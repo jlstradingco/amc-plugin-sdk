@@ -110,4 +110,33 @@ describe('validateManifest', () => {
     })
     expect(result.valid).toBe(true)
   })
+
+  it('accepts backend with resourceLimits', () => {
+    const manifest = {
+      ...validManifest,
+      backend: { entryPoint: 'dist/backend.js', resourceLimits: { memoryMb: 256 } }
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.backend?.resourceLimits?.memoryMb).toBe(256)
+  })
+
+  it('rejects resourceLimits.memoryMb exceeding 512', () => {
+    const manifest = {
+      ...validManifest,
+      backend: { entryPoint: 'dist/backend.js', resourceLimits: { memoryMb: 1024 } }
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+    expect(result.errors[0]).toContain('memoryMb')
+  })
+
+  it('rejects non-integer memoryMb', () => {
+    const manifest = {
+      ...validManifest,
+      backend: { entryPoint: 'dist/backend.js', resourceLimits: { memoryMb: 128.5 } }
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
 })
