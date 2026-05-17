@@ -6,7 +6,9 @@
   "bin": {
     "amc-plugin": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
@@ -14,10 +16,12 @@
   },
   "dependencies": {
     "@amc/plugin-sdk": "workspace:*",
+    "archiver": "^8.0.0",
     "commander": "^12.0.0",
     "prompts": "^2.4.2"
   },
   "devDependencies": {
+    "@types/archiver": "^7.0.0",
     "@types/prompts": "^2.4.9",
     "typescript": "^5.5.0"
   }

@@ -2,6 +2,9 @@
 
 import { Command } from 'commander'
 import { createCommand } from './commands/create.js'
+import { buildCommand } from './commands/build.js'
+import { validateCommand } from './commands/validate.js'
+import { packageCommand } from './commands/package.js'
 
 const program = new Command()
 
@@ -11,5 +14,8 @@ program
   .version('1.0.0')
 
 program.addCommand(createCommand)
+program.addCommand(buildCommand)
+program.addCommand(validateCommand)
+program.addCommand(packageCommand)
 
 program.parse()
