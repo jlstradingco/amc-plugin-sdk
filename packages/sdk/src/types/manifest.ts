@@ -101,6 +101,9 @@ export interface PluginManifest {
   sdkVersion: string
   backend?: {
     entryPoint: string
+    resourceLimits?: {
+      memoryMb?: number
+    }
   }
   permissions?: PluginPermission[]
   cli?: {

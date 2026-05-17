@@ -78,6 +78,10 @@ const cronJobSchema = z.object({
   approvalRequired: z.boolean(),
 })
 
+const resourceLimitsSchema = z.object({
+  memoryMb: z.number().int().positive().max(512).optional(),
+})
+
 const permissionSchema = z.enum([
   'storage', 'sessions', 'ai', 'network', 'cron', 'cli', 'notifications',
 ])
@@ -91,7 +95,10 @@ export const manifestSchema = z.object({
   migrations: z.array(migrationSchema),
   ui: uiSchema.optional(),
   sdkVersion: z.string().min(1),
-  backend: z.object({ entryPoint: z.string().min(1) }).optional(),
+  backend: z.object({
+    entryPoint: z.string().min(1),
+    resourceLimits: resourceLimitsSchema.optional(),
+  }).optional(),
   permissions: z.array(permissionSchema).optional(),
   cli: z.object({ endpoints: z.array(cliEndpointSchema) }).optional(),
   cron: z.object({ jobs: z.array(cronJobSchema) }).optional(),
