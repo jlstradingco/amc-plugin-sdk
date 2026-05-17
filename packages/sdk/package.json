@@ -8,20 +8,26 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js",
+      "default": "./dist/index.js"
     },
     "./browser": {
       "types": "./dist/types/bridge.d.ts",
-      "import": "./dist/types/bridge.js"
+      "import": "./dist/types/bridge.js",
+      "require": "./dist/cjs/types/bridge.js",
+      "default": "./dist/types/bridge.js"
     },
     "./validators": {
       "types": "./dist/validators/manifest.d.ts",
-      "import": "./dist/validators/manifest.js"
+      "import": "./dist/validators/manifest.js",
+      "require": "./dist/cjs/validators/manifest.js",
+      "default": "./dist/validators/manifest.js"
     }
   },
   "files": ["dist"],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json',JSON.stringify({type:'commonjs'}))\"",
     "clean": "rm -rf dist",
     "test": "vitest run",
     "prepublishOnly": "pnpm build"
