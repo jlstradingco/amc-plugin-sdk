@@ -38,8 +38,8 @@ export type {
   // Backend types
   PluginBackend,
   PluginActivate,
-} from './types/index'
+} from './types/index.js'
 
 // Validators (runtime value exports)
-export { manifestSchema, validateManifest } from './validators/manifest'
-export type { ManifestValidationResult } from './validators/manifest'
+export { manifestSchema, validateManifest } from './validators/manifest.js'
+export type { ManifestValidationResult } from './validators/manifest.js'

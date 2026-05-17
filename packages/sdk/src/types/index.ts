@@ -4,13 +4,13 @@ export type {
   PluginSettingOption, PluginSettingTestAction, PluginSettingDefinition,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
   PluginManifest, PluginRegistryEntry,
-} from './manifest'
+} from './manifest.js'
 
 export type {
   QueryOptions, SidebarItem, CliRequest, CliResponse, CliHandler,
   PluginStorage, PluginDb, PluginSettings, PluginLogger, PluginEvents,
   PluginSessions, PluginAi, PluginFs, PluginHttp, PluginCron, PluginCli,
   PluginSidebar, PluginToast, PluginContext,
-} from './context'
+} from './context.js'
 
-export type { PluginBackend, PluginActivate } from './backend'
+export type { PluginBackend, PluginActivate } from './backend.js'
