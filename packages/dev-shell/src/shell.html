@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AMC Plugin Dev Shell</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { display: flex; flex-direction: column; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+    .header { padding: 8px 16px; background: #16213e; border-bottom: 1px solid #333; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .header .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+    .main { flex: 1; display: flex; overflow: hidden; }
+    .sidebar { width: 200px; background: #0f3460; border-right: 1px solid #333; padding: 12px; overflow-y: auto; }
+    .sidebar h3 { font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 8px; }
+    .sidebar .item { padding: 6px 8px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+    .sidebar .item:hover { background: #1a4a7a; }
+    .content { flex: 1; }
+    .content webview { width: 100%; height: 100%; }
+    .log-panel { height: 150px; background: #0d1117; border-top: 1px solid #333; padding: 8px 12px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; }
+    .log-panel .log-line { padding: 1px 0; }
+    .log-panel .log-line .ts { color: #666; }
+    .log-panel .log-line .ns { color: #58a6ff; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="dot"></div>
+    <span id="title">AMC Plugin Dev Shell</span>
+  </div>
+  <div class="main">
+    <div class="sidebar">
+      <h3>Sidebar</h3>
+      <div id="sidebar-items"><em style="color:#666;font-size:12px">No items</em></div>
+    </div>
+    <div class="content">
+      <webview id="plugin-view" style="width:100%;height:100%"></webview>
+    </div>
+  </div>
+  <div class="log-panel" id="log-panel">
+    <div class="log-line"><span class="ts">--:--:--</span> <span class="ns">[dev-shell]</span> Ready</div>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search)
+    const pluginDir = params.get('pluginDir')
+    const pluginName = params.get('pluginName')
+    const pluginVersion = params.get('pluginVersion')
+    const entryPoint = params.get('entryPoint')
+
+    document.getElementById('title').textContent = `AMC Plugin Dev Shell - ${pluginName} v${pluginVersion}`
+
+    if (entryPoint) {
+      const webview = document.getElementById('plugin-view')
+      webview.src = `file://${pluginDir}/${entryPoint}`
+    }
+  </script>
+</body>
+</html>

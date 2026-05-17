@@ -1,0 +1,22 @@
+{
+  "name": "@amc/plugin-dev-shell",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/shell-window.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').copyFileSync('src/shell.html','dist/shell.html')\"",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "start": "electron ./dist/shell-window.js"
+  },
+  "dependencies": {
+    "@amc/plugin-sdk": "workspace:*",
+    "chokidar": "^4.0.0"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0"
+  }
+}
