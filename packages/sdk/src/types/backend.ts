@@ -1,4 +1,4 @@
-import type { PluginContext } from './context'
+import type { PluginContext } from './context.js'
 
 export interface PluginBackend {
   onEnable?(): Promise<void> | void

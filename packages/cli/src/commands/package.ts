@@ -39,10 +39,15 @@ export const packageCommand = new Command('package')
     const outputName = `${pluginId}-${version}.amcplugin`
     const outputPath = path.join(cwd, outputName)
 
-    const archiver = await import('archiver').catch(() => null)
+    // archiver v8 uses named exports (ZipArchive, TarArchive, etc.)
+    // but @types/archiver@7 still declares a default-export factory.
+    // Use a type assertion to access the actual runtime API.
+    const archiverMod = await import('archiver').catch(() => null) as
+      | { ZipArchive: new (opts: { zlib: { level: number } }) => import('archiver').Archiver }
+      | null
 
-    if (archiver) {
-      const archive = archiver.default('zip', { zlib: { level: 9 } })
+    if (archiverMod) {
+      const archive = new archiverMod.ZipArchive({ zlib: { level: 9 } })
       const output = fs.createWriteStream(outputPath)
 
       await new Promise<void>((resolve, reject) => {

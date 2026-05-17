@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginSidebar, PluginToast, PluginAi } from './context'
+import type { PluginStorage, PluginDb, PluginSettings, PluginSidebar, PluginToast, PluginAi } from './context.js'
 
 export interface BridgeTheme {
   get(): { mode: string; visualTheme: string }

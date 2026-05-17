@@ -9,11 +9,37 @@ type Template = typeof TEMPLATES[number]
 
 const CATEGORIES = ['planning', 'development', 'testing', 'devops', 'productivity', 'other'] as const
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+interface CreateOptions {
+  template: string
+  displayName?: string
+  description?: string
+  author?: string
+  category?: string
+  icon?: string
+  skipInstall?: boolean
+  skipGit?: boolean
+}
+
 export const createCommand = new Command('create')
   .argument('<name>', 'Plugin name (kebab-case)')
   .option('-t, --template <template>', 'Template: basic, with-backend, full', 'basic')
+  .option('--display-name <name>', 'Display name (skips interactive prompt)')
+  .option('--description <desc>', 'Plugin description')
+  .option('--author <author>', 'Plugin author')
+  .option('--category <category>', 'Plugin category', 'other')
+  .option('--icon <icon>', 'Lucide icon name', 'puzzle')
+  .option('--skip-install', 'Skip npm install')
+  .option('--skip-git', 'Skip git init and initial commit')
   .description('Scaffold a new AMC plugin project')
-  .action(async (name: string, opts: { template: string }) => {
+  .action(async (name: string, opts: CreateOptions) => {
     const template = opts.template as Template
     if (!TEMPLATES.includes(template)) {
       console.error(`Invalid template: ${template}. Choose from: ${TEMPLATES.join(', ')}`)
@@ -25,17 +51,42 @@ export const createCommand = new Command('create')
       process.exit(1)
     }
 
-    const response = await prompts([
-      { type: 'text', name: 'displayName', message: 'Display name', initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
-      { type: 'text', name: 'description', message: 'Description', initial: 'An AMC plugin' },
-      { type: 'text', name: 'author', message: 'Author' },
-      { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
-      { type: 'text', name: 'icon', message: 'Lucide icon name', initial: 'puzzle' },
-    ])
+    let displayName: string
+    let description: string
+    let author: string
+    let category: string
+    let icon: string
 
-    if (!response.author) {
-      console.error('Cancelled')
-      process.exit(1)
+    const hasAllOptions = opts.displayName && opts.description && opts.author
+    if (hasAllOptions) {
+      if (!CATEGORIES.includes(opts.category as typeof CATEGORIES[number])) {
+        console.error(`Invalid category: ${opts.category}. Choose from: ${CATEGORIES.join(', ')}`)
+        process.exit(1)
+      }
+      displayName = opts.displayName!
+      description = opts.description!
+      author = opts.author!
+      category = opts.category ?? 'other'
+      icon = opts.icon ?? 'puzzle'
+    } else {
+      const response = await prompts([
+        { type: 'text', name: 'displayName', message: 'Display name', initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
+        { type: 'text', name: 'description', message: 'Description', initial: 'An AMC plugin' },
+        { type: 'text', name: 'author', message: 'Author' },
+        { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
+        { type: 'text', name: 'icon', message: 'Lucide icon name', initial: 'puzzle' },
+      ])
+
+      if (!response.author) {
+        console.error('Cancelled')
+        process.exit(1)
+      }
+
+      displayName = response.displayName
+      description = response.description
+      author = response.author
+      category = response.category
+      icon = response.icon
     }
 
     const targetDir = path.resolve(process.cwd(), name)
@@ -52,12 +103,12 @@ export const createCommand = new Command('create')
     const manifest: Record<string, unknown> = {
       plugin: {
         id: name,
-        name: response.displayName,
+        name: displayName,
         version: '1.0.0',
-        author: response.author,
-        description: response.description,
-        icon: response.icon,
-        category: response.category,
+        author: author,
+        description: description,
+        icon: icon,
+        category: category,
         license: { type: 'free' },
       },
       settings: [],
@@ -69,7 +120,7 @@ export const createCommand = new Command('create')
     // UI setup
     manifest.ui = {
       entryPoint: 'dist/ui/index.html',
-      sidebar: { title: response.displayName, icon: response.icon },
+      sidebar: { title: displayName, icon: icon },
     }
 
     fs.mkdirSync(path.join(targetDir, 'src', 'ui'), { recursive: true })
@@ -79,7 +130,7 @@ export const createCommand = new Command('create')
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${response.displayName}</title>
+  <title>${escapeHtml(displayName)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
@@ -88,13 +139,15 @@ export const createCommand = new Command('create')
   </style>
 </head>
 <body>
-  <h1>${response.displayName}</h1>
-  <p>${response.description}</p>
+  <h1>${escapeHtml(displayName)}</h1>
+  <p>${escapeHtml(description)}</p>
   <script src="plugin.js"></script>
 </body>
 </html>`)
 
-    fs.writeFileSync(path.join(targetDir, 'src', 'ui', 'plugin.ts'), `const amc = window.AgentMC
+    fs.writeFileSync(path.join(targetDir, 'src', 'ui', 'plugin.ts'), `import type { AgentMC } from '@amc/plugin-sdk/browser'
+
+const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
 async function init() {
   const settings = await amc.settings.getAll()
@@ -116,11 +169,11 @@ init()
 const activate: PluginActivate = (ctx) => {
   return {
     onEnable() {
-      ctx.log.info('${response.displayName} enabled')
+      ctx.log.info('${displayName} enabled')
     },
 
     onDisable() {
-      ctx.log.info('${response.displayName} disabled')
+      ctx.log.info('${displayName} disabled')
     },
 
     onSettingsChanged(settings) {
@@ -188,17 +241,24 @@ export default activate
     fs.writeFileSync(path.join(targetDir, '.gitignore'), 'node_modules/\ndist/\n*.amcplugin\n')
 
     // Install dependencies
-    console.log('Installing dependencies...')
-    execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
+    if (!opts.skipInstall) {
+      console.log('Installing dependencies...')
+      execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
+    }
 
     // Init git
-    execSync('git init', { cwd: targetDir, stdio: 'pipe' })
-    execSync('git add -A', { cwd: targetDir, stdio: 'pipe' })
-    execSync('git commit -m "Initial plugin scaffold"', { cwd: targetDir, stdio: 'pipe' })
+    if (!opts.skipGit) {
+      execSync('git init', { cwd: targetDir, stdio: 'pipe' })
+      execSync('git add -A', { cwd: targetDir, stdio: 'pipe' })
+      execSync('git commit -m "Initial plugin scaffold"', { cwd: targetDir, stdio: 'pipe' })
+    }
 
     console.log(`\nPlugin scaffolded at ./${name}/`)
     console.log('\nNext steps:')
     console.log(`  cd ${name}`)
+    if (opts.skipInstall) {
+      console.log('  npm install')
+    }
     console.log('  npm run build')
     console.log('  npm run dev')
   })
