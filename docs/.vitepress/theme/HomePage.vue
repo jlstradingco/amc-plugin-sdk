@@ -1,21 +1,229 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   Blocks,
   Terminal,
   Zap,
   FileCode,
   Store,
-  LayoutTemplate
+  LayoutTemplate,
+  Check
 } from 'lucide-vue-next'
 
 const copied = ref(false)
+const typedLength = ref(0)
+const isTypingDone = ref(false)
+const showSuccess = ref(false)
+const hasStartedTyping = ref(false)
 
 function copyInstall() {
   navigator.clipboard.writeText('npm install -g @amc/plugin-cli')
   copied.value = true
   setTimeout(() => { copied.value = false }, 1500)
 }
+
+// Each segment is either plain text or a span with a token class
+interface Segment {
+  text: string
+  cls?: string
+}
+
+const codeLines: Segment[][] = [
+  [
+    { text: 'import', cls: 'tok-keyword' },
+    { text: ' { ' },
+    { text: 'definePlugin', cls: 'tok-fn' },
+    { text: ' } ' },
+    { text: 'from', cls: 'tok-keyword' },
+    { text: ' ' },
+    { text: "'@amc/plugin-sdk'", cls: 'tok-string' },
+  ],
+  [],
+  [
+    { text: 'export default', cls: 'tok-keyword' },
+    { text: ' ' },
+    { text: 'definePlugin', cls: 'tok-fn' },
+    { text: '({' },
+  ],
+  [
+    { text: '  ' },
+    { text: 'name', cls: 'tok-prop' },
+    { text: ': ' },
+    { text: "'my-plugin'", cls: 'tok-string' },
+    { text: ',' },
+  ],
+  [
+    { text: '  ' },
+    { text: 'version', cls: 'tok-prop' },
+    { text: ': ' },
+    { text: "'1.0.0'", cls: 'tok-string' },
+    { text: ',' },
+  ],
+  [],
+  [
+    { text: '  ' },
+    { text: 'backend', cls: 'tok-prop' },
+    { text: ': {' },
+  ],
+  [
+    { text: '    ' },
+    { text: 'onSessionEvent', cls: 'tok-fn' },
+    { text: '({ ' },
+    { text: 'sessions', cls: 'tok-param' },
+    { text: ', ' },
+    { text: 'toast', cls: 'tok-param' },
+    { text: ' }) {' },
+  ],
+  [
+    { text: '      sessions.' },
+    { text: 'onStatusChange', cls: 'tok-fn' },
+    { text: '(' },
+    { text: "'needs_you'", cls: 'tok-string' },
+    { text: ', (' },
+    { text: 'session', cls: 'tok-param' },
+    { text: ') => {' },
+  ],
+  [
+    { text: '        toast.' },
+    { text: 'show', cls: 'tok-fn' },
+    { text: '(' },
+    { text: '`Attention: ', cls: 'tok-string' },
+    { text: '${session.name}', cls: 'tok-interp' },
+    { text: '`', cls: 'tok-string' },
+    { text: ')' },
+  ],
+  [
+    { text: '      })' },
+  ],
+  [
+    { text: '    }' },
+  ],
+  [
+    { text: '  }' },
+  ],
+  [
+    { text: '})' },
+  ],
+]
+
+// Flatten all characters with their token class for the typing effect
+interface FlatChar {
+  char: string
+  cls?: string
+  lineIdx: number
+}
+
+const flatChars = computed<FlatChar[]>(() => {
+  const result: FlatChar[] = []
+  codeLines.forEach((line, lineIdx) => {
+    if (lineIdx > 0) {
+      result.push({ char: '\n', lineIdx })
+    }
+    for (const seg of line) {
+      for (const ch of seg.text) {
+        result.push({ char: ch, cls: seg.cls, lineIdx })
+      }
+    }
+  })
+  return result
+})
+
+const totalChars = computed(() => flatChars.value.length)
+
+// Build the visible HTML from typed characters
+const visibleHtml = computed(() => {
+  const chars = flatChars.value.slice(0, typedLength.value)
+  let html = ''
+  let currentCls: string | undefined = undefined
+  let inSpan = false
+
+  for (const c of chars) {
+    if (c.cls !== currentCls) {
+      if (inSpan) { html += '</span>'; inSpan = false }
+      if (c.cls) { html += `<span class="${c.cls}">`; inSpan = true }
+      currentCls = c.cls
+    }
+    if (c.char === '\n') {
+      if (inSpan) { html += '</span>'; inSpan = false; currentCls = undefined }
+      html += '\n'
+    } else if (c.char === '<') {
+      html += '&lt;'
+    } else if (c.char === '>') {
+      html += '&gt;'
+    } else if (c.char === '&') {
+      html += '&amp;'
+    } else {
+      html += c.char
+    }
+  }
+  if (inSpan) html += '</span>'
+  return html
+})
+
+// Cursor blink state
+const showCursor = ref(true)
+let cursorInterval: ReturnType<typeof setInterval> | undefined
+
+function startTyping() {
+  if (hasStartedTyping.value) return
+  hasStartedTyping.value = true
+
+  // Blink cursor
+  cursorInterval = setInterval(() => {
+    showCursor.value = !showCursor.value
+  }, 530)
+
+  let i = 0
+  const baseSpeed = 22 // ms per character — fast but readable
+
+  function typeNext() {
+    if (i >= totalChars.value) {
+      // Done typing
+      isTypingDone.value = true
+      showCursor.value = false
+      if (cursorInterval) clearInterval(cursorInterval)
+
+      // Success animation after a beat
+      setTimeout(() => { showSuccess.value = true }, 300)
+      return
+    }
+
+    const c = flatChars.value[i]
+    typedLength.value = i + 1
+    i++
+
+    // Variable speed: newlines and spaces are fast, code is normal
+    let delay = baseSpeed
+    if (c.char === '\n') {
+      delay = 80 // pause between lines
+    } else if (c.char === ' ' && !c.cls) {
+      delay = 10 // whitespace is instant
+    }
+
+    setTimeout(typeNext, delay)
+  }
+
+  // Small delay before starting
+  setTimeout(typeNext, 600)
+}
+
+// IntersectionObserver to start typing when code block is visible
+const codeRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  if (!codeRef.value) return
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        startTyping()
+        observer.disconnect()
+      }
+    },
+    { threshold: 0.3 }
+  )
+  observer.observe(codeRef.value)
+})
 
 const features = [
   {
@@ -74,8 +282,8 @@ const features = [
           </div>
         </div>
 
-        <div class="hero-code-wrapper">
-          <div class="hero-code">
+        <div class="hero-code-wrapper" ref="codeRef">
+          <div class="hero-code" :class="{ 'typing-done': showSuccess }">
             <div class="code-titlebar">
               <div class="code-dots">
                 <span class="dot dot-red" />
@@ -83,21 +291,14 @@ const features = [
                 <span class="dot dot-green" />
               </div>
               <span class="code-filename">my-plugin.ts</span>
+              <Transition name="success-badge">
+                <span v-if="showSuccess" class="code-success">
+                  <Check :size="14" :stroke-width="2.5" />
+                  Ready
+                </span>
+              </Transition>
             </div>
-            <pre class="code-body"><code><span class="tok-keyword">import</span> { <span class="tok-fn">definePlugin</span> } <span class="tok-keyword">from</span> <span class="tok-string">'@amc/plugin-sdk'</span>
-
-<span class="tok-keyword">export default</span> <span class="tok-fn">definePlugin</span>({
-  <span class="tok-prop">name</span>: <span class="tok-string">'my-plugin'</span>,
-  <span class="tok-prop">version</span>: <span class="tok-string">'1.0.0'</span>,
-
-  <span class="tok-prop">backend</span>: {
-    <span class="tok-fn">onSessionEvent</span>({ <span class="tok-param">sessions</span>, <span class="tok-param">toast</span> }) {
-      sessions.<span class="tok-fn">onStatusChange</span>(<span class="tok-string">'needs_you'</span>, (<span class="tok-param">session</span>) =&gt; {
-        toast.<span class="tok-fn">show</span>(<span class="tok-string">`Attention: <span class="tok-interp">${session.name}</span>`</span>)
-      })
-    }
-  }
-})</code></pre>
+            <pre class="code-body"><code><span v-html="visibleHtml" /><span v-if="!isTypingDone && hasStartedTyping" class="cursor" :class="{ blink: showCursor }">|</span></code></pre>
           </div>
         </div>
       </div>
@@ -226,11 +427,11 @@ const features = [
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 0 40px rgba(124, 92, 252, 0.06);
-  transform: rotateY(-2deg);
-  transition: transform 0.3s ease;
+  transition: border-color 0.6s ease, box-shadow 0.6s ease;
 }
-.hero-code:hover {
-  transform: rotateY(0deg);
+.hero-code.typing-done {
+  border-color: rgba(40, 200, 64, 0.3);
+  box-shadow: 0 0 40px rgba(40, 200, 64, 0.08), 0 0 80px rgba(40, 200, 64, 0.04);
 }
 .code-titlebar {
   display: flex;
@@ -257,6 +458,32 @@ const features = [
   color: #55555a;
   font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
 }
+
+/* Success badge in titlebar */
+.code-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #28c840;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, monospace;
+}
+.success-badge-enter-active {
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.success-badge-leave-active {
+  transition: all 0.2s ease;
+}
+.success-badge-enter-from {
+  opacity: 0;
+  transform: scale(0.5) translateY(4px);
+}
+.success-badge-leave-to {
+  opacity: 0;
+}
+
 .code-body {
   padding: 20px;
   margin: 0;
@@ -266,18 +493,32 @@ const features = [
   line-height: 1.7;
   color: #ededef;
   background: transparent;
+  min-height: 280px;
 }
 .code-body code {
   font-family: inherit;
 }
 
+/* Cursor */
+.cursor {
+  color: #7c5cfc;
+  font-weight: 300;
+  animation: none;
+}
+.cursor.blink {
+  opacity: 1;
+}
+.cursor:not(.blink) {
+  opacity: 0;
+}
+
 /* Syntax tokens */
-.tok-keyword { color: #c084fc; }
-.tok-string { color: #86efac; }
-.tok-fn { color: #93c5fd; }
-.tok-prop { color: #ededef; }
-.tok-param { color: #fbbf24; }
-.tok-interp { color: #fbbf24; }
+:deep(.tok-keyword) { color: #c084fc; }
+:deep(.tok-string) { color: #86efac; }
+:deep(.tok-fn) { color: #93c5fd; }
+:deep(.tok-prop) { color: #ededef; }
+:deep(.tok-param) { color: #fbbf24; }
+:deep(.tok-interp) { color: #fbbf24; }
 
 /* Divider */
 .section-divider {
@@ -386,12 +627,6 @@ const features = [
     grid-template-columns: 1fr;
     gap: 40px;
   }
-  .hero-code {
-    transform: none;
-  }
-  .hero-code:hover {
-    transform: none;
-  }
   .features-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -405,6 +640,9 @@ const features = [
   }
   .features-grid {
     grid-template-columns: 1fr;
+  }
+  .code-body {
+    min-height: 240px;
   }
 }
 </style>
