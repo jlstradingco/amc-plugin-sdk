@@ -5,18 +5,14 @@ import type { Theme } from 'vitepress'
 
 const theme: Theme = {
   extends: DefaultTheme,
-  enhanceApp({ app, router }) {
+  enhanceApp({ app }) {
     app.component('HomePage', HomePage)
 
     // Force dark class — appearance:false disables the toggle but also
-    // stops VitePress from adding .dark automatically
+    // stops VitePress from adding .dark automatically.
+    // Guard for SSR (document doesn't exist during server-side rendering).
     if (typeof document !== 'undefined') {
       document.documentElement.classList.add('dark')
-    }
-    if (router) {
-      router.onAfterRouteChanged = () => {
-        document.documentElement.classList.add('dark')
-      }
     }
   }
 }
