@@ -4,6 +4,7 @@ export default defineConfig({
   title: 'AMC Plugin SDK',
   description: 'Build plugins for Agent Mission Control',
   base: '/amc-plugin-sdk/',
+  appearance: 'dark',
   head: [['link', { rel: 'icon', href: '/amc-plugin-sdk/logo.svg' }]],
   themeConfig: {
     logo: '/logo.svg',
@@ -52,7 +53,7 @@ export default defineConfig({
     socialLinks: [{ icon: 'github', link: 'https://github.com/jlstradingco/amc-plugin-sdk' }],
     search: { provider: 'local' },
     footer: {
-      message: 'AMC Plugin SDK Documentation'
+      message: 'AMC Plugin SDK'
     }
   }
 })
