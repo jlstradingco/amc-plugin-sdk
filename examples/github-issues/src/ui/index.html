@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Issues</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        padding: 24px;
+        background: var(--surface-50, #fafafa);
+        color: var(--surface-900, #111);
+      }
+      h1 { font-size: 1.5rem; margin-bottom: 4px; }
+      .subtitle { color: var(--surface-500, #666); margin-bottom: 16px; font-size: 0.875rem; }
+      .toolbar {
+        display: flex; gap: 8px; align-items: center;
+        margin-bottom: 16px; flex-wrap: wrap;
+      }
+      .filter-btn {
+        padding: 6px 14px;
+        border: 1px solid var(--surface-300, #ddd);
+        border-radius: 20px;
+        background: var(--surface-0, #fff);
+        cursor: pointer; font-size: 0.8rem;
+        color: var(--surface-600, #555);
+      }
+      .filter-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+      input.search {
+        flex: 1; min-width: 200px;
+        padding: 8px 12px;
+        border: 1px solid var(--surface-300, #ddd);
+        border-radius: 8px; font-size: 0.85rem;
+        background: var(--surface-0, #fff);
+        color: var(--surface-900, #111);
+      }
+      .btn-refresh {
+        padding: 6px 14px;
+        border: 1px solid var(--surface-300, #ddd);
+        border-radius: 8px;
+        background: var(--surface-0, #fff);
+        cursor: pointer; font-size: 0.8rem;
+      }
+      .issue-list { list-style: none; }
+      .issue-item {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--surface-200, #eee);
+        border-radius: 8px; margin-bottom: 8px;
+        background: var(--surface-0, #fff);
+      }
+      .issue-number { font-size: 0.8rem; color: var(--surface-400); min-width: 40px; }
+      .issue-content { flex: 1; }
+      .issue-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+      .issue-meta { font-size: 0.75rem; color: var(--surface-500); display: flex; gap: 12px; }
+      .label {
+        display: inline-block; padding: 1px 8px; border-radius: 12px;
+        font-size: 0.7rem; background: #dbeafe; color: #1e40af;
+      }
+      .state-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+      .state-open { background: #dcfce7; color: #166534; }
+      .state-closed { background: #f3e8ff; color: #6b21a8; }
+      .empty { text-align: center; padding: 40px; color: var(--surface-400, #999); }
+    </style>
+  </head>
+  <body>
+    <h1>GitHub Issues</h1>
+    <p class="subtitle" id="repo-label">Configure repository in plugin settings</p>
+    <div class="toolbar">
+      <button class="filter-btn active" data-filter="open">Open</button>
+      <button class="filter-btn" data-filter="closed">Closed</button>
+      <button class="filter-btn" data-filter="all">All</button>
+      <input class="search" id="search" type="text" placeholder="Search issues..." />
+      <button class="btn-refresh" id="refresh-btn">Refresh</button>
+    </div>
+    <ul class="issue-list" id="issue-list">
+      <li class="empty">Loading issues...</li>
+    </ul>
+    <script src="plugin.js"></script>
+  </body>
+</html>

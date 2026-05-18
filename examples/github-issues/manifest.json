@@ -1,0 +1,72 @@
+{
+  "plugin": {
+    "id": "github-issues",
+    "name": "GitHub Issues",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Track GitHub issues from within AMC",
+    "icon": "github",
+    "category": "development",
+    "license": { "type": "free" },
+    "minAppVersion": "0.1.40"
+  },
+  "sdkVersion": "^1.0.0",
+  "permissions": ["storage", "network", "cron", "notifications"],
+  "settings": [
+    {
+      "key": "repo",
+      "label": "GitHub Repository",
+      "description": "Format: owner/repo",
+      "type": "text",
+      "default": ""
+    },
+    {
+      "key": "githubToken",
+      "label": "Personal Access Token",
+      "description": "GitHub PAT with 'repo' scope",
+      "type": "password",
+      "default": ""
+    },
+    {
+      "key": "syncInterval",
+      "label": "Sync Interval (minutes)",
+      "type": "number",
+      "default": 15,
+      "min": 5,
+      "max": 60
+    }
+  ],
+  "storage": {
+    "collections": {
+      "issues": {
+        "columns": {
+          "number": "integer",
+          "title": "text",
+          "state": "text",
+          "labels": "json",
+          "assignee": "text",
+          "body": "text",
+          "github_updated_at": "text"
+        },
+        "indexes": ["state", "number"]
+      }
+    }
+  },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "GitHub Issues", "icon": "github" }
+  },
+  "backend": {
+    "entryPoint": "dist/backend/index.js"
+  },
+  "cron": {
+    "jobs": [
+      {
+        "id": "sync-issues",
+        "schedule": "*/15 * * * *",
+        "description": "Sync issues from GitHub"
+      }
+    ]
+  }
+}
