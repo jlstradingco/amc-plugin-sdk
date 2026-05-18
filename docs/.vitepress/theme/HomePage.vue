@@ -493,7 +493,9 @@ const features = [
   line-height: 1.7;
   color: #ededef;
   background: transparent;
-  min-height: 280px;
+  /* 14 lines × 13px font × 1.7 line-height + 40px padding — prevents
+     hero section from growing as typing animation progresses */
+  min-height: 350px;
 }
 .code-body code {
   font-family: inherit;
@@ -642,7 +644,7 @@ const features = [
     grid-template-columns: 1fr;
   }
   .code-body {
-    min-height: 240px;
+    min-height: 350px;
   }
 }
 </style>
