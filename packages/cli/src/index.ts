@@ -10,6 +10,7 @@ import { whoamiCommand } from './commands/whoami.js'
 import { logoutCommand } from './commands/logout.js'
 import { statusCommand } from './commands/status.js'
 import { devCommand } from './commands/dev.js'
+import { infoCommand } from './commands/info.js'
 
 const program = new Command()
 
@@ -27,5 +28,6 @@ program.addCommand(whoamiCommand)
 program.addCommand(logoutCommand)
 program.addCommand(statusCommand)
 program.addCommand(devCommand)
+program.addCommand(infoCommand)
 
 program.parse()
