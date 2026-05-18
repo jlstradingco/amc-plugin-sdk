@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { authenticate, getStoredToken } from '../lib/auth.js'
 import { uploadPackage, getMyPlugins, MarketplaceApiError } from '../lib/marketplace-api.js'
+import { ok, fail, info } from '../lib/output.js'
 
 export const publishCommand = new Command('publish')
   .description('Upload plugin to the AMC Marketplace for review')
@@ -20,32 +21,32 @@ export const publishCommand = new Command('publish')
     // 2. Locate .amcplugin package
     let packagePath = findPackage(cwd)
     if (!packagePath) {
-      console.log('No .amcplugin found. Running `amc-plugin package` first...\n')
+      info('No .amcplugin found. Running `amc-plugin package` first...')
       const { execSync } = await import('node:child_process')
       execSync('npx amc-plugin package', { cwd, stdio: 'inherit' })
       packagePath = findPackage(cwd)
     }
 
     if (!packagePath) {
-      console.error('Could not find or create .amcplugin package')
+      fail('Could not find or create .amcplugin package')
       process.exit(1)
     }
 
     const sizeMB = (fs.statSync(packagePath).size / 1024 / 1024).toFixed(2)
-    console.log(`\nUploading ${path.basename(packagePath)} (${sizeMB} MB)...`)
+    info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB)...`)
 
     // 3. Upload
     try {
       const result = await uploadPackage(token, packagePath, opts.changelog ?? '')
-      console.log(`\nSubmitted for review (submission ID: ${result.submissionId})`)
+      ok(`Submitted for review (submission ID: ${result.submissionId})`)
 
       if (!opts.watch) {
-        console.log('Run `amc-plugin status` to check progress, or use --watch to wait.')
+        info('Run `amc-plugin status` to check progress, or use --watch to wait.')
         return
       }
 
       // 4. Poll for status
-      console.log('\nWatching for review decision...')
+      info('Watching for review decision...')
       for (let i = 0; i < 360; i++) { // 3 hours max
         await sleep(30_000) // 30 seconds
 
@@ -55,11 +56,11 @@ export const publishCommand = new Command('publish')
           if (!submission) continue
 
           if (submission.status === 'approved') {
-            console.log('\nPlugin published!')
+            ok('Plugin published!')
             return
           }
           if (submission.status === 'rejected') {
-            console.log(`\nRejected: ${submission.reviewNotes ?? 'No feedback provided'}`)
+            fail(`Rejected: ${submission.reviewNotes ?? 'No feedback provided'}`)
             process.exit(1)
           }
         } catch {
@@ -69,10 +70,10 @@ export const publishCommand = new Command('publish')
         if (i % 2 === 0) process.stdout.write('.')
       }
 
-      console.log('\nTimed out waiting for review. Check back with `amc-plugin status`.')
+      info('Timed out waiting for review. Check back with `amc-plugin status`.')
     } catch (err) {
       if (err instanceof MarketplaceApiError) {
-        console.error(`\nUpload failed: ${err.message}`)
+        fail(`Upload failed: ${err.message}`)
         if (err.details.length > 0) {
           console.error('Validation issues:')
           for (const detail of err.details) {

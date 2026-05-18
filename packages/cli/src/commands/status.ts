@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { getStoredToken, authenticate } from '../lib/auth.js'
 import { getMyPlugins } from '../lib/marketplace-api.js'
+import { ok, fail, info, heading } from '../lib/output.js'
 
 export const statusCommand = new Command('status')
   .description('Check submission status for the current plugin')
@@ -30,18 +31,21 @@ export const statusCommand = new Command('status')
       : result.submissions
 
     if (submissions.length === 0) {
-      console.log(pluginId
+      info(pluginId
         ? `No submissions found for "${pluginId}"`
         : 'No submissions found')
       return
     }
 
-    console.log(`\nSubmissions${pluginId ? ` for "${pluginId}"` : ''}:\n`)
+    heading(`Submissions${pluginId ? ` for "${pluginId}"` : ''}`)
     for (const s of submissions) {
-      const statusIcon = s.status === 'approved' ? '[OK]'
-        : s.status === 'rejected' ? '[X]'
-        : '[?]'
-      console.log(`  ${statusIcon} ${s.pluginId} v${s.version} — ${s.status} (${new Date(s.submittedAt).toLocaleDateString()})`)
+      if (s.status === 'approved') {
+        ok(`${s.pluginId} v${s.version} — ${s.status} (${new Date(s.submittedAt).toLocaleDateString()})`)
+      } else if (s.status === 'rejected') {
+        fail(`${s.pluginId} v${s.version} — ${s.status} (${new Date(s.submittedAt).toLocaleDateString()})`)
+      } else {
+        info(`${s.pluginId} v${s.version} — ${s.status} (${new Date(s.submittedAt).toLocaleDateString()})`)
+      }
       if (s.status === 'rejected' && s.reviewNotes) {
         console.log(`      Feedback: ${s.reviewNotes}`)
       }
