@@ -11,6 +11,7 @@ import { logoutCommand } from './commands/logout.js'
 import { statusCommand } from './commands/status.js'
 import { devCommand } from './commands/dev.js'
 import { infoCommand } from './commands/info.js'
+import { updateCommand } from './commands/update.js'
 
 const program = new Command()
 
@@ -29,5 +30,6 @@ program.addCommand(logoutCommand)
 program.addCommand(statusCommand)
 program.addCommand(devCommand)
 program.addCommand(infoCommand)
+program.addCommand(updateCommand)
 
 program.parse()
