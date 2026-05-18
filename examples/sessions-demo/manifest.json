@@ -1,0 +1,22 @@
+{
+  "plugin": {
+    "id": "sessions-demo",
+    "name": "Sessions Demo",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Demonstrates spawning and managing Claude sessions",
+    "icon": "message-square",
+    "category": "other",
+    "license": { "type": "free" },
+    "minAppVersion": "0.1.40"
+  },
+  "sdkVersion": "^1.0.0",
+  "permissions": ["sessions"],
+  "settings": [],
+  "storage": { "collections": {} },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "Sessions Demo", "icon": "message-square" }
+  }
+}

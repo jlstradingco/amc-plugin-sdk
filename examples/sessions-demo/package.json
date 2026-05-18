@@ -1,0 +1,16 @@
+{
+  "name": "sessions-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "amc-plugin dev",
+    "package": "amc-plugin package",
+    "validate": "amc-plugin validate"
+  },
+  "devDependencies": {
+    "@amc/plugin-sdk": "^1.0.0",
+    "typescript": "^5.5.0"
+  }
+}
