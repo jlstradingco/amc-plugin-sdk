@@ -1,0 +1,109 @@
+/*
+ * AMC Plugin SDK — Dark Theme Overrides
+ * Palette: near-black bases, purple-to-blue gradient accent
+ */
+
+:root {
+  --vp-c-bg: #0a0a0b;
+  --vp-c-bg-alt: #141416;
+  --vp-c-bg-soft: #1a1a1f;
+  --vp-c-bg-elv: #141416;
+
+  --vp-c-border: #1e1e22;
+  --vp-c-divider: #1e1e22;
+  --vp-c-gutter: #141416;
+
+  --vp-c-text-1: #ededef;
+  --vp-c-text-2: #8b8b8e;
+  --vp-c-text-3: #55555a;
+
+  --vp-c-brand-1: #7c5cfc;
+  --vp-c-brand-2: #6a4ce0;
+  --vp-c-brand-3: #5a3cc8;
+  --vp-c-brand-soft: rgba(124, 92, 252, 0.14);
+
+  --vp-c-default-1: #ededef;
+  --vp-c-default-2: #8b8b8e;
+  --vp-c-default-3: #55555a;
+  --vp-c-default-soft: rgba(30, 30, 34, 0.4);
+
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(135deg, #7c5cfc, #38bdf8);
+
+  --vp-c-tip-1: #7c5cfc;
+  --vp-c-tip-2: rgba(124, 92, 252, 0.5);
+  --vp-c-tip-3: rgba(124, 92, 252, 0.2);
+  --vp-c-tip-soft: rgba(124, 92, 252, 0.08);
+
+  --vp-button-brand-bg: #7c5cfc;
+  --vp-button-brand-hover-bg: #6a4ce0;
+  --vp-button-brand-active-bg: #5a3cc8;
+  --vp-button-brand-text: #ffffff;
+
+  --vp-button-alt-bg: #141416;
+  --vp-button-alt-hover-bg: #1a1a1f;
+  --vp-button-alt-border: #1e1e22;
+  --vp-button-alt-text: #ededef;
+
+  --vp-code-block-bg: #1a1a1f;
+  --vp-code-bg: rgba(124, 92, 252, 0.1);
+  --vp-code-color: #c4b5fd;
+}
+
+/* Force dark class on html — VitePress reads appearance config but
+   we also ensure CSS vars apply without the .dark class present */
+.dark {
+  --vp-c-bg: #0a0a0b;
+  --vp-c-bg-alt: #141416;
+  --vp-c-bg-soft: #1a1a1f;
+  --vp-c-bg-elv: #141416;
+  --vp-c-border: #1e1e22;
+  --vp-c-divider: #1e1e22;
+  --vp-c-gutter: #141416;
+  --vp-c-text-1: #ededef;
+  --vp-c-text-2: #8b8b8e;
+  --vp-c-text-3: #55555a;
+}
+
+/* ─── Nav bar ─── */
+.VPNav {
+  border-bottom: 1px solid var(--vp-c-border) !important;
+}
+.VPNavBar {
+  background: rgba(10, 10, 11, 0.85) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+/* ─── Code blocks on doc pages ─── */
+div[class*='language-'] {
+  border: 1px solid var(--vp-c-border);
+  border-radius: 8px;
+}
+
+/* ─── Footer ─── */
+.VPFooter {
+  border-top: 1px solid var(--vp-c-border) !important;
+  background: var(--vp-c-bg) !important;
+}
+
+/* ─── Sidebar active item ─── */
+.VPSidebarItem.is-active > .item .link > .text {
+  color: var(--vp-c-brand-1);
+}
+
+/* ─── Search modal ─── */
+.VPLocalSearchBox {
+  --vp-local-search-bg: #141416;
+}
+
+/* ─── Home page uses layout:page — remove default content constraints ─── */
+.is-page .vp-doc {
+  max-width: none !important;
+  padding: 0 !important;
+}
+.is-page .VPContent {
+  padding: 0 !important;
+}
+.is-page .VPPage {
+  padding: 0 !important;
+}

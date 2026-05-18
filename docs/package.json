@@ -8,6 +8,7 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
+    "lucide-vue-next": "^1.0.0",
     "vitepress": "^1.6.0"
   }
 }
