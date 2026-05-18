@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@amc/plugin-sdk'
+import { ok, fail, warn, info, actionableError, manifestNotFound } from '../lib/output.js'
 
 export const buildCommand = new Command('build')
   .description('Compile plugin TypeScript to JavaScript and validate manifest')
@@ -11,24 +12,23 @@ export const buildCommand = new Command('build')
     const manifestPath = path.join(cwd, 'manifest.json')
 
     if (!fs.existsSync(manifestPath)) {
-      console.error('No manifest.json found in current directory')
-      process.exit(1)
+      manifestNotFound()
     }
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
     const result = validateManifest(manifest)
     if (!result.valid) {
-      console.error('Manifest validation failed:')
+      fail('Manifest validation failed:')
       result.errors.forEach(e => console.error(`  - ${e}`))
       process.exit(1)
     }
-    console.log('Manifest validated')
+    ok('Manifest validated')
 
-    console.log('Compiling TypeScript...')
+    info('Compiling TypeScript...')
     try {
       execSync('npx tsc', { cwd, stdio: 'inherit' })
     } catch {
-      console.error('TypeScript compilation failed')
+      actionableError('TypeScript compilation failed', 'Check the errors above and fix your source files.')
       process.exit(1)
     }
 
@@ -40,11 +40,11 @@ export const buildCommand = new Command('build')
 
     const warnings = scanBannedImports(path.join(cwd, 'dist'))
     if (warnings.length > 0) {
-      console.warn('\nBanned import warnings:')
-      warnings.forEach(w => console.warn(`  - ${w}`))
+      warn('Banned import warnings:')
+      warnings.forEach(w => warn(`  ${w}`))
     }
 
-    console.log('\nBuild complete')
+    ok('Build complete')
   })
 
 function copyNonTsFiles(src: string, dest: string) {

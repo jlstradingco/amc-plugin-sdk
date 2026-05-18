@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@amc/plugin-sdk'
+import { ok, fail, info, warn, manifestNotFound } from '../lib/output.js'
 
 export const packageCommand = new Command('package')
   .description('Bundle plugin into a .amcplugin archive')
@@ -11,21 +12,20 @@ export const packageCommand = new Command('package')
 
     const manifestPath = path.join(cwd, 'manifest.json')
     if (!fs.existsSync(manifestPath)) {
-      console.error('No manifest.json found')
-      process.exit(1)
+      manifestNotFound()
     }
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
     const result = validateManifest(manifest)
     if (!result.valid) {
-      console.error('Manifest validation failed:')
+      fail('Manifest validation failed:')
       result.errors.forEach(e => console.error(`  - ${e}`))
       process.exit(1)
     }
 
     const distDir = path.join(cwd, 'dist')
     if (!fs.existsSync(distDir)) {
-      console.log('No dist/ found, building first...')
+      info('No dist/ found, building first...')
       execSync('npx tsc', { cwd, stdio: 'inherit' })
       const srcUi = path.join(cwd, 'src', 'ui')
       const distUi = path.join(cwd, 'dist', 'ui')
@@ -73,10 +73,10 @@ export const packageCommand = new Command('package')
     const stats = fs.statSync(outputPath)
     const sizeMB = (stats.size / 1024 / 1024).toFixed(2)
 
-    console.log(`\nPackaged: ${outputName} (${sizeMB} MB)`)
+    ok(`Packaged: ${outputName} (${sizeMB} MB)`)
 
     if (stats.size > 50 * 1024 * 1024) {
-      console.warn('WARNING: Package exceeds 50 MB marketplace limit')
+      warn('Package exceeds 50 MB marketplace limit')
     }
   })
 

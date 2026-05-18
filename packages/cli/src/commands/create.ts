@@ -3,6 +3,7 @@ import prompts from 'prompts'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { execSync } from 'node:child_process'
+import { ok, fail, info, actionableError } from '../lib/output.js'
 
 const TEMPLATES = ['basic', 'with-backend', 'full'] as const
 type Template = typeof TEMPLATES[number]
@@ -42,12 +43,12 @@ export const createCommand = new Command('create')
   .action(async (name: string, opts: CreateOptions) => {
     const template = opts.template as Template
     if (!TEMPLATES.includes(template)) {
-      console.error(`Invalid template: ${template}. Choose from: ${TEMPLATES.join(', ')}`)
+      actionableError(`Invalid template: ${template}`, `Choose from: ${TEMPLATES.join(', ')}`)
       process.exit(1)
     }
 
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) {
-      console.error('Plugin name must be kebab-case (lowercase alphanumeric + hyphens)')
+      actionableError('Plugin name must be kebab-case', 'Use lowercase letters, numbers, and hyphens only.')
       process.exit(1)
     }
 
@@ -60,7 +61,7 @@ export const createCommand = new Command('create')
     const hasAllOptions = opts.displayName && opts.description && opts.author
     if (hasAllOptions) {
       if (!CATEGORIES.includes(opts.category as typeof CATEGORIES[number])) {
-        console.error(`Invalid category: ${opts.category}. Choose from: ${CATEGORIES.join(', ')}`)
+        actionableError(`Invalid category: ${opts.category}`, `Choose from: ${CATEGORIES.join(', ')}`)
         process.exit(1)
       }
       displayName = opts.displayName!
@@ -78,7 +79,7 @@ export const createCommand = new Command('create')
       ])
 
       if (!response.author) {
-        console.error('Cancelled')
+        fail('Cancelled')
         process.exit(1)
       }
 
@@ -91,11 +92,11 @@ export const createCommand = new Command('create')
 
     const targetDir = path.resolve(process.cwd(), name)
     if (fs.existsSync(targetDir)) {
-      console.error(`Directory ${name} already exists`)
+      fail(`Directory ${name} already exists`)
       process.exit(1)
     }
 
-    console.log(`\nScaffolding ${name} with template: ${template}...\n`)
+    info(`Scaffolding ${name} with template: ${template}...`)
 
     fs.mkdirSync(targetDir, { recursive: true })
 
@@ -242,7 +243,7 @@ export default activate
 
     // Install dependencies
     if (!opts.skipInstall) {
-      console.log('Installing dependencies...')
+      info('Installing dependencies...')
       execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
     }
 
@@ -253,7 +254,7 @@ export default activate
       execSync('git commit -m "Initial plugin scaffold"', { cwd: targetDir, stdio: 'pipe' })
     }
 
-    console.log(`\nPlugin scaffolded at ./${name}/`)
+    ok(`Plugin scaffolded at ./${name}/`)
     console.log('\nNext steps:')
     console.log(`  cd ${name}`)
     if (opts.skipInstall) {

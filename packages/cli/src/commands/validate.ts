@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@amc/plugin-sdk'
+import { ok, fail, manifestNotFound } from '../lib/output.js'
 
 export const validateCommand = new Command('validate')
   .description('Run all validation checks without building (CI-friendly)')
@@ -12,24 +13,23 @@ export const validateCommand = new Command('validate')
 
     const manifestPath = path.join(cwd, 'manifest.json')
     if (!fs.existsSync(manifestPath)) {
-      console.error('FAIL: No manifest.json found')
-      process.exit(1)
+      manifestNotFound()
     }
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
     const result = validateManifest(manifest)
     if (!result.valid) {
-      console.error('FAIL: Manifest validation')
+      fail('Manifest validation')
       result.errors.forEach(e => console.error(`  - ${e}`))
       hasErrors = true
     } else {
-      console.log('PASS: Manifest schema')
+      ok('Manifest schema')
     }
 
     if (manifest.sdkVersion) {
-      console.log(`PASS: SDK version declared (${manifest.sdkVersion})`)
+      ok(`SDK version declared (${manifest.sdkVersion})`)
     } else {
-      console.error('FAIL: Missing sdkVersion in manifest')
+      fail('Missing sdkVersion in manifest')
       hasErrors = true
     }
 
@@ -37,10 +37,10 @@ export const validateCommand = new Command('validate')
       const srcPath = path.join(cwd, 'src', manifest.ui.entryPoint.replace('dist/', ''))
       const distPath = path.join(cwd, manifest.ui.entryPoint)
       if (!fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-        console.error(`FAIL: UI entry point not found: ${manifest.ui.entryPoint}`)
+        fail(`UI entry point not found: ${manifest.ui.entryPoint}`)
         hasErrors = true
       } else {
-        console.log('PASS: UI entry point exists')
+        ok('UI entry point exists')
       }
     }
 
@@ -48,18 +48,18 @@ export const validateCommand = new Command('validate')
       const srcPath = path.join(cwd, 'src', manifest.backend.entryPoint.replace('dist/', '').replace('.js', '.ts'))
       const distPath = path.join(cwd, manifest.backend.entryPoint)
       if (!fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-        console.error(`FAIL: Backend entry point not found: ${manifest.backend.entryPoint}`)
+        fail(`Backend entry point not found: ${manifest.backend.entryPoint}`)
         hasErrors = true
       } else {
-        console.log('PASS: Backend entry point exists')
+        ok('Backend entry point exists')
       }
     }
 
     try {
       execSync('npx tsc --noEmit', { cwd, stdio: 'pipe' })
-      console.log('PASS: TypeScript compilation')
+      ok('TypeScript compilation')
     } catch {
-      console.error('FAIL: TypeScript compilation errors')
+      fail('TypeScript compilation errors')
       hasErrors = true
     }
 
@@ -67,20 +67,20 @@ export const validateCommand = new Command('validate')
     if (fs.existsSync(distDir)) {
       const banned = scanBannedImportsStrict(distDir)
       if (banned.length > 0) {
-        console.error('FAIL: Banned imports detected')
+        fail('Banned imports detected')
         banned.forEach(b => console.error(`  - ${b}`))
         hasErrors = true
       } else {
-        console.log('PASS: No banned imports')
+        ok('No banned imports')
       }
     }
 
     if (hasErrors) {
-      console.error('\nValidation FAILED')
+      fail('Validation failed')
       process.exit(1)
     }
 
-    console.log('\nAll checks PASSED')
+    ok('All checks passed')
   })
 
 const BANNED_PATTERNS = [
