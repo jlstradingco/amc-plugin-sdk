@@ -6,8 +6,8 @@ import { execSync } from 'node:child_process'
 const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
 
 // Cloud Function base URL — filled after deployment
-const BASE_URL = 'https://us-central1-amc-marketplace.cloudfunctions.net'
-const AUTH_PAGE_URL = 'https://amc-marketplace.web.app'
+const BASE_URL = 'https://us-central1-amc-marketplace-jls.cloudfunctions.net'
+const AUTH_PAGE_URL = 'https://amc-marketplace-jls.web.app'
 
 export interface StoredToken {
   token: string
