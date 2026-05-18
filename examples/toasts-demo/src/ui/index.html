@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Toasts Demo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        padding: 24px;
+        background: var(--surface-50, #fafafa);
+        color: var(--surface-900, #111);
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+      .subtitle {
+        color: var(--surface-500, #666);
+        margin-bottom: 24px;
+        font-size: 0.875rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid var(--surface-200, #eee);
+        background: var(--surface-0, #fff);
+      }
+      .card button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 8px;
+      }
+      .btn-success {
+        background: #16a34a;
+      }
+      .btn-success:hover {
+        background: #15803d;
+      }
+      .btn-error {
+        background: #dc2626;
+      }
+      .btn-error:hover {
+        background: #b91c1c;
+      }
+      .btn-info {
+        background: #2563eb;
+      }
+      .btn-info:hover {
+        background: #1d4ed8;
+      }
+      .btn-notify {
+        background: #7c3aed;
+      }
+      .btn-notify:hover {
+        background: #6d28d9;
+      }
+
+      .count {
+        font-size: 0.75rem;
+        color: var(--surface-400, #999);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Toasts Demo</h1>
+    <p class="subtitle">In-app toasts &amp; OS notifications</p>
+
+    <div class="grid">
+      <div class="card">
+        <button class="btn-success" id="btn-success">Success Toast</button>
+        <div class="count" id="count-success">0 clicks</div>
+      </div>
+      <div class="card">
+        <button class="btn-error" id="btn-error">Error Toast</button>
+        <div class="count" id="count-error">0 clicks</div>
+      </div>
+      <div class="card">
+        <button class="btn-info" id="btn-info">Info Toast</button>
+        <div class="count" id="count-info">0 clicks</div>
+      </div>
+      <div class="card">
+        <button class="btn-notify" id="btn-notify">OS Notification</button>
+        <div class="count" id="count-notify">0 clicks</div>
+      </div>
+    </div>
+
+    <script src="plugin.js"></script>
+  </body>
+</html>
