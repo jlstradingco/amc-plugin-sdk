@@ -1,0 +1,31 @@
+{
+  "plugin": {
+    "id": "storage-demo",
+    "name": "Storage Demo",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Demonstrates the storage and database APIs",
+    "icon": "database",
+    "category": "other",
+    "license": { "type": "free" }
+  },
+  "sdkVersion": "^1.0.0",
+  "permissions": ["storage"],
+  "settings": [],
+  "storage": {
+    "collections": {
+      "notes": {
+        "columns": {
+          "title": "text",
+          "body": "text"
+        },
+        "indexes": []
+      }
+    }
+  },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "Storage Demo", "icon": "database" }
+  }
+}
