@@ -17,7 +17,7 @@
 
 ## Overview
 
-AMC Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Agent Mission Control](https://github.com/SirPsycho828/agent-orchestrator) (AMC) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
+AMC Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Agent Mission Control](https://github.com/jlstradingco/agent-mission-control) (AMC) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
 
 The SDK gives plugin authors a sandboxed `PluginContext` with 13 capability interfaces, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
 
@@ -249,7 +249,7 @@ amc-plugin-sdk/
 
 ```bash
 # Clone the repo
-git clone https://github.com/SirPsycho828/amc-plugin-sdk.git
+git clone https://github.com/jlstradingco/amc-plugin-sdk.git
 cd amc-plugin-sdk
 
 # Install dependencies
@@ -313,10 +313,15 @@ Plugins declare required permissions in `manifest.json`. AMC enforces these at r
 | `cli` | `ctx.cli` |
 | `notifications` | `ctx.toast.notify()` (OS-level notifications) |
 
-## Docs
+## Documentation
 
-Further documentation will be available in the `docs/` directory (coming soon).
+Full documentation is available at the [AMC Plugin SDK docs site](https://jlstradingco.github.io/amc-plugin-sdk/), covering:
+
+- **[Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started)** — scaffold, build, and install your first plugin
+- **[API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/)** — all 13 capability interfaces documented
+- **[Publishing](https://jlstradingco.github.io/amc-plugin-sdk/guide/publishing)** — submit to the AMC Marketplace
+- **[Examples](https://jlstradingco.github.io/amc-plugin-sdk/examples/)** — four reference plugins with full source
 
 ## License
 
-MIT
+[MIT](LICENSE)
