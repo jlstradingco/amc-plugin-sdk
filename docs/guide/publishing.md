@@ -59,11 +59,11 @@ npx amc-plugin publish
 
 ### First-Time Authentication
 
-On first publish, the CLI opens your browser to the AMC Marketplace sign-in page at `https://amc-marketplace-jls.web.app` for GitHub OAuth authentication:
+On first publish, the CLI opens your browser to the AMC Marketplace sign-in page for GitHub OAuth authentication:
 
 ```
 Opening browser for GitHub sign-in...
-If the browser doesn't open, visit: https://amc-marketplace-jls.web.app?session=A1B2C3
+If the browser doesn't open, visit: https://marketplace.agentmc.app?session=A1B2C3
 
 Waiting for sign-in...
 .....
