@@ -24,7 +24,7 @@ export const updateCommand = new Command('update')
     info('Checking npm registry...')
     let latestVersion: string
     try {
-      const res = await globalThis.fetch('https://registry.npmjs.org/@amc/plugin-cli/latest')
+      const res = await globalThis.fetch('https://registry.npmjs.org/@agent-mc/plugin-cli/latest')
       if (!res.ok) {
         // Package not published yet — expected for private repo
         info('Package not found on npm (private repo — install via git)')
@@ -51,12 +51,12 @@ export const updateCommand = new Command('update')
 
     info(`Updating ${currentVersion} → ${latestVersion}...`)
     try {
-      execSync('npm install -g @amc/plugin-cli@latest', { stdio: 'inherit' })
+      execSync('npm install -g @agent-mc/plugin-cli@latest', { stdio: 'inherit' })
       ok(`Updated to ${latestVersion}`)
     } catch {
       actionableError(
         'Update failed',
-        "Try running with sudo: 'sudo npm install -g @amc/plugin-cli@latest'"
+        "Try running with sudo: 'sudo npm install -g @agent-mc/plugin-cli@latest'"
       )
       process.exit(1)
     }

@@ -46,11 +46,11 @@ describe('Plugin lifecycle E2E', () => {
 
   beforeAll(() => {
     // Build SDK and CLI so dist/ artifacts are current
-    execSync('pnpm --filter @amc/plugin-sdk build', {
+    execSync('pnpm --filter @agent-mc/plugin-sdk build', {
       cwd: monorepoRoot,
       stdio: 'pipe',
     })
-    execSync('pnpm --filter @amc/plugin-cli build', {
+    execSync('pnpm --filter @agent-mc/plugin-cli build', {
       cwd: monorepoRoot,
       stdio: 'pipe',
     })
@@ -103,7 +103,7 @@ describe('Plugin lifecycle E2E', () => {
 
   it('builds successfully', () => {
     // Since we used --skip-install, wire up node_modules manually so
-    // tsc can resolve '@amc/plugin-sdk' types and the 'typescript' compiler
+    // tsc can resolve '@agent-mc/plugin-sdk' types and the 'typescript' compiler
     setupPluginNodeModules(pluginDir)
 
     execSync(`node "${cliDist}" build`, { cwd: pluginDir, stdio: 'pipe' })

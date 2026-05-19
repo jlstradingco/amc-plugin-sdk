@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { validateManifest } from '@amc/plugin-sdk'
+import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, filePath, manifestNotFound, actionableError } from '../lib/output.js'
 
 const require = createRequire(import.meta.url)
@@ -65,11 +65,11 @@ export const devCommand = new Command('dev')
     // Find dev-shell entry point
     let shellEntry: string
     try {
-      shellEntry = require.resolve('@amc/plugin-dev-shell')
+      shellEntry = require.resolve('@agent-mc/plugin-dev-shell')
     } catch {
       actionableError(
-        '@amc/plugin-dev-shell not found',
-        "Install it with 'pnpm add -D @amc/plugin-dev-shell' or run from the SDK monorepo."
+        '@agent-mc/plugin-dev-shell not found',
+        "Install it with 'pnpm add -D @agent-mc/plugin-dev-shell' or run from the SDK monorepo."
       )
       process.exit(1)
     }

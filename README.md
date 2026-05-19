@@ -78,7 +78,7 @@ Build and validate commands scan compiled output for forbidden imports (`electro
 
 ```bash
 # 1. Install the CLI globally
-npm install -g @amc/plugin-cli
+npm install -g @agent-mc/plugin-cli
 
 # 2. Scaffold a new plugin
 amc-plugin create my-plugin --template with-backend
@@ -123,7 +123,7 @@ UI plugins also get `window.AgentMC` — a browser-side bridge exposing `storage
 Backend modules export an `activate` function that receives `PluginContext` and returns a `PluginBackend`:
 
 ```typescript
-import type { PluginActivate } from '@amc/plugin-sdk'
+import type { PluginActivate } from '@agent-mc/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => {
   return {
@@ -177,7 +177,7 @@ Every plugin requires a `manifest.json` at the project root:
 }
 ```
 
-Validated at build time by Zod schemas — see `manifestSchema` in `@amc/plugin-sdk/validators`.
+Validated at build time by Zod schemas — see `manifestSchema` in `@agent-mc/plugin-sdk/validators`.
 
 ## CLI Commands
 
@@ -203,7 +203,7 @@ Validated at build time by Zod schemas — see `manifestSchema` in `@amc/plugin-
 ```
 amc-plugin-sdk/
 ├── packages/
-│   ├── sdk/                      # @amc/plugin-sdk
+│   ├── sdk/                      # @agent-mc/plugin-sdk
 │   │   ├── src/
 │   │   │   ├── index.ts          # Barrel exports (types + validators)
 │   │   │   ├── types/
@@ -215,7 +215,7 @@ amc-plugin-sdk/
 │   │   │       └── manifest.ts   # Zod schema + validateManifest()
 │   │   └── package.json
 │   │
-│   ├── cli/                      # @amc/plugin-cli
+│   ├── cli/                      # @agent-mc/plugin-cli
 │   │   ├── src/
 │   │   │   ├── index.ts          # CLI entry point (commander program)
 │   │   │   └── commands/
@@ -225,7 +225,7 @@ amc-plugin-sdk/
 │   │   │       └── package.ts    # .amcplugin archive bundler
 │   │   └── package.json
 │   │
-│   └── dev-shell/                # @amc/plugin-dev-shell
+│   └── dev-shell/                # @agent-mc/plugin-dev-shell
 │       ├── src/
 │       │   ├── shell-window.ts   # Electron BrowserWindow host
 │       │   ├── mock-context.ts   # Full MockPluginContext (in-memory)
@@ -266,37 +266,37 @@ pnpm test
 
 ```bash
 # Build a specific package
-pnpm --filter @amc/plugin-sdk build
+pnpm --filter @agent-mc/plugin-sdk build
 
 # Watch mode for the CLI
-pnpm --filter @amc/plugin-cli dev
+pnpm --filter @agent-mc/plugin-cli dev
 
 # Run SDK tests
-pnpm --filter @amc/plugin-sdk test
+pnpm --filter @agent-mc/plugin-sdk test
 ```
 
 ### Using in a Plugin Project
 
 ```bash
-npm install @amc/plugin-sdk --save-dev
+npm install @agent-mc/plugin-sdk --save-dev
 ```
 
 Import types for backend modules:
 
 ```typescript
-import type { PluginActivate, PluginContext } from '@amc/plugin-sdk'
+import type { PluginActivate, PluginContext } from '@agent-mc/plugin-sdk'
 ```
 
 Import types for UI code (browser-side bridge):
 
 ```typescript
-import type { AgentMC } from '@amc/plugin-sdk/browser'
+import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
 ```
 
 Import validators for CI or custom tooling:
 
 ```typescript
-import { validateManifest } from '@amc/plugin-sdk/validators'
+import { validateManifest } from '@agent-mc/plugin-sdk/validators'
 ```
 
 ## Permissions

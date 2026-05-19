@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
-import { validateManifest } from '@amc/plugin-sdk'
+import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, warn, manifestNotFound } from '../lib/output.js'
 
 export const packageCommand = new Command('package')

@@ -1,4 +1,4 @@
-import type { PluginActivate, PluginContext } from '@amc/plugin-sdk'
+import type { PluginActivate, PluginContext } from '@agent-mc/plugin-sdk'
 
 interface GitHubIssue {
   number: number

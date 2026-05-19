@@ -1,5 +1,5 @@
 {
-  "name": "@amc/plugin-cli",
+  "name": "@agent-mc/plugin-cli",
   "version": "1.0.0",
   "description": "CLI tool for building AMC plugins",
   "type": "module",
@@ -16,7 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@amc/plugin-sdk": "workspace:*",
+    "@agent-mc/plugin-sdk": "workspace:*",
     "archiver": "^8.0.0",
     "chalk": "^5.4.0",
     "commander": "^12.0.0",

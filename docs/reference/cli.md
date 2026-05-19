@@ -5,7 +5,7 @@ The `amc-plugin` CLI is a Commander.js-based tool for building, validating, pack
 ## Install
 
 ```bash
-npm install -g @amc/plugin-cli
+npm install -g @agent-mc/plugin-cli
 ```
 
 ---
@@ -334,7 +334,7 @@ amc-plugin info --json
 
 ### `update`
 
-Self-update the `@amc/plugin-cli` package to the latest version.
+Self-update the `@agent-mc/plugin-cli` package to the latest version.
 
 **Usage:**
 
@@ -355,7 +355,7 @@ amc-plugin update --check
 # Current: 1.0.0, Latest: 1.2.0 — update available
 
 amc-plugin update
-# Updated @amc/plugin-cli to 1.2.0
+# Updated @agent-mc/plugin-cli to 1.2.0
 ```
 
 **Exit codes:** `0` success (or already up to date), `1` update failed.

@@ -1,4 +1,4 @@
-import type { AgentMC } from '@amc/plugin-sdk/browser'
+import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
 
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 

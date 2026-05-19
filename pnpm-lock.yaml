@@ -22,7 +22,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@amc/plugin-sdk':
+      '@agent-mc/plugin-sdk':
         specifier: workspace:*
         version: link:../sdk
       archiver:
@@ -53,7 +53,7 @@ importers:
 
   packages/dev-shell:
     dependencies:
-      '@amc/plugin-sdk':
+      '@agent-mc/plugin-sdk':
         specifier: workspace:*
         version: link:../sdk
       chokidar:

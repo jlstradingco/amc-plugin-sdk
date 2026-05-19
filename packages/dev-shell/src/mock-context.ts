@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import type { PluginContext } from '@amc/plugin-sdk'
+import type { PluginContext } from '@agent-mc/plugin-sdk'
 
 interface MockContextOptions {
   pluginId: string

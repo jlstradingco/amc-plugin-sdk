@@ -1,5 +1,5 @@
 {
-  "name": "@amc/plugin-sdk",
+  "name": "@agent-mc/plugin-sdk",
   "version": "1.0.0",
   "description": "SDK for building Agent Mission Control plugins",
   "type": "module",

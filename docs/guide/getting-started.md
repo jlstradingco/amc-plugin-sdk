@@ -13,7 +13,7 @@ Build and install your first AMC plugin in under five minutes.
 Install the AMC Plugin CLI globally:
 
 ```bash
-npm install -g @amc/plugin-cli
+npm install -g @agent-mc/plugin-cli
 ```
 
 Verify the installation:

@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { validateManifest } from '@amc/plugin-sdk'
+import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, label, heading, manifestNotFound } from '../lib/output.js'
 import { getStoredToken } from '../lib/auth.js'
 import { getMyPlugins } from '../lib/marketplace-api.js'

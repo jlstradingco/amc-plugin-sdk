@@ -146,7 +146,7 @@ export const createCommand = new Command('create')
 </body>
 </html>`)
 
-    fs.writeFileSync(path.join(targetDir, 'src', 'ui', 'plugin.ts'), `import type { AgentMC } from '@amc/plugin-sdk/browser'
+    fs.writeFileSync(path.join(targetDir, 'src', 'ui', 'plugin.ts'), `import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
 
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
@@ -165,7 +165,7 @@ init()
 
       fs.mkdirSync(path.join(targetDir, 'src', 'backend'), { recursive: true })
 
-      fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.ts'), `import type { PluginActivate } from '@amc/plugin-sdk'
+      fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.ts'), `import type { PluginActivate } from '@agent-mc/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => {
   return {
@@ -217,7 +217,7 @@ export default activate
         validate: 'amc-plugin validate',
       },
       devDependencies: {
-        '@amc/plugin-sdk': '^1.0.0',
+        '@agent-mc/plugin-sdk': '^1.0.0',
         'typescript': '^5.5.0',
       },
     }, null, 2))

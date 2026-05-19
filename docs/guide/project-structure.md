@@ -78,13 +78,13 @@ Standard npm project file. The scaffolder generates it with the build, dev, pack
     "validate": "amc-plugin validate"
   },
   "devDependencies": {
-    "@amc/plugin-sdk": "^1.0.0",
+    "@agent-mc/plugin-sdk": "^1.0.0",
     "typescript": "^5.5.0"
   }
 }
 ```
 
-The `@amc/plugin-sdk` package provides TypeScript types for both the backend (`PluginContext`, `PluginActivate`, `PluginBackend`) and the frontend (`AgentMC` bridge). It is a dev dependency only -- it is not bundled into your plugin at runtime.
+The `@agent-mc/plugin-sdk` package provides TypeScript types for both the backend (`PluginContext`, `PluginActivate`, `PluginBackend`) and the frontend (`AgentMC` bridge). It is a dev dependency only -- it is not bundled into your plugin at runtime.
 
 ### `tsconfig.json` (required)
 
@@ -143,7 +143,7 @@ AMC injects CSS custom properties (`--surface-50`, `--surface-900`, etc.) into t
 TypeScript for your UI logic. Access AMC APIs through `window.AgentMC`:
 
 ```typescript
-import type { AgentMC } from '@amc/plugin-sdk/browser'
+import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
 
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
@@ -162,7 +162,7 @@ The `AgentMC` bridge is injected into the webview by AMC before your script runs
 The backend module runs in a sandboxed Node.js worker inside AMC's main process. It exports an `activate` function that receives a `PluginContext` and returns a `PluginBackend` with lifecycle hooks:
 
 ```typescript
-import type { PluginActivate } from '@amc/plugin-sdk'
+import type { PluginActivate } from '@agent-mc/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => {
   return {

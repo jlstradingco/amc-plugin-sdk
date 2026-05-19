@@ -26,7 +26,7 @@ The AMC Plugin SDK exposes 13 APIs to plugins. Some are available on both the fr
 
 ```typescript
 // src/backend/index.ts
-import type { PluginContext } from '@amc/plugin-sdk'
+import type { PluginContext } from '@agent-mc/plugin-sdk'
 
 export function activate(ctx: PluginContext) {
   ctx.storage.set('initialized', true)
