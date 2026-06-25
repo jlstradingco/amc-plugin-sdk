@@ -110,6 +110,71 @@ export interface PluginToast {
   notify(opts: { title: string; body: string }): void
 }
 
+export interface PluginAuthUser {
+  uid: string
+  email: string
+  displayName: string | null
+  photoURL: string | null
+}
+
+export interface PluginAuthSession {
+  provider: 'google' | 'github'
+  accessToken: string
+  scopes: string[]
+  /** Epoch ms — the plugin should re-request near/after this.
+   *  For providers without native expiry (GitHub), the broker sets a synthetic 8h TTL. */
+  expiresAt: number
+  account: { uid: string; email: string }
+}
+
+export interface PluginAuth {
+  getUser(): Promise<PluginAuthUser | null>
+  getGoogleIdToken(): Promise<string | null>
+  isAuthenticated(): Promise<boolean>
+  onAuthStateChange(handler: (user: PluginAuthUser | null) => void): () => void
+  requestSignIn(): Promise<{ success: boolean }>
+  getSession(
+    provider: 'google' | 'github',
+    scopes: string[],
+    options?: { createIfNone?: boolean; forceNewSession?: boolean }
+  ): Promise<PluginAuthSession | null>
+}
+
+export interface InboxItem {
+  id: string
+  title: string
+  body?: string
+  icon?: string
+  priority?: 'low' | 'normal' | 'high'
+  actionLabel?: string
+  actionId?: string
+  timestamp?: string
+}
+
+export interface PluginInbox {
+  setItems(items: InboxItem[]): Promise<void>
+}
+
+export interface RecordingHandle {
+  recordingId: string
+}
+
+export interface Recording {
+  id: string
+  filename: string
+  durationMs: number
+  createdAt: string
+  sizeBytes: number
+}
+
+export interface PluginRecording {
+  start(options?: { source?: 'screen' | 'window' | 'tab' }): Promise<RecordingHandle>
+  stop(handle: RecordingHandle): Promise<{ recordingId: string }>
+  list(): Promise<Recording[]>
+  getShareUrl(recordingId: string): Promise<string>
+  delete(recordingId: string): Promise<void>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -127,4 +192,7 @@ export interface PluginContext {
   cli: PluginCli
   sidebar: PluginSidebar
   toast: PluginToast
+  inbox: PluginInbox
+  auth: PluginAuth
+  recording: PluginRecording
 }
