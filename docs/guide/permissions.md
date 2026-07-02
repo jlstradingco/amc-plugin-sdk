@@ -4,7 +4,7 @@ Plugins declare the permissions they need in `manifest.json`. AMC shows these to
 
 ## Permission Model
 
-There are **7 permissions** that gate access to specific API surfaces. Some APIs are available to every plugin without any permission declaration.
+There are **8 permissions** that gate access to specific API surfaces. Some APIs are available to every plugin without any permission declaration.
 
 ### Always Available (No Permission Needed)
 
@@ -225,6 +225,24 @@ ctx.toast.notify({
 
 Note that `ctx.toast.show()` (in-app toasts) is available without this permission. The `notifications` permission is only required for `ctx.toast.notify()`, which triggers a native OS notification.
 
+### `rss`
+
+**Grants access to:** AMC's built-in RSS feed data
+
+Allows the plugin to read RSS feeds and articles managed by AMC's Channels system:
+
+```typescript
+// Fetch articles from a specific feed
+const articles = await ctx.rss.getArticles({ feedId: 'abc-123', limit: 20 })
+
+// Get all configured feeds
+const feeds = await ctx.rss.getFeeds()
+```
+
+Plugins that source content from RSS feeds (e.g. newsletter builders, digest generators) should declare this permission.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -248,4 +266,5 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on AMC's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
+| `rss` | `PluginRss` | Read RSS feeds and articles from AMC's Channels |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |

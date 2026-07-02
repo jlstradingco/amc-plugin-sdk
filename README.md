@@ -150,7 +150,7 @@ Every plugin requires a `manifest.json` at the project root:
     "version": "1.0.0",
     "author": "Your Name",
     "description": "What it does",
-    "icon": "puzzle",             // Lucide icon name
+    "icon": "icon.png",           // Image file (png/jpg/svg/webp) or Lucide icon name
     "category": "productivity",   // planning | development | testing | devops | productivity | other
     "license": { "type": "free" } // free | paid | trial
   },
@@ -312,6 +312,7 @@ Plugins declare required permissions in `manifest.json`. AMC enforces these at r
 | `cron` | `ctx.cron` |
 | `cli` | `ctx.cli` |
 | `notifications` | `ctx.toast.notify()` (OS-level notifications) |
+| `rss` | AMC's built-in RSS feed data |
 
 ## Documentation
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander'
+import { createRequire } from 'node:module'
 import { createCommand } from './commands/create.js'
 import { buildCommand } from './commands/build.js'
 import { validateCommand } from './commands/validate.js'
@@ -13,12 +14,15 @@ import { devCommand } from './commands/dev.js'
 import { infoCommand } from './commands/info.js'
 import { updateCommand } from './commands/update.js'
 
+const require = createRequire(import.meta.url)
+const { version } = require('../package.json')
+
 const program = new Command()
 
 program
   .name('amc-plugin')
   .description('CLI tool for building Agent Mission Control plugins')
-  .version('1.0.0')
+  .version(version)
 
 program.addCommand(createCommand)
 program.addCommand(buildCommand)

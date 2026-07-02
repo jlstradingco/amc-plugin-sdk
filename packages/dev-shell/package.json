@@ -1,7 +1,6 @@
 {
   "name": "@agent-mc/plugin-dev-shell",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
   "main": "./dist/shell-window.js",
   "scripts": {
@@ -11,7 +10,7 @@
     "start": "electron ./dist/shell-window.js"
   },
   "dependencies": {
-    "@agent-mc/plugin-sdk": "workspace:*",
+    "@agent-mc/plugin-sdk": "^1.0.0",
     "chokidar": "^4.0.0"
   },
   "devDependencies": {

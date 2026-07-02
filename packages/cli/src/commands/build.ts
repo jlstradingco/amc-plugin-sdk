@@ -62,11 +62,7 @@ function copyNonTsFiles(src: string, dest: string) {
 
 const BANNED_PATTERNS = [
   /require\(['"]electron['"]\)/,
-  /require\(['"]child_process['"]\)/,
-  /require\(['"]node:child_process['"]\)/,
   /from\s+['"]electron['"]/,
-  /from\s+['"]child_process['"]/,
-  /from\s+['"]node:child_process['"]/,
   /require\(['"]better-sqlite3['"]\)/,
   /require\(['"]node:worker_threads['"]\)/,
 ]
