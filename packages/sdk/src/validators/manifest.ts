@@ -84,7 +84,7 @@ const resourceLimitsSchema = z.object({
 
 const permissionSchema = z.enum([
   'storage', 'sessions', 'ai', 'network', 'cron', 'cli', 'notifications',
-  'rss', 'auth', 'auth.session', 'recording',
+  'rss', 'auth', 'auth.session', 'recording', 'navigation',
 ])
 
 export const manifestSchema = z.object({
