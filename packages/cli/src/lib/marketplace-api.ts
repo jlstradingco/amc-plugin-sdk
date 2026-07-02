@@ -38,11 +38,35 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export interface SecurityFinding {
+  ruleId: string
+  severity: 'critical' | 'warning' | 'info'
+  file: string
+  line: number
+  snippet: string
+}
+
+export interface UploadResult {
+  submissionId: string
+  status: string
+  message?: string
+  securityReport?: {
+    severitySummary: { critical: number; warning: number; info: number }
+    findings: SecurityFinding[]
+    externalUrls: string[]
+    cdnDependencies: string[]
+  }
+  validationResults?: {
+    passed: boolean
+    checks: Array<{ id: string; passed: boolean; message?: string }>
+  }
+}
+
 export async function uploadPackage(
   token: StoredToken,
   packagePath: string,
   changelog: string
-): Promise<{ submissionId: string; status: string }> {
+): Promise<UploadResult> {
   const fileBuffer = fs.readFileSync(packagePath)
   const fileName = path.basename(packagePath)
 

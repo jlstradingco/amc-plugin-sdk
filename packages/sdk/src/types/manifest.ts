@@ -65,6 +65,7 @@ export type PluginPermission =
   | 'auth'
   | 'auth.session'
   | 'recording'
+  | 'inbox'
   | 'navigation'
 
 export interface PluginCliEndpoint {

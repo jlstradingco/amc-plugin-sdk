@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginSidebar, PluginToast, PluginAi } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording } from './context.js'
 
 export interface BridgeTheme {
   get(): { mode: string; visualTheme: string }
@@ -48,6 +48,9 @@ export interface AgentMC {
   project: BridgeProject
   sidebar: PluginSidebar
   assets: BridgeAssets
+  inbox: PluginInbox
+  auth: PluginAuth
+  recording: PluginRecording
 }
 
 declare global {

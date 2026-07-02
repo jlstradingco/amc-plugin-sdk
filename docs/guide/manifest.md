@@ -42,7 +42,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
     "version": "1.0.0",
     "author": "Your Name",
     "description": "Does something useful",
-    "icon": "puzzle",
+    "icon": "icon.png",
     "category": "development",
     "license": { "type": "free" },
     "minAppVersion": "0.1.30"
@@ -57,13 +57,41 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `version` | string | Yes | Semver version (e.g. `"1.0.0"`) |
 | `author` | string | Yes | Author name or organization |
 | `description` | string | Yes | Short description shown in the marketplace |
-| `icon` | string | Yes | [Lucide](https://lucide.dev/icons) icon name |
+| `icon` | string | Yes | Image filename (e.g. `"icon.png"`) or [Lucide](https://lucide.dev/icons) icon name as fallback |
 | `category` | string | Yes | One of: `planning`, `development`, `testing`, `devops`, `productivity`, `other` |
 | `license` | object | Yes | `{ "type": "free" }`, `{ "type": "paid" }`, or `{ "type": "trial" }` |
 | `minAppVersion` | string | No | Minimum AMC version required to run this plugin |
 
 ::: warning
 The `id` field is permanent. It is used as the storage namespace, database prefix, and marketplace identifier. Changing it after publishing creates a new, separate plugin.
+:::
+
+### Plugin Icon
+
+Your plugin's icon appears in the Marketplace card (40 × 40 px) and detail page (56 × 56 px). To include a custom icon:
+
+1. Place an image file in your plugin's root directory (alongside `manifest.json`)
+2. Reference it in the `icon` field:
+
+```json
+{
+  "plugin": {
+    "id": "my-plugin",
+    "name": "My Plugin",
+    "icon": "icon.png",
+    ...
+  }
+}
+```
+
+**Supported formats:** PNG, JPG, SVG, WebP
+
+**Recommended:** 128 × 128 px PNG with a transparent background. The image is displayed at 40 px in Marketplace cards and 56 px in the detail view, so a 128 px source gives crisp rendering on high-DPI screens.
+
+When you upload your plugin to the Marketplace, AMC automatically extracts the icon from the package and hosts it. If no image file is found, AMC falls back to showing the first letter of the plugin name.
+
+::: tip
+You can still use a [Lucide](https://lucide.dev/icons) icon name (e.g. `"puzzle"`) as a lightweight fallback, but an image file gives your plugin a distinctive look in the Marketplace.
 :::
 
 ## `settings` Array
@@ -328,7 +356,7 @@ List the permissions your plugin needs. AMC shows these to the user during insta
 
 ```json
 {
-  "permissions": ["storage", "sessions", "ai", "network", "cron", "cli", "notifications"]
+  "permissions": ["storage", "sessions", "ai", "network", "cron", "cli", "notifications", "rss"]
 }
 ```
 

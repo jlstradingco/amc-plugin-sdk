@@ -152,5 +152,30 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [notify] ${notifyOpts.title}: ${notifyOpts.body}`)
       },
     },
+
+    inbox: {
+      setItems: (items) => {
+        if (shouldLog) console.log(`${prefix} [inbox] setItems(${items.length} items)`)
+        return Promise.resolve()
+      },
+    },
+
+    auth: {
+      getUser: () => Promise.resolve(null),
+      getGoogleIdToken: () => Promise.resolve(null),
+      isAuthenticated: () => Promise.resolve(false),
+      onAuthStateChange: () => () => {},
+      requestSignIn: () => Promise.resolve({ success: false }),
+      getSession: () => Promise.resolve(null),
+    },
+
+    recording: {
+      start: () => Promise.resolve({ recordingId: `mock-recording-${Date.now()}` }),
+      stop: (handle) => Promise.resolve({ recordingId: handle.recordingId }),
+      list: () => Promise.resolve([]),
+      getShareUrl: (recordingId) =>
+        Promise.resolve(`https://mock.local/recordings/${recordingId}`),
+      delete: () => Promise.resolve(),
+    },
   }
 }
