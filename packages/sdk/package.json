@@ -1,6 +1,6 @@
 {
   "name": "@agent-mc/plugin-sdk",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "SDK for building Agent Mission Control plugins",
   "type": "module",
   "main": "./dist/index.js",
