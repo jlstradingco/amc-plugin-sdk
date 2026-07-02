@@ -61,6 +61,11 @@ export type PluginPermission =
   | 'cron'
   | 'cli'
   | 'notifications'
+  | 'rss'
+  | 'auth'
+  | 'auth.session'
+  | 'recording'
+  | 'navigation'
 
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'

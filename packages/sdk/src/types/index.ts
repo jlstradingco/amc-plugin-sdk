@@ -11,6 +11,8 @@ export type {
   PluginStorage, PluginDb, PluginSettings, PluginLogger, PluginEvents,
   PluginSessions, PluginAi, PluginFs, PluginHttp, PluginCron, PluginCli,
   PluginSidebar, PluginToast, PluginContext,
+  PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, PluginInbox,
+  RecordingHandle, Recording, PluginRecording,
 } from './context.js'
 
 export type { PluginBackend, PluginActivate } from './backend.js'
