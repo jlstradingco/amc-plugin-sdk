@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
+import { randomBytes } from 'node:crypto'
 import { execSync } from 'node:child_process'
 
 const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
@@ -53,8 +54,10 @@ export async function authenticate(): Promise<StoredToken> {
   const existing = getStoredToken()
   if (existing) return existing
 
-  // Generate session ID for polling
-  const sessionId = Math.random().toString(36).substring(2, 8).toUpperCase()
+  // Generate session ID for polling. The server's getAuthSession endpoint
+  // (RT-F008 hardening) rejects any id that doesn't match /^[A-Za-z0-9_-]{20,200}$/,
+  // so mint 24 hex chars — matching the length the endpoint documents as expected.
+  const sessionId = randomBytes(12).toString('hex')
   const authUrl = `${AUTH_PAGE_URL}?session=${sessionId}`
 
   console.log('\nOpening browser for GitHub sign-in...')
