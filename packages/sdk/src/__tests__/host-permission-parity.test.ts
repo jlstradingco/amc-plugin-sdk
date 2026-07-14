@@ -3,6 +3,7 @@ import { PLUGIN_PERMISSIONS, manifestSchema } from '../index.js'
 import {
   HOST_PERMISSIONS,
   SDK_AHEAD_PERMISSIONS,
+  BRIDGE_PENDING_PERMISSIONS,
   KNOWN_TYPE_DELTAS,
 } from './fixtures/host-permission-mirror.js'
 
@@ -10,6 +11,7 @@ describe('SDK <-> host permission parity', () => {
   const sdk = new Set<string>(PLUGIN_PERMISSIONS)
   const host = new Set<string>(HOST_PERMISSIONS)
   const sdkAhead = new Set<string>(SDK_AHEAD_PERMISSIONS)
+  const bridgePending = new Set<string>(BRIDGE_PENDING_PERMISSIONS)
 
   it('exports a non-empty runtime permission list', () => {
     expect(PLUGIN_PERMISSIONS.length).toBeGreaterThan(0)
@@ -35,6 +37,13 @@ describe('SDK <-> host permission parity', () => {
   it('every documented SDK-ahead permission is actually exposed by the SDK', () => {
     const dangling = [...sdkAhead].filter((p) => !sdk.has(p))
     expect(dangling).toEqual([])
+  })
+
+  it('every bridge-pending permission is recognized by BOTH sides (set parity holds)', () => {
+    // Bridge-pending permissions are a runtime namespace gap, NOT a permission
+    // -set gap: both the SDK and the host must still recognize the string.
+    const notRecognized = [...bridgePending].filter((p) => !sdk.has(p) || !host.has(p))
+    expect(notRecognized).toEqual([])
   })
 
   it('the Zod manifest schema accepts exactly the runtime permission list', () => {

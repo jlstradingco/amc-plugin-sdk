@@ -263,8 +263,8 @@ Lets a plugin's UI integrate with AMC's own chrome — contributing toolbar/cont
 
 **Grants access to:** `PluginRecording` (screen-recording control)
 
-::: warning SDK-ahead
-This permission and the `ctx.recording` namespace are defined by the SDK so plugin authors can target them, but the host does not yet wire a recording bridge — requesting it is currently inert. It is a tracked known-delta (see the SDK↔host parity guard) pending a future host release.
+::: warning Bridge pending
+The `recording` permission is recognized and described by the host, but the backend `ctx.recording` namespace is not yet wired — a call is currently inert. It is a tracked known-delta (see the SDK↔host parity guard) pending a future host release that connects the bridge.
 :::
 
 ---
@@ -297,7 +297,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `auth` | `PluginAuth` (identity) | Read the signed-in user's identity + Google ID token |
 | `auth.session` | `PluginAuth.getSession()` | Read the active auth session |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
-| `recording` | `PluginRecording` | Screen-recording control — **SDK-ahead, not yet gated by the host** |
+| `recording` | `PluginRecording` | Screen-recording control — recognized, but **the host bridge is not yet wired (calls are inert)** |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
 | `navigation` | In-app navigation | Navigate the user within AMC |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |
