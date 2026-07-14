@@ -10,7 +10,7 @@
     "license": { "type": "free" },
     "minAppVersion": "0.1.40"
   },
-  "sdkVersion": "^1.0.0",
+  "sdkVersion": "^1.0.7",
   "permissions": ["sessions"],
   "settings": [],
   "storage": { "collections": {} },

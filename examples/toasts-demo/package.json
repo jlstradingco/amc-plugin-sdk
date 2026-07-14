@@ -10,7 +10,7 @@
     "validate": "amc-plugin validate"
   },
   "devDependencies": {
-    "@agent-mc/plugin-sdk": "^1.0.0",
-    "typescript": "^5.5.0"
+    "@agent-mc/plugin-sdk": "^1.0.7",
+    "typescript": "^5.9.0"
   }
 }

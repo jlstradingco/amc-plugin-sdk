@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Review Inbox</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        padding: 24px;
+        background: var(--surface-50, #fafafa);
+        color: var(--surface-900, #111);
+      }
+      h1 { font-size: 1.5rem; margin-bottom: 4px; }
+      .subtitle { color: var(--surface-500, #666); margin-bottom: 16px; font-size: 0.875rem; }
+      .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+      .btn-refresh {
+        padding: 6px 14px;
+        border: 1px solid var(--surface-300, #ddd);
+        border-radius: 8px;
+        background: var(--surface-0, #fff);
+        cursor: pointer; font-size: 0.8rem;
+        color: var(--surface-700, #333);
+      }
+      .review-list { list-style: none; }
+      .review-item {
+        display: flex; align-items: flex-start; gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--surface-200, #eee);
+        border-radius: 8px; margin-bottom: 8px;
+        background: var(--surface-0, #fff);
+      }
+      .review-content { flex: 1; }
+      .review-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+      .review-meta { font-size: 0.75rem; color: var(--surface-500); display: flex; gap: 12px; }
+      .repo-badge {
+        display: inline-block; padding: 1px 8px; border-radius: 12px;
+        font-size: 0.7rem; background: #dbeafe; color: #1e40af;
+      }
+      .empty { text-align: center; padding: 40px; color: var(--surface-400, #999); }
+    </style>
+  </head>
+  <body>
+    <h1>Review Inbox</h1>
+    <p class="subtitle" id="last-sync">Pull requests awaiting your review</p>
+    <div class="toolbar">
+      <button class="btn-refresh" id="refresh-btn">Refresh</button>
+    </div>
+    <ul class="review-list" id="review-list">
+      <li class="empty">Loading…</li>
+    </ul>
+    <script src="plugin.js"></script>
+  </body>
+</html>

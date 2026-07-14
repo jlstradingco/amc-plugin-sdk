@@ -1,0 +1,50 @@
+{
+  "plugin": {
+    "id": "review-inbox",
+    "name": "Review Inbox",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Surfaces GitHub pull requests awaiting your review in AMC's Inbox",
+    "icon": "git-pull-request",
+    "category": "development",
+    "license": { "type": "free" },
+    "minAppVersion": "0.1.40"
+  },
+  "sdkVersion": "^1.0.7",
+  "permissions": ["storage", "network", "cron", "auth", "auth.session", "inbox"],
+  "settings": [],
+  "storage": {
+    "collections": {
+      "reviews": {
+        "columns": {
+          "number": "integer",
+          "title": "text",
+          "repo": "text",
+          "url": "text",
+          "author": "text",
+          "updated_at": "text"
+        },
+        "indexes": ["number"]
+      }
+    }
+  },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "Review Inbox", "icon": "git-pull-request" }
+  },
+  "backend": {
+    "entryPoint": "dist/backend/index.js"
+  },
+  "cron": {
+    "jobs": [
+      {
+        "id": "sync-reviews",
+        "label": "Sync review requests",
+        "schedule": "*/10 * * * *",
+        "description": "Fetch pull requests awaiting your review",
+        "approvalRequired": false
+      }
+    ]
+  }
+}
