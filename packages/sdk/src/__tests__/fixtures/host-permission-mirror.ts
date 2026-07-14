@@ -10,8 +10,13 @@
 // host adds/removes a permission, update this mirror in the SAME change that
 // updates the SDK enum, then reconcile the allow-lists below.
 //
+// SOURCE OF TRUTH (host repo, current): the host moved the `PluginPermission`
+// union into src/shared/plugin-permissions.ts (PLUGIN_PERMISSION_INFO keys);
+// plugin-permission-map.ts re-exports it. Mirror that file's keys here.
+//
 // Last reconciled: 2026-07-14 with the paired host PR that recognizes the
-// `recording` permission (host permission-map union: 15 permissions).
+// `recording` permission (host union: 16 permissions, incl. host-ahead
+// `firebase`).
 
 /** The exact permission strings the host recognizes and gates. */
 export const HOST_PERMISSIONS = [
@@ -29,6 +34,7 @@ export const HOST_PERMISSIONS = [
   'inbox',
   'navigation',
   'chrome',
+  'firebase',
   'recording',
 ] as const
 
@@ -42,6 +48,19 @@ export const HOST_PERMISSIONS = [
  * that is a namespace-wiring gap, not a permission-set gap.
  */
 export const SDK_AHEAD_PERMISSIONS = [] as const
+
+/**
+ * Permissions the HOST gates that the SDK does NOT yet expose to external
+ * authors (host-ahead). These are recognized + consented by the host but have
+ * no typed SDK `ctx` namespace, so a plugin built with this SDK cannot request
+ * them. Tracked so the gap is named, not silently tolerated.
+ *
+ * - `firebase`: the host enumerates the user's Firebase accounts / projects and
+ *   starts a login. There is no SDK `ctx.firebase` namespace yet, so exposing
+ *   the permission string alone would let a plugin declare a capability it can
+ *   never actually call. Deferred to a future SDK PR that adds the namespace.
+ */
+export const HOST_AHEAD_PERMISSIONS = ['firebase'] as const
 
 /**
  * Permissions whose string is recognized+gated by both sides, but whose backend
