@@ -6,12 +6,14 @@ import { authenticate, getStoredToken } from '../lib/auth.js'
 import { uploadPackage, getMyPlugins, MarketplaceApiError } from '../lib/marketplace-api.js'
 import type { SecurityFinding, UploadResult } from '../lib/marketplace-api.js'
 import { ok, fail, info, warn, heading } from '../lib/output.js'
+import { runPreflight, renderPreflight } from './preflight.js'
 
 export const publishCommand = new Command('publish')
   .description('Upload plugin to the AMC Marketplace for review')
   .option('--changelog <text>', 'Changelog for this version')
   .option('--watch', 'Poll until submission is approved or rejected')
-  .action(async (opts: { changelog?: string; watch?: boolean }) => {
+  .option('--skip-preflight', 'Skip the pre-upload readiness checks')
+  .action(async (opts: { changelog?: string; watch?: boolean; skipPreflight?: boolean }) => {
     const cwd = process.cwd()
 
     // 1. Check auth
@@ -34,10 +36,23 @@ export const publishCommand = new Command('publish')
       process.exit(1)
     }
 
+    // 3. Preflight readiness checks (skippable)
+    if (!opts.skipPreflight) {
+      const { results, hasFailure } = await runPreflight(cwd, {
+        changelog: opts.changelog,
+        packagePath
+      })
+      renderPreflight(results)
+      if (hasFailure) {
+        fail('Preflight failed — resolve the issues above, or re-run with --skip-preflight to override.')
+        process.exit(1)
+      }
+    }
+
     const sizeMB = (fs.statSync(packagePath).size / 1024 / 1024).toFixed(2)
     info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB)...`)
 
-    // 3. Upload
+    // 4. Upload
     try {
       const result = await uploadPackage(token, packagePath, opts.changelog ?? '')
       ok(`Submitted for review (submission ID: ${result.submissionId})`)
@@ -51,7 +66,7 @@ export const publishCommand = new Command('publish')
         return
       }
 
-      // 4. Poll for status
+      // 5. Poll for status
       info('Watching for review decision...')
       for (let i = 0; i < 360; i++) { // 3 hours max
         await sleep(30_000) // 30 seconds
