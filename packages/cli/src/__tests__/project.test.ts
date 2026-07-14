@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { isTypeScriptProject, collectFlatPackageEntries } from '../lib/project.js'
+import {
+  isTypeScriptProject,
+  collectFlatPackageEntries,
+  collectPackageEntries,
+} from '../lib/project.js'
 
 let tmp: string
 
@@ -66,5 +70,28 @@ describe('collectFlatPackageEntries', () => {
     fs.writeFileSync(path.join(tmp, 'index.html'), '<html></html>')
     const manifest = { ui: { entryPoint: 'index.html' } }
     expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['index.html'])
+  })
+})
+
+describe('collectPackageEntries', () => {
+  it('is dist/ for a TypeScript plugin', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    const manifest = { ui: { entryPoint: 'dist/ui/index.html' } }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['dist'])
+  })
+
+  it('includes assets/ alongside dist/ for a TypeScript plugin when present', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    fs.mkdirSync(path.join(tmp, 'assets'))
+    const manifest = { ui: { entryPoint: 'dist/ui/index.html' } }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['dist', 'assets'])
+  })
+
+  it('delegates to flat entries for a flat-JS plugin', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    const manifest = { ui: { entryPoint: 'ui/index.html' } }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['ui'])
   })
 })

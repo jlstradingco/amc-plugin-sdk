@@ -4,7 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, warn, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, copyNonTsFiles, collectFlatPackageEntries } from '../lib/project.js'
+import { isTypeScriptProject, copyNonTsFiles, collectPackageEntries } from '../lib/project.js'
 
 export const packageCommand = new Command('package')
   .description('Bundle plugin into a .amcplugin archive')
@@ -41,13 +41,10 @@ export const packageCommand = new Command('package')
     }
 
     // Top-level entries (dirs or files) to place at the archive root, alongside
-    // manifest.json. TS plugins ship a single `dist/` tree; flat plugins ship
-    // their as-authored folders (ui/, assets/, prompts/, backend/…).
-    const rootEntries = flat ? collectFlatPackageEntries(cwd, manifest) : ['dist']
-    if (!flat) {
-      const assetsDir = path.join(cwd, 'assets')
-      if (fs.existsSync(assetsDir)) rootEntries.push('assets')
-    }
+    // manifest.json. TS plugins ship a single `dist/` tree (+ optional assets/);
+    // flat plugins ship their as-authored folders (ui/, assets/, prompts/…).
+    // Shared with `install` so both agree on a plugin's shippable payload.
+    const rootEntries = collectPackageEntries(cwd, manifest)
 
     const pluginId = manifest.plugin.id
     const version = manifest.plugin.version

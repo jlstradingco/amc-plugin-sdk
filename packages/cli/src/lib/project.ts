@@ -40,6 +40,20 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   return [...names].filter((name) => fs.existsSync(path.join(cwd, name)))
 }
 
+/**
+ * The top-level entries (besides manifest.json) that make up a plugin's
+ * shippable payload — the single source of truth shared by `package` and
+ * `install` so both agree on exactly what a plugin consists of. A TypeScript
+ * plugin ships its compiled `dist/` tree (plus an optional top-level `assets/`);
+ * a flat-JS plugin ships its as-authored folders.
+ */
+export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): string[] {
+  if (!isTypeScriptProject(cwd)) return collectFlatPackageEntries(cwd, manifest)
+  const entries = ['dist']
+  if (fs.existsSync(path.join(cwd, 'assets'))) entries.push('assets')
+  return entries
+}
+
 /** Recursively copy every non-`.ts` file from `src` into `dest`. */
 export function copyNonTsFiles(src: string, dest: string): void {
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
