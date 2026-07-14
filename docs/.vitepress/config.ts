@@ -43,6 +43,9 @@ export default defineConfig({
             { text: 'CLI Endpoints', link: '/api/cli' },
             { text: 'Sidebar', link: '/api/sidebar' },
             { text: 'Toast', link: '/api/toast' },
+            { text: 'Inbox', link: '/api/inbox' },
+            { text: 'Auth', link: '/api/auth' },
+            { text: 'Recording', link: '/api/recording' },
             { text: 'Settings', link: '/api/settings' },
             { text: 'Events', link: '/api/events' },
             { text: 'Logging', link: '/api/logging' }

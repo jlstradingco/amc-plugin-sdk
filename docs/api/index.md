@@ -1,6 +1,6 @@
 # API Reference
 
-The AMC Plugin SDK exposes 13 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The AMC Plugin SDK exposes 16 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -16,6 +16,9 @@ The AMC Plugin SDK exposes 13 APIs to plugins. Some are available on both the fr
 | [CLI Endpoints](./cli) | Register REST endpoints | Backend only | `cli` |
 | [Sidebar](./sidebar) | Badge count and item list | Both | None |
 | [Toast](./toast) | In-app and OS notifications | Both | `notifications` (for `notify`) |
+| [Inbox](./inbox) | Surface items in AMC's Inbox | Backend only | `inbox` |
+| [Auth](./auth) | User identity and provider sessions | Backend only | `auth` (+ `auth.session` for tokens) |
+| [Recording](./recording) | Capture screen/window recordings | Backend only | `recording` |
 | [Settings](./settings) | Read plugin settings | Both | None |
 | [Events](./events) | Pub/sub messaging | Backend only | None |
 | [Logging](./logging) | Structured log output | Backend only | None |

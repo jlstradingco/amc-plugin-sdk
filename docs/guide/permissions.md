@@ -4,7 +4,7 @@ Plugins declare the permissions they need in `manifest.json`. AMC shows these to
 
 ## Permission Model
 
-There are **8 permissions** that gate access to specific API surfaces. Some APIs are available to every plugin without any permission declaration.
+There are **13 permissions** that gate access to specific API surfaces. Some APIs are available to every plugin without any permission declaration.
 
 ### Always Available (No Permission Needed)
 
@@ -243,6 +243,83 @@ Plugins that source content from RSS feeds (e.g. newsletter builders, digest gen
 
 ---
 
+### `inbox`
+
+**Grants access to:** `PluginInbox`
+
+Surface items in AMC's Inbox — the unified list where the user handles things that need their attention:
+
+```typescript
+await ctx.inbox.setItems([
+  { id: 'pr-4821', title: 'PR #4821 needs review', priority: 'high' },
+])
+
+// Clear the plugin's inbox items
+await ctx.inbox.setItems([])
+```
+
+`setItems` is a declarative full-replace of the plugin's own items. See [API > Inbox](../api/inbox).
+
+---
+
+### `auth`
+
+**Grants access to:** `PluginAuth` **identity** methods — `getUser()`, `isAuthenticated()`, `getGoogleIdToken()`, `requestSignIn()`, `onAuthStateChange()`
+
+Read the signed-in AMC user's identity:
+
+```typescript
+const user = await ctx.auth.getUser()
+if (user) ctx.log.info(`Signed in as ${user.email}`)
+```
+
+This permission grants **identity only** — no provider access tokens. To request a scoped provider token, also declare [`auth.session`](#auth-session).
+
+---
+
+### `auth.session`
+
+**Grants access to:** `PluginAuth.getSession()`
+
+Request a short-lived provider access token (Google or GitHub) scoped to exactly what your plugin needs. Requires `auth` as well.
+
+```typescript
+const session = await ctx.auth.getSession(
+  'google',
+  ['https://www.googleapis.com/auth/calendar.readonly'],
+  { createIfNone: true },
+)
+// session.accessToken — send to the provider API; expires at session.expiresAt
+```
+
+Tokens are minted per-request and expire. Never persist them. See [API > Auth](../api/auth).
+
+---
+
+### `recording`
+
+**Grants access to:** `PluginRecording`
+
+Capture screen, window, or tab recordings, then list, share, or delete them:
+
+```typescript
+const handle = await ctx.recording.start({ source: 'screen' })
+const { recordingId } = await ctx.recording.stop(handle)
+const url = await ctx.recording.getShareUrl(recordingId)
+```
+
+See [API > Recording](../api/recording).
+
+---
+
+### `navigation`
+
+**Grants:** the ability for the plugin's UI to drive AMC navigation (open AMC views/routes from the plugin).
+
+Declare this permission when your plugin's UI needs to navigate the user to AMC screens rather than staying entirely within its own panel.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -267,4 +344,9 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `cli` | `PluginCli` | HTTP endpoints on AMC's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
 | `rss` | `PluginRss` | Read RSS feeds and articles from AMC's Channels |
+| `inbox` | `PluginInbox` | Surface items in AMC's Inbox |
+| `auth` | `PluginAuth` (identity) | Read the signed-in user's identity |
+| `auth.session` | `PluginAuth.getSession()` | Request scoped provider access tokens |
+| `recording` | `PluginRecording` | Capture screen/window/tab recordings |
+| `navigation` | AMC navigation from plugin UI | Drive AMC navigation from the plugin |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |
