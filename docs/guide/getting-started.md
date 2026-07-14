@@ -20,7 +20,7 @@ Verify the installation:
 
 ```bash
 amc-plugin --version
-# 1.0.0
+# 1.0.7
 ```
 
 ## Scaffold a New Plugin
@@ -137,12 +137,12 @@ npx amc-plugin validate
 Expected output:
 
 ```
-PASS: Manifest schema
-PASS: SDK version declared (^1.0.0)
-PASS: UI entry point exists
-PASS: TypeScript compilation
-
-All checks PASSED
+✓ Manifest schema
+✓ SDK version declared (^1.0.0)
+✓ UI entry point exists
+✓ TypeScript compilation
+✓ No banned imports
+✓ All checks passed
 ```
 
 ::: warning
