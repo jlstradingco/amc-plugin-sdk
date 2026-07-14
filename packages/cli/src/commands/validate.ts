@@ -4,6 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, manifestNotFound } from '../lib/output.js'
+import { isTypeScriptProject, collectFlatPackageEntries } from '../lib/project.js'
 
 export const validateCommand = new Command('validate')
   .description('Run all validation checks without building (CI-friendly)')
@@ -55,17 +56,26 @@ export const validateCommand = new Command('validate')
       }
     }
 
-    try {
-      execSync('npx tsc --noEmit', { cwd, stdio: 'pipe' })
-      ok('TypeScript compilation')
-    } catch {
-      fail('TypeScript compilation errors')
-      hasErrors = true
+    const flat = !isTypeScriptProject(cwd)
+
+    // Flat-JS / webview plugins have no compile step — running tsc would hang.
+    if (!flat) {
+      try {
+        execSync('npx tsc --noEmit', { cwd, stdio: 'pipe' })
+        ok('TypeScript compilation')
+      } catch {
+        fail('TypeScript compilation errors')
+        hasErrors = true
+      }
     }
 
-    const distDir = path.join(cwd, 'dist')
-    if (fs.existsSync(distDir)) {
-      const banned = scanBannedImportsStrict(distDir)
+    // Scan for banned imports: TS plugins in dist/, flat plugins in their
+    // as-authored entry dirs.
+    const scanDirs = flat
+      ? collectFlatPackageEntries(cwd, manifest).map(e => path.join(cwd, e))
+      : [path.join(cwd, 'dist')].filter(d => fs.existsSync(d))
+    if (scanDirs.length > 0) {
+      const banned = scanDirs.flatMap(scanBannedImportsStrict)
       if (banned.length > 0) {
         fail('Banned imports detected')
         banned.forEach(b => console.error(`  - ${b}`))
@@ -92,6 +102,7 @@ const BANNED_PATTERNS = [
 
 function scanBannedImportsStrict(dir: string): string[] {
   const errors: string[] = []
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return errors
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name)
     if (entry.isDirectory()) {
