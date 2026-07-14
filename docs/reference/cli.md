@@ -171,21 +171,48 @@ amc-plugin publish [options]
 |---|---|---|
 | `--changelog <text>` | Changelog text for this version | &mdash; |
 | `--watch` | Poll until the submission is approved or rejected (up to 3 hours) | `false` |
+| `--as <github-user>` | Assert the expected GitHub account; aborts before upload on mismatch | &mdash; |
+| `--switch-account` | Sign out first and re-authenticate as a different account | `false` |
+| `-y, --yes` | Skip the upload-identity confirmation prompt (for CI) | `false` |
 
 **What it does:**
 
 1. Checks for a stored auth token; prompts GitHub OAuth if missing.
-2. Locates a `.amcplugin` file (runs `amc-plugin package` if none found).
-3. Uploads the archive to the marketplace.
-4. With `--watch`, polls every 30 seconds for the review decision.
+2. **Confirms the uploading identity** before upload (see the account trap below).
+3. Locates a `.amcplugin` file (runs `amc-plugin package` if none found).
+4. Uploads the archive to the marketplace.
+5. With `--watch`, polls every 30 seconds for the review decision.
+
+::: warning The GitHub account trap
+GitHub sign-in reuses whatever account your **default browser** is already logged
+into — there is no account chooser, so a publish can silently go out under the
+**wrong** identity (marketplace ownership is tied to the GitHub account).
+
+Before uploading, `publish` shows `Uploading as: <github>` and asks you to confirm.
+If it's the wrong account:
+
+- Run `amc-plugin publish --switch-account` to sign out and re-authenticate, **or**
+- Use `--as <github-user>` in scripts to hard-assert the intended account (aborts on mismatch).
+
+To land on the right account during sign-in, open an incognito / private window
+signed into the correct GitHub account first, or sign out at
+`https://github.com/logout`.
+:::
 
 **Example:**
 
 ```bash
+# Interactive — confirms "Uploading as: <you>" before upload
 amc-plugin publish --changelog "Added dark mode support" --watch
+
+# Publish under a specific account, re-authenticating if needed
+amc-plugin publish --switch-account
+
+# CI — assert the account and skip the prompt
+amc-plugin publish --as my-org-bot --yes
 ```
 
-**Exit codes:** `0` success (or approved with `--watch`), `1` upload failed or rejected.
+**Exit codes:** `0` success (or approved with `--watch`), `1` upload failed, rejected, or `--as` mismatch.
 
 ---
 
