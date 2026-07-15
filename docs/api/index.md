@@ -1,6 +1,6 @@
 # API Reference
 
-The AMC Plugin SDK exposes 13 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The AMC Plugin SDK exposes 16 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -19,6 +19,9 @@ The AMC Plugin SDK exposes 13 APIs to plugins. Some are available on both the fr
 | [Settings](./settings) | Read plugin settings | Both | None |
 | [Events](./events) | Pub/sub messaging | Backend only | None |
 | [Logging](./logging) | Structured log output | Backend only | None |
+| [Inbox](./inbox) | Surface items in AMC's inbox | Both | `inbox` |
+| [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
+| [Recording](./recording) | Screen recording (bridge not yet wired) | Both | `recording` |
 
 ## Access Patterns
 

@@ -45,7 +45,10 @@ export default defineConfig({
             { text: 'Toast', link: '/api/toast' },
             { text: 'Settings', link: '/api/settings' },
             { text: 'Events', link: '/api/events' },
-            { text: 'Logging', link: '/api/logging' }
+            { text: 'Logging', link: '/api/logging' },
+            { text: 'Inbox', link: '/api/inbox' },
+            { text: 'Auth', link: '/api/auth' },
+            { text: 'Recording', link: '/api/recording' }
           ]
         }
       ]
