@@ -118,8 +118,12 @@ describe('Plugin lifecycle E2E', () => {
       cwd: pluginDir,
       encoding: 'utf-8',
     })
-    expect(output).toContain('PASS')
-    expect(output).not.toContain('FAIL')
+    // `validate` prints `✓ <check>` per check via ok() and the summary line
+    // `✓ All checks passed` on success; failures go to stderr via fail() and
+    // exit non-zero (execSync would then throw). Assert the real success signal
+    // rather than a literal 'PASS'/'FAIL' the command never emits.
+    expect(output).toContain('All checks passed')
+    expect(output).not.toContain('✗')
   })
 
   it('packages into .amcplugin', () => {
