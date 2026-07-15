@@ -299,7 +299,7 @@ amc-plugin dev --no-build
 
 ### `info`
 
-Show a summary of the current plugin project (name, version, template, permissions, entry points).
+Show a summary of the current plugin project (name, version, author, category, discoverability tags, permissions, entry points).
 
 **Usage:**
 
@@ -319,7 +319,8 @@ amc-plugin info [options]
 amc-plugin info
 # Plugin:      my-plugin
 # Version:     1.0.0
-# Template:    with-backend
+# Category:    other
+# Tags:        other, productivity
 # Permissions: storage, cron
 # UI:          dist/ui/index.html
 # Backend:     dist/backend/index.js

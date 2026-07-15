@@ -127,6 +127,16 @@ describe('Plugin lifecycle E2E', () => {
     expect(output).not.toContain('✗')
   })
 
+  it('info lists the declared discoverability tags', () => {
+    const output = execSync(`node "${cliDist}" info`, {
+      cwd: pluginDir,
+      encoding: 'utf-8',
+    })
+    // The scaffold seeds `tags: [<category>]`, so `--category other` yields `other`.
+    expect(output).toContain('Tags:')
+    expect(output).toContain('other')
+  })
+
   it('packages into .amcplugin', () => {
     execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
 
