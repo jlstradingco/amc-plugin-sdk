@@ -98,6 +98,7 @@ describe('Plugin lifecycle E2E', () => {
     expect(manifest.plugin.name).toBe('E2E Test Plugin')
     expect(manifest.plugin.author).toBe('Test Author')
     expect(manifest.plugin.description).toBe('A test plugin')
+    expect(manifest.plugin.tags).toEqual(['other'])
     expect(manifest.ui.entryPoint).toBe('dist/ui/index.html')
   })
 

@@ -111,6 +111,10 @@ export const createCommand = new Command('create')
         icon: icon,
         category: category,
         license: { type: 'free' },
+        // Seed one discoverability tag (the chosen category) so the plugin ships
+        // searchable on the marketplace from day one. Free-form keywords — add more
+        // (up to 10, 30 chars each) to widen how developers find this plugin.
+        tags: [category],
       },
       settings: [],
       storage: { collections: {} },
