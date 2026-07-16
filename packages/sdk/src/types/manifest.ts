@@ -96,6 +96,10 @@ export interface PluginManifest {
     category: PluginCategory
     license: { type: PluginLicenseType }
     minAppVersion?: string
+    // Free-form discoverability keywords. Folded into the marketplace's text
+    // search and rendered as chips on the plugin card. Bounded by the validator
+    // (up to 10 tags, 30 chars each) so a manifest can't flood search or the UI.
+    tags?: string[]
   }
   settings: PluginSettingDefinition[]
   storage: {

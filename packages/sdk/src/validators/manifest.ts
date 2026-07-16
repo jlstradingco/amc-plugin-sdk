@@ -13,6 +13,10 @@ const pluginInfoSchema = z.object({
   category: z.enum(['planning', 'development', 'testing', 'devops', 'productivity', 'other']),
   license: z.object({ type: z.enum(['free', 'paid', 'trial']) }),
   minAppVersion: z.string().optional(),
+  // Discoverability keywords surfaced in marketplace search + card chips.
+  // Bounded (≤10 tags, ≤30 chars each) so a manifest can't flood search/UI.
+  // Kept in sync with PluginManifest.plugin.tags and the AMC host validator.
+  tags: z.array(z.string().min(1).max(30)).max(10).optional(),
 })
 
 const settingOptionSchema = z.object({

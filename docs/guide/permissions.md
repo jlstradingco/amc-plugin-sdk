@@ -259,12 +259,69 @@ Lets a plugin's UI integrate with AMC's own chrome — contributing toolbar/cont
 
 ---
 
+### `inbox`
+
+**Grants access to:** `PluginInbox`
+
+Surface items in AMC's inbox -- the unified list where the user reviews things that need their attention:
+
+```typescript
+await ctx.inbox.setItems([
+  { id: 'scan-report', title: 'Security scan finished', priority: 'high' },
+])
+```
+
+See the [Inbox API](../api/inbox) for the full `InboxItem` shape.
+
+---
+
+### `auth`
+
+**Grants access to:** `PluginAuth` identity methods
+
+See who is signed in to AMC (name and email) and react to sign-in state:
+
+```typescript
+const user = await ctx.auth.getUser()
+const signedIn = await ctx.auth.isAuthenticated()
+```
+
+This covers `getUser()`, `isAuthenticated()`, `getGoogleIdToken()`, `onAuthStateChange()`, and `requestSignIn()`. See the [Auth API](../api/auth).
+
+---
+
+### `auth.session`
+
+**Grants access to:** `PluginAuth.getSession()`
+
+Request scoped OAuth access tokens for Google and GitHub on the user's behalf, so your plugin can call those providers' APIs as the user:
+
+```typescript
+const session = await ctx.auth.getSession('google', [
+  'https://www.googleapis.com/auth/calendar.readonly',
+])
+```
+
+This is a distinct, higher-trust permission from `auth`. Declare it only if you need to act against a provider's API; declare `network` too if you call that API via `ctx.http.fetch`.
+
+---
+
+### `navigation`
+
+**Grants:** the ability to navigate AMC to your sessions, projects, and views
+
+The `navigation` permission lets a plugin ask AMC to move the user to a session, project, or view. There is no `ctx.navigation` API in the current SDK surface -- navigation is host-gated and requested through the host bridge. Declare `navigation` so a plugin that drives AMC's navigation installs cleanly and is recognized at runtime.
+
+---
+
 ### `recording`
 
 **Grants access to:** `PluginRecording` (screen-recording control)
 
+Start and stop screen recordings and manage the resulting files.
+
 ::: warning Bridge pending
-The `recording` permission is recognized and described by the host, but the backend `ctx.recording` namespace is not yet wired — a call is currently inert. It is a tracked known-delta (see the SDK↔host parity guard) pending a future host release that connects the bridge.
+The `recording` permission is recognized and described by the host, and the `PluginRecording` type is part of the SDK, but the backend `ctx.recording` namespace is **not yet wired** — a call is currently inert. It is a tracked known-delta (see the SDK↔host parity guard) pending a future host release that connects the bridge. Declaring it lets a plugin install cleanly and be ready for when the bridge ships. See the [Recording API](../api/recording).
 :::
 
 ---
@@ -294,10 +351,10 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
 | `system` | Shell / clipboard / process (UI bridge) | Open paths, read clipboard, run child processes |
 | `rss` | `PluginRss` | Read RSS feeds and articles from AMC's Channels |
-| `auth` | `PluginAuth` (identity) | Read the signed-in user's identity + Google ID token |
-| `auth.session` | `PluginAuth.getSession()` | Read the active auth session |
+| `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
+| `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
-| `recording` | `PluginRecording` | Screen-recording control — recognized, but **the host bridge is not yet wired (calls are inert)** |
+| `recording` | `PluginRecording` | Screen recording (bridge not yet wired; requests inert) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
-| `navigation` | In-app navigation | Navigate the user within AMC |
+| `navigation` | *(host-gated; no `ctx` API)* | Navigate AMC to sessions, projects, and views |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |
