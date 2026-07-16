@@ -85,6 +85,13 @@ describe('Plugin lifecycle E2E', () => {
     expect(fs.existsSync(path.join(pluginDir, 'src', 'backend', 'index.ts'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'package.json'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'README.md'))).toBe(true)
+  })
+
+  it('scaffolds a README describing the plugin', () => {
+    const readme = fs.readFileSync(path.join(pluginDir, 'README.md'), 'utf-8')
+    expect(readme).toContain('# E2E Test Plugin')
+    expect(readme).toContain('npm run package')
   })
 
   it('manifest has correct v2 fields', () => {
@@ -98,7 +105,16 @@ describe('Plugin lifecycle E2E', () => {
     expect(manifest.plugin.name).toBe('E2E Test Plugin')
     expect(manifest.plugin.author).toBe('Test Author')
     expect(manifest.plugin.description).toBe('A test plugin')
+    expect(manifest.plugin.tags).toEqual(['other'])
     expect(manifest.ui.entryPoint).toBe('dist/ui/index.html')
+  })
+
+  it('scaffolds a .gitignore that excludes env/secret files', () => {
+    const gitignore = fs.readFileSync(path.join(pluginDir, '.gitignore'), 'utf-8')
+    expect(gitignore).toContain('.env')
+    expect(gitignore).toContain('!.env.example')
+    expect(gitignore).toContain('node_modules/')
+    expect(gitignore).toContain('dist/')
   })
 
   it('builds successfully', () => {
@@ -118,8 +134,22 @@ describe('Plugin lifecycle E2E', () => {
       cwd: pluginDir,
       encoding: 'utf-8',
     })
-    expect(output).toContain('PASS')
-    expect(output).not.toContain('FAIL')
+    // `validate` prints `✓ <check>` per check via ok() and the summary line
+    // `✓ All checks passed` on success; failures go to stderr via fail() and
+    // exit non-zero (execSync would then throw). Assert the real success signal
+    // rather than a literal 'PASS'/'FAIL' the command never emits.
+    expect(output).toContain('All checks passed')
+    expect(output).not.toContain('✗')
+  })
+
+  it('info lists the declared discoverability tags', () => {
+    const output = execSync(`node "${cliDist}" info`, {
+      cwd: pluginDir,
+      encoding: 'utf-8',
+    })
+    // The scaffold seeds `tags: [<category>]`, so `--category other` yields `other`.
+    expect(output).toContain('Tags:')
+    expect(output).toContain('other')
   })
 
   it('packages into .amcplugin', () => {

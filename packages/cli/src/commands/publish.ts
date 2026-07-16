@@ -1,25 +1,73 @@
 import { Command } from 'commander'
+import prompts from 'prompts'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import chalk from 'chalk'
-import { authenticate, getStoredToken } from '../lib/auth.js'
+import { authenticate, getStoredToken, clearToken } from '../lib/auth.js'
 import { uploadPackage, getMyPlugins, MarketplaceApiError } from '../lib/marketplace-api.js'
 import type { SecurityFinding, UploadResult } from '../lib/marketplace-api.js'
-import { ok, fail, info, warn, heading } from '../lib/output.js'
+import { ok, fail, info, warn, heading, label, actionableError } from '../lib/output.js'
 import { runPreflight, renderPreflight } from './preflight.js'
+import { evaluatePublishAccount, SWITCH_ACCOUNT_GUIDANCE } from '../lib/publish-account.js'
 
 export const publishCommand = new Command('publish')
   .description('Upload plugin to the AMC Marketplace for review')
   .option('--changelog <text>', 'Changelog for this version')
   .option('--watch', 'Poll until submission is approved or rejected')
   .option('--skip-preflight', 'Skip the pre-upload readiness checks')
-  .action(async (opts: { changelog?: string; watch?: boolean; skipPreflight?: boolean }) => {
+  .option('--as <github-user>', 'Assert the expected GitHub account; aborts on mismatch')
+  .option('--switch-account', 'Sign out first and re-authenticate as a different account')
+  .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
+  .action(async (opts: {
+    changelog?: string
+    watch?: boolean
+    skipPreflight?: boolean
+    as?: string
+    switchAccount?: boolean
+    yes?: boolean
+  }) => {
     const cwd = process.cwd()
 
-    // 1. Check auth
+    // 1. Check auth. --switch-account forces a fresh sign-in.
+    if (opts.switchAccount) {
+      const prev = getStoredToken()
+      clearToken()
+      if (prev) info(`Signed out (was: ${prev.github})`)
+      heading('Switching GitHub account')
+      console.log(SWITCH_ACCOUNT_GUIDANCE)
+      console.log('')
+    }
+
     let token = getStoredToken()
     if (!token) {
+      if (!opts.switchAccount) {
+        // First-time sign-in: warn about the silent-account trap up front.
+        info('You are about to sign in with GitHub to publish.')
+        console.log(SWITCH_ACCOUNT_GUIDANCE)
+        console.log('')
+      }
       token = await authenticate()
+    }
+
+    // 2. Confirm the uploading identity (the silent-account trap guard).
+    const gate = evaluatePublishAccount(token.github, { as: opts.as, yes: opts.yes })
+    if (gate.action === 'abort') {
+      actionableError(gate.message, gate.suggestion)
+      process.exit(1)
+    }
+    if (gate.action === 'confirm') {
+      label('\nUploading as:', `${chalk.bold(gate.github)} (uid: ${token.uid})`)
+      const { confirmed } = await prompts({
+        type: 'confirm',
+        name: 'confirmed',
+        message: `Publish to the marketplace as "${gate.github}"?`,
+        initial: false
+      })
+      if (!confirmed) {
+        info('Cancelled — nothing was uploaded.')
+        info("Wrong account? Run 'amc-plugin publish --switch-account'.")
+        return
+      }
     }
 
     // 2. Locate .amcplugin package
@@ -50,7 +98,7 @@ export const publishCommand = new Command('publish')
     }
 
     const sizeMB = (fs.statSync(packagePath).size / 1024 / 1024).toFixed(2)
-    info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB)...`)
+    info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB) as ${token.github}...`)
 
     // 4. Upload
     try {

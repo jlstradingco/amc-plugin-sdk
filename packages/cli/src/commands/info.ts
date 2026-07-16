@@ -31,6 +31,9 @@ export const infoCommand = new Command('info')
     label('Version:', p.version ?? '0.0.0')
     label('Author:', p.author ?? 'Unknown')
     label('Category:', p.category ?? 'other')
+    // Discoverability tags folded into marketplace search + rendered as card chips.
+    // Array-guarded — an older/hand-written manifest may omit the field.
+    label('Tags:', Array.isArray(p.tags) && p.tags.length > 0 ? p.tags.join(', ') : 'none')
     label('License:', p.license?.type ?? 'free')
     if (manifest.sdkVersion) label('SDK Version:', manifest.sdkVersion)
 
