@@ -5,6 +5,7 @@ import { execSync, spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, filePath, manifestNotFound, actionableError } from '../lib/output.js'
+import { isTypeScriptProject } from '../lib/project.js'
 
 const require = createRequire(import.meta.url)
 
@@ -28,9 +29,9 @@ export const devCommand = new Command('dev')
     }
     ok('Manifest valid')
 
-    // Build if dist/ missing and --build is true (default)
+    // Flat-JS / webview plugins have no compile step — never run tsc for them.
     const distDir = path.join(cwd, 'dist')
-    if (opts.build && !fs.existsSync(distDir)) {
+    if (opts.build && isTypeScriptProject(cwd) && !fs.existsSync(distDir)) {
       info('Building TypeScript...')
       try {
         execSync('npx tsc', { cwd, stdio: 'inherit' })

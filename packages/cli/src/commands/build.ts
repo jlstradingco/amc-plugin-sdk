@@ -4,6 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, info, actionableError, manifestNotFound } from '../lib/output.js'
+import { isTypeScriptProject, copyNonTsFiles, collectFlatPackageEntries } from '../lib/project.js'
 
 export const buildCommand = new Command('build')
   .description('Compile plugin TypeScript to JavaScript and validate manifest')
@@ -24,6 +25,15 @@ export const buildCommand = new Command('build')
     }
     ok('Manifest validated')
 
+    // Flat-JS / webview plugins have no TypeScript compile step — their files
+    // ship as-authored. Running tsc here would hang (nothing to compile).
+    if (!isTypeScriptProject(cwd)) {
+      info('No tsconfig.json — flat plugin, skipping TypeScript compilation')
+      warnBannedImports(collectFlatPackageEntries(cwd, manifest).map(e => path.join(cwd, e)))
+      ok('Build complete (flat plugin)')
+      return
+    }
+
     info('Compiling TypeScript...')
     try {
       execSync('npx tsc', { cwd, stdio: 'inherit' })
@@ -38,25 +48,15 @@ export const buildCommand = new Command('build')
       copyNonTsFiles(srcUi, distUi)
     }
 
-    const warnings = scanBannedImports(path.join(cwd, 'dist'))
-    if (warnings.length > 0) {
-      warn('Banned import warnings:')
-      warnings.forEach(w => warn(`  ${w}`))
-    }
-
+    warnBannedImports([path.join(cwd, 'dist')])
     ok('Build complete')
   })
 
-function copyNonTsFiles(src: string, dest: string) {
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const srcPath = path.join(src, entry.name)
-    const destPath = path.join(dest, entry.name)
-    if (entry.isDirectory()) {
-      copyNonTsFiles(srcPath, destPath)
-    } else if (!entry.name.endsWith('.ts')) {
-      fs.copyFileSync(srcPath, destPath)
-    }
+function warnBannedImports(dirs: string[]): void {
+  const warnings = dirs.flatMap(scanBannedImports)
+  if (warnings.length > 0) {
+    warn('Banned import warnings:')
+    warnings.forEach(w => warn(`  ${w}`))
   }
 }
 
@@ -69,7 +69,7 @@ const BANNED_PATTERNS = [
 
 function scanBannedImports(dir: string): string[] {
   const warnings: string[] = []
-  if (!fs.existsSync(dir)) return warnings
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return warnings
 
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name)
