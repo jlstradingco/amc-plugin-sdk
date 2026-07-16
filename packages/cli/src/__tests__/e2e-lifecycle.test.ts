@@ -109,6 +109,18 @@ describe('Plugin lifecycle E2E', () => {
     expect(manifest.ui.entryPoint).toBe('dist/ui/index.html')
   })
 
+  it('scaffolds a package.json carrying the create metadata', () => {
+    const pkg = JSON.parse(
+      fs.readFileSync(path.join(pluginDir, 'package.json'), 'utf-8'),
+    )
+    expect(pkg.name).toBe('e2e-test-plugin')
+    expect(pkg.description).toBe('A test plugin')
+    expect(pkg.author).toBe('Test Author')
+    expect(pkg.license).toBe('UNLICENSED')
+    expect(pkg.scripts.build).toBe('tsc')
+    expect(pkg.devDependencies['@agent-mc/plugin-sdk']).toBeDefined()
+  })
+
   it('scaffolds a .gitignore that excludes env/secret files', () => {
     const gitignore = fs.readFileSync(path.join(pluginDir, '.gitignore'), 'utf-8')
     expect(gitignore).toContain('.env')

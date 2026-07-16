@@ -123,6 +123,50 @@ export function buildReadme(opts: {
   ].join('\n')
 }
 
+export function buildPackageJson(opts: {
+  id: string
+  description: string
+  author: string
+  isWebview?: boolean
+  hasBackend?: boolean
+}): Record<string, unknown> {
+  const { id, description, author, isWebview = false, hasBackend = false } = opts
+  const pkg: Record<string, unknown> = {
+    name: id,
+    version: '1.0.0',
+    private: true,
+    type: 'module',
+  }
+  if (description) pkg.description = description
+  if (author) pkg.author = author
+  pkg.license = 'UNLICENSED'
+
+  // Webview plugins have no compile step, so no build script or TypeScript
+  // dependency. Backend templates add a test script + vitest.
+  const scripts: Record<string, string> = isWebview
+    ? {
+        dev: 'amc-plugin dev',
+        package: 'amc-plugin package',
+        validate: 'amc-plugin validate',
+      }
+    : {
+        build: 'tsc',
+        dev: 'amc-plugin dev',
+        package: 'amc-plugin package',
+        validate: 'amc-plugin validate',
+      }
+  const devDependencies: Record<string, string> = isWebview
+    ? { '@agent-mc/plugin-sdk': '^1.0.0' }
+    : { '@agent-mc/plugin-sdk': '^1.0.0', typescript: '^5.5.0' }
+  if (hasBackend) {
+    scripts.test = 'amc-plugin test'
+    devDependencies['vitest'] = '^3.0.0'
+  }
+  pkg.scripts = scripts
+  pkg.devDependencies = devDependencies
+  return pkg
+}
+
 interface CreateOptions {
   template: string
   displayName?: string
@@ -352,36 +396,17 @@ describe('${displayName} backend', () => {
 
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
-    // package.json. Webview plugins have no compile step, so no build script or
-    // TypeScript dependency. Backend templates add a test script + vitest.
+    // package.json — metadata (description/author/license) plus template-aware
+    // scripts + dev deps, all assembled by buildPackageJson.
     const hasBackend = template === 'with-backend' || template === 'full'
-    const scripts: Record<string, string> = isWebview
-      ? {
-          dev: 'amc-plugin dev',
-          package: 'amc-plugin package',
-          validate: 'amc-plugin validate',
-        }
-      : {
-          build: 'tsc',
-          dev: 'amc-plugin dev',
-          package: 'amc-plugin package',
-          validate: 'amc-plugin validate',
-        }
-    const devDependencies: Record<string, string> = isWebview
-      ? { '@agent-mc/plugin-sdk': '^1.0.0' }
-      : { '@agent-mc/plugin-sdk': '^1.0.0', 'typescript': '^5.5.0' }
-    if (hasBackend) {
-      scripts.test = 'amc-plugin test'
-      devDependencies['vitest'] = '^3.0.0'
-    }
-    fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify({
-      name: name,
-      version: '1.0.0',
-      private: true,
-      type: 'module',
-      scripts,
-      devDependencies,
-    }, null, 2))
+    fs.writeFileSync(
+      path.join(targetDir, 'package.json'),
+      JSON.stringify(
+        buildPackageJson({ id: name, description, author, isWebview, hasBackend }),
+        null,
+        2,
+      ),
+    )
 
     // tsconfig.json — TS templates only. Its absence is the signal that marks a
     // plugin as flat-JS (no tsc run).
