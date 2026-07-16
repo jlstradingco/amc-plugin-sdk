@@ -1,7 +1,6 @@
 export interface QueryOptions {
   where?: Record<string, unknown>
-  orderBy?: string
-  order?: 'ASC' | 'DESC'
+  orderBy?: Record<string, 'asc' | 'desc'>
   limit?: number
   offset?: number
 }
@@ -41,7 +40,7 @@ export interface PluginDb {
   insert(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>
   query(collection: string, options?: QueryOptions): Promise<Record<string, unknown>[]>
   getById(collection: string, id: string): Promise<Record<string, unknown> | null>
-  update(collection: string, id: string, fields: Record<string, unknown>): Promise<Record<string, unknown>>
+  update(collection: string, id: string, fields: Record<string, unknown>): Promise<void>
   delete(collection: string, id: string): Promise<void>
   deleteWhere(collection: string, where: Record<string, unknown>): Promise<void>
 }

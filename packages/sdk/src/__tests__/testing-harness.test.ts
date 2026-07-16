@@ -51,10 +51,10 @@ describe('db — real in-memory collection', () => {
     const onlyA = await ctx.db.query('t', { where: { name: 'a' } })
     expect(onlyA).toHaveLength(2)
 
-    const sorted = await ctx.db.query('t', { orderBy: 'pri', order: 'ASC' })
+    const sorted = await ctx.db.query('t', { orderBy: { pri: 'asc' } })
     expect(sorted.map((r) => r.pri)).toEqual([1, 2, 3, 9])
 
-    const desc = await ctx.db.query('t', { orderBy: 'pri', order: 'DESC', limit: 2 })
+    const desc = await ctx.db.query('t', { orderBy: { pri: 'desc' }, limit: 2 })
     expect(desc.map((r) => r.pri)).toEqual([9, 3])
   })
 
@@ -64,8 +64,7 @@ describe('db — real in-memory collection', () => {
     const b = await ctx.db.insert('c', { v: 2 })
     expect((await ctx.db.getById('c', String(a.id)))?.v).toBe(1)
 
-    const updated = await ctx.db.update('c', String(a.id), { v: 42 })
-    expect(updated.v).toBe(42)
+    await ctx.db.update('c', String(a.id), { v: 42 })
     expect((await ctx.db.getById('c', String(a.id)))?.v).toBe(42)
 
     await ctx.db.delete('c', String(b.id))

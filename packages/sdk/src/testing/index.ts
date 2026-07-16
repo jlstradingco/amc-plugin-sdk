@@ -91,16 +91,19 @@ function applyQuery(
 ): Record<string, unknown>[] {
   let out = rows.filter((r) => matchesWhere(r, options?.where))
   if (options?.orderBy) {
-    const key = options.orderBy
-    const dir = options.order === 'DESC' ? -1 : 1
-    out = [...out].sort((a, b) => {
-      const av = a[key]
-      const bv = b[key]
-      if (av === bv) return 0
-      if (av === undefined || av === null) return -1 * dir
-      if (bv === undefined || bv === null) return 1 * dir
-      return (av < bv ? -1 : 1) * dir
-    })
+    const entry = Object.entries(options.orderBy)[0]
+    if (entry) {
+      const [key, direction] = entry
+      const dir = direction === 'desc' ? -1 : 1
+      out = [...out].sort((a, b) => {
+        const av = a[key]
+        const bv = b[key]
+        if (av === bv) return 0
+        if (av === undefined || av === null) return -1 * dir
+        if (bv === undefined || bv === null) return 1 * dir
+        return (av < bv ? -1 : 1) * dir
+      })
+    }
   }
   const offset = options?.offset ?? 0
   const end = options?.limit !== undefined ? offset + options.limit : undefined
@@ -178,7 +181,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         const row = rows.find((r) => r.id === id)
         if (!row) return Promise.reject(new Error(`No row "${id}" in "${collection}"`))
         Object.assign(row, fields, { updated_at: nowIso() })
-        return Promise.resolve({ ...row })
+        return Promise.resolve()
       },
       delete: (collection, id) => {
         const rows = collections.get(collection) ?? []

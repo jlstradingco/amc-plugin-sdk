@@ -11,11 +11,10 @@ Several methods accept an optional `QueryOptions` object:
 
 ```typescript
 interface QueryOptions {
-  where?: Record<string, unknown>   // Field equality filters
-  orderBy?: string                  // Column to sort by
-  order?: 'ASC' | 'DESC'           // Sort direction (default: ASC)
-  limit?: number                   // Maximum rows to return
-  offset?: number                  // Number of rows to skip
+  where?: Record<string, unknown>           // Field equality filters
+  orderBy?: Record<string, 'asc' | 'desc'>  // Column -> sort direction
+  limit?: number                            // Maximum rows to return
+  offset?: number                           // Number of rows to skip
 }
 ```
 
@@ -77,15 +76,13 @@ const allTasks = await AgentMC.db.query('tasks')
 // Frontend -- filtered and sorted
 const urgent = await AgentMC.db.query('tasks', {
   where: { priority: 1, done: false },
-  orderBy: 'created_at',
-  order: 'DESC',
+  orderBy: { created_at: 'desc' },
   limit: 10,
 })
 
 // Backend -- paginated
 const page2 = await ctx.db.query('tasks', {
-  orderBy: 'created_at',
-  order: 'ASC',
+  orderBy: { created_at: 'asc' },
   limit: 20,
   offset: 20,
 })
@@ -121,7 +118,7 @@ if (!task) {
 
 ---
 
-### `update(collection: string, id: string, fields: Record<string, unknown>): Promise<Record<string, unknown>>`
+### `update(collection: string, id: string, fields: Record<string, unknown>): Promise<void>`
 
 Update specific fields on an existing row. Fields not included in the update are left unchanged.
 
@@ -133,19 +130,19 @@ Update specific fields on an existing row. Fields not included in the update are
 | `id` | `string` | The row ID to update |
 | `fields` | `Record<string, unknown>` | The fields to update |
 
-**Returns:** `Promise<Record<string, unknown>>` -- the updated row.
+**Returns:** `Promise<void>` -- re-read the row with `getById()` if you need the updated values.
 
 **Example:**
 
 ```typescript
 // Frontend
-const updated = await AgentMC.db.update('tasks', 'a1b2c3', {
+await AgentMC.db.update('tasks', 'a1b2c3', {
   done: true,
   completedAt: Date.now(),
 })
 
 // Backend
-const updated = await ctx.db.update('tasks', 'a1b2c3', {
+await ctx.db.update('tasks', 'a1b2c3', {
   done: true,
   completedAt: Date.now(),
 })
