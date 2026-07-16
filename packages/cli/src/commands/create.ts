@@ -43,6 +43,32 @@ export function parseTagsInput(raw: string | undefined, fallbackCategory: string
   return out.length > 0 ? out : [fallbackCategory]
 }
 
+// Scaffolded .gitignore. Beyond build output, it excludes env/secret files up front
+// (the `git add -A` the scaffold runs — and every one the developer runs later — would
+// otherwise commit a `.env` full of keys). `.env.example` stays tracked so the template
+// for required vars can be shared safely.
+const SCAFFOLD_GITIGNORE = [
+  '# Dependencies',
+  'node_modules/',
+  '',
+  '# Build output',
+  'dist/',
+  '*.amcplugin',
+  '',
+  '# Secrets / local env — never commit these',
+  '.env',
+  '.env.*',
+  '!.env.example',
+  '*.local',
+  '',
+  '# Logs & editor / OS cruft',
+  '*.log',
+  '.DS_Store',
+  '.vscode/',
+  '.idea/',
+  ''
+].join('\n')
+
 interface CreateOptions {
   template: string
   displayName?: string
@@ -275,7 +301,7 @@ export default activate
     }, null, 2))
 
     // .gitignore
-    fs.writeFileSync(path.join(targetDir, '.gitignore'), 'node_modules/\ndist/\n*.amcplugin\n')
+    fs.writeFileSync(path.join(targetDir, '.gitignore'), SCAFFOLD_GITIGNORE)
 
     // Install dependencies
     if (!opts.skipInstall) {

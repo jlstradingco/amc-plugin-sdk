@@ -102,6 +102,14 @@ describe('Plugin lifecycle E2E', () => {
     expect(manifest.ui.entryPoint).toBe('dist/ui/index.html')
   })
 
+  it('scaffolds a .gitignore that excludes env/secret files', () => {
+    const gitignore = fs.readFileSync(path.join(pluginDir, '.gitignore'), 'utf-8')
+    expect(gitignore).toContain('.env')
+    expect(gitignore).toContain('!.env.example')
+    expect(gitignore).toContain('node_modules/')
+    expect(gitignore).toContain('dist/')
+  })
+
   it('builds successfully', () => {
     // Since we used --skip-install, wire up node_modules manually so
     // tsc can resolve '@agent-mc/plugin-sdk' types and the 'typescript' compiler
