@@ -365,6 +365,87 @@ amc-plugin update
 
 ---
 
+### `test`
+
+Run the plugin test suite with [vitest](https://vitest.dev). Uses the plugin's
+local vitest if installed, otherwise falls back to `npx vitest`.
+
+**Usage:**
+
+```bash
+amc-plugin test [patterns...] [options]
+```
+
+**Arguments:**
+
+| Name | Description |
+|---|---|
+| `patterns` | Optional test file patterns to filter (passed through to vitest) |
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--watch` | Run vitest in watch mode | `false` |
+
+**Testing your backend with the SDK harness:**
+
+The SDK ships a test harness at `@agent-mc/plugin-sdk/testing` that gives you a
+faithful in-memory `PluginContext` — real storage and db (query / where / orderBy /
+limit), plus capture surfaces for toasts, notifications, logs, events, sidebar,
+and inbox, and triggers for cron jobs and CLI handlers. No AMC or Electron needed.
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import activate from './index.js'
+
+describe('my backend', () => {
+  it('stores a note and shows a toast', async () => {
+    const h = createTestContext({ settings: { apiKey: 'sk-test' } })
+    const backend = activate(h.ctx)
+    backend.onEnable?.()
+
+    await h.ctx.db.insert('notes', { title: 'hello' })
+    expect(await h.ctx.db.query('notes')).toHaveLength(1)
+    expect(h.toasts.map((t) => t.message)).toContain('Saved')
+  })
+
+  it('runs a cron job and answers a CLI request', async () => {
+    const h = createTestContext()
+    activate(h.ctx)
+    await h.runCron('heartbeat')                       // invoke a registered cron handler
+    const res = await h.callCli('status', { method: 'GET', path: 'status' })
+    expect(res.status).toBe(200)
+  })
+})
+```
+
+Inject `fetch`, `ai`, and `auth` via options to control outbound calls:
+
+```ts
+const h = createTestContext({
+  fetch: async () => new Response('{"ok":true}', { status: 200 }),
+  ai: { generateMessage: async () => 'stubbed reply' },
+  auth: { user: { uid: 'u1', email: 'a@b.co', displayName: null, photoURL: null } },
+})
+```
+
+The `with-backend` and `full` scaffold templates come with vitest, a `test`
+script, and a starter `src/backend/index.test.ts` wired to this harness.
+
+**Example:**
+
+```bash
+amc-plugin test
+amc-plugin test --watch
+amc-plugin test src/backend
+```
+
+**Exit codes:** propagates vitest's exit code (`0` all passed, `1` failures), `1` if vitest can't run.
+
+---
+
 ### `doctor`
 
 Diagnose your local environment for plugin development. Run it any time something

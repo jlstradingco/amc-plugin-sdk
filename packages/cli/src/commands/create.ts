@@ -301,6 +301,21 @@ const activate: PluginActivate = (ctx) => {
 
 export default activate
 `)
+
+      // Sample test wired to the SDK test harness
+      fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.test.ts'), `import { describe, it, expect } from 'vitest'
+import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import activate from './index.js'
+
+describe('${displayName} backend', () => {
+  it('logs when enabled', () => {
+    const h = createTestContext({ pluginId: '${name}', pluginVersion: '1.0.0' })
+    const backend = activate(h.ctx)
+    backend.onEnable?.()
+    expect(h.logs.some((l) => l.message.includes('enabled'))).toBe(true)
+  })
+})
+`)
     }
 
     // Cron + CLI setup (full template only)
@@ -321,21 +336,28 @@ export default activate
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
     // package.json
+    const hasBackend = template === 'with-backend' || template === 'full'
+    const scripts: Record<string, string> = {
+      build: 'tsc',
+      dev: 'amc-plugin dev',
+      package: 'amc-plugin package',
+      validate: 'amc-plugin validate',
+    }
+    const devDependencies: Record<string, string> = {
+      '@agent-mc/plugin-sdk': '^1.0.0',
+      'typescript': '^5.5.0',
+    }
+    if (hasBackend) {
+      scripts.test = 'amc-plugin test'
+      devDependencies['vitest'] = '^3.0.0'
+    }
     fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify({
       name: name,
       version: '1.0.0',
       private: true,
       type: 'module',
-      scripts: {
-        build: 'tsc',
-        dev: 'amc-plugin dev',
-        package: 'amc-plugin package',
-        validate: 'amc-plugin validate',
-      },
-      devDependencies: {
-        '@agent-mc/plugin-sdk': '^1.0.0',
-        'typescript': '^5.5.0',
-      },
+      scripts,
+      devDependencies,
     }, null, 2))
 
     // tsconfig.json
@@ -352,6 +374,7 @@ export default activate
         rootDir: 'src',
       },
       include: ['src'],
+      exclude: ['**/*.test.ts'],
     }, null, 2))
 
     // .gitignore
