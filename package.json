@@ -4,7 +4,8 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "clean": "pnpm -r clean"
+    "clean": "pnpm -r clean",
+    "typecheck:examples": "tsc -p tsconfig.examples.json"
   },
   "engines": {
     "node": ">=18"

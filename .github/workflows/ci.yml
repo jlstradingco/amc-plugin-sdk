@@ -32,6 +32,12 @@ jobs:
       # and emits dist/, which dev-shell and the tests resolve SDK types from.
       - name: Typecheck + build all packages
         run: pnpm -r build
+      # The examples/ are not workspace members (they pin a published SDK range
+      # so a user can copy one out), so `pnpm -r build` never checks them. This
+      # typechecks them against the freshly built local SDK dist/ via a
+      # paths-mapped config, catching a breaking SDK change in the examples too.
+      - name: Typecheck examples against local SDK
+        run: pnpm run typecheck:examples
       # Serialized so the CLI's real-tsc e2e build test isn't starved by
       # parallel workspace load (it has a per-test timeout).
       - name: Test all packages
