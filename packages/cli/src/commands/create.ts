@@ -123,6 +123,34 @@ export function buildReadme(opts: {
   ].join('\n')
 }
 
+export function buildPackageJson(opts: {
+  id: string
+  description: string
+  author: string
+}): Record<string, unknown> {
+  const { id, description, author } = opts
+  const pkg: Record<string, unknown> = {
+    name: id,
+    version: '1.0.0',
+    private: true,
+    type: 'module',
+  }
+  if (description) pkg.description = description
+  if (author) pkg.author = author
+  pkg.license = 'UNLICENSED'
+  pkg.scripts = {
+    build: 'tsc',
+    dev: 'amc-plugin dev',
+    package: 'amc-plugin package',
+    validate: 'amc-plugin validate',
+  }
+  pkg.devDependencies = {
+    '@agent-mc/plugin-sdk': '^1.0.0',
+    typescript: '^5.5.0',
+  }
+  return pkg
+}
+
 interface CreateOptions {
   template: string
   displayName?: string
@@ -321,22 +349,10 @@ export default activate
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
     // package.json
-    fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify({
-      name: name,
-      version: '1.0.0',
-      private: true,
-      type: 'module',
-      scripts: {
-        build: 'tsc',
-        dev: 'amc-plugin dev',
-        package: 'amc-plugin package',
-        validate: 'amc-plugin validate',
-      },
-      devDependencies: {
-        '@agent-mc/plugin-sdk': '^1.0.0',
-        'typescript': '^5.5.0',
-      },
-    }, null, 2))
+    fs.writeFileSync(
+      path.join(targetDir, 'package.json'),
+      JSON.stringify(buildPackageJson({ id: name, description, author }), null, 2),
+    )
 
     // tsconfig.json
     fs.writeFileSync(path.join(targetDir, 'tsconfig.json'), JSON.stringify({
