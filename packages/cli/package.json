@@ -16,7 +16,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-mc/plugin-sdk": "^1.0.0",
+    "@agent-mc/plugin-sdk": "workspace:^",
     "archiver": "^8.0.0",
     "chalk": "^5.4.0",
     "commander": "^12.0.0",

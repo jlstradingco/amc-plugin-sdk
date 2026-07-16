@@ -27,8 +27,8 @@ importers:
   packages/cli:
     dependencies:
       '@agent-mc/plugin-sdk':
-        specifier: ^1.0.0
-        version: 1.0.7
+        specifier: workspace:^
+        version: link:../sdk
       archiver:
         specifier: ^8.0.0
         version: 8.0.0
@@ -58,8 +58,8 @@ importers:
   packages/dev-shell:
     dependencies:
       '@agent-mc/plugin-sdk':
-        specifier: ^1.0.0
-        version: 1.0.7
+        specifier: workspace:^
+        version: link:../sdk
       chokidar:
         specifier: ^4.0.0
         version: 4.0.3
@@ -88,9 +88,6 @@ importers:
         version: 3.2.7(@types/node@25.8.0)
 
 packages:
-
-  '@agent-mc/plugin-sdk@1.0.7':
-    resolution: {integrity: sha512-w7+5qCLMMmvxZhbpVAJz3jgTxOhoBXP3/EXuop0T32Rwe1gaIplNFwIy7nWiXC1r1RcXlAttDf1Eg2BTdQk6hA==}
 
   '@algolia/abtesting@1.18.1':
     resolution: {integrity: sha512-aehCadlWOGvrT91KUIZpC0MbB8KBW9yUuvTJFd2xesR7le/IsT4nJUnjCCZ4ZqZCeTcPHPV5mo//fZ5oxcSVYw==}
@@ -1787,10 +1784,6 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
-
-  '@agent-mc/plugin-sdk@1.0.7':
-    dependencies:
-      zod: 3.25.76
 
   '@algolia/abtesting@1.18.1':
     dependencies:
