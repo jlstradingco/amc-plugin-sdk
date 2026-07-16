@@ -45,7 +45,8 @@ The `manifest.json` file is the central configuration for your plugin. It declar
     "icon": "icon.png",
     "category": "development",
     "license": { "type": "free" },
-    "minAppVersion": "0.1.30"
+    "minAppVersion": "0.1.30",
+    "tags": ["linter", "security"]
   }
 }
 ```
@@ -61,6 +62,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `category` | string | Yes | One of: `planning`, `development`, `testing`, `devops`, `productivity`, `other` |
 | `license` | object | Yes | `{ "type": "free" }`, `{ "type": "paid" }`, or `{ "type": "trial" }` |
 | `minAppVersion` | string | No | Minimum AMC version required to run this plugin |
+| `tags` | string[] | No | Discoverability keywords surfaced in marketplace search and shown as chips on the plugin card (up to 10 tags, 30 characters each) |
 
 ::: warning
 The `id` field is permanent. It is used as the storage namespace, database prefix, and marketplace identifier. Changing it after publishing creates a new, separate plugin.

@@ -49,5 +49,5 @@ export type {
 } from './types/index.js'
 
 // Validators (runtime value exports)
-export { manifestSchema, validateManifest } from './validators/manifest.js'
+export { manifestSchema, validateManifest, PLUGIN_PERMISSIONS } from './validators/manifest.js'
 export type { ManifestValidationResult } from './validators/manifest.js'

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recording Demo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        padding: 24px;
+        background: var(--surface-50, #fafafa);
+        color: var(--surface-900, #111);
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+      .subtitle {
+        color: var(--surface-500, #666);
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+      }
+      .banner {
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid #f59e0b;
+        background: rgba(245, 158, 11, 0.12);
+        color: var(--surface-800, #222);
+        font-size: 0.85rem;
+        margin-bottom: 20px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      button {
+        padding: 10px 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #fff;
+        background: rgb(var(--accent-rgb, 37 99 235));
+      }
+      button.secondary {
+        background: #475569;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .status {
+        font-size: 0.85rem;
+        color: var(--surface-600, #444);
+        margin-bottom: 16px;
+      }
+      ul {
+        list-style: none;
+      }
+      .rec {
+        padding: 12px;
+        border: 1px solid var(--surface-200, #eee);
+        border-radius: 8px;
+        background: var(--surface-0, #fff);
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+      }
+      .empty {
+        color: var(--surface-400, #999);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Recording Demo</h1>
+    <p class="subtitle">Screen recording API preview</p>
+
+    <div class="banner">
+      <strong>Preview only.</strong> The recording bridge is not yet wired in AMC — these buttons
+      call the real API but it is currently inert. This example is a template for when the API ships.
+    </div>
+
+    <div class="row">
+      <button id="start-btn">Start recording</button>
+      <button id="stop-btn" class="secondary" disabled>Stop</button>
+      <button id="refresh-btn" class="secondary">Refresh list</button>
+    </div>
+
+    <div class="status" id="status">Idle.</div>
+
+    <ul id="rec-list"></ul>
+
+    <script src="plugin.js"></script>
+  </body>
+</html>

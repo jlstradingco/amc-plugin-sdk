@@ -1,0 +1,21 @@
+{
+  "plugin": {
+    "id": "auth-demo",
+    "name": "Auth Demo",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Demonstrates the identity and scoped-token auth APIs",
+    "icon": "key",
+    "category": "other",
+    "license": { "type": "free" }
+  },
+  "sdkVersion": "^1.0.7",
+  "permissions": ["auth", "auth.session", "network"],
+  "settings": [],
+  "storage": { "collections": {} },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "Auth Demo", "icon": "key" }
+  }
+}

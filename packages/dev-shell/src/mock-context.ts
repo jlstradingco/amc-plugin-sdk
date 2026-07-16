@@ -1,18 +1,68 @@
 import { EventEmitter } from 'node:events'
-import type { PluginContext } from '@agent-mc/plugin-sdk'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import type { PluginContext, QueryOptions } from '@agent-mc/plugin-sdk'
 
 interface MockContextOptions {
   pluginId: string
   pluginVersion: string
   dataDir?: string
   logToConsole?: boolean
+  /**
+   * Dev config the plugin reads via `ctx.settings.getAll()` / `ctx.settings.get()`.
+   * The dev-shell loads this from an `amc-dev-settings.json` file next to the
+   * plugin, so a plugin's settings-gated logic can actually be exercised.
+   */
+  settings?: Record<string, unknown>
+}
+
+/** A copy so callers can't mutate rows/values still held by the in-memory store. */
+function clone<T>(value: T): T {
+  return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
 }
 
 export function createMockContext(opts: MockContextOptions): PluginContext {
-  const store = new Map<string, unknown>()
   const eventBus = new EventEmitter()
   const prefix = `[plugin:${opts.pluginId}]`
   const shouldLog = opts.logToConsole ?? true
+  const seededSettings = { ...(opts.settings ?? {}) }
+
+  // --- Persisted KV storage -------------------------------------------------
+  // With a real `dataDir` the KV store is flushed to `<dataDir>/amc-dev-storage.json`
+  // so a plugin's state survives a dev-shell restart, mirroring the host's
+  // durable plugin_kv table. Without one it stays purely in-memory.
+  const storageFile = opts.dataDir
+    ? path.join(opts.dataDir, 'amc-dev-storage.json')
+    : null
+  const store = new Map<string, unknown>()
+  if (storageFile && fs.existsSync(storageFile)) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(storageFile, 'utf-8')) as Record<string, unknown>
+      for (const [k, v] of Object.entries(raw)) store.set(k, v)
+    } catch (err) {
+      if (shouldLog) console.warn(`${prefix} [storage] failed to load ${storageFile}:`, err)
+    }
+  }
+  const flushStorage = (): void => {
+    if (!storageFile) return
+    fs.mkdirSync(path.dirname(storageFile), { recursive: true })
+    fs.writeFileSync(storageFile, JSON.stringify(Object.fromEntries(store), null, 2))
+  }
+
+  // --- Faithful in-memory relational store ----------------------------------
+  // Mirrors the host's per-collection tables: rows carry framework-managed
+  // id/created_at/updated_at, query supports where/orderBy/order/limit/offset,
+  // and reads/writes are cloned so held references can't corrupt the store.
+  const collections = new Map<string, Map<string, Record<string, unknown>>>()
+  const collectionOf = (name: string): Map<string, Record<string, unknown>> => {
+    let col = collections.get(name)
+    if (!col) { col = new Map(); collections.set(name, col) }
+    return col
+  }
+  const matchesWhere = (row: Record<string, unknown>, where?: Record<string, unknown>): boolean => {
+    if (!where) return true
+    return Object.entries(where).every(([k, v]) => row[k] === v)
+  }
 
   return {
     pluginId: opts.pluginId,
@@ -21,8 +71,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
     storage: {
       get: (key) => Promise.resolve(store.get(key)),
-      set: (key, value) => { store.set(key, value); return Promise.resolve() },
-      delete: (key) => { store.delete(key); return Promise.resolve() },
+      set: (key, value) => { store.set(key, value); flushStorage(); return Promise.resolve() },
+      delete: (key) => { store.delete(key); flushStorage(); return Promise.resolve() },
       list: (pfx) => {
         const items = [...store.entries()]
           .filter(([k]) => !pfx || k.startsWith(pfx))
@@ -34,35 +84,64 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     db: {
       insert: (col, data) => {
         const id = crypto.randomUUID()
-        const row = { ...data, id, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        const now = new Date().toISOString()
+        const row = { ...clone(data), id, created_at: now, updated_at: now }
+        collectionOf(col).set(id, row)
         if (shouldLog) console.log(`${prefix} [db] insert(${col})`, row)
-        return Promise.resolve(row)
+        return Promise.resolve(clone(row))
       },
-      query: (col, _options) => {
-        if (shouldLog) console.log(`${prefix} [db] query(${col})`)
-        return Promise.resolve([])
+      query: (col, options?: QueryOptions) => {
+        let rows = [...collectionOf(col).values()].filter((r) => matchesWhere(r, options?.where))
+        if (options?.orderBy) {
+          const key = options.orderBy
+          const dir = options.order === 'DESC' ? -1 : 1
+          rows = [...rows].sort((a, b) => {
+            const av = a[key]
+            const bv = b[key]
+            if (av === bv) return 0
+            return ((av as number | string) < (bv as number | string) ? -1 : 1) * dir
+          })
+        }
+        const offset = options?.offset ?? 0
+        const sliced = options?.limit !== undefined
+          ? rows.slice(offset, offset + options.limit)
+          : rows.slice(offset)
+        if (shouldLog) console.log(`${prefix} [db] query(${col}) -> ${sliced.length} rows`)
+        return Promise.resolve(sliced.map(clone))
       },
       getById: (col, id) => {
-        if (shouldLog) console.log(`${prefix} [db] getById(${col}, ${id})`)
-        return Promise.resolve(null)
+        const row = collectionOf(col).get(id)
+        if (shouldLog) console.log(`${prefix} [db] getById(${col}, ${id}) -> ${row ? 'hit' : 'null'}`)
+        return Promise.resolve(row ? clone(row) : null)
       },
       update: (col, id, fields) => {
+        const existing = collectionOf(col).get(id)
+        if (!existing) {
+          return Promise.reject(new Error(`db.update: no row "${id}" in collection "${col}"`))
+        }
+        const updated = { ...existing, ...clone(fields), id, updated_at: new Date().toISOString() }
+        collectionOf(col).set(id, updated)
         if (shouldLog) console.log(`${prefix} [db] update(${col}, ${id})`, fields)
-        return Promise.resolve({ id, ...fields, updated_at: new Date().toISOString() })
+        return Promise.resolve(clone(updated))
       },
       delete: (col, id) => {
+        collectionOf(col).delete(id)
         if (shouldLog) console.log(`${prefix} [db] delete(${col}, ${id})`)
         return Promise.resolve()
       },
       deleteWhere: (col, where) => {
+        const target = collectionOf(col)
+        for (const [id, row] of [...target.entries()]) {
+          if (matchesWhere(row, where)) target.delete(id)
+        }
         if (shouldLog) console.log(`${prefix} [db] deleteWhere(${col})`, where)
         return Promise.resolve()
       },
     },
 
     settings: {
-      getAll: () => Promise.resolve({}),
-      get: () => Promise.resolve(undefined),
+      getAll: () => Promise.resolve(clone(seededSettings)),
+      get: (key) => Promise.resolve(clone(seededSettings[key])),
     },
 
     log: {
