@@ -172,3 +172,52 @@ describe('Plugin lifecycle E2E', () => {
     expect(files[0]).toBe('e2e-test-plugin-1.0.0.amcplugin')
   })
 })
+
+describe('Webview (flat-JS) plugin lifecycle E2E', () => {
+  let tmpDir: string
+  let pluginDir: string
+  const cliDist = path.resolve(__dirname, '../../dist/index.js')
+
+  beforeAll(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-e2e-webview-'))
+    pluginDir = path.join(tmpDir, 'webview-e2e-plugin')
+  })
+
+  afterAll(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('scaffolds a flat-JS plugin with no tsconfig or src/', () => {
+    execSync(
+      [
+        `node "${cliDist}" create webview-e2e-plugin`,
+        '--template webview',
+        '--display-name "Webview E2E"',
+        '--description "A flat webview plugin"',
+        '--author "Test Author"',
+        '--category other',
+        '--icon puzzle',
+        '--skip-install',
+        '--skip-git',
+      ].join(' '),
+      { cwd: tmpDir, stdio: 'pipe' },
+    )
+
+    expect(fs.existsSync(path.join(pluginDir, 'ui', 'index.html'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'ui', 'plugin.js'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(false)
+    expect(fs.existsSync(path.join(pluginDir, 'src'))).toBe(false)
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'))
+    expect(manifest.ui.entryPoint).toBe('ui/index.html')
+  })
+
+  it('packages root-layout without running tsc (no dist/ produced)', () => {
+    execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
+
+    const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.amcplugin'))
+    expect(files).toEqual(['webview-e2e-plugin-1.0.0.amcplugin'])
+    // Flat plugins must never trigger a TypeScript compile.
+    expect(fs.existsSync(path.join(pluginDir, 'dist'))).toBe(false)
+  })
+})

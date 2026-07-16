@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { PluginPermission } from '../types/manifest.js'
 
 const pluginIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -86,10 +87,40 @@ const resourceLimitsSchema = z.object({
   memoryMb: z.number().int().positive().max(512).optional(),
 })
 
-const permissionSchema = z.enum([
-  'storage', 'sessions', 'ai', 'network', 'cron', 'cli', 'notifications',
-  'rss', 'auth', 'auth.session', 'recording', 'inbox', 'navigation',
-])
+/**
+ * Canonical, runtime-visible list of every permission a plugin can request.
+ * Single source of truth: the Zod enum below is derived from it, and the two
+ * `satisfies`/exhaustiveness guards keep it byte-for-byte in sync with the
+ * `PluginPermission` union in ../types/manifest.ts. The SDK<->host parity guard
+ * (src/__tests__/host-permission-parity.test.ts) compares this to the vendored
+ * host mirror so the two surfaces cannot silently drift.
+ */
+export const PLUGIN_PERMISSIONS = [
+  'storage',
+  'sessions',
+  'ai',
+  'network',
+  'cron',
+  'cli',
+  'notifications',
+  'system',
+  'rss',
+  'auth',
+  'auth.session',
+  'chrome',
+  'recording',
+  'inbox',
+  'navigation',
+] as const satisfies readonly PluginPermission[]
+
+// Compile-time completeness: fails to type-check if a PluginPermission is added
+// to the union but not listed above (the `satisfies` clause guards the reverse).
+type _AssertAllPermissionsListed =
+  PluginPermission extends (typeof PLUGIN_PERMISSIONS)[number] ? true : never
+const _permissionExhaustiveness: _AssertAllPermissionsListed = true
+void _permissionExhaustiveness
+
+const permissionSchema = z.enum(PLUGIN_PERMISSIONS)
 
 export const manifestSchema = z.object({
   plugin: pluginInfoSchema,

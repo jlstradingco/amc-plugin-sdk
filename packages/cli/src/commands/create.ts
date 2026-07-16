@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import { execSync } from 'node:child_process'
 import { ok, fail, info, actionableError } from '../lib/output.js'
 
-const TEMPLATES = ['basic', 'with-backend', 'full'] as const
+const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
 type Template = typeof TEMPLATES[number]
 
 const CATEGORIES = ['planning', 'development', 'testing', 'devops', 'productivity', 'other'] as const
@@ -127,8 +127,10 @@ export function buildPackageJson(opts: {
   id: string
   description: string
   author: string
+  isWebview?: boolean
+  hasBackend?: boolean
 }): Record<string, unknown> {
-  const { id, description, author } = opts
+  const { id, description, author, isWebview = false, hasBackend = false } = opts
   const pkg: Record<string, unknown> = {
     name: id,
     version: '1.0.0',
@@ -138,16 +140,30 @@ export function buildPackageJson(opts: {
   if (description) pkg.description = description
   if (author) pkg.author = author
   pkg.license = 'UNLICENSED'
-  pkg.scripts = {
-    build: 'tsc',
-    dev: 'amc-plugin dev',
-    package: 'amc-plugin package',
-    validate: 'amc-plugin validate',
+
+  // Webview plugins have no compile step, so no build script or TypeScript
+  // dependency. Backend templates add a test script + vitest.
+  const scripts: Record<string, string> = isWebview
+    ? {
+        dev: 'amc-plugin dev',
+        package: 'amc-plugin package',
+        validate: 'amc-plugin validate',
+      }
+    : {
+        build: 'tsc',
+        dev: 'amc-plugin dev',
+        package: 'amc-plugin package',
+        validate: 'amc-plugin validate',
+      }
+  const devDependencies: Record<string, string> = isWebview
+    ? { '@agent-mc/plugin-sdk': '^1.0.0' }
+    : { '@agent-mc/plugin-sdk': '^1.0.0', typescript: '^5.5.0' }
+  if (hasBackend) {
+    scripts.test = 'amc-plugin test'
+    devDependencies['vitest'] = '^3.0.0'
   }
-  pkg.devDependencies = {
-    '@agent-mc/plugin-sdk': '^1.0.0',
-    typescript: '^5.5.0',
-  }
+  pkg.scripts = scripts
+  pkg.devDependencies = devDependencies
   return pkg
 }
 
@@ -165,7 +181,7 @@ interface CreateOptions {
 
 export const createCommand = new Command('create')
   .argument('<name>', 'Plugin name (kebab-case)')
-  .option('-t, --template <template>', 'Template: basic, with-backend, full', 'basic')
+  .option('-t, --template <template>', 'Template: basic, with-backend, full, webview', 'basic')
   .option('--display-name <name>', 'Display name (skips interactive prompt)')
   .option('--description <desc>', 'Plugin description')
   .option('--author <author>', 'Plugin author')
@@ -262,15 +278,19 @@ export const createCommand = new Command('create')
       sdkVersion: '^1.0.0',
     }
 
-    // UI setup
+    // A webview plugin is flat-JS: files ship as-authored at the root (no tsc
+    // compile step), matching how AMC's builtin plugins are structured.
+    const isWebview = template === 'webview'
+    const uiRoot = isWebview ? path.join(targetDir, 'ui') : path.join(targetDir, 'src', 'ui')
+
     manifest.ui = {
-      entryPoint: 'dist/ui/index.html',
+      entryPoint: isWebview ? 'ui/index.html' : 'dist/ui/index.html',
       sidebar: { title: displayName, icon: icon },
     }
 
-    fs.mkdirSync(path.join(targetDir, 'src', 'ui'), { recursive: true })
+    fs.mkdirSync(uiRoot, { recursive: true })
 
-    fs.writeFileSync(path.join(targetDir, 'src', 'ui', 'index.html'), `<!DOCTYPE html>
+    fs.writeFileSync(path.join(uiRoot, 'index.html'), `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -290,7 +310,19 @@ export const createCommand = new Command('create')
 </body>
 </html>`)
 
-    fs.writeFileSync(path.join(targetDir, 'src', 'ui', 'plugin.ts'), `import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+    if (isWebview) {
+      fs.writeFileSync(path.join(uiRoot, 'plugin.js'), `// Plain-JS webview plugin — no build step. Edit and reload.
+const amc = window.AgentMC
+
+async function init() {
+  const settings = await amc.settings.getAll()
+  console.log('Plugin initialized with settings:', settings)
+}
+
+init()
+`)
+    } else {
+      fs.writeFileSync(path.join(uiRoot, 'plugin.ts'), `import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
 
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
@@ -301,6 +333,7 @@ async function init() {
 
 init()
 `)
+    }
 
     // Backend setup (with-backend and full templates)
     if (template === 'with-backend' || template === 'full') {
@@ -329,6 +362,21 @@ const activate: PluginActivate = (ctx) => {
 
 export default activate
 `)
+
+      // Sample test wired to the SDK test harness
+      fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.test.ts'), `import { describe, it, expect } from 'vitest'
+import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import activate from './index.js'
+
+describe('${displayName} backend', () => {
+  it('logs when enabled', () => {
+    const h = createTestContext({ pluginId: '${name}', pluginVersion: '1.0.0' })
+    const backend = activate(h.ctx)
+    backend.onEnable?.()
+    expect(h.logs.some((l) => l.message.includes('enabled'))).toBe(true)
+  })
+})
+`)
     }
 
     // Cron + CLI setup (full template only)
@@ -348,27 +396,37 @@ export default activate
 
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
-    // package.json
+    // package.json — metadata (description/author/license) plus template-aware
+    // scripts + dev deps, all assembled by buildPackageJson.
+    const hasBackend = template === 'with-backend' || template === 'full'
     fs.writeFileSync(
       path.join(targetDir, 'package.json'),
-      JSON.stringify(buildPackageJson({ id: name, description, author }), null, 2),
+      JSON.stringify(
+        buildPackageJson({ id: name, description, author, isWebview, hasBackend }),
+        null,
+        2,
+      ),
     )
 
-    // tsconfig.json
-    fs.writeFileSync(path.join(targetDir, 'tsconfig.json'), JSON.stringify({
-      compilerOptions: {
-        target: 'ES2022',
-        module: 'ESNext',
-        moduleResolution: 'bundler',
-        declaration: true,
-        strict: true,
-        esModuleInterop: true,
-        skipLibCheck: true,
-        outDir: 'dist',
-        rootDir: 'src',
-      },
-      include: ['src'],
-    }, null, 2))
+    // tsconfig.json — TS templates only. Its absence is the signal that marks a
+    // plugin as flat-JS (no tsc run).
+    if (!isWebview) {
+      fs.writeFileSync(path.join(targetDir, 'tsconfig.json'), JSON.stringify({
+        compilerOptions: {
+          target: 'ES2022',
+          module: 'ESNext',
+          moduleResolution: 'bundler',
+          declaration: true,
+          strict: true,
+          esModuleInterop: true,
+          skipLibCheck: true,
+          outDir: 'dist',
+          rootDir: 'src',
+        },
+        include: ['src'],
+        exclude: ['**/*.test.ts'],
+      }, null, 2))
+    }
 
     // .gitignore
     fs.writeFileSync(path.join(targetDir, '.gitignore'), SCAFFOLD_GITIGNORE)
@@ -382,7 +440,7 @@ export default activate
         id: name,
         category,
         tags,
-        hasBackend: template === 'with-backend' || template === 'full',
+        hasBackend,
       }),
     )
 
@@ -405,6 +463,8 @@ export default activate
     if (opts.skipInstall) {
       console.log('  npm install')
     }
-    console.log('  npm run build')
+    if (!isWebview) {
+      console.log('  npm run build')
+    }
     console.log('  npm run dev')
   })

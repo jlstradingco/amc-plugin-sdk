@@ -4,6 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, warn, manifestNotFound } from '../lib/output.js'
+import { isTypeScriptProject, copyNonTsFiles, collectPackageEntries } from '../lib/project.js'
 
 export const packageCommand = new Command('package')
   .description('Bundle plugin into a .amcplugin archive')
@@ -23,16 +24,26 @@ export const packageCommand = new Command('package')
       process.exit(1)
     }
 
-    const distDir = path.join(cwd, 'dist')
-    if (!fs.existsSync(distDir)) {
-      info('No dist/ found, building first...')
-      execSync('npx tsc', { cwd, stdio: 'inherit' })
-      const srcUi = path.join(cwd, 'src', 'ui')
-      const distUi = path.join(cwd, 'dist', 'ui')
-      if (fs.existsSync(srcUi)) {
-        copyNonTsFiles(srcUi, distUi)
+    const flat = !isTypeScriptProject(cwd)
+
+    // For TS projects, ensure dist/ is built. Flat plugins ship files as-authored.
+    if (!flat) {
+      const distDir = path.join(cwd, 'dist')
+      if (!fs.existsSync(distDir)) {
+        info('No dist/ found, building first...')
+        execSync('npx tsc', { cwd, stdio: 'inherit' })
+        const srcUi = path.join(cwd, 'src', 'ui')
+        const distUi = path.join(cwd, 'dist', 'ui')
+        if (fs.existsSync(srcUi)) {
+          copyNonTsFiles(srcUi, distUi)
+        }
       }
     }
+
+    // manifest.json. TS plugins ship a single `dist/` tree (+ optional assets/);
+    // flat plugins ship their as-authored folders (ui/, assets/, prompts/…).
+    // Shared with `install` so both agree on a plugin's shippable payload.
+    const rootEntries = collectPackageEntries(cwd, manifest)
 
     const pluginId = manifest.plugin.id
     const version = manifest.plugin.version
@@ -55,19 +66,18 @@ export const packageCommand = new Command('package')
         archive.on('error', reject)
         archive.pipe(output)
         archive.file(manifestPath, { name: 'manifest.json' })
-        archive.directory(distDir, 'dist')
-        const assetsDir = path.join(cwd, 'assets')
-        if (fs.existsSync(assetsDir)) {
-          archive.directory(assetsDir, 'assets')
+        for (const entry of rootEntries) {
+          const full = path.join(cwd, entry)
+          if (fs.statSync(full).isDirectory()) {
+            archive.directory(full, entry)
+          } else {
+            archive.file(full, { name: entry })
+          }
         }
         archive.finalize()
       })
     } else {
-      const filesToInclude = ['manifest.json', 'dist/']
-      const assetsDir = path.join(cwd, 'assets')
-      if (fs.existsSync(assetsDir)) filesToInclude.push('assets/')
-
-      execSync(`tar -czf "${outputName}" ${filesToInclude.join(' ')}`, { cwd, stdio: 'pipe' })
+      execSync(`tar -czf "${outputName}" manifest.json ${rootEntries.join(' ')}`, { cwd, stdio: 'pipe' })
     }
 
     const stats = fs.statSync(outputPath)
@@ -79,16 +89,3 @@ export const packageCommand = new Command('package')
       warn('Package exceeds 50 MB marketplace limit')
     }
   })
-
-function copyNonTsFiles(src: string, dest: string) {
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const srcPath = path.join(src, entry.name)
-    const destPath = path.join(dest, entry.name)
-    if (entry.isDirectory()) {
-      copyNonTsFiles(srcPath, destPath)
-    } else if (!entry.name.endsWith('.ts')) {
-      fs.copyFileSync(srcPath, destPath)
-    }
-  }
-}
