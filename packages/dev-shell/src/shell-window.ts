@@ -43,10 +43,26 @@ app.whenReady().then(() => {
   if (manifest.backend?.entryPoint) {
     const backendPath = path.join(pluginDir, manifest.backend.entryPoint)
     if (fs.existsSync(backendPath)) {
+      // Dev config: `amc-dev-settings.json` next to the plugin seeds
+      // ctx.settings so settings-gated logic runs; `.amc-dev/` holds the
+      // persisted KV store so plugin state survives a dev-shell restart.
+      const settingsFile = path.join(pluginDir, 'amc-dev-settings.json')
+      let devSettings: Record<string, unknown> = {}
+      if (fs.existsSync(settingsFile)) {
+        try {
+          devSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'))
+          console.log(`[dev-shell] Loaded dev settings from ${settingsFile}`)
+        } catch (err) {
+          console.error(`[dev-shell] Failed to parse ${settingsFile}:`, err)
+        }
+      }
+
       const mockCtx = createMockContext({
         pluginId: manifest.plugin.id,
         pluginVersion,
         logToConsole: true,
+        dataDir: path.join(pluginDir, '.amc-dev'),
+        settings: devSettings,
       })
 
       try {
