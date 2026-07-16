@@ -16,7 +16,10 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "baseUrl": ".",
+    // No `baseUrl`: it is deprecated in TS 5.9 (removed in 7.0) and errors under
+    // the version CI resolves. Modern TS resolves `paths` relative to this
+    // config file's directory (the repo root), so the relative targets below
+    // work without it.
     "paths": {
       "@agent-mc/plugin-sdk": ["./packages/sdk/dist/index.d.ts"],
       "@agent-mc/plugin-sdk/browser": ["./packages/sdk/dist/types/bridge.d.ts"]
