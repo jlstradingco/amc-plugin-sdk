@@ -167,6 +167,81 @@ export function buildPackageJson(opts: {
   return pkg
 }
 
+/**
+ * Assemble the scaffolded `manifest.json` for a template. Kept pure (no filesystem)
+ * so every template's manifest can be unit-tested against the SDK's own
+ * `validateManifest` — the drift that silently broke the github-issues example
+ * (cron gained required `label` / `approvalRequired`) would otherwise only surface
+ * when a developer ran `amc-plugin validate` on a freshly scaffolded `full` plugin.
+ * Key insertion order matches the previous inline literal so generated files are
+ * byte-identical: plugin, settings, storage, migrations, sdkVersion, ui, then the
+ * template-conditional backend/permissions/cli/cron.
+ */
+export function buildManifest(opts: {
+  id: string
+  displayName: string
+  author: string
+  description: string
+  icon: string
+  category: string
+  tags: string[]
+  template: Template
+}): Record<string, unknown> {
+  const { id, displayName, author, description, icon, category, tags, template } = opts
+  const isWebview = template === 'webview'
+  const hasBackend = template === 'with-backend' || template === 'full'
+
+  const manifest: Record<string, unknown> = {
+    plugin: {
+      id,
+      name: displayName,
+      version: '1.0.0',
+      author,
+      description,
+      icon,
+      category,
+      license: { type: 'free' },
+      // Discoverability tags folded into marketplace search + shown as card chips.
+      // Taken from `--tags` / the create prompt (bounded to ≤10 tags, ≤30 chars
+      // each); an empty entry falls back to the chosen category so the plugin ships
+      // searchable on the marketplace from day one.
+      tags,
+    },
+    settings: [],
+    storage: { collections: {} },
+    migrations: [],
+    sdkVersion: '^1.0.0',
+  }
+
+  manifest.ui = {
+    entryPoint: isWebview ? 'ui/index.html' : 'dist/ui/index.html',
+    sidebar: { title: displayName, icon },
+  }
+
+  // Backend setup (with-backend and full templates)
+  if (hasBackend) {
+    manifest.backend = { entryPoint: 'dist/backend/index.js' }
+    manifest.permissions = ['storage']
+  }
+
+  // Cron + CLI setup (full template only)
+  if (template === 'full') {
+    manifest.permissions = ['storage', 'cron', 'cli']
+    manifest.cli = {
+      endpoints: [
+        { method: 'GET', path: 'status', description: 'Get plugin status', auth: true },
+      ],
+    }
+    manifest.cron = {
+      jobs: [
+        { id: 'heartbeat', label: 'Heartbeat Check', schedule: '*/30 * * * *', description: 'Periodic health check', approvalRequired: true },
+      ],
+    }
+  }
+
+  return manifest
+}
+
 interface CreateOptions {
   template: string
   displayName?: string
@@ -255,38 +330,14 @@ export const createCommand = new Command('create')
 
     fs.mkdirSync(targetDir, { recursive: true })
 
-    // manifest.json
-    const manifest: Record<string, unknown> = {
-      plugin: {
-        id: name,
-        name: displayName,
-        version: '1.0.0',
-        author: author,
-        description: description,
-        icon: icon,
-        category: category,
-        license: { type: 'free' },
-        // Discoverability tags folded into marketplace search + shown as card chips.
-        // Taken from `--tags` / the create prompt (bounded to ≤10 tags, ≤30 chars
-        // each); an empty entry falls back to the chosen category so the plugin ships
-        // searchable on the marketplace from day one.
-        tags: tags,
-      },
-      settings: [],
-      storage: { collections: {} },
-      migrations: [],
-      sdkVersion: '^1.0.0',
-    }
+    // manifest.json — fully assembled (template-aware ui/backend/permissions/cli/cron)
+    // by the pure buildManifest so every scaffolded template stays validator-clean.
+    const manifest = buildManifest({ id: name, displayName, author, description, icon, category, tags, template })
 
     // A webview plugin is flat-JS: files ship as-authored at the root (no tsc
     // compile step), matching how AMC's builtin plugins are structured.
     const isWebview = template === 'webview'
     const uiRoot = isWebview ? path.join(targetDir, 'ui') : path.join(targetDir, 'src', 'ui')
-
-    manifest.ui = {
-      entryPoint: isWebview ? 'ui/index.html' : 'dist/ui/index.html',
-      sidebar: { title: displayName, icon: icon },
-    }
 
     fs.mkdirSync(uiRoot, { recursive: true })
 
@@ -335,11 +386,9 @@ init()
 `)
     }
 
-    // Backend setup (with-backend and full templates)
+    // Backend files (with-backend and full templates) — the manifest's backend
+    // entry / permissions are set by buildManifest above.
     if (template === 'with-backend' || template === 'full') {
-      manifest.backend = { entryPoint: 'dist/backend/index.js' }
-      manifest.permissions = ['storage']
-
       fs.mkdirSync(path.join(targetDir, 'src', 'backend'), { recursive: true })
 
       fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.ts'), `import type { PluginActivate } from '@agent-mc/plugin-sdk'
@@ -377,21 +426,6 @@ describe('${displayName} backend', () => {
   })
 })
 `)
-    }
-
-    // Cron + CLI setup (full template only)
-    if (template === 'full') {
-      manifest.permissions = ['storage', 'cron', 'cli']
-      manifest.cli = {
-        endpoints: [
-          { method: 'GET', path: 'status', description: 'Get plugin status', auth: true },
-        ],
-      }
-      manifest.cron = {
-        jobs: [
-          { id: 'heartbeat', label: 'Heartbeat Check', schedule: '*/30 * * * *', description: 'Periodic health check', approvalRequired: true },
-        ],
-      }
     }
 
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
