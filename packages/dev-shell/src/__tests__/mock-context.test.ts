@@ -220,6 +220,91 @@ describe('createMockContext — persisted storage', () => {
   })
 })
 
+describe('createMockContext — sandboxed fs (with dataDir)', () => {
+  let dir: string
+  let ctx: ReturnType<typeof createMockContext>
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-mock-fs-'))
+    ctx = createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false, dataDir: dir })
+  })
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('writeFile then readFile round-trips through the real filesystem', async () => {
+    await ctx.fs.writeFile('notes/todo.txt', 'buy milk')
+    expect(await ctx.fs.readFile('notes/todo.txt')).toBe('buy milk')
+    // The bytes really landed under dataDir.
+    expect(fs.readFileSync(path.join(dir, 'notes', 'todo.txt'), 'utf-8')).toBe('buy milk')
+  })
+
+  it('writeFile creates intermediate directories', async () => {
+    await ctx.fs.writeFile('a/b/c/deep.txt', 'x')
+    expect(fs.existsSync(path.join(dir, 'a', 'b', 'c', 'deep.txt'))).toBe(true)
+  })
+
+  it('exists reflects the real file, and is false for a missing one', async () => {
+    expect(await ctx.fs.exists('gone.txt')).toBe(false)
+    await ctx.fs.writeFile('gone.txt', 'here')
+    expect(await ctx.fs.exists('gone.txt')).toBe(true)
+  })
+
+  it('listDir lists a directory and returns [] for a missing one', async () => {
+    await ctx.fs.writeFile('out/a.txt', '1')
+    await ctx.fs.writeFile('out/b.txt', '2')
+    expect((await ctx.fs.listDir('out')).sort()).toEqual(['a.txt', 'b.txt'])
+    expect(await ctx.fs.listDir('nope')).toEqual([])
+  })
+
+  it('deleteFile removes the file (and is a no-op when absent)', async () => {
+    await ctx.fs.writeFile('temp.txt', 'x')
+    await ctx.fs.deleteFile('temp.txt')
+    expect(await ctx.fs.exists('temp.txt')).toBe(false)
+    await expect(ctx.fs.deleteFile('temp.txt')).resolves.toBeUndefined()
+  })
+
+  it('survives a dev-shell restart — a fresh context reads prior files', async () => {
+    await ctx.fs.writeFile('state.json', '{"n":1}')
+    const restarted = createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false, dataDir: dir })
+    expect(await restarted.fs.readFile('state.json')).toBe('{"n":1}')
+  })
+
+  it('readFile rejects for a missing file', async () => {
+    await expect(ctx.fs.readFile('missing.txt')).rejects.toThrow()
+  })
+
+  it('rejects paths that escape the sandbox', async () => {
+    await expect(ctx.fs.writeFile('../escape.txt', 'nope')).rejects.toThrow(/sandbox/)
+    await expect(ctx.fs.readFile('../../etc/passwd')).rejects.toThrow(/sandbox/)
+    // No file was written outside the sandbox.
+    expect(fs.existsSync(path.join(dir, '..', 'escape.txt'))).toBe(false)
+  })
+})
+
+describe('createMockContext — in-memory fs (no dataDir)', () => {
+  let ctx: ReturnType<typeof createMockContext>
+
+  beforeEach(() => {
+    ctx = createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false })
+  })
+
+  it('writeFile/readFile/exists/listDir/deleteFile work purely in memory', async () => {
+    await ctx.fs.writeFile('a.txt', 'hello')
+    expect(await ctx.fs.readFile('a.txt')).toBe('hello')
+    expect(await ctx.fs.exists('a.txt')).toBe(true)
+    await ctx.fs.writeFile('b.txt', 'world')
+    expect((await ctx.fs.listDir('')).sort()).toEqual(['a.txt', 'b.txt'])
+    await ctx.fs.deleteFile('a.txt')
+    expect(await ctx.fs.exists('a.txt')).toBe(false)
+  })
+
+  it('readFile rejects for a missing file', async () => {
+    await expect(ctx.fs.readFile('nope.txt')).rejects.toThrow()
+  })
+})
+
 describe('createMockContext — settings from dev config', () => {
   it('settings.getAll returns the seeded dev config', async () => {
     const ctx = createMockContext({

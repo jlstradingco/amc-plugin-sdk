@@ -64,6 +64,53 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     return Object.entries(where).every(([k, v]) => row[k] === v)
   }
 
+  // --- Sandboxed filesystem -------------------------------------------------
+  // Mirrors the host's PluginFs: every path is relative to the plugin's data
+  // directory and cannot escape it. With a `dataDir` reads/writes hit the real
+  // filesystem under `<dataDir>/`, so a plugin's ctx.fs output survives a
+  // dev-shell restart just like the host. Without one it stays purely in-memory
+  // so fs still works in a throwaway dev session.
+  const fsRoot = opts.dataDir ? path.resolve(opts.dataDir) : null
+  const memFiles = new Map<string, string>()
+  const resolveInSandbox = (relativePath: string): string => {
+    const full = path.resolve(fsRoot as string, relativePath)
+    const rel = path.relative(fsRoot as string, full)
+    if (rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel)) {
+      throw new Error(`fs path escapes the plugin sandbox: ${relativePath}`)
+    }
+    return full
+  }
+  const realFs: PluginContext['fs'] = {
+    readFile: async (rp) => fs.promises.readFile(resolveInSandbox(rp), 'utf-8'),
+    writeFile: async (rp, content) => {
+      const full = resolveInSandbox(rp)
+      await fs.promises.mkdir(path.dirname(full), { recursive: true })
+      await fs.promises.writeFile(full, content)
+    },
+    exists: async (rp) => fs.existsSync(resolveInSandbox(rp)),
+    listDir: async (rp) => {
+      const full = resolveInSandbox(rp ?? '')
+      if (!fs.existsSync(full)) return []
+      return fs.promises.readdir(full)
+    },
+    deleteFile: async (rp) => {
+      await fs.promises.rm(resolveInSandbox(rp), { force: true })
+    },
+  }
+  const memFs: PluginContext['fs'] = {
+    readFile: (rp) => {
+      const content = memFiles.get(rp)
+      return content === undefined
+        ? Promise.reject(new Error(`No such file: ${rp}`))
+        : Promise.resolve(content)
+    },
+    writeFile: (rp, content) => { memFiles.set(rp, content); return Promise.resolve() },
+    exists: (rp) => Promise.resolve(memFiles.has(rp)),
+    listDir: (rp) =>
+      Promise.resolve([...memFiles.keys()].filter((k) => !rp || k.startsWith(rp))),
+    deleteFile: (rp) => { memFiles.delete(rp); return Promise.resolve() },
+  }
+
   return {
     pluginId: opts.pluginId,
     pluginVersion: opts.pluginVersion,
@@ -183,13 +230,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       generateTitle: (text) => Promise.resolve(`[AI mock] Title: ${text.slice(0, 50)}`),
     },
 
-    fs: {
-      readFile: () => Promise.reject(new Error('Mock fs: use --dataDir for real filesystem')),
-      writeFile: () => Promise.reject(new Error('Mock fs: use --dataDir for real filesystem')),
-      exists: () => Promise.resolve(false),
-      listDir: () => Promise.resolve([]),
-      deleteFile: () => Promise.reject(new Error('Mock fs: use --dataDir for real filesystem')),
-    },
+    fs: fsRoot ? realFs : memFs,
 
     http: {
       fetch: (url, options) => globalThis.fetch(url, options),
