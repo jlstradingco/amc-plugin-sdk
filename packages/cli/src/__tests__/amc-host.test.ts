@@ -14,12 +14,14 @@ describe('resolveAmcUserDataDir', () => {
       env: { APPDATA: 'C:\\Users\\me\\AppData\\Roaming' },
       homedir: 'C:\\Users\\me',
     })
-    expect(dir).toBe(path.join('C:\\Users\\me\\AppData\\Roaming', 'agent-mission-control'))
+    // win32 expectations must use path.win32 so the assertion is correct on a
+    // POSIX CI runner (ambient path.join would emit forward slashes there).
+    expect(dir).toBe(path.win32.join('C:\\Users\\me\\AppData\\Roaming', 'agent-mission-control'))
   })
 
   it('falls back to <home>/AppData/Roaming when APPDATA is unset on Windows', () => {
     const dir = resolveAmcUserDataDir({ platform: 'win32', env: {}, homedir: 'C:\\Users\\me' })
-    expect(dir).toBe(path.join('C:\\Users\\me', 'AppData', 'Roaming', 'agent-mission-control'))
+    expect(dir).toBe(path.win32.join('C:\\Users\\me', 'AppData', 'Roaming', 'agent-mission-control'))
   })
 
   it('uses ~/Library/Application Support/agent-mission-control on macOS', () => {
