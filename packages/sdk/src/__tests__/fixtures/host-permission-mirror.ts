@@ -75,17 +75,18 @@ export const HOST_AHEAD_PERMISSIONS = ['firebase'] as const
 export const BRIDGE_PENDING_PERMISSIONS = ['recording'] as const
 
 /**
- * Type-shape deltas between the SDK's `PluginContext` and the host's runtime,
- * deferred to their own breaking-change PR (see the overhaul backlog, PR "type
- * parity"). Recorded here so the guard test documents them rather than silently
- * tolerating an unbounded gap:
+ * Type-shape deltas between the SDK's `PluginContext` and the host's runtime.
+ * Recorded here so the guard test names any known drift rather than silently
+ * tolerating an unbounded gap. Currently EMPTY — the two historical deltas were
+ * resolved by the `fix(sdk): align PluginDb query/update types to host runtime`
+ * change:
  *
- * - `QueryOptions.orderBy`: SDK types it as `string` (+ separate `order`), the
- *   host's `collectionQuery` expects `Record<string, 'asc' | 'desc'>`.
- * - `PluginDb.update`: SDK returns the updated row, the host's
- *   `collectionUpdate` returns `void`.
+ * - `QueryOptions.orderBy`: was SDK `string` (+ separate `order`) vs host
+ *   `Record<string, 'asc' | 'desc'>` — SDK now matches the host object form.
+ * - `PluginDb.update`: was SDK returning the updated row vs host returning
+ *   `void` — SDK now returns `Promise<void>`.
+ *
+ * Append a new entry here (and bump the guard's expected count) only when a
+ * fresh, deliberately-deferred type delta is introduced.
  */
-export const KNOWN_TYPE_DELTAS = [
-  'QueryOptions.orderBy: SDK string+order vs host Record<string,"asc"|"desc">',
-  'PluginDb.update: SDK returns row vs host returns void',
-] as const
+export const KNOWN_TYPE_DELTAS = [] as const

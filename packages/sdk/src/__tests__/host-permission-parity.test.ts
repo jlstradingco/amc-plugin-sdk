@@ -81,9 +81,12 @@ describe('SDK <-> host permission parity', () => {
     expect(bad.success).toBe(false)
   })
 
-  it('documents the deferred type-shape deltas (breaking, own PR)', () => {
-    // This assertion exists so the guard file names the known drift rather than
-    // silently tolerating it. Updating the deltas is intentional and reviewed.
-    expect(KNOWN_TYPE_DELTAS.length).toBe(2)
+  it('has no outstanding type-shape deltas (both historical ones resolved)', () => {
+    // This assertion exists so the guard file names any known drift rather than
+    // silently tolerating it. The two original deltas (QueryOptions.orderBy and
+    // PluginDb.update) were resolved when the SDK types were aligned to the host
+    // runtime, so the list is now empty. Bumping this count is intentional and
+    // reviewed — do it only when a new deferred delta is genuinely introduced.
+    expect(KNOWN_TYPE_DELTAS.length).toBe(0)
   })
 })
