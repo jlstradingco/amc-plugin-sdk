@@ -1,0 +1,26 @@
+{
+  // Typecheck-only config for the examples/. The examples are NOT pnpm
+  // workspace members (they declare a published `@agent-mc/plugin-sdk` range so
+  // a user can copy one out and `pnpm install`), so nothing normally checks
+  // them against the *local* SDK source. This config maps the SDK import to the
+  // freshly built dist/ so a breaking SDK change surfaces here in CI.
+  //
+  // Requires `packages/sdk` to be built first (dist/*.d.ts must exist).
+  // Mirrors the examples' own tsconfig compiler options + noEmit + paths.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@agent-mc/plugin-sdk": ["./packages/sdk/dist/index.d.ts"],
+      "@agent-mc/plugin-sdk/browser": ["./packages/sdk/dist/types/bridge.d.ts"]
+    }
+  },
+  "include": ["examples/*/src/**/*.ts"]
+}
