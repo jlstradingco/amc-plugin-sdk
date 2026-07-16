@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pnpm
+        run: npm install -g pnpm
+      # --ignore-scripts skips electron's binary download (a dev-shell dep);
+      # tsc and the mock-context tests never launch a real Electron window.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      # `pnpm -r build` runs tsc across every package (this IS the typecheck)
+      # and emits dist/, which dev-shell and the tests resolve SDK types from.
+      - name: Typecheck + build all packages
+        run: pnpm -r build
+      # Serialized so the CLI's real-tsc e2e build test isn't starved by
+      # parallel workspace load (it has a per-test timeout).
+      - name: Test all packages
+        run: pnpm --workspace-concurrency=1 -r test
