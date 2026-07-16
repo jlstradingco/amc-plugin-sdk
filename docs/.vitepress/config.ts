@@ -9,7 +9,7 @@ export default defineConfig({
   themeConfig: {
     logo: '/logo.svg',
     nav: [
-      { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Guide', link: '/guide/quickstart' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
       { text: 'CLI', link: '/reference/cli' }
@@ -19,6 +19,7 @@ export default defineConfig({
         {
           text: 'Guide',
           items: [
+            { text: 'Quickstart', link: '/guide/quickstart' },
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Project Structure', link: '/guide/project-structure' },
             { text: 'Manifest', link: '/guide/manifest' },
@@ -45,7 +46,10 @@ export default defineConfig({
             { text: 'Toast', link: '/api/toast' },
             { text: 'Settings', link: '/api/settings' },
             { text: 'Events', link: '/api/events' },
-            { text: 'Logging', link: '/api/logging' }
+            { text: 'Logging', link: '/api/logging' },
+            { text: 'Inbox', link: '/api/inbox' },
+            { text: 'Auth', link: '/api/auth' },
+            { text: 'Recording', link: '/api/recording' }
           ]
         }
       ]

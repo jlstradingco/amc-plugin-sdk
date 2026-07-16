@@ -40,7 +40,6 @@ export const packageCommand = new Command('package')
       }
     }
 
-    // Top-level entries (dirs or files) to place at the archive root, alongside
     // manifest.json. TS plugins ship a single `dist/` tree (+ optional assets/);
     // flat plugins ship their as-authored folders (ui/, assets/, prompts/…).
     // Shared with `install` so both agree on a plugin's shippable payload.

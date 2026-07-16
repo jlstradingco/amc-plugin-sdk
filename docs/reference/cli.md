@@ -37,6 +37,7 @@ amc-plugin create <name> [options]
 | `--description <desc>` | Plugin description | &mdash; |
 | `--author <author>` | Plugin author | &mdash; |
 | `--category <category>` | Category: `planning`, `development`, `testing`, `devops`, `productivity`, `other` | `other` |
+| `--tags <tags>` | Comma-separated discoverability tags (≤10, ≤30 chars each). Blank falls back to the category | category |
 | `--icon <icon>` | Lucide icon name | `puzzle` |
 | `--skip-install` | Skip `npm install` after scaffolding | `false` |
 | `--skip-git` | Skip `git init` and initial commit | `false` |
@@ -53,6 +54,7 @@ amc-plugin create my-plugin \
   --display-name "My Plugin" \
   --description "Does cool things" \
   --author "Jane Doe" \
+  --tags "linter, security" \
   --skip-git
 ```
 
@@ -155,6 +157,47 @@ amc-plugin package
 
 ---
 
+### `preflight`
+
+Run publish-readiness checks **without uploading**. This is the same gate `publish` runs before an upload, exposed as a standalone dry-run so you can fix issues first.
+
+**Usage:**
+
+```bash
+amc-plugin preflight [options]
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--changelog <text>` | Changelog for this version (checked for presence) | &mdash; |
+
+**Checks performed:**
+
+| Check | Fails when | Warns when |
+|---|---|---|
+| Version | Manifest version is already published (marketplace versions are **immutable**) or older than the latest published version | &mdash; |
+| Changelog | &mdash; | No changelog provided |
+| Permissions | An unknown permission is declared | Duplicate permissions |
+| Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
+
+If the marketplace registry is unreachable, the version check is skipped rather than blocking.
+
+**Example:**
+
+```bash
+amc-plugin preflight --changelog "Added dark mode support"
+# ✓ Version: 1.1.0 is newer than the published 1.0.0
+# ⚠ Permissions: Duplicate permission(s): storage
+#   → Remove the duplicate entries from manifest.json permissions.
+# ✓ Package size: 0.12 MB
+```
+
+**Exit codes:** `0` all checks passed (warnings allowed), `1` one or more checks failed.
+
+---
+
 ### `publish`
 
 Upload a `.amcplugin` archive to the AMC Marketplace for review. Authenticates via GitHub OAuth on first use.
@@ -171,21 +214,50 @@ amc-plugin publish [options]
 |---|---|---|
 | `--changelog <text>` | Changelog text for this version | &mdash; |
 | `--watch` | Poll until the submission is approved or rejected (up to 3 hours) | `false` |
+| `--skip-preflight` | Skip the pre-upload readiness checks | `false` |
+| `--as <github-user>` | Assert the expected GitHub account; aborts before upload on mismatch | &mdash; |
+| `--switch-account` | Sign out first and re-authenticate as a different account | `false` |
+| `-y, --yes` | Skip the upload-identity confirmation prompt (for CI) | `false` |
 
 **What it does:**
 
 1. Checks for a stored auth token; prompts GitHub OAuth if missing.
-2. Locates a `.amcplugin` file (runs `amc-plugin package` if none found).
-3. Uploads the archive to the marketplace.
-4. With `--watch`, polls every 30 seconds for the review decision.
+2. **Confirms the uploading identity** before upload (see the account trap below).
+3. Locates a `.amcplugin` file (runs `amc-plugin package` if none found).
+4. Runs [`preflight`](#preflight) readiness checks (unless `--skip-preflight`); aborts on any failure.
+5. Uploads the archive to the marketplace.
+6. With `--watch`, polls every 30 seconds for the review decision.
+
+::: warning The GitHub account trap
+GitHub sign-in reuses whatever account your **default browser** is already logged
+into — there is no account chooser, so a publish can silently go out under the
+**wrong** identity (marketplace ownership is tied to the GitHub account).
+
+Before uploading, `publish` shows `Uploading as: <github>` and asks you to confirm.
+If it's the wrong account:
+
+- Run `amc-plugin publish --switch-account` to sign out and re-authenticate, **or**
+- Use `--as <github-user>` in scripts to hard-assert the intended account (aborts on mismatch).
+
+To land on the right account during sign-in, open an incognito / private window
+signed into the correct GitHub account first, or sign out at
+`https://github.com/logout`.
+:::
 
 **Example:**
 
 ```bash
+# Interactive — confirms "Uploading as: <you>" before upload
 amc-plugin publish --changelog "Added dark mode support" --watch
+
+# Publish under a specific account, re-authenticating if needed
+amc-plugin publish --switch-account
+
+# CI — assert the account and skip the prompt
+amc-plugin publish --as my-org-bot --yes
 ```
 
-**Exit codes:** `0` success (or approved with `--watch`), `1` upload failed or rejected.
+**Exit codes:** `0` success (or approved with `--watch`), `1` preflight failed, upload failed, rejected, or `--as` mismatch.
 
 ---
 
@@ -299,7 +371,7 @@ amc-plugin dev --no-build
 
 ### `info`
 
-Show a summary of the current plugin project (name, version, template, permissions, entry points).
+Show a summary of the current plugin project (name, version, author, category, discoverability tags, permissions, entry points).
 
 **Usage:**
 
@@ -319,7 +391,8 @@ amc-plugin info [options]
 amc-plugin info
 # Plugin:      my-plugin
 # Version:     1.0.0
-# Template:    with-backend
+# Category:    other
+# Tags:        other, productivity
 # Permissions: storage, cron
 # UI:          dist/ui/index.html
 # Backend:     dist/backend/index.js
@@ -359,3 +432,141 @@ amc-plugin update
 ```
 
 **Exit codes:** `0` success (or already up to date), `1` update failed.
+
+---
+
+### `test`
+
+Run the plugin test suite with [vitest](https://vitest.dev). Uses the plugin's
+local vitest if installed, otherwise falls back to `npx vitest`.
+
+**Usage:**
+
+```bash
+amc-plugin test [patterns...] [options]
+```
+
+**Arguments:**
+
+| Name | Description |
+|---|---|
+| `patterns` | Optional test file patterns to filter (passed through to vitest) |
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--watch` | Run vitest in watch mode | `false` |
+
+**Testing your backend with the SDK harness:**
+
+The SDK ships a test harness at `@agent-mc/plugin-sdk/testing` that gives you a
+faithful in-memory `PluginContext` — real storage and db (query / where / orderBy /
+limit), plus capture surfaces for toasts, notifications, logs, events, sidebar,
+and inbox, and triggers for cron jobs and CLI handlers. No AMC or Electron needed.
+
+```ts
+import { describe, it, expect } from 'vitest'
+import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import activate from './index.js'
+
+describe('my backend', () => {
+  it('stores a note and shows a toast', async () => {
+    const h = createTestContext({ settings: { apiKey: 'sk-test' } })
+    const backend = activate(h.ctx)
+    backend.onEnable?.()
+
+    await h.ctx.db.insert('notes', { title: 'hello' })
+    expect(await h.ctx.db.query('notes')).toHaveLength(1)
+    expect(h.toasts.map((t) => t.message)).toContain('Saved')
+  })
+
+  it('runs a cron job and answers a CLI request', async () => {
+    const h = createTestContext()
+    activate(h.ctx)
+    await h.runCron('heartbeat')                       // invoke a registered cron handler
+    const res = await h.callCli('status', { method: 'GET', path: 'status' })
+    expect(res.status).toBe(200)
+  })
+})
+```
+
+Inject `fetch`, `ai`, and `auth` via options to control outbound calls:
+
+```ts
+const h = createTestContext({
+  fetch: async () => new Response('{"ok":true}', { status: 200 }),
+  ai: { generateMessage: async () => 'stubbed reply' },
+  auth: { user: { uid: 'u1', email: 'a@b.co', displayName: null, photoURL: null } },
+})
+```
+
+The `with-backend` and `full` scaffold templates come with vitest, a `test`
+script, and a starter `src/backend/index.test.ts` wired to this harness.
+
+**Example:**
+
+```bash
+amc-plugin test
+amc-plugin test --watch
+amc-plugin test src/backend
+```
+
+**Exit codes:** propagates vitest's exit code (`0` all passed, `1` failures), `1` if vitest can't run.
+
+---
+
+### `doctor`
+
+Diagnose your local environment for plugin development. Run it any time something
+isn't working -- it reports a pass / warning / fail for each dependency the toolchain
+relies on, with a fix suggestion for anything that isn't right.
+
+**Usage:**
+
+```bash
+amc-plugin doctor [options]
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--json` | Output the results as JSON | `false` |
+
+**Checks performed:**
+
+| Check | Description |
+|---|---|
+| Node.js | Node version is supported (>= 18, 20+ recommended) |
+| Plugin SDK | `@agent-mc/plugin-sdk` is installed and up to date with npm |
+| Manifest | `manifest.json` (if present) is valid against the SDK schema |
+| AMC host | A running AMC is reachable on `127.0.0.1:19519` (for local install / hot-reload) |
+| AMC CLI token | A control-server token is available (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`) |
+| Marketplace API | The marketplace backend is reachable (needed to publish) |
+
+Warnings never fail the command -- only a hard failure (unsupported Node, or an
+invalid `manifest.json` while inside a plugin project) sets a non-zero exit code.
+Host, token, and marketplace checks are environmental and only ever warn.
+
+Override the host port with the `AMC_CLI_PORT` environment variable.
+
+**Example:**
+
+```bash
+amc-plugin doctor
+# AMC Plugin Doctor
+# ✓ Node.js: Node v22.11.0
+# ✓ Plugin SDK: @agent-mc/plugin-sdk 1.0.7
+# ✓ Manifest: manifest.json is valid
+# ⚠ AMC host: No running AMC on 127.0.0.1:19519
+#     → Start Agent Mission Control to enable local install and hot-reload.
+# ✓ AMC CLI token: AMC CLI token available
+# ✓ Marketplace API: Reachable
+#
+# ⚠ 5 passed, 1 warning, 0 failed
+
+amc-plugin doctor --json
+```
+
+**Exit codes:** `0` no failures, `1` an unsupported Node or invalid manifest.

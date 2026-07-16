@@ -273,7 +273,7 @@ const features = [
             Type-safe APIs, CLI toolchain, dev shell with hot-reload
           </p>
           <div class="hero-actions">
-            <a href="/amc-plugin-sdk/guide/getting-started.html" class="btn-primary">
+            <a href="/amc-plugin-sdk/guide/quickstart.html" class="btn-primary">
               Get Started
             </a>
             <a href="/amc-plugin-sdk/api/" class="btn-ghost">
