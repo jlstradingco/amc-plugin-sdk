@@ -69,6 +69,60 @@ const SCAFFOLD_GITIGNORE = [
   ''
 ].join('\n')
 
+// Scaffolded README.md. A fresh plugin shipped with no README is a bare repo the
+// author (and anyone they share it with) has to reverse-engineer; this gives them a
+// self-describing starting point wired to the exact npm scripts the scaffold writes.
+export function buildReadme(opts: {
+  displayName: string
+  description: string
+  id: string
+  category: string
+  tags: string[]
+  hasBackend: boolean
+}): string {
+  const { displayName, description, id, category, tags, hasBackend } = opts
+  return [
+    `# ${displayName}`,
+    '',
+    description,
+    '',
+    `- **Plugin ID:** \`${id}\``,
+    `- **Category:** ${category}`,
+    `- **Tags:** ${tags.join(', ')}`,
+    '',
+    '## Getting started',
+    '',
+    '```bash',
+    'npm install       # install the SDK + TypeScript',
+    'npm run dev       # launch the dev shell with hot reload',
+    'npm run build     # compile src/ to dist/',
+    'npm run validate  # check the manifest',
+    'npm run package   # bundle a distributable .amcplugin',
+    '```',
+    '',
+    '## Project layout',
+    '',
+    '```',
+    'manifest.json   plugin metadata, permissions, settings',
+    'src/ui/         webview UI (index.html + plugin.ts)',
+    ...(hasBackend ? ['src/backend/    backend entry (onEnable / onDisable lifecycle)'] : []),
+    'dist/           build output (gitignored)',
+    '```',
+    '',
+    '## Publishing',
+    '',
+    'Bump the version in `manifest.json`, then:',
+    '',
+    '```bash',
+    'npm run package',
+    'amc-plugin publish',
+    '```',
+    '',
+    'See the [AMC Plugin SDK docs](https://jlstradingco.github.io/amc-plugin-sdk/) for the full guide.',
+    ''
+  ].join('\n')
+}
+
 interface CreateOptions {
   template: string
   displayName?: string
@@ -302,6 +356,19 @@ export default activate
 
     // .gitignore
     fs.writeFileSync(path.join(targetDir, '.gitignore'), SCAFFOLD_GITIGNORE)
+
+    // README.md
+    fs.writeFileSync(
+      path.join(targetDir, 'README.md'),
+      buildReadme({
+        displayName,
+        description,
+        id: name,
+        category,
+        tags,
+        hasBackend: template === 'with-backend' || template === 'full',
+      }),
+    )
 
     // Install dependencies
     if (!opts.skipInstall) {

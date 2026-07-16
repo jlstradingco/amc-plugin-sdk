@@ -85,6 +85,13 @@ describe('Plugin lifecycle E2E', () => {
     expect(fs.existsSync(path.join(pluginDir, 'src', 'backend', 'index.ts'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'package.json'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'README.md'))).toBe(true)
+  })
+
+  it('scaffolds a README describing the plugin', () => {
+    const readme = fs.readFileSync(path.join(pluginDir, 'README.md'), 'utf-8')
+    expect(readme).toContain('# E2E Test Plugin')
+    expect(readme).toContain('npm run package')
   })
 
   it('manifest has correct v2 fields', () => {
