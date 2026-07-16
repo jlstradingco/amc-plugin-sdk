@@ -35,8 +35,7 @@ async function loadIssues() {
 
   const issues = await amc.db.query('issues', {
     where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
-    orderBy: 'github_updated_at',
-    order: 'DESC'
+    orderBy: { github_updated_at: 'desc' }
   })
 
   const filtered = currentSearch

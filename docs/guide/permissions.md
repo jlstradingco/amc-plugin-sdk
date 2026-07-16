@@ -51,8 +51,7 @@ const row = await ctx.db.insert('tasks', {
 // Query with filters, ordering, and pagination
 const results = await ctx.db.query('tasks', {
   where: { priority: 1 },
-  orderBy: 'created_at',
-  order: 'DESC',
+  orderBy: { created_at: 'desc' },
   limit: 10,
   offset: 0,
 })
@@ -187,8 +186,7 @@ Register HTTP endpoint handlers accessible through AMC's CLI control server:
 ctx.cli.handle('status', async (req) => {
   // req: { method, path, body?, query? }
   const checks = await ctx.db.query('checks', {
-    orderBy: 'created_at',
-    order: 'DESC',
+    orderBy: { created_at: 'desc' },
     limit: 5,
   })
 

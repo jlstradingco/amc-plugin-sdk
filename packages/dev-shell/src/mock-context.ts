@@ -51,8 +51,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
   // --- Faithful in-memory relational store ----------------------------------
   // Mirrors the host's per-collection tables: rows carry framework-managed
-  // id/created_at/updated_at, query supports where/orderBy/order/limit/offset,
-  // and reads/writes are cloned so held references can't corrupt the store.
+  // id/created_at/updated_at, query supports where/orderBy/limit/offset, and
+  // reads/writes are cloned so held references can't corrupt the store.
   const collections = new Map<string, Map<string, Record<string, unknown>>>()
   const collectionOf = (name: string): Map<string, Record<string, unknown>> => {
     let col = collections.get(name)
@@ -140,14 +140,17 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       query: (col, options?: QueryOptions) => {
         let rows = [...collectionOf(col).values()].filter((r) => matchesWhere(r, options?.where))
         if (options?.orderBy) {
-          const key = options.orderBy
-          const dir = options.order === 'DESC' ? -1 : 1
-          rows = [...rows].sort((a, b) => {
-            const av = a[key]
-            const bv = b[key]
-            if (av === bv) return 0
-            return ((av as number | string) < (bv as number | string) ? -1 : 1) * dir
-          })
+          const entry = Object.entries(options.orderBy)[0]
+          if (entry) {
+            const [key, direction] = entry
+            const dir = direction === 'desc' ? -1 : 1
+            rows = [...rows].sort((a, b) => {
+              const av = a[key]
+              const bv = b[key]
+              if (av === bv) return 0
+              return ((av as number | string) < (bv as number | string) ? -1 : 1) * dir
+            })
+          }
         }
         const offset = options?.offset ?? 0
         const sliced = options?.limit !== undefined
@@ -169,7 +172,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         const updated = { ...existing, ...clone(fields), id, updated_at: new Date().toISOString() }
         collectionOf(col).set(id, updated)
         if (shouldLog) console.log(`${prefix} [db] update(${col}, ${id})`, fields)
-        return Promise.resolve(clone(updated))
+        return Promise.resolve()
       },
       delete: (col, id) => {
         collectionOf(col).delete(id)

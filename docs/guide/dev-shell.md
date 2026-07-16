@@ -50,7 +50,7 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | API | Mock behavior |
 |---|---|
 | **storage** | Persisted KV store -- survives restarts via `.amc-dev/amc-dev-storage.json` in your plugin dir (in-memory only when no data dir is set) |
-| **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy`/`order`, `limit`/`offset`; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
+| **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy` (`{ col: 'asc' | 'desc' }`), `limit`/`offset`; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
 | **settings** | Seeded from an `amc-dev-settings.json` dev config file next to your plugin; `getAll()`/`get(key)` read from it (empty when the file is absent) |
 | **log** | Prints to the terminal with a `[plugin:your-id]` prefix |
 | **events** | Fully functional in-memory `EventEmitter` |

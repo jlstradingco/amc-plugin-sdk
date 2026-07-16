@@ -114,19 +114,19 @@ describe('createMockContext — faithful db', () => {
     expect(oneMatch).toHaveLength(1)
   })
 
-  it('query orders by orderBy + order (ASC default, DESC honored)', async () => {
+  it('query orders by orderBy (asc default, desc honored)', async () => {
     await ctx.db.insert('nums', { n: 3 })
     await ctx.db.insert('nums', { n: 1 })
     await ctx.db.insert('nums', { n: 2 })
-    const asc = await ctx.db.query('nums', { orderBy: 'n' })
+    const asc = await ctx.db.query('nums', { orderBy: { n: 'asc' } })
     expect(asc.map((r) => r.n)).toEqual([1, 2, 3])
-    const desc = await ctx.db.query('nums', { orderBy: 'n', order: 'DESC' })
+    const desc = await ctx.db.query('nums', { orderBy: { n: 'desc' } })
     expect(desc.map((r) => r.n)).toEqual([3, 2, 1])
   })
 
   it('query applies offset then limit', async () => {
     for (let i = 0; i < 5; i++) await ctx.db.insert('nums', { n: i })
-    const page = await ctx.db.query('nums', { orderBy: 'n', limit: 2, offset: 1 })
+    const page = await ctx.db.query('nums', { orderBy: { n: 'asc' }, limit: 2, offset: 1 })
     expect(page.map((r) => r.n)).toEqual([1, 2])
   })
 
@@ -139,11 +139,10 @@ describe('createMockContext — faithful db', () => {
 
   it('update merges fields, bumps updated_at, and persists', async () => {
     const row = await ctx.db.insert('todos', { title: 'a', done: false })
-    const updated = await ctx.db.update('todos', row.id as string, { done: true })
-    expect(updated.done).toBe(true)
-    expect(updated.title).toBe('a')
+    await ctx.db.update('todos', row.id as string, { done: true })
     const reread = await ctx.db.getById('todos', row.id as string)
     expect(reread?.done).toBe(true)
+    expect(reread?.title).toBe('a')
   })
 
   it('update throws for an unknown id', async () => {

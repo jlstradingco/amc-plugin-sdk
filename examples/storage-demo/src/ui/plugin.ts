@@ -23,8 +23,7 @@ async function savePreferences() {
 
 async function loadNotes() {
   const notes = await amc.db.query('notes', {
-    orderBy: 'created_at',
-    order: newestFirst ? 'DESC' : 'ASC'
+    orderBy: { created_at: newestFirst ? 'desc' : 'asc' }
   })
 
   countSpan.textContent = `${notes.length} note${notes.length !== 1 ? 's' : ''}`
