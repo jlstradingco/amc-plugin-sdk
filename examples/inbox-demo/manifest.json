@@ -1,0 +1,21 @@
+{
+  "plugin": {
+    "id": "inbox-demo",
+    "name": "Inbox Demo",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Demonstrates publishing items to the AMC inbox",
+    "icon": "inbox",
+    "category": "other",
+    "license": { "type": "free" }
+  },
+  "sdkVersion": "^1.0.7",
+  "permissions": ["inbox", "storage"],
+  "settings": [],
+  "storage": { "collections": {} },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "Inbox Demo", "icon": "inbox" }
+  }
+}

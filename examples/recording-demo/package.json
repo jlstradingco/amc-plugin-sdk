@@ -1,0 +1,16 @@
+{
+  "name": "recording-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "amc-plugin dev",
+    "package": "amc-plugin package",
+    "validate": "amc-plugin validate"
+  },
+  "devDependencies": {
+    "@agent-mc/plugin-sdk": "^1.0.7",
+    "typescript": "^5.5.0"
+  }
+}

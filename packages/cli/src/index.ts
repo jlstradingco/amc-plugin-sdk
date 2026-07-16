@@ -13,6 +13,8 @@ import { statusCommand } from './commands/status.js'
 import { devCommand } from './commands/dev.js'
 import { infoCommand } from './commands/info.js'
 import { updateCommand } from './commands/update.js'
+import { testCommand } from './commands/test.js'
+import { doctorCommand } from './commands/doctor.js'
 
 const require = createRequire(import.meta.url)
 const { version } = require('../package.json')
@@ -35,5 +37,7 @@ program.addCommand(statusCommand)
 program.addCommand(devCommand)
 program.addCommand(infoCommand)
 program.addCommand(updateCommand)
+program.addCommand(testCommand)
+program.addCommand(doctorCommand)
 
 program.parse()
