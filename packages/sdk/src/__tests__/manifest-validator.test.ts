@@ -139,4 +139,32 @@ describe('validateManifest', () => {
     const result = validateManifest(manifest)
     expect(result.valid).toBe(false)
   })
+
+  it('accepts plugin tags and preserves them', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, tags: ['linter', 'security'] },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.plugin.tags).toEqual(['linter', 'security'])
+  })
+
+  it('rejects more than 10 tags', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, tags: Array.from({ length: 11 }, (_, i) => `tag${i}`) },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects a tag over 30 chars', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, tags: ['x'.repeat(31)] },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
 })

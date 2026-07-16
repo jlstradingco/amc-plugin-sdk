@@ -49,9 +49,9 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 
 | API | Mock behavior |
 |---|---|
-| **storage** | In-memory `Map` -- data is lost when the dev shell closes |
-| **db** | Logs operations; `insert` returns a row with a random UUID; `query` returns `[]`; `getById` returns `null` |
-| **settings** | `getAll()` returns `{}`; `get()` returns `undefined` |
+| **storage** | Persisted KV store -- survives restarts via `.amc-dev/amc-dev-storage.json` in your plugin dir (in-memory only when no data dir is set) |
+| **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy`/`order`, `limit`/`offset`; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
+| **settings** | Seeded from an `amc-dev-settings.json` dev config file next to your plugin; `getAll()`/`get(key)` read from it (empty when the file is absent) |
 | **log** | Prints to the terminal with a `[plugin:your-id]` prefix |
 | **events** | Fully functional in-memory `EventEmitter` |
 | **sessions** | `create` returns a mock session ID; `getStatus` always returns `"running"`; `getMessages` returns `[]` |
@@ -65,6 +65,26 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 
 ::: tip
 The `http` mock is a passthrough to real `fetch`, so network requests to external APIs work in the dev shell exactly as they would in production. This is useful for testing integrations.
+:::
+
+### Dev Config: settings & persisted data
+
+The dev shell reads two conventional locations next to your plugin so you can exercise real plugin logic:
+
+- **`amc-dev-settings.json`** — a JSON object of setting values your plugin reads via `ctx.settings.getAll()` / `ctx.settings.get(key)`. Create it alongside `manifest.json` to drive settings-gated code paths:
+
+  ```json
+  {
+    "apiKey": "dev-only-key",
+    "maxItems": 10,
+    "theme": "dark"
+  }
+  ```
+
+- **`.amc-dev/`** — a working directory the shell uses as the plugin `dataDir`. The KV `storage` API is flushed to `.amc-dev/amc-dev-storage.json`, so anything your plugin writes with `ctx.storage.set()` survives a dev-shell restart, just like the real SQLite-backed store in AMC.
+
+::: tip
+Add `amc-dev-settings.json` and `.amc-dev/` to your plugin's `.gitignore` — they hold local-only dev state and secrets.
 :::
 
 ## Debugging
@@ -113,7 +133,9 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 |---|---|---|
 | UI rendering | Full (Electron webview) | Full (Electron webview) |
 | Theme CSS variables | Injected by shell HTML | Injected by AMC |
-| Storage / DB | In-memory mock (lost on restart) | SQLite (persistent) |
+| Storage | Persisted to `.amc-dev/` (JSON file) | SQLite `plugin_kv` (persistent) |
+| DB | Faithful in-memory store (where/orderBy/limit) -- lost on restart | SQLite tables (persistent) |
+| Settings | Seeded from `amc-dev-settings.json` | Configured in AMC settings UI |
 | Sessions | Mock IDs, no real Claude process | Real Claude Code sessions |
 | AI generation | Returns placeholder strings | Calls Anthropic API |
 | Filesystem | Disabled (throws errors) | Sandboxed to plugin data dir |

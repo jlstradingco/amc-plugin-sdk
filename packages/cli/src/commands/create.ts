@@ -18,12 +18,118 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+const MAX_TAGS = 10
+const MAX_TAG_LEN = 30
+
+/**
+ * Parse a comma-separated `--tags` / prompt value into a bounded, normalized list
+ * for the scaffolded manifest. Mirrors the host `sanitizeTags` bounds (≤10 tags,
+ * ≤30 chars each, lowercased, deduped, control chars / angle brackets dropped) so a
+ * scaffolded manifest never fails upload validation. Empty input falls back to the
+ * chosen category, keeping the plugin searchable from day one.
+ */
+export function parseTagsInput(raw: string | undefined, fallbackCategory: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const part of (raw ?? '').split(',')) {
+    const tag = part.trim().toLowerCase()
+    if (tag.length === 0 || tag.length > MAX_TAG_LEN) continue
+    if (/[\u0000-\u001f<>]/.test(tag)) continue
+    if (seen.has(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+    if (out.length >= MAX_TAGS) break
+  }
+  return out.length > 0 ? out : [fallbackCategory]
+}
+
+// Scaffolded .gitignore. Beyond build output, it excludes env/secret files up front
+// (the `git add -A` the scaffold runs — and every one the developer runs later — would
+// otherwise commit a `.env` full of keys). `.env.example` stays tracked so the template
+// for required vars can be shared safely.
+const SCAFFOLD_GITIGNORE = [
+  '# Dependencies',
+  'node_modules/',
+  '',
+  '# Build output',
+  'dist/',
+  '*.amcplugin',
+  '',
+  '# Secrets / local env — never commit these',
+  '.env',
+  '.env.*',
+  '!.env.example',
+  '*.local',
+  '',
+  '# Logs & editor / OS cruft',
+  '*.log',
+  '.DS_Store',
+  '.vscode/',
+  '.idea/',
+  ''
+].join('\n')
+
+// Scaffolded README.md. A fresh plugin shipped with no README is a bare repo the
+// author (and anyone they share it with) has to reverse-engineer; this gives them a
+// self-describing starting point wired to the exact npm scripts the scaffold writes.
+export function buildReadme(opts: {
+  displayName: string
+  description: string
+  id: string
+  category: string
+  tags: string[]
+  hasBackend: boolean
+}): string {
+  const { displayName, description, id, category, tags, hasBackend } = opts
+  return [
+    `# ${displayName}`,
+    '',
+    description,
+    '',
+    `- **Plugin ID:** \`${id}\``,
+    `- **Category:** ${category}`,
+    `- **Tags:** ${tags.join(', ')}`,
+    '',
+    '## Getting started',
+    '',
+    '```bash',
+    'npm install       # install the SDK + TypeScript',
+    'npm run dev       # launch the dev shell with hot reload',
+    'npm run build     # compile src/ to dist/',
+    'npm run validate  # check the manifest',
+    'npm run package   # bundle a distributable .amcplugin',
+    '```',
+    '',
+    '## Project layout',
+    '',
+    '```',
+    'manifest.json   plugin metadata, permissions, settings',
+    'src/ui/         webview UI (index.html + plugin.ts)',
+    ...(hasBackend ? ['src/backend/    backend entry (onEnable / onDisable lifecycle)'] : []),
+    'dist/           build output (gitignored)',
+    '```',
+    '',
+    '## Publishing',
+    '',
+    'Bump the version in `manifest.json`, then:',
+    '',
+    '```bash',
+    'npm run package',
+    'amc-plugin publish',
+    '```',
+    '',
+    'See the [AMC Plugin SDK docs](https://jlstradingco.github.io/amc-plugin-sdk/) for the full guide.',
+    ''
+  ].join('\n')
+}
+
 interface CreateOptions {
   template: string
   displayName?: string
   description?: string
   author?: string
   category?: string
+  tags?: string
   icon?: string
   skipInstall?: boolean
   skipGit?: boolean
@@ -36,6 +142,7 @@ export const createCommand = new Command('create')
   .option('--description <desc>', 'Plugin description')
   .option('--author <author>', 'Plugin author')
   .option('--category <category>', 'Plugin category', 'other')
+  .option('--tags <tags>', 'Comma-separated discoverability tags (defaults to the category)')
   .option('--icon <icon>', 'Lucide icon name', 'puzzle')
   .option('--skip-install', 'Skip npm install')
   .option('--skip-git', 'Skip git init and initial commit')
@@ -56,6 +163,7 @@ export const createCommand = new Command('create')
     let description: string
     let author: string
     let category: string
+    let tags: string[]
     let icon: string
 
     const hasAllOptions = opts.displayName && opts.description && opts.author
@@ -68,6 +176,7 @@ export const createCommand = new Command('create')
       description = opts.description!
       author = opts.author!
       category = opts.category ?? 'other'
+      tags = parseTagsInput(opts.tags, category)
       icon = opts.icon ?? 'puzzle'
     } else {
       const response = await prompts([
@@ -75,6 +184,7 @@ export const createCommand = new Command('create')
         { type: 'text', name: 'description', message: 'Description', initial: 'An AMC plugin' },
         { type: 'text', name: 'author', message: 'Author' },
         { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
+        { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: '' },
         { type: 'text', name: 'icon', message: 'Lucide icon name', initial: 'puzzle' },
       ])
 
@@ -87,6 +197,7 @@ export const createCommand = new Command('create')
       description = response.description
       author = response.author
       category = response.category
+      tags = parseTagsInput(response.tags, category)
       icon = response.icon
     }
 
@@ -111,6 +222,11 @@ export const createCommand = new Command('create')
         icon: icon,
         category: category,
         license: { type: 'free' },
+        // Discoverability tags folded into marketplace search + shown as card chips.
+        // Taken from `--tags` / the create prompt (bounded to ≤10 tags, ≤30 chars
+        // each); an empty entry falls back to the chosen category so the plugin ships
+        // searchable on the marketplace from day one.
+        tags: tags,
       },
       settings: [],
       storage: { collections: {} },
@@ -262,7 +378,20 @@ describe('${displayName} backend', () => {
     }, null, 2))
 
     // .gitignore
-    fs.writeFileSync(path.join(targetDir, '.gitignore'), 'node_modules/\ndist/\n*.amcplugin\n')
+    fs.writeFileSync(path.join(targetDir, '.gitignore'), SCAFFOLD_GITIGNORE)
+
+    // README.md
+    fs.writeFileSync(
+      path.join(targetDir, 'README.md'),
+      buildReadme({
+        displayName,
+        description,
+        id: name,
+        category,
+        tags,
+        hasBackend: template === 'with-backend' || template === 'full',
+      }),
+    )
 
     // Install dependencies
     if (!opts.skipInstall) {
