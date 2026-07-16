@@ -1,8 +1,9 @@
 {
   "name": "@agent-mc/plugin-dev-shell",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "main": "./dist/shell-window.js",
+  "files": ["dist"],
   "scripts": {
     "build": "tsc && node -e \"require('fs').copyFileSync('src/shell.html','dist/shell.html')\"",
     "clean": "rm -rf dist",
