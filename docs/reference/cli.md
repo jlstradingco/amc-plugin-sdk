@@ -157,6 +157,47 @@ amc-plugin package
 
 ---
 
+### `preflight`
+
+Run publish-readiness checks **without uploading**. This is the same gate `publish` runs before an upload, exposed as a standalone dry-run so you can fix issues first.
+
+**Usage:**
+
+```bash
+amc-plugin preflight [options]
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--changelog <text>` | Changelog for this version (checked for presence) | &mdash; |
+
+**Checks performed:**
+
+| Check | Fails when | Warns when |
+|---|---|---|
+| Version | Manifest version is already published (marketplace versions are **immutable**) or older than the latest published version | &mdash; |
+| Changelog | &mdash; | No changelog provided |
+| Permissions | An unknown permission is declared | Duplicate permissions |
+| Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
+
+If the marketplace registry is unreachable, the version check is skipped rather than blocking.
+
+**Example:**
+
+```bash
+amc-plugin preflight --changelog "Added dark mode support"
+# ✓ Version: 1.1.0 is newer than the published 1.0.0
+# ⚠ Permissions: Duplicate permission(s): storage
+#   → Remove the duplicate entries from manifest.json permissions.
+# ✓ Package size: 0.12 MB
+```
+
+**Exit codes:** `0` all checks passed (warnings allowed), `1` one or more checks failed.
+
+---
+
 ### `publish`
 
 Upload a `.amcplugin` archive to the AMC Marketplace for review. Authenticates via GitHub OAuth on first use.
@@ -173,6 +214,7 @@ amc-plugin publish [options]
 |---|---|---|
 | `--changelog <text>` | Changelog text for this version | &mdash; |
 | `--watch` | Poll until the submission is approved or rejected (up to 3 hours) | `false` |
+| `--skip-preflight` | Skip the pre-upload readiness checks | `false` |
 | `--as <github-user>` | Assert the expected GitHub account; aborts before upload on mismatch | &mdash; |
 | `--switch-account` | Sign out first and re-authenticate as a different account | `false` |
 | `-y, --yes` | Skip the upload-identity confirmation prompt (for CI) | `false` |
@@ -182,8 +224,9 @@ amc-plugin publish [options]
 1. Checks for a stored auth token; prompts GitHub OAuth if missing.
 2. **Confirms the uploading identity** before upload (see the account trap below).
 3. Locates a `.amcplugin` file (runs `amc-plugin package` if none found).
-4. Uploads the archive to the marketplace.
-5. With `--watch`, polls every 30 seconds for the review decision.
+4. Runs [`preflight`](#preflight) readiness checks (unless `--skip-preflight`); aborts on any failure.
+5. Uploads the archive to the marketplace.
+6. With `--watch`, polls every 30 seconds for the review decision.
 
 ::: warning The GitHub account trap
 GitHub sign-in reuses whatever account your **default browser** is already logged
@@ -214,7 +257,7 @@ amc-plugin publish --switch-account
 amc-plugin publish --as my-org-bot --yes
 ```
 
-**Exit codes:** `0` success (or approved with `--watch`), `1` upload failed, rejected, or `--as` mismatch.
+**Exit codes:** `0` success (or approved with `--watch`), `1` preflight failed, upload failed, rejected, or `--as` mismatch.
 
 ---
 
