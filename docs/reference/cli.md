@@ -362,3 +362,60 @@ amc-plugin update
 ```
 
 **Exit codes:** `0` success (or already up to date), `1` update failed.
+
+---
+
+### `doctor`
+
+Diagnose your local environment for plugin development. Run it any time something
+isn't working -- it reports a pass / warning / fail for each dependency the toolchain
+relies on, with a fix suggestion for anything that isn't right.
+
+**Usage:**
+
+```bash
+amc-plugin doctor [options]
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--json` | Output the results as JSON | `false` |
+
+**Checks performed:**
+
+| Check | Description |
+|---|---|
+| Node.js | Node version is supported (>= 18, 20+ recommended) |
+| Plugin SDK | `@agent-mc/plugin-sdk` is installed and up to date with npm |
+| Manifest | `manifest.json` (if present) is valid against the SDK schema |
+| AMC host | A running AMC is reachable on `127.0.0.1:19519` (for local install / hot-reload) |
+| AMC CLI token | A control-server token is available (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`) |
+| Marketplace API | The marketplace backend is reachable (needed to publish) |
+
+Warnings never fail the command -- only a hard failure (unsupported Node, or an
+invalid `manifest.json` while inside a plugin project) sets a non-zero exit code.
+Host, token, and marketplace checks are environmental and only ever warn.
+
+Override the host port with the `AMC_CLI_PORT` environment variable.
+
+**Example:**
+
+```bash
+amc-plugin doctor
+# AMC Plugin Doctor
+# ✓ Node.js: Node v22.11.0
+# ✓ Plugin SDK: @agent-mc/plugin-sdk 1.0.7
+# ✓ Manifest: manifest.json is valid
+# ⚠ AMC host: No running AMC on 127.0.0.1:19519
+#     → Start Agent Mission Control to enable local install and hot-reload.
+# ✓ AMC CLI token: AMC CLI token available
+# ✓ Marketplace API: Reachable
+#
+# ⚠ 5 passed, 1 warning, 0 failed
+
+amc-plugin doctor --json
+```
+
+**Exit codes:** `0` no failures, `1` an unsupported Node or invalid manifest.
