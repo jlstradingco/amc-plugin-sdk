@@ -11,7 +11,7 @@
     "start": "electron ./dist/shell-window.js"
   },
   "dependencies": {
-    "@agent-mc/plugin-sdk": "^1.0.0",
+    "@agent-mc/plugin-sdk": "workspace:^",
     "chokidar": "^4.0.0"
   },
   "devDependencies": {
