@@ -557,7 +557,7 @@ Override the host port with the `AMC_CLI_PORT` environment variable.
 amc-plugin doctor
 # AMC Plugin Doctor
 # ✓ Node.js: Node v22.11.0
-# ✓ Plugin SDK: @agent-mc/plugin-sdk 1.0.7
+# ✓ Plugin SDK: @agent-mc/plugin-sdk 1.1.0
 # ✓ Manifest: manifest.json is valid
 # ⚠ AMC host: No running AMC on 127.0.0.1:19519
 #     → Start Agent Mission Control to enable local install and hot-reload.

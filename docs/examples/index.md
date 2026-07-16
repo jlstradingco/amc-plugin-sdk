@@ -28,7 +28,7 @@ Spawn Claude sessions, stream status updates, display conversation messages, and
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/sessions-demo)
 
-## 1.0.7 Namespace Showcases
+## Namespace Showcases
 
 ### Auth Demo
 
