@@ -1,3 +1,10 @@
 packages:
   - 'packages/*'
   - 'docs'
+
+# pnpm 10 reads dependency overrides from HERE, not from package.json's
+# `pnpm.overrides` field (which it now ignores). These pin transitive vite /
+# esbuild past the advisories fixed in the 1.1.0 release train.
+overrides:
+  vite@>=7.0.0 <7.3.5: '>=7.3.5'
+  esbuild@>=0.27.0 <0.28.1: '>=0.28.1'
