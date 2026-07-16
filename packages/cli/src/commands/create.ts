@@ -18,12 +18,38 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
 }
 
+const MAX_TAGS = 10
+const MAX_TAG_LEN = 30
+
+/**
+ * Parse a comma-separated `--tags` / prompt value into a bounded, normalized list
+ * for the scaffolded manifest. Mirrors the host `sanitizeTags` bounds (≤10 tags,
+ * ≤30 chars each, lowercased, deduped, control chars / angle brackets dropped) so a
+ * scaffolded manifest never fails upload validation. Empty input falls back to the
+ * chosen category, keeping the plugin searchable from day one.
+ */
+export function parseTagsInput(raw: string | undefined, fallbackCategory: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const part of (raw ?? '').split(',')) {
+    const tag = part.trim().toLowerCase()
+    if (tag.length === 0 || tag.length > MAX_TAG_LEN) continue
+    if (/[\u0000-\u001f<>]/.test(tag)) continue
+    if (seen.has(tag)) continue
+    seen.add(tag)
+    out.push(tag)
+    if (out.length >= MAX_TAGS) break
+  }
+  return out.length > 0 ? out : [fallbackCategory]
+}
+
 interface CreateOptions {
   template: string
   displayName?: string
   description?: string
   author?: string
   category?: string
+  tags?: string
   icon?: string
   skipInstall?: boolean
   skipGit?: boolean
@@ -36,6 +62,7 @@ export const createCommand = new Command('create')
   .option('--description <desc>', 'Plugin description')
   .option('--author <author>', 'Plugin author')
   .option('--category <category>', 'Plugin category', 'other')
+  .option('--tags <tags>', 'Comma-separated discoverability tags (defaults to the category)')
   .option('--icon <icon>', 'Lucide icon name', 'puzzle')
   .option('--skip-install', 'Skip npm install')
   .option('--skip-git', 'Skip git init and initial commit')
@@ -56,6 +83,7 @@ export const createCommand = new Command('create')
     let description: string
     let author: string
     let category: string
+    let tags: string[]
     let icon: string
 
     const hasAllOptions = opts.displayName && opts.description && opts.author
@@ -68,6 +96,7 @@ export const createCommand = new Command('create')
       description = opts.description!
       author = opts.author!
       category = opts.category ?? 'other'
+      tags = parseTagsInput(opts.tags, category)
       icon = opts.icon ?? 'puzzle'
     } else {
       const response = await prompts([
@@ -75,6 +104,7 @@ export const createCommand = new Command('create')
         { type: 'text', name: 'description', message: 'Description', initial: 'An AMC plugin' },
         { type: 'text', name: 'author', message: 'Author' },
         { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
+        { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: '' },
         { type: 'text', name: 'icon', message: 'Lucide icon name', initial: 'puzzle' },
       ])
 
@@ -87,6 +117,7 @@ export const createCommand = new Command('create')
       description = response.description
       author = response.author
       category = response.category
+      tags = parseTagsInput(response.tags, category)
       icon = response.icon
     }
 
@@ -111,10 +142,11 @@ export const createCommand = new Command('create')
         icon: icon,
         category: category,
         license: { type: 'free' },
-        // Seed one discoverability tag (the chosen category) so the plugin ships
-        // searchable on the marketplace from day one. Free-form keywords — add more
-        // (up to 10, 30 chars each) to widen how developers find this plugin.
-        tags: [category],
+        // Discoverability tags folded into marketplace search + shown as card chips.
+        // Taken from `--tags` / the create prompt (bounded to ≤10 tags, ≤30 chars
+        // each); an empty entry falls back to the chosen category so the plugin ships
+        // searchable on the marketplace from day one.
+        tags: tags,
       },
       settings: [],
       storage: { collections: {} },

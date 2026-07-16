@@ -37,6 +37,7 @@ amc-plugin create <name> [options]
 | `--description <desc>` | Plugin description | &mdash; |
 | `--author <author>` | Plugin author | &mdash; |
 | `--category <category>` | Category: `planning`, `development`, `testing`, `devops`, `productivity`, `other` | `other` |
+| `--tags <tags>` | Comma-separated discoverability tags (≤10, ≤30 chars each). Blank falls back to the category | category |
 | `--icon <icon>` | Lucide icon name | `puzzle` |
 | `--skip-install` | Skip `npm install` after scaffolding | `false` |
 | `--skip-git` | Skip `git init` and initial commit | `false` |
@@ -53,6 +54,7 @@ amc-plugin create my-plugin \
   --display-name "My Plugin" \
   --description "Does cool things" \
   --author "Jane Doe" \
+  --tags "linter, security" \
   --skip-git
 ```
 
