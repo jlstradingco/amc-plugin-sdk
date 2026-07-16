@@ -10,7 +10,12 @@ import { execSync } from 'node:child_process'
  */
 function setupPluginNodeModules(pluginDir: string) {
   const sdkPkg = path.resolve(__dirname, '../../../sdk')
-  const nmSdk = path.join(pluginDir, 'node_modules', '@amc', 'plugin-sdk')
+  // Install under the SDK's real scope so the scaffolded plugin's
+  // `import ... from '@agent-mc/plugin-sdk'` resolves from its OWN node_modules.
+  // (Previously '@amc' — a stale pre-rename scope — which only resolved locally
+  // because Windows module resolution walked up into the monorepo; a clean
+  // Linux /tmp runner has nothing above it, so tsc failed to find the module.)
+  const nmSdk = path.join(pluginDir, 'node_modules', '@agent-mc', 'plugin-sdk')
   fs.mkdirSync(nmSdk, { recursive: true })
   fs.cpSync(path.join(sdkPkg, 'dist'), path.join(nmSdk, 'dist'), { recursive: true })
   fs.copyFileSync(path.join(sdkPkg, 'package.json'), path.join(nmSdk, 'package.json'))
