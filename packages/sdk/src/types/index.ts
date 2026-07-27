@@ -13,6 +13,10 @@ export type {
   PluginSidebar, PluginToast, PluginContext,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, PluginInbox,
   RecordingHandle, Recording, PluginRecording,
+  SynthesizedSpeech, PluginTts,
+  HistoryProject, HistorySession, HistoryMessage, HistoryGrantResult, PluginSessionHistory,
+  FirebaseAccount, FirebaseProject, FirebaseSetupStatus, PluginFirebase,
+  SpendWindow, SpendEngineLine, SpendFeatureLine, SpendCharge, SpendReportBreakdown, PluginSpend,
 } from './context.js'
 
 export type { PluginBackend, PluginActivate } from './backend.js'
