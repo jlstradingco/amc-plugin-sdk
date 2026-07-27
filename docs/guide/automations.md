@@ -42,12 +42,12 @@ This page covers only what is specific to *publishing* one.
 amc-automation validate
 ```
 
-Five groups of checks run locally:
+Six groups of checks run locally:
 
 - **Structure** — a name, at least one step, a known `executionMode`.
-- **Steps** — every step has a name and a non-empty prompt. AMC's own pre-flight
-  blocks a run on an empty prompt, so a published automation with one can never
-  actually run.
+- **Steps** — every step has a name and a non-empty prompt, and every entry in a
+  steps array is actually a step. AMC's own pre-flight blocks a run on an empty
+  prompt, so a published automation with one can never actually run.
 - **Portability** — nothing the person installing it will not have. See below.
 - **Secrets** — anything key-shaped or a path pointing into your home directory,
   anywhere in what gets published.
@@ -55,9 +55,13 @@ Five groups of checks run locally:
   steps, 256 KB of shareable definition, and a name that turns into a usable
   marketplace id. These fail here rather than as a bare `400` after an upload
   attempt is already spent.
+- **Fields that will not be published** — informational only. An automation
+  travels as an allow-listed envelope, at the top level and inside every step, so
+  a field outside it is dropped rather than shipped. Usually a typo; occasionally
+  a surprise worth knowing about before you go looking for it in the catalog.
 
-Errors block a publish; warnings do not. Exit code is `0` when clean or
-warning-only, `1` when anything errored — so it drops straight into CI. Add
+Errors block a publish; warnings and notes do not. Exit code is `0` when clean or
+advisory-only, `1` when anything errored — so it drops straight into CI. Add
 `--json` for machine-readable findings.
 
 To also get the marketplace's own verdict:
