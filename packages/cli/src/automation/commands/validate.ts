@@ -72,7 +72,11 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
     // Renews silently rather than declaring the author signed out the moment the
     // hour-long ID token lapsed. Never interactive — `validate` must not turn into a
     // browser sign-in; a failed renewal just skips the server check.
-    const token = opts.token ?? (await getStoredTokenOrRefresh())
+    // `=== undefined`, not `??`: the option is typed `StoredToken | null`, so an
+    // explicit null MEANS "signed out" and must be honoured. Under `??` a caller
+    // passing null fell through to the real disk-and-network lookup instead — the
+    // same seam `status` already gets right.
+    const token = opts.token === undefined ? await getStoredTokenOrRefresh() : opts.token
     if (!token) {
       if (!opts.json) {
         warn('Not signed in — skipping the server check.')
