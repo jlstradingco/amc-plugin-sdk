@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { PLUGIN_PERMISSIONS } from '@agent-mc/plugin-sdk'
 import {
   checkVersionAgainstRegistry,
   checkChangelog,
@@ -93,6 +94,41 @@ describe('checkDeclaredPermissions', () => {
     const r = checkDeclaredPermissions(['storage', 'storage'])
     expect(r.status).toBe('warn')
     expect(r.message).toMatch(/duplicate/i)
+  })
+
+  // Regression guard. The 1.2.0 SDK widened its permission enum to cover four
+  // shipped host capabilities, but preflight kept a hand-copied list that never
+  // learned them — so `amc-plugin publish` still exited 1 on "Unknown
+  // permission(s)" for the exact plugins the enum was widened to allow. The list
+  // had also been missing `system` and `chrome` for longer than that. Accepting
+  // every SDK permission is the invariant; the source of the set is the fix.
+  it('accepts every permission the SDK enum recognizes', () => {
+    const rejected = PLUGIN_PERMISSIONS.filter(
+      (p) => checkDeclaredPermissions([p]).status !== 'pass'
+    )
+    expect(rejected).toEqual([])
+  })
+
+  it.each(['tts', 'sessions.readHistory', 'firebase', 'spend'] as const)(
+    'accepts the 1.2.0 permission %s',
+    (permission) => {
+      expect(checkDeclaredPermissions([permission]).status).toBe('pass')
+    }
+  )
+
+  it.each(['system', 'chrome'] as const)(
+    'accepts %s, which the hand-copied list had always omitted',
+    (permission) => {
+      expect(checkDeclaredPermissions([permission]).status).toBe('pass')
+    }
+  )
+
+  it('still rejects a string the SDK does not recognize', () => {
+    // The widening must not have turned the check into a no-op.
+    const r = checkDeclaredPermissions(['storage', 'not-a-permission'])
+    expect(r.status).toBe('fail')
+    expect(r.message).toMatch(/not-a-permission/)
+    expect(r.suggestion).toMatch(/storage/)
   })
 })
 

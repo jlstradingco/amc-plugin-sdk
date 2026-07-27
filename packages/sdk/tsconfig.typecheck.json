@@ -1,0 +1,14 @@
+{
+  // Type-checks EVERYTHING, tests included, and emits nothing.
+  //
+  // The build configs exclude tests, because `files: ["dist"]` publishes whatever they
+  // emit and a published SDK should not carry its own specs. Excluding them there
+  // would have quietly stopped type-checking them too, which is how a broken spec
+  // reaches CI as a runtime failure instead of a compile error. This config is the
+  // other half of that trade.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src"]
+}

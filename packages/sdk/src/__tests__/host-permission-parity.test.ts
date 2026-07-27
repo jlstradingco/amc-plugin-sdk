@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { PLUGIN_PERMISSIONS, manifestSchema } from '../index.js'
+import { createTestContext } from '../testing/index.js'
 import {
   HOST_PERMISSIONS,
   SDK_AHEAD_PERMISSIONS,
@@ -79,6 +80,63 @@ describe('SDK <-> host permission parity', () => {
     expect(ok.success).toBe(true)
     const bad = manifestSchema.safeParse({ ...base, permissions: ['not-a-real-permission'] })
     expect(bad.success).toBe(false)
+  })
+
+  it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
+    // Regression guard for the 2026-07-15 -> 2026-07-27 failure: the mirror was
+    // reconciled to 14 permissions while the host union held 19, and because the
+    // parity assertions above compare the SDK enum against THIS MIRROR, a wrong
+    // mirror plus a wrong enum agreed and the suite stayed green. An explicit
+    // count means shrinking the mirror can only happen deliberately, in a diff a
+    // reviewer sees. Bump it ONLY after re-deriving from the host's
+    // src/shared/plugin-permissions.ts union.
+    expect(HOST_PERMISSIONS.length).toBe(19)
+    expect(host.size).toBe(HOST_PERMISSIONS.length)
+  })
+
+  it('gives every recognized permission a typed ctx namespace', () => {
+    // The other half of the same failure: a permission string with no typed
+    // namespace is declarable but unusable, which is barely better than being
+    // rejected outright. Every permission maps to the ctx key that carries it
+    // (or to null when it gates no backend namespace at all).
+    const namespaceForPermission: Record<string, string | null> = {
+      storage: 'storage',
+      sessions: 'sessions',
+      'sessions.readHistory': 'sessionHistory',
+      ai: 'ai',
+      tts: 'tts',
+      network: 'http',
+      cron: 'cron',
+      cli: 'cli',
+      notifications: 'toast',
+      // Ungated-at-the-namespace-level host capabilities reached through other
+      // surfaces (shell/clipboard/process for `system`, RSS reads, the webview
+      // chrome APIs, deep-link navigation) — no single backend ctx key owns them.
+      system: null,
+      rss: null,
+      chrome: null,
+      navigation: null,
+      auth: 'auth',
+      'auth.session': 'auth',
+      firebase: 'firebase',
+      recording: 'recording',
+      inbox: 'inbox',
+      spend: 'spend',
+    }
+
+    // Every permission the SDK exposes must be classified above — no silent omissions.
+    const unclassified = [...sdk].filter(
+      (p) => !Object.prototype.hasOwnProperty.call(namespaceForPermission, p)
+    )
+    expect(unclassified).toEqual([])
+
+    // And every classified namespace must actually exist on PluginContext.
+    const ctxKeys = new Set(Object.keys(createTestContext().ctx))
+    const missingNamespaces = [...sdk]
+      .map((p) => namespaceForPermission[p])
+      .filter((ns): ns is string => ns !== null && ns !== undefined)
+      .filter((ns) => !ctxKeys.has(ns))
+    expect(missingNamespaces).toEqual([])
   })
 
   it('has no outstanding type-shape deltas (both historical ones resolved)', () => {

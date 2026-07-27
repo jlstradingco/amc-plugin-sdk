@@ -324,6 +324,66 @@ The `recording` permission is recognized and described by the host, and the `Plu
 
 ---
 
+### `tts`
+
+**Grants access to:** `PluginTts` (text-to-speech)
+
+Read text aloud using whichever voice the user configured in AMC. `isAvailable()` reports false when the user has TTS turned off or has set up no voice provider — check it before offering a read-aloud control.
+
+::: warning Metered spend
+Synthesis costs real money and is billed to the user. AMC enforces its own per-plugin daily cap (shared with the `ai` capability) and `synthesize()` **rejects** once that cap is hit. Treat the rejection as an expected runtime state, not a bug — surface it to the user rather than retrying.
+:::
+
+See the [Text to Speech API](../api/tts).
+
+---
+
+### `sessions.readHistory`
+
+**Grants access to:** `PluginSessionHistory` (read past sessions and projects)
+
+Read the user's **existing** AMC sessions and projects — distinct from `sessions`, which creates and drives new ones. Intended for plugins that turn prior work into a summary, a deck, or a report.
+
+This is the most privacy-sensitive permission in the SDK, and it is default-deny at runtime:
+
+- The plugin sees **nothing** until it calls `requestAccess()`, which opens a picker where the user chooses exactly which projects or sessions to hand over. `getMessages()` on anything else **throws**.
+- Content is **text only**. Tool calls, tool output, and file contents are stripped by the host before the plugin sees them, so secrets embedded in tool blocks never travel.
+- Every read is written to an audit log the plugin cannot touch, and the user can revoke the grant at any time from Settings → Plugins.
+
+Handle a cancelled grant (`result.cancelled === true`) as a normal outcome — declining is the expected default.
+
+See the [Session History API](../api/session-history).
+
+---
+
+### `firebase`
+
+**Grants access to:** `PluginFirebase` (enumerate Firebase accounts and projects)
+
+List the Firebase accounts the user is signed into, list their projects, and start an interactive `firebase login`. Backed by the user's locally installed Firebase CLI.
+
+::: tip Empty, never thrown
+Every list method resolves to an **empty array** when the CLI is missing, times out, or returns something unparseable — none of them reject. So an empty result does not mean "no projects". Call `setupStatus()` to tell a genuinely empty account apart from a machine with no Firebase CLI, and branch on `cliInstalled` / `signedIn` before showing an empty state.
+:::
+
+See the [Firebase API](../api/firebase).
+
+---
+
+### `spend`
+
+**Grants access to:** `PluginSpend` (read-only AI cost and usage totals)
+
+Read the user's AI spend breakdown — headline totals for yesterday, the last 7 days, and the last 30 days, plus per-engine coding lines, per-feature background lines, and notable individual charges. This is what a spend-report plugin is built on.
+
+Read-only, and there is nothing to pass: the host resolves the time windows and the user's timezone itself, so there is no window to widen. Note that the numbers are the user's **global** spend across all their accounts, not a slice scoped to your plugin.
+
+`codingValue` is a shadow figure — what the agent-coding work would have cost at API rates, though it is covered by the flat plan. `outOfPocket` is the money actually spent. Do not present the two as the same thing.
+
+See the [Spend API](../api/spend).
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -342,7 +402,9 @@ Only request the permissions your plugin actually needs. Users see the permissio
 |---|---|---|
 | `storage` | `PluginStorage`, `PluginDb`, `PluginFs` | Persist data, query collections, read/write files |
 | `sessions` | `PluginSessions` | Create/manage Claude Code sessions |
+| `sessions.readHistory` | `PluginSessionHistory` | Read PAST sessions/projects the user explicitly grants |
 | `ai` | `PluginAi` | Direct AI text generation |
+| `tts` | `PluginTts` | Read text aloud with the user's configured voice (metered) |
 | `network` | `PluginHttp` | Outbound HTTP requests |
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on AMC's control server |
@@ -352,7 +414,9 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
+| `firebase` | `PluginFirebase` | List the user's Firebase accounts/projects; start a login |
 | `recording` | `PluginRecording` | Screen recording (bridge not yet wired; requests inert) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate AMC to sessions, projects, and views |
+| `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |

@@ -174,6 +174,172 @@ export interface PluginRecording {
   delete(recordingId: string): Promise<void>
 }
 
+/** Base64 MP3 returned by `ctx.tts.synthesize()`. Play it in the webview via a data: URL. */
+export interface SynthesizedSpeech {
+  audioBase64: string
+  mime: 'audio/mpeg'
+}
+
+/**
+ * Text to speech, using whichever voice the user configured in AMC.
+ * Requires the `tts` permission.
+ *
+ * Synthesis is metered AI spend. The host enforces its own per-plugin daily cap
+ * (shared with the `ai` capability) and throws once the cap is hit, so treat a
+ * rejection from `synthesize()` as an expected runtime state, not a bug.
+ */
+export interface PluginTts {
+  /** False when the user has TTS disabled or has configured no voice provider. */
+  isAvailable(): Promise<boolean>
+  synthesize(text: string): Promise<SynthesizedSpeech>
+}
+
+/** A project the user granted this plugin access to. */
+export interface HistoryProject {
+  id: string
+  name: string
+}
+
+/** A session the user granted this plugin access to, directly or via its project. */
+export interface HistorySession {
+  id: string
+  name: string
+  projectId: string
+  status: string
+  lastActiveAt: string
+}
+
+/** One text-only turn of a granted session. */
+export interface HistoryMessage {
+  id: string
+  role: 'user' | 'assistant'
+  /** Plain conversation text. Tool calls, tool output and file contents are stripped by the host. */
+  content: string
+  timestamp: string
+}
+
+/** Outcome of a `requestAccess()` round trip. `cancelled` is true when the user dismissed the picker. */
+export interface HistoryGrantResult {
+  requestId: string
+  cancelled?: boolean
+  sessionIds?: string[]
+  projectIds?: string[]
+}
+
+/**
+ * Read the user's PAST AMC sessions and projects.
+ * Requires the `sessions.readHistory` permission.
+ *
+ * Strictly opt-in and default-deny: the plugin sees nothing until the user picks
+ * specific projects/sessions in the grant picker raised by `requestAccess()`.
+ * `getMessages()` throws for a session that was never granted, returns text only,
+ * and every read is written to an audit log the plugin cannot touch.
+ */
+export interface PluginSessionHistory {
+  listProjects(): Promise<HistoryProject[]>
+  listSessions(): Promise<HistorySession[]>
+  getMessages(options: { sessionId: string }): Promise<HistoryMessage[]>
+  /** Opens the user's grant picker. Resolves once they choose or cancel. */
+  requestAccess(options?: { kinds?: ('session' | 'project')[] }): Promise<HistoryGrantResult>
+}
+
+/** A Firebase account the user is signed into via the Firebase CLI. */
+export interface FirebaseAccount {
+  email: string
+  active: boolean
+}
+
+export interface FirebaseProject {
+  projectId: string
+  displayName: string
+}
+
+export interface FirebaseSetupStatus {
+  cliInstalled: boolean
+  signedIn: boolean
+  accounts: { email: string }[]
+  firebaseAccess: 'ok' | 'needs-tos' | 'unknown'
+  billing: { checked: boolean; hasOpenAccount: boolean }
+}
+
+/**
+ * Enumerate the user's Firebase accounts and projects, and start an interactive login.
+ * Requires the `firebase` permission.
+ *
+ * Backed by the user's locally installed Firebase CLI. Every list method resolves to
+ * an EMPTY array when the CLI is missing, times out, or returns an unparseable
+ * payload — it never rejects — so check `setupStatus()` to tell "none" from "no CLI".
+ */
+export interface PluginFirebase {
+  listAccounts(): Promise<FirebaseAccount[]>
+  listProjects(): Promise<FirebaseProject[]>
+  listProjectsForAccount(email: string): Promise<FirebaseProject[]>
+  setupStatus(): Promise<FirebaseSetupStatus>
+  /** Spawns a detached `firebase login`. `started` only reports that the spawn succeeded. */
+  startLogin(): Promise<{ started: boolean }>
+}
+
+/** Headline totals for one spend window. All money is USD. */
+export interface SpendWindow {
+  /** Agent-coding shadow value — what the coding work would have cost at API rates. Not a bill. */
+  codingValue: number
+  /** Total metered background-feature spend, plan-covered and real combined. */
+  backgroundTotal: number
+  /** The real out-of-pocket slice of `backgroundTotal` (billed to a real API key). */
+  outOfPocket: number
+}
+
+/** One engine's coding line in the yesterday drill-down. */
+export interface SpendEngineLine {
+  engine: string
+  value: number
+  sessions: number
+}
+
+/** One background-feature line in the yesterday drill-down. */
+export interface SpendFeatureLine {
+  label: string
+  total: number
+  real: number
+  count: number
+}
+
+/** One notable individual charge, deduped by (feature, model, apiKey). */
+export interface SpendCharge {
+  amount: number
+  feature: string
+  model: string
+  apiKey: boolean
+  count: number
+  session: string | null
+}
+
+/** The full breakdown returned by `ctx.spend.getBreakdown()`. */
+export interface SpendReportBreakdown {
+  generatedAt: string
+  windows: {
+    yesterday: SpendWindow
+    week: SpendWindow
+    month: SpendWindow
+  }
+  codingEngines: SpendEngineLine[]
+  backgroundFeatures: SpendFeatureLine[]
+  /** Empty unless yesterday's biggest single charge was at least $0.10. */
+  notableCharges: SpendCharge[]
+}
+
+/**
+ * Read-only AI cost and usage totals, for building spend reports.
+ * Requires the `spend` permission.
+ *
+ * Returns the host's GLOBAL spend across all of the user's accounts, not a
+ * plugin-scoped slice. The host resolves the time windows and timezone itself,
+ * so there is nothing to pass and no window to widen.
+ */
+export interface PluginSpend {
+  getBreakdown(): Promise<SpendReportBreakdown>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -194,4 +360,8 @@ export interface PluginContext {
   inbox: PluginInbox
   auth: PluginAuth
   recording: PluginRecording
+  tts: PluginTts
+  sessionHistory: PluginSessionHistory
+  firebase: PluginFirebase
+  spend: PluginSpend
 }

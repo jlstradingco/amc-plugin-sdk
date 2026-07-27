@@ -43,6 +43,27 @@ export type {
   RecordingHandle,
   Recording,
   PluginRecording,
+  // Text to speech (`tts`)
+  SynthesizedSpeech,
+  PluginTts,
+  // Session history (`sessions.readHistory`)
+  HistoryProject,
+  HistorySession,
+  HistoryMessage,
+  HistoryGrantResult,
+  PluginSessionHistory,
+  // Firebase (`firebase`)
+  FirebaseAccount,
+  FirebaseProject,
+  FirebaseSetupStatus,
+  PluginFirebase,
+  // Spend reporting (`spend`)
+  SpendWindow,
+  SpendEngineLine,
+  SpendFeatureLine,
+  SpendCharge,
+  SpendReportBreakdown,
+  PluginSpend,
   // Backend types
   PluginBackend,
   PluginActivate,

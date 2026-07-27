@@ -63,14 +63,14 @@ On first publish, the CLI opens your browser to the AMC Marketplace sign-in page
 
 ```
 Opening browser for GitHub sign-in...
-If the browser doesn't open, visit: https://marketplace.agentmc.app?session=A1B2C3
+If the browser doesn't open, visit: https://amc-marketplace-jls.web.app?session=A1B2C3
 
 Waiting for sign-in...
 .....
 Signed in as your-github-username
 ```
 
-After signing in, the CLI stores your token locally at `~/.amc/marketplace-token`. Subsequent publishes reuse this token until it expires.
+After signing in, the CLI stores your token locally at `~/.amc/marketplace-token`. Subsequent publishes reuse it, and when it expires the CLI renews it silently in the background using the stored refresh token — so you should only see the browser flow again if you sign out or your access is revoked.
 
 ### Upload
 
