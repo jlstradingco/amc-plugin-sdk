@@ -66,9 +66,19 @@ describe('checkSteps', () => {
     expect(codes('nope')).toEqual([])
   })
 
-  it('skips a non-object entry rather than throwing', () => {
+  it('reports a non-object entry rather than throwing, or ignoring it', () => {
+    // This used to assert NO findings for a malformed entry. That was the bug, not the
+    // contract: the step collectors skip these so a stray `null` cannot renumber the
+    // steps around it, and the publish envelope then dropped them — so the author's
+    // automation quietly lost a step and nothing anywhere said so. Not throwing is
+    // still required; saying nothing is not.
     expect(() => checkSteps({ steps: [null, 'x', 3] })).not.toThrow()
-    expect(checkSteps({ steps: [null, 'x', 3] })).toEqual([])
+    const found = checkSteps({ steps: [null, 'x', 3] })
+    expect(found.map((f) => f.code)).toEqual([
+      'malformed-step',
+      'malformed-step',
+      'malformed-step'
+    ])
   })
 
   // `pipelines` rides the publish envelope's allow-list, so its steps are published and
