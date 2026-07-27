@@ -10,6 +10,7 @@ import {
   DEFAULT_PUBLISH_CATEGORY,
   type AutomationCategory
 } from '../lib/envelope.js'
+import { checkPublishInputs } from '../lib/publish-inputs.js'
 import { uploadAutomation } from '../api/automation-api.js'
 import { authenticate, getStoredToken, clearToken, type StoredToken } from '../../lib/auth.js'
 import { MarketplaceApiError } from '../../lib/marketplace-api.js'
@@ -57,6 +58,15 @@ export interface PublishOptions {
 export async function runPublish(
   opts: PublishOptions
 ): Promise<{ exitCode: number; submissionId?: string }> {
+  // Before anything reads the disk or the network: a typo in a flag is the cheapest
+  // possible failure, and the most expensive one to discover from a 400 after the
+  // upload slot is already spent.
+  const inputProblems = checkPublishInputs({ version: opts.version, category: opts.category })
+  if (inputProblems.length > 0) {
+    for (const problem of inputProblems) actionableError(problem.message, problem.suggestion)
+    return { exitCode: 1 }
+  }
+
   let recipe: Record<string, unknown>
   try {
     const resolved = resolveRecipePath(opts.cwd, opts.file)
