@@ -97,6 +97,73 @@ describe('runValidate', () => {
     expect((await runValidate({ cwd: dir })).exitCode).toBe(1)
   })
 
+  // Under --json this exit used to print NOTHING, so a CI step parsing stdout received
+  // an empty string and could not tell a missing recipe from a crashed process.
+  describe('an unloadable recipe file under --json', () => {
+    interface JsonPayload {
+      ok: boolean
+      errors: { code: string; fix?: string }[]
+      warnings: { code: string }[]
+      info: { code: string }[]
+      server: unknown
+    }
+
+    const captureJson = async (run: () => Promise<unknown>): Promise<JsonPayload> => {
+      const logged: string[] = []
+      vi.spyOn(console, 'log').mockImplementation((m: unknown) => {
+        logged.push(String(m))
+      })
+      await run()
+      return JSON.parse(logged.join('\n'))
+    }
+
+    it('emits a parseable payload when the file is missing', async () => {
+      const parsed = await captureJson(() => runValidate({ cwd: dir, json: true }))
+      expect(parsed.ok).toBe(false)
+      expect(parsed.errors.map((e) => e.code)).toContain('recipe-file')
+    })
+
+    it('carries the remedy in the payload, not only on the console', async () => {
+      const parsed = await captureJson(() => runValidate({ cwd: dir, json: true }))
+      expect(parsed.errors[0]?.fix).toBeTruthy()
+    })
+
+    it('emits a payload when the file is not valid JSON', async () => {
+      fs.writeFileSync(path.join(dir, 'x.recipe.json'), '{ oops', 'utf-8')
+      const parsed = await captureJson(() => runValidate({ cwd: dir, json: true }))
+      expect(parsed.ok).toBe(false)
+      expect(parsed.errors.map((e) => e.code)).toContain('recipe-file')
+    })
+
+    it('emits a payload when the top level is not an object', async () => {
+      fs.writeFileSync(path.join(dir, 'x.recipe.json'), '[1,2,3]', 'utf-8')
+      const parsed = await captureJson(() => runValidate({ cwd: dir, json: true }))
+      expect(parsed.errors.map((e) => e.code)).toContain('recipe-file')
+    })
+
+    it('emits a payload when two recipe files make the choice ambiguous', async () => {
+      write(good)
+      fs.writeFileSync(path.join(dir, 'y.recipe.json'), JSON.stringify(good), 'utf-8')
+      const parsed = await captureJson(() => runValidate({ cwd: dir, json: true }))
+      expect(parsed.errors.map((e) => e.code)).toContain('recipe-file')
+    })
+
+    it('returns the same finding to the caller as it printed', async () => {
+      const res = await runValidate({ cwd: dir })
+      expect(res.findings.map((f) => f.code)).toEqual(['recipe-file'])
+      expect(res.exitCode).toBe(1)
+    })
+
+    it('still prints the human message when --json is off', async () => {
+      const errors: string[] = []
+      vi.spyOn(console, 'error').mockImplementation((m: unknown) => {
+        errors.push(String(m))
+      })
+      await runValidate({ cwd: dir })
+      expect(errors.join('\n')).toContain('recipe')
+    })
+  })
+
   // --version and --category were passed straight through to the upload, so a typo was
   // only discovered as a bare 400 that had already spent one of five hourly attempts.
   describe('publish flags', () => {
