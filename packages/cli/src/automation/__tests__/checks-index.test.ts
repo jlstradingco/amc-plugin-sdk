@@ -45,6 +45,47 @@ describe('runAllChecks', () => {
     expect(lastError).toBeLessThan(firstWarning)
   })
 
+  it('reports a stripped field alongside the rest', () => {
+    const codes = runAllChecks({
+      name: 'Fine Name',
+      executionMode: 'multi-session',
+      steps: [{ name: 'a', prompt: 'go' }],
+      notAThing: 1
+    }).map((f) => f.code)
+    expect(codes).toContain('field-not-published') // stripped-fields
+  })
+
+  it('sorts info findings after errors and warnings', () => {
+    const found = runAllChecks({
+      name: '',
+      steps: [],
+      description: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA',
+      notAThing: 1
+    })
+    const severities = found.map((f) => f.severity)
+    expect(severities).toContain('info')
+    expect(severities.lastIndexOf('warning')).toBeLessThan(severities.indexOf('info'))
+  })
+
+  it('an advisory alone never makes the run look failed', () => {
+    // `hasErrors` gates the publish, so a recipe whose only finding is informational
+    // must still be publishable.
+    const found = runAllChecks({
+      name: 'Fine Name',
+      executionMode: 'multi-session',
+      steps: [{ name: 'a', prompt: 'go' }],
+      notAThing: 1
+    })
+    expect(found.every((f) => f.severity === 'info')).toBe(true)
+  })
+
+  it('keeps findings of equal severity in the order the checks produced them', () => {
+    // Array.prototype.sort is stable, so the output order tracks the author's file
+    // rather than shuffling between runs.
+    const found = runAllChecks({ name: '', steps: [] })
+    expect(found.map((f) => f.code)).toEqual(['missing-name', 'no-steps'])
+  })
+
   it('re-exports the shared constants so callers have one import site', () => {
     expect(SCHEMA_VERSION).toBe(1)
     expect([...EXECUTION_MODES]).toEqual(['multi-session', 'same-session', 'parallel'])
