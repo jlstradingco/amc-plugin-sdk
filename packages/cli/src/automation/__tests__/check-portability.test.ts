@@ -88,6 +88,64 @@ describe('checkPortability', () => {
     for (const f of found) expect(f.fix, `${f.code} has no fix`).toBeTruthy()
   })
 
+  // pipelines rides the publish envelope's allow-list, so anything in one is shipped.
+  // Neither the CLI nor the server used to walk them, so a script step inside a
+  // pipeline reached the marketplace with no warning from either side.
+  describe('pipelines', () => {
+    it('flags a script step inside a pipeline', () => {
+      const found = checkPortability({
+        ...base,
+        pipelines: { review: [{ name: 'run', script: './local.sh' }] }
+      })
+      expect(found.map((f) => f.code)).toContain('script-step')
+    })
+
+    it('flags a sub-recipe step inside a pipeline', () => {
+      const found = checkPortability({
+        ...base,
+        pipelines: { review: [{ name: 'call', kind: 'sub-recipe' }] }
+      })
+      expect(found.map((f) => f.code)).toContain('sub-recipe-step')
+    })
+
+    it('flags a promptFile and a targetProjectId inside a pipeline', () => {
+      const found = checkPortability({
+        ...base,
+        pipelines: { review: [{ name: 'x', promptFile: './p.md', targetProjectId: 'p1' }] }
+      })
+      const codes = found.map((f) => f.code)
+      expect(codes).toContain('prompt-file')
+      expect(codes).toContain('target-project')
+    })
+
+    it('says which pipeline the step came from', () => {
+      // A step name is not unique across pipelines, so "run" alone would be ambiguous.
+      const found = checkPortability({
+        ...base,
+        pipelines: { review: [{ name: 'run', script: './local.sh' }] }
+      })
+      expect(found[0]?.stepName).toBe('run (in pipeline "review")')
+      expect(found[0]?.message).toContain('review')
+    })
+
+    it('catches a recipe whose only nonportable step is in a pipeline', () => {
+      // The exact shape that used to publish clean.
+      const found = checkPortability({
+        ...base,
+        steps: [{ name: 'ok', prompt: 'fine' }],
+        pipelines: { deploy: [{ name: 'ship', script: './deploy.sh' }] }
+      })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.code).toBe('script-step')
+    })
+
+    it('does not throw on malformed pipelines', () => {
+      expect(() => checkPortability({ ...base, pipelines: 'nope' })).not.toThrow()
+      expect(() => checkPortability({ ...base, pipelines: { a: 'nope' } })).not.toThrow()
+      expect(() => checkPortability({ ...base, pipelines: { a: [null, 3] } })).not.toThrow()
+    })
+  })
+
   it('does not throw on malformed input', () => {
     expect(() => checkPortability({})).not.toThrow()
     expect(() => checkPortability({ steps: [null, 3] })).not.toThrow()
