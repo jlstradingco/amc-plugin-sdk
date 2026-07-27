@@ -98,7 +98,9 @@ const resourceLimitsSchema = z.object({
 export const PLUGIN_PERMISSIONS = [
   'storage',
   'sessions',
+  'sessions.readHistory',
   'ai',
+  'tts',
   'network',
   'cron',
   'cli',
@@ -108,9 +110,11 @@ export const PLUGIN_PERMISSIONS = [
   'auth',
   'auth.session',
   'chrome',
+  'firebase',
   'recording',
   'inbox',
   'navigation',
+  'spend',
 ] as const satisfies readonly PluginPermission[]
 
 // Compile-time completeness: fails to type-check if a PluginPermission is added
