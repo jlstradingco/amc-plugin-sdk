@@ -93,3 +93,38 @@ export function collectPipelineSteps(recipe: Record<string, unknown>): LocatedSt
 export function collectAllSteps(recipe: Record<string, unknown>): LocatedStep[] {
   return [...collectTopLevelSteps(recipe), ...collectPipelineSteps(recipe)]
 }
+
+/**
+ * Field paths of entries that sit in a steps array but are not steps.
+ *
+ * The collectors above SKIP a non-object entry so a malformed one cannot renumber the
+ * steps after it — the right call for labelling, but it meant a `null` or a bare
+ * string in the array was invisible to every check, and then silently dropped by the
+ * publish envelope. The author's automation quietly lost a step somewhere between
+ * their file and the catalog, with nothing anywhere saying so.
+ *
+ * Returned as paths rather than values because there is nothing useful to say about
+ * the entry itself; what the author needs is which slot to go and look at.
+ */
+export function collectMalformedSteps(recipe: Record<string, unknown>): string[] {
+  const paths: string[] = []
+
+  if (Array.isArray(recipe.steps)) {
+    recipe.steps.forEach((step, index) => {
+      if (!isStepObject(step)) paths.push(`steps[${index}]`)
+    })
+  }
+
+  const pipelines = recipe.pipelines
+  if (isStepObject(pipelines)) {
+    for (const pipelineName of Object.keys(pipelines).sort()) {
+      const steps = pipelines[pipelineName]
+      if (!Array.isArray(steps)) continue
+      steps.forEach((step, index) => {
+        if (!isStepObject(step)) paths.push(`pipelines.${pipelineName}[${index}]`)
+      })
+    }
+  }
+
+  return paths
+}
