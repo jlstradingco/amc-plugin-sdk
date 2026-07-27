@@ -3,8 +3,9 @@ import { checkStructure } from './structure.js'
 import { checkSteps } from './steps.js'
 import { checkPortability } from './portability.js'
 import { checkSecrets } from './secrets.js'
+import { checkLimits } from './limits.js'
 
-export { checkStructure, checkSteps, checkPortability, checkSecrets }
+export { checkStructure, checkSteps, checkPortability, checkSecrets, checkLimits }
 export { SCHEMA_VERSION, EXECUTION_MODES } from './structure.js'
 
 const SEVERITY_ORDER = { error: 0, warning: 1, info: 2 } as const
@@ -18,7 +19,8 @@ export function runAllChecks(recipe: Record<string, unknown>): Finding[] {
     ...checkStructure(recipe),
     ...checkSteps(recipe),
     ...checkPortability(recipe),
-    ...checkSecrets(recipe)
+    ...checkSecrets(recipe),
+    ...checkLimits(recipe)
   ]
   return findings.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
 }
