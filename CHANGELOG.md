@@ -25,9 +25,10 @@ together.
   - `amc-automation init <name>` — scaffolds a `.recipe.json` plus a README. The
     template is a working two-step automation, not a stub: a test asserts that
     `init` followed by `validate` reports zero findings.
-  - `amc-automation validate` — five groups of local checks (structure, steps,
-    portability, secrets, marketplace limits). Exits `1` on an error, `0` on
-    warnings only, so it drops into CI. `--json` for machine-readable findings.
+  - `amc-automation validate` — six groups of local checks (structure, steps,
+    portability, secrets, marketplace limits, and an advisory list of fields the
+    envelope will not carry). Exits `1` on an error, `0` on advisories only, so it
+    drops into CI. `--json` for machine-readable findings.
   - `amc-automation publish` — validates, authenticates, and submits for review.
     `--dry-run`, `--as <user>`, `--version`, `--category`, `--changelog`.
   - `amc-automation status` — the review verdict, scoped to the automation in the
@@ -37,11 +38,22 @@ together.
   the existing marketplace token, sign-in flow, docs site and release train.
 
   **Validation is deliberately split.** The share envelope's schema lives in AMC
-  and is version-gated; copying it here would recreate exactly the drift that
+  and is version-gated; copying it wholesale would recreate exactly the drift that
   stranded four permissions in 1.2.0. So the server holds the authoritative
-  verdict (`validate --check`), and the local checks are advisory heuristics whose
-  worst failure is a *missed warning* — they can never wrongly reject a valid
-  automation. That asymmetry is why they need no parity guard.
+  verdict (`validate --check`), and the local checks exist to fail the hopeless
+  cases before an upload slot is spent.
+
+  Two caveats, because the original framing of this split was too neat. First, the
+  local checks are **not** purely advisory: `checkPortability` walks pipeline steps,
+  which neither AMC's share gate nor the marketplace validator does, so it can
+  refuse a submission the server would have accepted. That is intentional — a
+  pipeline step running a local script installs fine and then cannot run, which is
+  worse for the importer than a publish the author has to think about — and
+  `--skip-validation` remains the way past it. Second, the values that *are*
+  mirrored from the server (the id pattern, the version pattern, the categories,
+  the step and definition allow-lists, the 200-step and 256 KB caps) do need parity
+  guards, and now carry them: each is pinned by a test naming the file it was
+  derived from.
 
   `validate --check` and `status` depend on the marketplace's `validateAutomation`
   and `getMyAutomations` endpoints. Where `validateAutomation` is not deployed,
@@ -56,6 +68,14 @@ together.
 
 - **`amc-automation publish` takes `--switch-account`,** matching `amc-plugin
   publish`. Both binaries share one token file, so switching here switches both.
+
+- **API reference pages for the four 1.2.0 namespaces.** `tts`,
+  `sessions.readHistory`, `firebase` and `spend` were typed, mocked and permitted,
+  but every other namespace had a page under `/api/` and these four did not — so
+  the headline capabilities of the release were the only ones an author browsing
+  the reference could not find. Each page documents the surface, the failure modes
+  that are expected rather than exceptional, and how to seed it in
+  `createTestContext()`.
 
 ### Fixed
 
