@@ -11,6 +11,23 @@ describe('buildTemplateRecipe', () => {
     expect(runAllChecks(buildTemplateRecipe(opts))).toEqual([])
   })
 
+  it('raises no advisory either, not just no errors', () => {
+    // The zero-findings assertion above already covers this, but it is worth pinning
+    // separately: an INFO line on a freshly scaffolded file would train authors to
+    // ignore the advisory channel before they have ever seen it matter. The template's
+    // `scope` is the interesting case — it is dropped from the envelope, and stays
+    // quiet only because it is on the expected-local list.
+    const findings = runAllChecks(buildTemplateRecipe(opts))
+    expect(findings.filter((f) => f.severity === 'info')).toEqual([])
+  })
+
+  it('survives a name that reaches the id length limits', () => {
+    // `init` derives the marketplace id from the name, and both ends of the id range
+    // are reachable from a name the other checks accept.
+    const long = 'A'.repeat(64)
+    expect(runAllChecks(buildTemplateRecipe({ ...opts, name: long }))).toEqual([])
+  })
+
   it('stamps the schema version and a global scope', () => {
     const r = buildTemplateRecipe(opts)
     expect(r.schemaVersion).toBe(1)
