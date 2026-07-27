@@ -6,6 +6,8 @@ import {
   buildEnvelope,
   deriveAutomationId,
   AUTOMATION_CATEGORIES,
+  DEFAULT_PUBLISH_VERSION,
+  DEFAULT_PUBLISH_CATEGORY,
   type AutomationCategory
 } from '../lib/envelope.js'
 import { uploadAutomation } from '../api/automation-api.js'
@@ -68,8 +70,8 @@ export async function runPublish(
 
   const envelope = buildEnvelope(recipe, {
     automationId: deriveAutomationId(String(recipe.name ?? '')),
-    version: opts.version ?? '1.0.0',
-    category: opts.category ?? 'other',
+    version: opts.version ?? DEFAULT_PUBLISH_VERSION,
+    category: opts.category ?? DEFAULT_PUBLISH_CATEGORY,
     changelog: opts.changelog ?? ''
   })
 
@@ -99,8 +101,12 @@ export async function runPublish(
 export const publishCommand = new Command('publish')
   .description('Publish an automation to the AMC Marketplace for review')
   .argument('[file]', 'Path to the .recipe.json')
-  .option('--version <version>', 'Version for this submission', '1.0.0')
-  .option('--category <category>', `One of: ${AUTOMATION_CATEGORIES.join(', ')}`, 'other')
+  .option('--version <version>', 'Version for this submission', DEFAULT_PUBLISH_VERSION)
+  .option(
+    '--category <category>',
+    `One of: ${AUTOMATION_CATEGORIES.join(', ')}`,
+    DEFAULT_PUBLISH_CATEGORY
+  )
   .option('--changelog <text>', 'What changed in this version')
   .option('--as <github-user>', 'Assert the expected GitHub account; aborts on mismatch')
   .option('-y, --yes', 'Skip the identity confirmation prompt')
