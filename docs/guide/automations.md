@@ -98,11 +98,38 @@ These are checked in your `steps` **and** in every named array under
 for the step checks: a pipeline step with an empty prompt is caught too, because
 it would stop the automation just as surely as a top-level one.
 
+::: tip Stricter than the server, on purpose
+The marketplace only inspects your top-level `steps`, so a script step inside a
+pipeline would be *accepted* by the server. `validate` refuses it anyway: it
+still travels, and it still cannot run on the importer's machine, so accepting it
+means shipping an automation that installs and then does nothing. If you have a
+reason to publish one regardless, `publish --skip-validation` is the way past.
+:::
+
 The same is true of the advisory secret scan, which sweeps everything a publish
-ships — prompts, parameter defaults, `onComplete`, `supervisors` — not just the
+ships — every step prompt, exit message, approval-gate message and supervisor
+prompt, plus parameter defaults, `onComplete` and `supervisors` — not just the
 description. A pasted API key warns wherever it sits. It only ever warns: a
 published automation is world-readable, so a false positive must never block you,
 and only you can tell.
+
+## What actually gets published
+
+An automation travels as an **allow-list**, not as your file. Only the fields the
+envelope defines are carried, at the top level and inside every step — so local
+ids, project references and anything the envelope has never heard of stay on your
+machine whether or not you remembered to remove them.
+
+That is a safety property, but a silent one, so `validate` names what it dropped:
+
+```
+ℹ Inside your steps, "workingDir" will not be published.
+  → Remove the field, or check the spelling if you meant a step field that does travel.
+```
+
+Informational only — it never blocks a publish. Fields AMC itself always strips
+(`id`, `createdAt`, `scope` and friends) stay quiet, because every recipe exported
+from AMC carries them and an advisory that always fires is one nobody reads.
 
 ## Publish it
 
