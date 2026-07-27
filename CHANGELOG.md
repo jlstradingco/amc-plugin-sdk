@@ -9,6 +9,69 @@ Versions listed here cover the published packages `@agent-mc/plugin-sdk`,
 `@agent-mc/plugin-cli`, and `@agent-mc/plugin-dev-shell`, which are released
 together.
 
+## [1.2.0]
+
+### Added
+
+- **Four permissions the SDK was missing.** `tts`, `sessions.readHistory`,
+  `firebase` and `spend` are all gated by the AMC host and accepted by the
+  marketplace validator, but the SDK's enum rejected them — so `amc-plugin
+  validate` failed any plugin that declared one, and four shipped host
+  capabilities were unbuildable with the public SDK. Among them
+  `sessions.readHistory`, which backs AMC's documented "Session history access"
+  feature, and `spend`, which AMC's own `daily-spend-report` plugin uses.
+
+  Each also gets a typed `ctx` namespace, since a permission you can declare but
+  not call is barely better than one that is rejected:
+
+  - `ctx.tts` — `isAvailable()`, `synthesize(text)`. Metered; the host enforces a
+    per-plugin daily cap and `synthesize()` rejects once it is hit.
+  - `ctx.sessionHistory` — `requestAccess()`, `listProjects()`, `listSessions()`,
+    `getMessages({ sessionId })`. Default-deny and text-only; `getMessages()`
+    throws for a session the user never granted.
+  - `ctx.firebase` — `listAccounts()`, `listProjects()`,
+    `listProjectsForAccount(email)`, `setupStatus()`, `startLogin()`. Lists
+    resolve empty rather than rejecting when the Firebase CLI is absent.
+  - `ctx.spend` — `getBreakdown()`, returning the host's global spend report.
+
+  Signatures were taken from the host's bridge handlers rather than an idealized
+  shape, to avoid repeating the type drift 1.1.0 had to correct.
+
+- `createTestContext()` mocks all four, reproducing the host's real posture —
+  `sessionHistory` is default-deny, `tts` rejects with no voice configured, and
+  the `firebase` lists resolve empty.
+
+### Fixed
+
+- **The CLI no longer makes you sign in again roughly every hour.** It has stored
+  a refresh token since the first sign-in and never used it, so publishing a few
+  versions in one afternoon meant several trips through GitHub OAuth. Renewal is
+  silent, and every failure (expired, revoked, offline) still falls back to the
+  interactive flow.
+- **A fresh clone can build again.** `pnpm-workspace.yaml` carried unanswered
+  `pnpm approve-builds` placeholders, which made pnpm 11 abort every install and
+  script in the workspace with `ERR_PNPM_IGNORED_BUILDS`. CI never hit it because
+  it passes `--ignore-scripts`. Also pins `packageManager`.
+- The SDK↔host permission parity mirror claimed a 14-permission host union and
+  reasoned that `firebase` was an ungated browser namespace. Both were wrong — the
+  host declares 19 and denies the `firebase` namespace without the permission.
+  Because the guard compared the SDK enum against that mirror, a wrong mirror and
+  a wrong enum agreed and the suite stayed green while the gap above shipped. The
+  guard now pins the host union size and requires every permission to have a typed
+  namespace.
+- Corrected the sign-in URL in the publishing guide (it named a host the CLI does
+  not open) and documented all four new permissions, which had no reference entry.
+
+### Compatibility
+
+No breaking changes. Every 1.1.0 plugin builds unchanged; this release only widens
+what a manifest may declare.
+
+Note that AMC now enforces the `sdkVersion` field, which was never checked before.
+A **bare** version (`"sdkVersion": "1.0.7"`) is read as a **minimum**, not an exact
+pin, so existing plugins keep loading as the host SDK version advances. Only a real
+range like `^2.0.0` can refuse, and an unparseable value is ignored.
+
 ## [1.1.0]
 
 ### Changed
