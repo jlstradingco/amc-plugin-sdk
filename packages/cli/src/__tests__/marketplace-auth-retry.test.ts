@@ -39,9 +39,23 @@ const TOKEN: StoredToken = {
   expiresAt: new Date(Date.now() + 3600_000).toISOString()
 }
 
-/** A minimal Response stand-in — only `status`, `ok` and `json` are consumed. */
+/**
+ * A minimal Response stand-in — only `status`, `ok`, `json` and `clone` are consumed.
+ *
+ * `clone()` matters: `isRenewableRejection` inspects a 403's body to decide whether a
+ * renewal could help, and the ORIGINAL must still be readable by `handleResponse`
+ * afterwards. A stand-in without it would pass the retry tests while the real code
+ * threw on every 403.
+ */
 function reply(status: number, body: unknown = {}): Response {
-  return { ok: status >= 200 && status < 300, status, statusText: '', json: async () => body } as Response
+  const res = {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: '',
+    json: async () => body,
+    clone: () => reply(status, body)
+  }
+  return res as Response
 }
 
 /** The Authorization header of the Nth fetch call. */
@@ -98,18 +112,84 @@ describe('marketplace API token renewal', () => {
     expect(bearerOf(fetchMock, 2)).toBe('Bearer renewed-id-token')
   })
 
-  it('retries a 403 the same way', async () => {
+  it('does NOT retry the marketplace 403, which no fresh token can fix', async () => {
+    // FORBIDDEN means "that namespace belongs to another developer" (or "you are not an
+    // admin") — a decision about who you are, not about how old your token is. Retrying
+    // re-sent the entire request, which for uploadPlugin is up to 50MB of package bytes
+    // sent a second time for a guaranteed failure, plus a second slot against the hourly
+    // upload limit.
     writeToken()
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(reply(403))
+      .mockResolvedValueOnce(
+        reply(403, { error: true, code: 'FORBIDDEN', message: '"x" is owned by another developer' })
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { getMyPlugins } = await import('../lib/marketplace-api.js')
+
+    await expect(getMyPlugins(TOKEN)).rejects.toThrow(/owned by another developer/)
+    // One call: no renewal round trip, no second request.
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not retry an unexplained 403', async () => {
+    // A proxy or gateway 403 with no JSON body is treated as the permanent kind.
+    writeToken()
+    const fetchMock = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      statusText: 'Forbidden',
+      json: async () => {
+        throw new Error('not JSON')
+      },
+      clone: () => ({
+        json: async () => {
+          throw new Error('not JSON')
+        }
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { getMyPlugins } = await import('../lib/marketplace-api.js')
+
+    await expect(getMyPlugins(TOKEN)).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does retry a 403 that identifies itself as an auth-freshness problem', async () => {
+    // Belt and braces: if a proxy or a future server revision answers AUTH_REQUIRED with
+    // the wrong status, a renewal genuinely could fix it.
+    writeToken()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        reply(403, { error: true, code: 'AUTH_REQUIRED', message: 'Invalid or expired token' })
+      )
       .mockResolvedValueOnce(reply(200, { id_token: 'renewed-id-token', expires_in: '3600' }))
       .mockResolvedValueOnce(reply(200, { submissions: [] }))
     vi.stubGlobal('fetch', fetchMock)
 
     const { getMyPlugins } = await import('../lib/marketplace-api.js')
     await getMyPlugins(TOKEN)
+
     expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(bearerOf(fetchMock, 2)).toBe('Bearer renewed-id-token')
+  })
+
+  it('leaves the original 403 body readable after inspecting a clone', async () => {
+    // The regression this guards: reading the body to classify the rejection would consume
+    // it, so handleResponse would lose the server's own message and report a bare HTTP 403.
+    writeToken()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        reply(403, { error: true, code: 'FORBIDDEN', message: 'the specific server reason' })
+      )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { getMyPlugins } = await import('../lib/marketplace-api.js')
+    await expect(getMyPlugins(TOKEN)).rejects.toThrow('the specific server reason')
   })
 
   it('surfaces the original rejection when renewal fails', async () => {
