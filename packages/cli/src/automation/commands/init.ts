@@ -7,6 +7,7 @@ import {
   AUTOMATION_CATEGORIES,
   type AutomationCategory
 } from '../lib/envelope.js'
+import { isValidCategory } from '../lib/publish-inputs.js'
 import { ok, info, filePath } from '../../lib/output.js'
 
 export interface InitOptions {
@@ -18,8 +19,12 @@ export interface InitOptions {
 }
 
 export function runInit(opts: InitOptions): { recipePath: string; readmePath: string } {
+  // Through the shared predicate, not a second `includes` call. `init` validating its
+  // own `--category` by hand is the duplication `publish-inputs.ts` was extracted to
+  // end — the same flag was checked in one command and trusted in the other two, and
+  // a hand-rolled copy is exactly how they drifted apart in the first place.
   const category = opts.category ?? 'other'
-  if (!AUTOMATION_CATEGORIES.includes(category)) {
+  if (!isValidCategory(category)) {
     throw new Error(
       `"${category}" is not a valid category. Use one of: ${AUTOMATION_CATEGORIES.join(', ')}.`
     )
