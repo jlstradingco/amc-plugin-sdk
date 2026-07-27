@@ -40,8 +40,19 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
     recipe = loadRecipe(resolved).recipe
   } catch (err) {
     if (err instanceof RecipeFileError) {
-      if (!opts.json) actionableError(err.message, err.suggestion)
-      return { exitCode: 1, findings: [], server: null }
+      // Under --json this used to return exit 1 having printed NOTHING, so a CI step
+      // parsing stdout got an empty string and had to special-case "no output" to tell
+      // a missing recipe from a crash. Every other exit from this command emits a
+      // payload; a file that will not load is a finding like any other.
+      const findings: Finding[] = [
+        { severity: 'error', code: 'recipe-file', message: err.message, fix: err.suggestion }
+      ]
+      if (opts.json) {
+        console.log(JSON.stringify({ ...findingsToJson(findings), server: null }, null, 2))
+      } else {
+        actionableError(err.message, err.suggestion)
+      }
+      return { exitCode: 1, findings, server: null }
     }
     throw err
   }
