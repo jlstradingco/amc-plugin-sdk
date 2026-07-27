@@ -124,7 +124,7 @@ describe('checkPortability', () => {
         ...base,
         pipelines: { review: [{ name: 'run', script: './local.sh' }] }
       })
-      expect(found[0]?.stepName).toBe('run (in pipeline "review")')
+      expect(found[0]?.stepName).toBe('review › run')
       expect(found[0]?.message).toContain('review')
     })
 

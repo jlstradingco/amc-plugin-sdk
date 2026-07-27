@@ -72,15 +72,18 @@ describe('collectPipelineSteps', () => {
     const found = collectPipelineSteps({
       pipelines: { review: [{ name: 'check', prompt: 'a' }], deploy: [{ name: 'check', prompt: 'b' }] }
     })
-    expect(found.map((s) => s.label)).toEqual([
-      'check (in pipeline "deploy")',
-      'check (in pipeline "review")'
-    ])
+    expect(found.map((s) => s.label)).toEqual(['deploy › check', 'review › check'])
   })
 
-  it('falls back to the path when a pipeline step has no name', () => {
+  it('falls back to a positional label when a pipeline step has no name', () => {
     const [s] = collectPipelineSteps({ pipelines: { review: [{ prompt: 'a' }] } })
-    expect(s!.label).toBe('pipelines.review[0]')
+    expect(s!.label).toBe('review › step 1')
+  })
+
+  it('keeps labels free of quotes, since callers wrap them in quotes', () => {
+    // A label carrying its own quotes produced nested ones in every rendered finding.
+    const found = collectPipelineSteps({ pipelines: { review: [{ name: 'ship', prompt: 'a' }] } })
+    expect(found[0]!.label).not.toContain('"')
   })
 
   it('orders pipelines by name so findings do not shuffle when the file is reordered', () => {
@@ -104,7 +107,7 @@ describe('collectAllSteps', () => {
       pipelines: { review: [{ name: 'check', prompt: 'b' }] }
     }
     expect(paths(recipe)).toEqual(['steps[0]', 'pipelines.review[0]'])
-    expect(labels(recipe)).toEqual(['gather', 'check (in pipeline "review")'])
+    expect(labels(recipe)).toEqual(['gather', 'review › check'])
   })
 
   it('covers a recipe that keeps ALL its work in pipelines', () => {
