@@ -47,7 +47,7 @@ export interface AutomationPublishRequest {
  * feature, whereas a field we forget to exclude could be a local path, a project
  * id, or worse. The server re-validates against the real schema regardless.
  */
-const SHAREABLE_FIELDS = [
+export const SHAREABLE_FIELDS = [
   'name',
   'description',
   'silent',
