@@ -18,19 +18,88 @@ export interface StoredToken {
   expiresAt: string
 }
 
-export function getStoredToken(): StoredToken | null {
+// The marketplace project's Firebase Web API key. NOT a secret: Firebase web API
+// keys are public project identifiers (this exact value is served to every
+// visitor of the sign-in page in public/assets/auth.js). Access control is
+// enforced by Firebase Auth + the functions' own `authenticate` middleware, not
+// by keeping this string private.
+const FIREBASE_WEB_API_KEY =
+  process.env.AMC_MARKETPLACE_WEB_API_KEY ?? 'AIzaSyByrpH7y4nm0ZxLKNkZZD9gIMO19rJ_220'
+
+const SECURE_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token'
+
+/** Read the token file as-is, ignoring expiry. Returns null when absent/corrupt. */
+function readStoredTokenRaw(): StoredToken | null {
   if (!fs.existsSync(TOKEN_PATH)) return null
   try {
     const raw = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'))
     if (!raw.token || !raw.expiresAt) return null
-
-    // Check expiry (with 5-minute buffer)
-    const expiresAt = new Date(raw.expiresAt).getTime()
-    if (Date.now() > expiresAt - 5 * 60 * 1000) {
-      return null // Expired
-    }
-
     return raw as StoredToken
+  } catch {
+    return null
+  }
+}
+
+/** True when `token` is still valid, allowing a 5-minute clock-skew buffer. */
+export function isTokenFresh(token: StoredToken, now: number = Date.now()): boolean {
+  const expiresAt = new Date(token.expiresAt).getTime()
+  if (Number.isNaN(expiresAt)) return false
+  return now <= expiresAt - 5 * 60 * 1000
+}
+
+export function getStoredToken(): StoredToken | null {
+  const raw = readStoredTokenRaw()
+  if (!raw) return null
+  return isTokenFresh(raw) ? raw : null
+}
+
+/**
+ * Exchange the stored refresh token for a fresh ID token.
+ *
+ * Without this the CLI made you re-authenticate through the browser roughly
+ * every hour, even though the refresh token needed to avoid that has been
+ * saved since the first sign-in and simply went unused. Publishing a few
+ * versions over an afternoon meant several trips through GitHub OAuth.
+ *
+ * Returns null (never throws) when there is nothing to refresh, the network is
+ * down, or the refresh token has been revoked — every caller then falls back to
+ * the interactive browser flow, which is the correct recovery for all three.
+ */
+export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
+  const stored = readStoredTokenRaw()
+  if (!stored?.refreshToken) return null
+
+  try {
+    const res = await globalThis.fetch(`${SECURE_TOKEN_URL}?key=${FIREBASE_WEB_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: stored.refreshToken
+      }).toString()
+    })
+    if (!res.ok) return null
+
+    const data = (await res.json()) as {
+      id_token?: string
+      refresh_token?: string
+      expires_in?: string
+    }
+    if (!data.id_token) return null
+
+    // expires_in is seconds-as-string; default to Firebase's standard hour.
+    const ttlSeconds = Number.parseInt(data.expires_in ?? '3600', 10)
+    const refreshed: StoredToken = {
+      ...stored,
+      token: data.id_token,
+      // Google may rotate the refresh token — keep the new one when offered.
+      refreshToken: data.refresh_token ?? stored.refreshToken,
+      expiresAt: new Date(
+        Date.now() + (Number.isFinite(ttlSeconds) ? ttlSeconds : 3600) * 1000
+      ).toISOString()
+    }
+    saveToken(refreshed)
+    return refreshed
   } catch {
     return null
   }
@@ -53,6 +122,13 @@ export async function authenticate(): Promise<StoredToken> {
   // Check for existing valid token
   const existing = getStoredToken()
   if (existing) return existing
+
+  // Expired, but a refresh token may still be good — try that before sending the
+  // user through the browser again. Silent on failure: falling through to the
+  // interactive flow is the right recovery for an expired, revoked, or
+  // unreachable refresh token alike.
+  const refreshed = await tryRefreshStoredToken()
+  if (refreshed) return refreshed
 
   // Generate session ID for polling. The server's getAuthSession endpoint
   // (RT-F008 hardening) rejects any id that doesn't match /^[A-Za-z0-9_-]{20,200}$/,
