@@ -1,4 +1,7 @@
-import { SCHEMA_VERSION } from '../checks/index.js'
+// Imported from the check module directly rather than through checks/index.js:
+// checks/limits.ts needs buildEnvelope from here, and going through the barrel
+// would close that into an import cycle.
+import { SCHEMA_VERSION } from '../checks/structure.js'
 
 export type AutomationCategory =
   | 'planning'
@@ -65,6 +68,25 @@ const SHAREABLE_FIELDS = [
   'resumable',
   'resumeMaxAgeMinutes'
 ]
+
+/**
+ * The id shape the marketplace enforces, mirrored from its `validateAutomationId`:
+ * 2-64 characters, lowercase letters / digits / hyphens, first character not a hyphen.
+ *
+ * Mirrored, not guessed. `deriveAutomationId` slugs a display NAME into this shape and
+ * gets it right for ordinary names, but the two ends of that range are reachable from a
+ * name the local checks otherwise accept: a one-character name slugs to one character,
+ * and the 100-character name limit slugs past 64. Both passed `validate` clean and were
+ * then refused by the server with a 400.
+ */
+export const AUTOMATION_ID_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/
+
+export const AUTOMATION_ID_MIN_LENGTH = 2
+export const AUTOMATION_ID_MAX_LENGTH = 64
+
+export function isValidAutomationId(id: string): boolean {
+  return AUTOMATION_ID_PATTERN.test(id)
+}
 
 /** Kebab-case a display name into a marketplace id. */
 export function deriveAutomationId(name: string): string {
