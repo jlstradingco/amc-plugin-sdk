@@ -97,6 +97,75 @@ describe('runValidate', () => {
     expect((await runValidate({ cwd: dir })).exitCode).toBe(1)
   })
 
+  // --version and --category were passed straight through to the upload, so a typo was
+  // only discovered as a bare 400 that had already spent one of five hourly attempts.
+  describe('publish flags', () => {
+    it('reports a malformed version as an error finding', async () => {
+      write(good)
+      const res = await runValidate({ cwd: dir, version: 'v1.0.0' })
+      expect(res.exitCode).toBe(1)
+      expect(res.findings.some((f) => f.code === 'bad-version')).toBe(true)
+    })
+
+    it('reports an unknown category', async () => {
+      write(good)
+      const res = await runValidate({ cwd: dir, category: 'malware' as never })
+      expect(res.exitCode).toBe(1)
+      expect(res.findings.some((f) => f.code === 'bad-category')).toBe(true)
+    })
+
+    it('accepts a well-formed version and category', async () => {
+      write(good)
+      const res = await runValidate({ cwd: dir, version: '2.1.0', category: 'devops' })
+      expect(res.exitCode).toBe(0)
+      expect(res.findings).toEqual([])
+    })
+
+    it('still reports the recipe findings alongside a flag problem', async () => {
+      // A bad flag is one answer to "what is wrong with this publish?", not a reason
+      // to stop looking for the others.
+      write({ ...good, steps: [{ name: 'a', prompt: '' }] })
+      const res = await runValidate({ cwd: dir, version: 'nope' })
+      const codes = res.findings.map((f) => f.code)
+      expect(codes).toContain('bad-version')
+      expect(codes).toContain('empty-prompt')
+    })
+
+    it('does not ask the server about a submission it would reject on shape', async () => {
+      write(good)
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const res = await runValidate({ cwd: dir, check: true, token, version: '1.0' })
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(res.server).toBeNull()
+      expect(res.exitCode).toBe(1)
+    })
+
+    it('carries a flag problem into the --json payload', async () => {
+      write(good)
+      const logged: string[] = []
+      vi.spyOn(console, 'log').mockImplementation((m: unknown) => {
+        logged.push(String(m))
+      })
+      await runValidate({ cwd: dir, json: true, category: 'malware' as never })
+      const parsed = JSON.parse(logged.join('\n'))
+      expect(parsed.ok).toBe(false)
+      expect(parsed.errors.some((e: { code: string }) => e.code === 'bad-category')).toBe(true)
+    })
+  })
+
+  it('treats an explicit null token as signed out without touching the network', async () => {
+    // The option is typed `StoredToken | null`; under `??` an explicit null fell through
+    // to the real disk-and-network lookup instead of meaning "signed out".
+    write(good)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const res = await runValidate({ cwd: dir, check: true, token: null })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(res.server).toBeNull()
+    expect(res.exitCode).toBe(0)
+  })
+
   it('emits machine-readable findings with --json', async () => {
     write({ ...good, steps: [{ name: 'a', prompt: '' }] })
     const logged: string[] = []
