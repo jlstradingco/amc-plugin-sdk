@@ -246,4 +246,94 @@ describe('runPublish', () => {
     expect(body.category).toBe('devops')
     expect(body.changelog).toBe('what changed')
   })
+
+  // The marketplace refuses a non-semver version and an unknown category with a bare
+  // 400, and a refused upload still costs one of the five attempts an account gets per
+  // hour. Both are retyped on every publish, so they are where a typo lands.
+  describe('flag validation', () => {
+    it('refuses a non-semver version without uploading', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      const res = await runPublish({ cwd: dir, token, yes: true, version: 'v1.0.0' })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('refuses a two-part version', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      expect((await runPublish({ cwd: dir, token, yes: true, version: '1.0' })).exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('refuses an unknown category without uploading', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        yes: true,
+        category: 'malware' as never
+      })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('checks the flags before it reads the recipe file', async () => {
+      // No recipe here at all. The flag problem is the one reported, because a typo is
+      // the cheapest possible failure and should not wait on disk access.
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      const res = await runPublish({ cwd: dir, token, yes: true, version: 'nope' })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('is not bypassed by --skip-validation', async () => {
+      // --skip-validation waives the RECIPE checks, which are advice about your file.
+      // A malformed version is not advice — the server cannot accept it either way.
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        yes: true,
+        version: 'v9',
+        skipValidation: true
+      })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('is not bypassed by --dry-run', async () => {
+      write(good)
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        yes: true,
+        version: 'v9',
+        dryRun: true
+      })
+      expect(res.exitCode).toBe(1)
+    })
+
+    it('lets a well-formed version and category through', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        yes: true,
+        version: '1.2.3',
+        category: 'testing'
+      })
+      expect(res.exitCode).toBe(0)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
+  })
 })
