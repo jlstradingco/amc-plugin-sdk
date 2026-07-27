@@ -1,4 +1,5 @@
 import type { Finding } from '../lib/findings.js'
+import { collectAllSteps } from '../lib/recipe-steps.js'
 
 /**
  * Key/path shapes worth a second look. Mirrors the spirit of AMC's own
@@ -49,14 +50,13 @@ export function checkSecrets(recipe: Record<string, unknown>): Finding[] {
   inspect(findings, 'description', recipe.description)
   inspect(findings, 'runLabel', recipe.runLabel)
 
-  const steps = Array.isArray(recipe.steps) ? recipe.steps : []
-  steps.forEach((step, index) => {
-    if (typeof step !== 'object' || step === null) return
-    const s = step as Record<string, unknown>
-    const name = typeof s.name === 'string' ? s.name : undefined
-    inspect(findings, `steps[${index}].prompt`, s.prompt, name)
-    inspect(findings, `steps[${index}].exitMessage`, s.exitMessage, name)
-  })
+  // Pipeline steps are scanned too. `pipelines` rides the publish envelope's
+  // allow-list, so a key pasted into a pipeline prompt was published unflagged —
+  // and AMC's own share-time scanner has always walked them.
+  for (const { step: s, path, declaredName } of collectAllSteps(recipe)) {
+    inspect(findings, `${path}.prompt`, s.prompt, declaredName)
+    inspect(findings, `${path}.exitMessage`, s.exitMessage, declaredName)
+  }
 
   return findings
 }
