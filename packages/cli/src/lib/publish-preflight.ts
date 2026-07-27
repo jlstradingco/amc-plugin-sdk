@@ -24,7 +24,8 @@ const VALID_PERMISSIONS = new Set([
   'auth.session',
   'recording',
   'inbox',
-  'navigation'
+  'navigation',
+  'tts'
 ])
 
 const MB = 1024 * 1024

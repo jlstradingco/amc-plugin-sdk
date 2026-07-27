@@ -111,6 +111,7 @@ export const PLUGIN_PERMISSIONS = [
   'recording',
   'inbox',
   'navigation',
+  'tts',
 ] as const satisfies readonly PluginPermission[]
 
 // Compile-time completeness: fails to type-check if a PluginPermission is added

@@ -69,6 +69,7 @@ export type PluginPermission =
   | 'recording'
   | 'inbox'
   | 'navigation'
+  | 'tts'
 
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'

@@ -13,8 +13,9 @@
 // host adds/removes a permission, update this mirror in the SAME change that
 // updates the SDK enum, then reconcile the allow-lists below.
 //
-// Last reconciled: 2026-07-15 against the real host `plugin-permission-map.ts`.
-// The host union is 14 permissions. Two strings previously listed here as
+// Last reconciled: 2026-07-27 against the real host `plugin-permission-map.ts`.
+// The host union is 15 permissions (added `tts` — read-aloud, gated via the
+// `tts.synthesize` / `tts.isAvailable` methods). Two strings previously listed here as
 // host-recognized — `firebase` and `recording` — are NOT host permissions:
 //   - `firebase`: the host delivers it as an UNGATED browser namespace
 //     (`AgentMC.firebase` in plugin-bridge-preload.ts → plugin-bridge-handler's
@@ -46,6 +47,7 @@ export const HOST_PERMISSIONS = [
   'inbox',
   'navigation',
   'chrome',
+  'tts',
 ] as const
 
 // --- Documented known-deltas (intentional, tracked drift) -------------------
