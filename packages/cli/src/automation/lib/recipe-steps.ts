@@ -78,8 +78,9 @@ export function collectPipelineSteps(recipe: Record<string, unknown>): LocatedSt
         step,
         declaredName,
         // A pipeline step's own name is not unique across pipelines, so the label
-        // always says which pipeline it came from.
-        label: declaredName ? `${declaredName} (in pipeline "${pipelineName}")` : path,
+        // always says which pipeline it came from. Quote-free on purpose: callers
+        // wrap the label in quotes, and a label carrying its own would nest them.
+        label: `${pipelineName} › ${declaredName ?? `step ${index + 1}`}`,
         path
       })
     })
