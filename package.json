@@ -5,6 +5,7 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "clean": "pnpm -r clean",
+    "typecheck": "pnpm -r --filter \"./packages/*\" typecheck && pnpm run typecheck:examples",
     "typecheck:examples": "tsc -p tsconfig.examples.json"
   },
   "packageManager": "pnpm@11.17.0",
