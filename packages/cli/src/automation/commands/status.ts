@@ -3,6 +3,7 @@ import { resolveRecipePath, loadRecipe } from '../lib/recipe-file.js'
 import { deriveAutomationId } from '../lib/envelope.js'
 import { getMyAutomations, type AutomationSubmission } from '../api/automation-api.js'
 import { getStoredTokenOrRefresh, type StoredToken } from '../../lib/auth.js'
+import { MarketplaceApiError } from '../../lib/marketplace-api.js'
 import { fail, info, label, heading, actionableError } from '../../lib/output.js'
 
 export interface StatusOptions {
@@ -37,8 +38,16 @@ export async function runStatus(
   let all: AutomationSubmission[]
   try {
     all = await getMyAutomations(token)
-  } catch {
-    fail('Could not reach the marketplace. Check your connection and try again.')
+  } catch (err) {
+    // Distinguish "the server answered, and said no" from "we never reached it".
+    // Collapsing both into a connection message sent authors to debug their network
+    // over a rejection the server had already explained — and would have sent them
+    // there permanently if the endpoint were ever missing or renamed.
+    if (err instanceof MarketplaceApiError) {
+      fail(err.message)
+    } else {
+      fail('Could not reach the marketplace. Check your connection and try again.')
+    }
     return { exitCode: 1, rows: [] }
   }
 
