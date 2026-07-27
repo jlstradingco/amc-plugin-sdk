@@ -1,11 +1,12 @@
 // Checked-in mirror of the AMC host's plugin permission surface.
 //
 // SOURCE OF TRUTH (host repo): Agent Orchestrator
-//   src/main/services/plugin/plugin-permission-map.ts — the `PluginPermission`
-//   union + PERMISSION_MAP / PERMISSION_DESCRIPTIONS keys. That file is the ONLY
-//   place the host enumerates gated permissions. (`src/main/ipc/plugin-
-//   permissions.ts` merely resolves whatever strings a manifest/registry entry
-//   declares; it does not define or enum-enforce the set.)
+//   src/shared/plugin-permissions.ts — the `PluginPermission` union and the
+//   exhaustive `PLUGIN_PERMISSION_INFO` consent map. That shared file is the ONE
+//   definition; src/main/services/plugin/plugin-permission-map.ts re-exports the
+//   union and maps bridge METHODS onto it, and the marketplace validator keeps a
+//   hand-copy in firebase/marketplace/functions/src/types.ts (KNOWN_PERMISSIONS)
+//   held in parity by the host's own guard test.
 //
 // The host consumes the *published* @agent-mc/plugin-sdk, so a runtime
 // cross-import is impossible here (and would be circular). This vendored list
@@ -13,28 +14,27 @@
 // host adds/removes a permission, update this mirror in the SAME change that
 // updates the SDK enum, then reconcile the allow-lists below.
 //
-// Last reconciled: 2026-07-15 against the real host `plugin-permission-map.ts`.
-// The host union is 14 permissions. Two strings previously listed here as
-// host-recognized — `firebase` and `recording` — are NOT host permissions:
-//   - `firebase`: the host delivers it as an UNGATED browser namespace
-//     (`AgentMC.firebase` in plugin-bridge-preload.ts → plugin-bridge-handler's
-//     `case 'firebase'`), with no PERMISSION_MAP entry and no consent gate. It
-//     is a capability the host exposes without a permission, so it does not
-//     belong in the permission mirror at all. (A future SDK PR could add a
-//     browser-only `AgentMC.firebase` *type* — no permission string — if we
-//     want to type that surface for authors.)
-//   - `recording`: the host has a general screen-recorder service but exposes
-//     NO plugin `ctx`/bridge namespace and does NOT gate a `recording`
-//     permission. The SDK is ahead here (it exposes the string + typed
-//     namespace), so `recording` is tracked below as SDK-ahead — matching the
-//     `recording-demo` example, which docs describe as a forward-looking
-//     scaffold whose calls are currently inert.
+// Last reconciled: 2026-07-27 against src/shared/plugin-permissions.ts.
+//
+// HISTORY — why this file is worth distrusting. Between 2026-07-15 and
+// 2026-07-27 this mirror claimed the host union was 14 permissions and that
+// `firebase` was "an ungated browser namespace, not a host permission". Both
+// were wrong: the host union was 19, and plugin-bridge-handler.ts hard-denies
+// the `firebase` namespace without the `firebase` permission. Because the guard
+// compares the SDK enum against THIS FILE, a wrong mirror and a wrong enum
+// agreed with each other and the guard stayed green while four shipped host
+// capabilities (`tts`, `sessions.readHistory`, `firebase`, `spend`) were
+// unreachable from the public SDK. A local mirror can only catch drift it is
+// itself reconciled against — so re-derive it from the host source when you
+// touch it, never from this file's own prior reasoning.
 
 /** The exact permission strings the host recognizes and gates. */
 export const HOST_PERMISSIONS = [
   'storage',
   'sessions',
+  'sessions.readHistory',
   'ai',
+  'tts',
   'network',
   'cron',
   'cli',
@@ -43,9 +43,12 @@ export const HOST_PERMISSIONS = [
   'rss',
   'auth',
   'auth.session',
+  'chrome',
+  'firebase',
+  'recording',
   'inbox',
   'navigation',
-  'chrome',
+  'spend',
 ] as const
 
 // --- Documented known-deltas (intentional, tracked drift) -------------------
@@ -56,13 +59,12 @@ export const HOST_PERMISSIONS = [
  * namespace) so an author can build against them, but the host does not yet
  * recognize the permission, so a real plugin's call is currently inert.
  *
- * - `recording`: the SDK exposes the `recording` permission + a typed
- *   `PluginRecording` namespace (start/stop/list/getShareUrl/delete). The host
- *   has a screen-recorder service but wires NO plugin bridge for it and does
- *   not gate a `recording` permission. The `recording-demo` example is the
- *   forward-looking scaffold for when the host catches up.
+ * Currently EMPTY. `recording` used to sit here on the belief that the host had
+ * no `recording` permission; the host does carry it in its union and consent map
+ * (as an explicitly documented gating stub), so it belongs in
+ * BRIDGE_PENDING_PERMISSIONS below instead.
  */
-export const SDK_AHEAD_PERMISSIONS = ['recording'] as const
+export const SDK_AHEAD_PERMISSIONS = [] as const
 
 /**
  * Permissions the HOST gates that the SDK does NOT yet expose to external
@@ -70,9 +72,8 @@ export const SDK_AHEAD_PERMISSIONS = ['recording'] as const
  * no typed SDK `ctx` namespace, so a plugin built with this SDK cannot request
  * them. Tracked so the gap is named, not silently tolerated.
  *
- * Currently EMPTY: the host's 14-permission union is fully covered by the SDK.
- * (`firebase` was previously listed here, but it is an ungated browser
- * namespace on the host, not a gated permission — see the header note.)
+ * Currently EMPTY: the host's 19-permission union is fully covered by the SDK
+ * enum, and each one has a typed `ctx` namespace.
  */
 export const HOST_AHEAD_PERMISSIONS = [] as const
 
@@ -82,12 +83,12 @@ export const HOST_AHEAD_PERMISSIONS = [] as const
  * rejects. Distinct from a permission-set gap: the manifest may declare it and
  * the consent dialog describes it, but the capability itself is pending.
  *
- * Currently EMPTY. `recording` was previously listed here, but the host does
- * not recognize a `recording` permission at all (no union entry, no consent
- * description), so it is an SDK-ahead permission (above), not a both-sides
- * bridge-pending one.
+ * - `recording`: the host's own comment in plugin-permissions.ts calls this a
+ *   "gating stub" — the consent dialog recognizes and describes it, but the
+ *   `ctx.recording` namespace is not wired, so a call is inert. The SDK types
+ *   the namespace so `recording-demo` compiles against the eventual shape.
  */
-export const BRIDGE_PENDING_PERMISSIONS = [] as const
+export const BRIDGE_PENDING_PERMISSIONS = ['recording'] as const
 
 /**
  * Type-shape deltas between the SDK's `PluginContext` and the host's runtime.
