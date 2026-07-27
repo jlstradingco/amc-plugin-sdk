@@ -17,6 +17,17 @@ export const AUTOMATION_CATEGORIES: readonly AutomationCategory[] = [
   'other'
 ]
 
+/**
+ * Defaults shared by `publish` and `validate --check`.
+ *
+ * They MUST agree: `validate --check` asks the marketplace whether this exact
+ * submission would be accepted, and the server's answer covers version collisions.
+ * A validate that quietly substituted a placeholder version would report "the
+ * marketplace accepts this" for a publish that is about to 409.
+ */
+export const DEFAULT_PUBLISH_VERSION = '1.0.0'
+export const DEFAULT_PUBLISH_CATEGORY: AutomationCategory = 'other'
+
 export interface AutomationPublishRequest {
   automationId: string
   version: string
