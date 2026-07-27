@@ -148,8 +148,19 @@ export async function getStoredTokenOrRefresh(): Promise<StoredToken | null> {
 
 export function saveToken(token: StoredToken): void {
   const dir = path.dirname(TOKEN_PATH)
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(TOKEN_PATH, JSON.stringify(token, null, 2), 'utf-8')
+  // 0700/0600: the file holds a refresh token, which silent renewal turns into
+  // an indefinitely reusable marketplace credential — anyone who can read it can
+  // publish as you. Default modes leave it world-readable on POSIX. `mode` on
+  // mkdir/writeFile only applies at CREATE time, so chmod the file as well to
+  // tighten one written by an older CLI. No-op on Windows, which ignores mode.
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
+  fs.writeFileSync(TOKEN_PATH, JSON.stringify(token, null, 2), { encoding: 'utf-8', mode: 0o600 })
+  try {
+    fs.chmodSync(TOKEN_PATH, 0o600)
+  } catch {
+    // Filesystems without POSIX modes (Windows, some network mounts) — the
+    // credential is still written, which is what the caller asked for.
+  }
 }
 
 export function clearToken(): void {
