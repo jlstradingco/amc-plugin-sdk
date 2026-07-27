@@ -1,5 +1,6 @@
 import { getBaseUrl, type StoredToken } from '../../lib/auth.js'
 import { MarketplaceApiError } from '../../lib/marketplace-api.js'
+import { sendAuthed } from '../../lib/authed-fetch.js'
 import type { AutomationPublishRequest } from '../lib/envelope.js'
 
 export interface AutomationSubmission {
@@ -47,11 +48,16 @@ export async function uploadAutomation(
   token: StoredToken,
   req: AutomationPublishRequest
 ): Promise<{ submissionId: string; status: string }> {
-  const res = await globalThis.fetch(`${getBaseUrl()}/uploadAutomation`, {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: JSON.stringify(req)
-  })
+  // Renews and retries once if the credential is refused mid-flight, exactly like
+  // the plugin surface's uploadPackage. Serializing per attempt costs nothing here
+  // (a recipe is at most 256 KB of JSON) and keeps each attempt self-contained.
+  const res = await sendAuthed(token, (t) =>
+    globalThis.fetch(`${getBaseUrl()}/uploadAutomation`, {
+      method: 'POST',
+      headers: authHeaders(t),
+      body: JSON.stringify(req)
+    })
+  )
   return handle(res)
 }
 
@@ -68,11 +74,13 @@ export async function validateAutomationRemote(
   req: AutomationPublishRequest
 ): Promise<ServerValidation | null> {
   try {
-    const res = await globalThis.fetch(`${getBaseUrl()}/validateAutomation`, {
-      method: 'POST',
-      headers: authHeaders(token),
-      body: JSON.stringify(req)
-    })
+    const res = await sendAuthed(token, (t) =>
+      globalThis.fetch(`${getBaseUrl()}/validateAutomation`, {
+        method: 'POST',
+        headers: authHeaders(t),
+        body: JSON.stringify(req)
+      })
+    )
     if (!res.ok) return null
     const data = (await res.json()) as Partial<ServerValidation>
     if (typeof data.valid !== 'boolean') return null
@@ -83,9 +91,11 @@ export async function validateAutomationRemote(
 }
 
 export async function getMyAutomations(token: StoredToken): Promise<AutomationSubmission[]> {
-  const res = await globalThis.fetch(`${getBaseUrl()}/getMyAutomations`, {
-    headers: authHeaders(token)
-  })
+  const res = await sendAuthed(token, (t) =>
+    globalThis.fetch(`${getBaseUrl()}/getMyAutomations`, {
+      headers: authHeaders(t)
+    })
+  )
   const data = await handle<{ submissions?: AutomationSubmission[] }>(res)
   return Array.isArray(data.submissions) ? data.submissions : []
 }
