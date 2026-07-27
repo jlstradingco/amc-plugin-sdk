@@ -58,8 +58,14 @@ warning-only, `1` when anything errored — so it drops straight into CI. Add
 To also get the marketplace's own verdict:
 
 ```bash
-amc-automation validate --check
+amc-automation validate --check --version 1.2.0
 ```
+
+This asks the marketplace whether the exact submission you are about to make
+would be accepted, so it catches the two things only the server can know: the
+automation id already belonging to another developer, and that version already
+being published. Pass the `--version` you actually intend to publish, or the
+second answer is about a version you were never going to submit.
 
 If that endpoint is unavailable, you get a note and the local result stands. It
 never turns an unreachable server into a validation failure.
@@ -78,6 +84,14 @@ refuses it — with the fix:
 | A **target project** | Pins the step to one of *your* projects | Remove `targetProjectId` |
 | **Project scope** | The whole automation is tied to a local project | Set `"scope": "global"` |
 
+These are checked in your `steps` **and** in every named array under
+`pipelines`. Both are published, so both have to be portable.
+
+The same is true of the advisory secret scan: a pasted API key warns wherever it
+sits, top-level prompt or pipeline prompt. It only ever warns — a published
+automation is world-readable, so a false positive must never block you, and only
+you can tell.
+
 ## Publish it
 
 ```bash
@@ -87,6 +101,18 @@ amc-automation publish --changelog "what changed in this version"
 The first publish opens your browser for GitHub sign-in and stores a token at
 `~/.amc/marketplace-token`. Later publishes reuse it and renew it silently.
 
+Then it asks you to confirm the account, defaulting to **no**:
+
+```
+Publishing as: octocat
+? Publish this automation to the marketplace as "octocat"? › (y/N)
+```
+
+That question is not ceremony. GitHub sign-in silently reuses whatever account
+your browser is already logged into, and a published automation carries that
+name permanently. If it is the wrong one, answer `n` and re-run with
+`--switch-account`.
+
 Useful flags:
 
 - `--dry-run` — do everything except the upload. Good for CI.
@@ -94,7 +120,12 @@ Useful flags:
   `development`, `testing`, `devops`, `productivity`, `other`.
 - `--as <github-user>` — abort unless that account is the one signed in. Worth
   using in CI so a stray token cannot publish under the wrong name.
-- `--skip-validation` — publish despite local errors. Rarely what you want.
+- `-y` / `--yes` — skip the confirmation question. For CI, where nobody is there
+  to answer it; pair it with `--as`.
+- `--switch-account` — sign out and re-authenticate as someone else. Shared with
+  `amc-plugin`, so this switches the account for both tools.
+- `--skip-validation` — publish despite local errors. Rarely what you want. It
+  never skips the account confirmation.
 
 Publishing creates a **submission**, not a listing. A human reviews it:
 
