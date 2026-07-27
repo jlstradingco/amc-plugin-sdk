@@ -2,6 +2,7 @@
 // checks/limits.ts needs buildEnvelope from here, and going through the barrel
 // would close that into an import cycle.
 import { SCHEMA_VERSION } from '../checks/structure.js'
+import { pickPortableSteps, pickPortablePipelines } from './portable-step.js'
 
 export type AutomationCategory =
   | 'planning'
@@ -40,12 +41,20 @@ export interface AutomationPublishRequest {
 }
 
 /**
- * Shareable top-level fields, mirroring the host envelope's shape.
+ * Shareable TOP-LEVEL fields, mirroring the host envelope's shape.
  *
  * An ALLOW-list, not a deny-list: anything not named here simply does not
  * travel. That is the safe direction — a field we forget to add is a missing
  * feature, whereas a field we forget to exclude could be a local path, a project
  * id, or worse. The server re-validates against the real schema regardless.
+ *
+ * The two step-bearing entries (`steps`, `pipelines`) are NOT copied verbatim —
+ * every step inside them goes through the step-level allow-list in
+ * `portable-step.ts`, so the guarantee above holds all the way down rather than
+ * stopping at the top level.
+ *
+ * `readonly`, because `checks/secrets.ts` drives its scan coverage off this list:
+ * a mutation would silently narrow what gets scanned for secrets.
  */
 export const SHAREABLE_FIELDS = [
   'name',
@@ -67,7 +76,7 @@ export const SHAREABLE_FIELDS = [
   'defaultStepTimeoutMinutes',
   'resumable',
   'resumeMaxAgeMinutes'
-]
+] as const satisfies readonly string[]
 
 /**
  * The id shape the marketplace enforces, mirrored from its `validateAutomationId`:
@@ -113,6 +122,15 @@ export function buildEnvelope(
 
   for (const field of SHAREABLE_FIELDS) {
     if (recipe[field] !== undefined) definition[field] = recipe[field]
+  }
+
+  // The two step-bearing fields are re-derived rather than copied. Filtering them in
+  // place, after the generic copy, keeps ONE loop over the top-level allow-list while
+  // still guaranteeing that nothing inside a step escapes on the strength of the
+  // top-level list alone.
+  if (definition.steps !== undefined) definition.steps = pickPortableSteps(recipe.steps)
+  if (definition.pipelines !== undefined) {
+    definition.pipelines = pickPortablePipelines(recipe.pipelines)
   }
 
   // executionMode is required by the envelope; multi-session is AMC's own default.
