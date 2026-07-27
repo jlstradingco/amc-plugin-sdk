@@ -9,6 +9,44 @@ Versions listed here cover the published packages `@agent-mc/plugin-sdk`,
 `@agent-mc/plugin-cli`, and `@agent-mc/plugin-dev-shell`, which are released
 together.
 
+## [Unreleased]
+
+### Added
+
+- **`amc-automation` — a second binary for publishing AMC automations.** Until
+  now the only way to share an automation was to build a recipe inside AMC's UI
+  and click Publish; there was no way to validate one, publish from a repo or CI,
+  or keep a published automation under version control. The automation catalog
+  has been live and empty since it shipped.
+
+  Four commands, mirroring the plugin CLI so anyone who has published a plugin
+  already knows it:
+
+  - `amc-automation init <name>` — scaffolds a `.recipe.json` plus a README. The
+    template is a working two-step automation, not a stub: a test asserts that
+    `init` followed by `validate` reports zero findings.
+  - `amc-automation validate` — four groups of local checks (structure, steps,
+    portability, secrets). Exits `1` on an error, `0` on warnings only, so it
+    drops into CI. `--json` for machine-readable findings.
+  - `amc-automation publish` — validates, authenticates, and submits for review.
+    `--dry-run`, `--as <user>`, `--version`, `--category`, `--changelog`.
+  - `amc-automation status` — the review verdict, scoped to the automation in the
+    current directory.
+
+  It ships from `@agent-mc/plugin-cli` rather than a new package, so it shares
+  the existing marketplace token, sign-in flow, docs site and release train.
+
+  **Validation is deliberately split.** The share envelope's schema lives in AMC
+  and is version-gated; copying it here would recreate exactly the drift that
+  stranded four permissions in 1.2.0. So the server holds the authoritative
+  verdict (`validate --check`), and the local checks are advisory heuristics whose
+  worst failure is a *missed warning* — they can never wrongly reject a valid
+  automation. That asymmetry is why they need no parity guard.
+
+  `validate --check` depends on a `validateAutomation` endpoint. Where it is not
+  deployed, it prints a notice and the local result stands; an unreachable server
+  is never treated as a validation failure.
+
 ## [1.2.0]
 
 ### Added
