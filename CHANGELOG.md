@@ -79,6 +79,38 @@ together.
 
 ### Fixed
 
+- **A published step no longer carries whatever the author's file happened to
+  hold.** The envelope's allow-list stopped at the top level: `steps` and
+  `pipelines` were copied VERBATIM, so every field inside a step travelled. The
+  guarantee the allow-list exists to make — "anything not named here does not
+  travel" — was therefore true of the recipe and false of its steps, which is
+  where the author's own content lives. AMC's share path never had the hole; it
+  maps every step through a 21-field allow-list first. Reachable by the ordinary
+  workflow: copy a recipe out of AMC to edit as a file, and its step ids, local
+  project references and engine pins all published. The same allow-list is now
+  applied at both levels, and mirrored server-side so it no longer depends on
+  every client choosing to honour it.
+
+- **The secret scan covers every field a step publishes.** It named `prompt` and
+  `exitMessage` by hand, which missed `approvalGate.message` and
+  `supervisor.systemPrompt` — both free text, both shareable, and both scanned by
+  AMC's own share-time scanner. A key pasted into either was flagged in the app
+  and waved through by the CLI. The scan is now driven off the step allow-list, so
+  a field added to the envelope is swept the day it is added, and a local-only
+  field is deliberately not swept at all.
+
+- **An entry that is not a step is reported instead of silently dropped.** The
+  step collectors skip a `null` or a stray string so a malformed entry cannot
+  renumber the steps around it — correct for labelling, but it meant no check ever
+  saw them and the envelope then dropped them without a word. The author's
+  published automation was missing a step, and nothing anywhere said so.
+
+- **`validate --json` always emits a payload.** When the recipe file was missing,
+  unreadable, not JSON, or ambiguous, it exited `1` having printed nothing — so a
+  CI step parsing stdout received an empty string and had to special-case "no
+  output" to tell a missing recipe from a crashed process. The file problem is now
+  a `recipe-file` finding in the same payload shape as everything else.
+
 - **The four namespaces this release adds are now importable by name.** `tts`,
   `sessions.readHistory`, `firebase` and `spend` got typed `ctx` namespaces and
   were re-exported from `src/types/index.ts` — which is INTERNAL. The package
