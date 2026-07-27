@@ -8,6 +8,9 @@
     "typecheck:examples": "tsc -p tsconfig.examples.json"
   },
   "packageManager": "pnpm@11.17.0",
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  },
   "engines": {
     "node": ">=18"
   }
