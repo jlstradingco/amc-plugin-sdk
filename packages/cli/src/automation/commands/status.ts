@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import { resolveRecipePath, loadRecipe } from '../lib/recipe-file.js'
 import { deriveAutomationId } from '../lib/envelope.js'
 import { getMyAutomations, type AutomationSubmission } from '../api/automation-api.js'
-import { getStoredToken, type StoredToken } from '../../lib/auth.js'
+import { getStoredTokenOrRefresh, type StoredToken } from '../../lib/auth.js'
 import { fail, info, label, heading, actionableError } from '../../lib/output.js'
 
 export interface StatusOptions {
@@ -20,7 +20,12 @@ const STATUS_TEXT: Record<string, string> = {
 export async function runStatus(
   opts: StatusOptions
 ): Promise<{ exitCode: number; rows: AutomationSubmission[] }> {
-  const token = opts.token === undefined ? getStoredToken() : opts.token
+  // Renews silently when the ID token has lapsed. Reading the file directly meant
+  // `status` announced "Not signed in" the moment the hour-long token expired, while
+  // the refresh token beside it was still good and the next publish would renew
+  // without a browser. Never interactive: a failed renewal falls through to the same
+  // sign-in advice below.
+  const token = opts.token === undefined ? await getStoredTokenOrRefresh() : opts.token
   if (!token) {
     actionableError(
       'Not signed in to the AMC Marketplace',

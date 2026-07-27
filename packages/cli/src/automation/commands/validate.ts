@@ -4,7 +4,7 @@ import { runAllChecks } from '../checks/index.js'
 import { hasErrors, reportFindings, findingsToJson, type Finding } from '../lib/findings.js'
 import { buildEnvelope, deriveAutomationId } from '../lib/envelope.js'
 import { validateAutomationRemote, type ServerValidation } from '../api/automation-api.js'
-import { getStoredToken, type StoredToken } from '../../lib/auth.js'
+import { getStoredTokenOrRefresh, type StoredToken } from '../../lib/auth.js'
 import { ok, fail, warn, info, heading, actionableError } from '../../lib/output.js'
 
 export interface ValidateOptions {
@@ -38,7 +38,10 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
   let server: ServerValidation | null = null
 
   if (opts.check) {
-    const token = opts.token ?? getStoredToken()
+    // Renews silently rather than declaring the author signed out the moment the
+    // hour-long ID token lapsed. Never interactive — `validate` must not turn into a
+    // browser sign-in; a failed renewal just skips the server check.
+    const token = opts.token ?? (await getStoredTokenOrRefresh())
     if (!token) {
       if (!opts.json) {
         warn('Not signed in — skipping the server check.')
