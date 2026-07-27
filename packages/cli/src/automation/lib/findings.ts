@@ -38,7 +38,12 @@ export function findingsToJson(findings: Finding[]): {
 }
 
 function line(f: Finding): string {
-  const where = f.stepName ? ` (step "${f.stepName}")` : ''
+  // The location suffix is dropped when the message already names the step. Several
+  // checks lead with the step name because the sentence reads better that way, and
+  // repeating it turned every portability finding into
+  //   "ship" runs a local script ... (step "ship")
+  const alreadyNamed = f.stepName !== undefined && f.message.includes(f.stepName)
+  const where = f.stepName && !alreadyNamed ? ` (step "${f.stepName}")` : ''
   return `${f.message}${where}`
 }
 
