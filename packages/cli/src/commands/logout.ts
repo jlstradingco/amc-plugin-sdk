@@ -1,6 +1,6 @@
 import { Command } from 'commander'
-import { clearToken, getStoredTokenIgnoringExpiry } from '../lib/auth.js'
-import { ok, info } from '../lib/output.js'
+import { clearToken, getStoredTokenIgnoringExpiry, getTokenPath } from '../lib/auth.js'
+import { ok, info, actionableError } from '../lib/output.js'
 
 export const logoutCommand = new Command('logout')
   .description('Clear stored marketplace authentication token')
@@ -15,6 +15,17 @@ export const logoutCommand = new Command('logout')
       info('Not signed in')
       return
     }
-    clearToken()
+    // Report what actually happened. A failed unlink (the file held open by another
+    // AMC process, a read-only home) used to throw a stack trace; claiming "Signed
+    // out" instead would be worse still, because the credential is the whole point of
+    // the command and it would still be sitting on disk.
+    if (!clearToken()) {
+      actionableError(
+        `Could not remove the stored credential for ${token.github}`,
+        `Delete it by hand: ${getTokenPath()}`
+      )
+      process.exitCode = 1
+      return
+    }
     ok(`Signed out (was: ${token.github})`)
   })
