@@ -67,6 +67,19 @@ together.
   layer out was not. That list is now derived from the SDK enum rather than
   restated, which also restores `system` and `chrome`, missing from it since
   before this release.
+- **The marketplace token is stored `0600`.** Silent renewal turns the stored
+  refresh token into an indefinitely reusable publish credential, so the default
+  world-readable mode was no longer acceptable. Existing files are tightened on
+  the next write.
+- **A rejected token is renewed mid-flight.** Freshness is only checked before a
+  command runs, so a long upload, a clock skewed past the 5-minute buffer, or a
+  server-side revocation still met a raw `401`. Authenticated calls now renew and
+  retry once — never twice, and never for non-auth failures.
+- A renewed token's lifetime is floored at the freshness buffer, so a zero or
+  negative `expires_in` can no longer mint a token that is expired on arrival.
+- `createTestContext().ctx.firebase.startLogin()` now reports `started: false` by
+  default (seedable via `firebase.loginStarts`), agreeing with the dev-shell mock
+  and with its own `cliInstalled: false` default instead of contradicting both.
 - **A fresh clone can build again.** `pnpm-workspace.yaml` carried unanswered
   `pnpm approve-builds` placeholders, which made pnpm 11 abort every install and
   script in the workspace with `ERR_PNPM_IGNORED_BUILDS`. CI never hit it because
