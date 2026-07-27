@@ -2,7 +2,14 @@ import { Command } from 'commander'
 import { resolveRecipePath, loadRecipe, RecipeFileError } from '../lib/recipe-file.js'
 import { runAllChecks } from '../checks/index.js'
 import { hasErrors, reportFindings, findingsToJson, type Finding } from '../lib/findings.js'
-import { buildEnvelope, deriveAutomationId } from '../lib/envelope.js'
+import {
+  buildEnvelope,
+  deriveAutomationId,
+  AUTOMATION_CATEGORIES,
+  DEFAULT_PUBLISH_VERSION,
+  DEFAULT_PUBLISH_CATEGORY,
+  type AutomationCategory
+} from '../lib/envelope.js'
 import { validateAutomationRemote, type ServerValidation } from '../api/automation-api.js'
 import { getStoredTokenOrRefresh, type StoredToken } from '../../lib/auth.js'
 import { ok, fail, warn, info, heading, actionableError } from '../../lib/output.js'
@@ -12,6 +19,10 @@ export interface ValidateOptions {
   file?: string
   check?: boolean
   json?: boolean
+  /** The version to validate AS. Defaults to publish's own default so the two agree. */
+  version?: string
+  /** The category to validate AS. Defaults to publish's own default so the two agree. */
+  category?: AutomationCategory
   token?: StoredToken | null
 }
 
@@ -48,12 +59,15 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
         info('Run `amc-automation publish` once to sign in, or drop --check.')
       }
     } else {
-      // A dry-run envelope: the version and category do not matter to a
-      // validity check, only the definition does.
+      // Built with the SAME version and category `publish` would send, not with
+      // placeholders. The server's verdict now covers the two stateful rejections a
+      // publish can still hit after the shape checks pass — the namespace being owned
+      // by another developer, and this version already existing — and a placeholder
+      // version would have made the second answer meaningless.
       const envelope = buildEnvelope(recipe, {
         automationId: deriveAutomationId(String(recipe.name ?? '')),
-        version: '0.0.0',
-        category: 'other',
+        version: opts.version ?? DEFAULT_PUBLISH_VERSION,
+        category: opts.category ?? DEFAULT_PUBLISH_CATEGORY,
         changelog: ''
       })
       server = await validateAutomationRemote(token, envelope)
@@ -86,13 +100,26 @@ export const validateCommand = new Command('validate')
   .description('Check an automation before publishing')
   .argument('[file]', 'Path to the .recipe.json (defaults to the one in this directory)')
   .option('--check', 'Also ask the marketplace for the authoritative verdict')
+  .option(
+    '--version <version>',
+    'Version to validate as, so --check can answer about version collisions',
+    DEFAULT_PUBLISH_VERSION
+  )
+  .option('--category <category>', `One of: ${AUTOMATION_CATEGORIES.join(', ')}`, DEFAULT_PUBLISH_CATEGORY)
   .option('--json', 'Emit machine-readable findings')
-  .action(async (file: string | undefined, options: { check?: boolean; json?: boolean }) => {
-    const res = await runValidate({
-      cwd: process.cwd(),
-      file,
-      check: options.check,
-      json: options.json
-    })
-    process.exit(res.exitCode)
-  })
+  .action(
+    async (
+      file: string | undefined,
+      options: { check?: boolean; json?: boolean; version?: string; category?: string }
+    ) => {
+      const res = await runValidate({
+        cwd: process.cwd(),
+        file,
+        check: options.check,
+        json: options.json,
+        version: options.version,
+        category: options.category as AutomationCategory
+      })
+      process.exit(res.exitCode)
+    }
+  )
