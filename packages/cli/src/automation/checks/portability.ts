@@ -1,4 +1,5 @@
 import type { Finding } from '../lib/findings.js'
+import { collectAllSteps } from '../lib/recipe-steps.js'
 
 /**
  * Does this recipe depend on anything the importer will not have?
@@ -7,6 +8,10 @@ import type { Finding } from '../lib/findings.js'
  * not the letter. It is deliberately NOT a mirror: the server decides whether a
  * publish succeeds, so the worst this can do is miss a warning (spec §4). Every
  * finding names a remedy, because "not portable" without one is a dead end.
+ *
+ * Walks pipeline steps as well as top-level ones. `pipelines` is on the publish
+ * envelope's allow-list, so a script or sub-recipe step inside one used to travel
+ * unflagged — and the server does not walk pipelines either, so nothing caught it.
  */
 export function checkPortability(recipe: Record<string, unknown>): Finding[] {
   const findings: Finding[] = []
@@ -20,18 +25,14 @@ export function checkPortability(recipe: Record<string, unknown>): Finding[] {
     })
   }
 
-  const steps = Array.isArray(recipe.steps) ? recipe.steps : []
-  for (const [index, step] of steps.entries()) {
-    if (typeof step !== 'object' || step === null) continue
-    const s = step as Record<string, unknown>
-    const name = typeof s.name === 'string' && s.name.trim() ? s.name : `step ${index + 1}`
-    const at = { stepName: name }
+  for (const { step: s, label } of collectAllSteps(recipe)) {
+    const at = { stepName: label }
 
     if (s.kind === 'sub-recipe' || s.subRecipe) {
       findings.push({
         severity: 'error',
         code: 'sub-recipe-step',
-        message: `"${name}" calls another recipe, which the person importing will not have.`,
+        message: `"${label}" calls another recipe, which the person importing will not have.`,
         ...at,
         fix: 'Inline the sub-recipe steps, or split it into its own published automation.'
       })
@@ -41,7 +42,7 @@ export function checkPortability(recipe: Record<string, unknown>): Finding[] {
       findings.push({
         severity: 'error',
         code: 'script-step',
-        message: `"${name}" runs a local script that only exists on your machine.`,
+        message: `"${label}" runs a local script that only exists on your machine.`,
         ...at,
         fix: 'Replace it with a prompt step, or drop it before publishing.'
       })
@@ -51,7 +52,7 @@ export function checkPortability(recipe: Record<string, unknown>): Finding[] {
       findings.push({
         severity: 'error',
         code: 'prompt-file',
-        message: `"${name}" reads its prompt from a file on disk.`,
+        message: `"${label}" reads its prompt from a file on disk.`,
         ...at,
         fix: 'Inline the prompt text into the step so it travels with the automation.'
       })
@@ -61,7 +62,7 @@ export function checkPortability(recipe: Record<string, unknown>): Finding[] {
       findings.push({
         severity: 'error',
         code: 'target-project',
-        message: `"${name}" is pinned to a specific local project.`,
+        message: `"${label}" is pinned to a specific local project.`,
         ...at,
         fix: 'Remove "targetProjectId" so the importer picks their own project.'
       })
