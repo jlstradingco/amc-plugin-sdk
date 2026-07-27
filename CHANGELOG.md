@@ -25,9 +25,9 @@ together.
   - `amc-automation init <name>` — scaffolds a `.recipe.json` plus a README. The
     template is a working two-step automation, not a stub: a test asserts that
     `init` followed by `validate` reports zero findings.
-  - `amc-automation validate` — four groups of local checks (structure, steps,
-    portability, secrets). Exits `1` on an error, `0` on warnings only, so it
-    drops into CI. `--json` for machine-readable findings.
+  - `amc-automation validate` — five groups of local checks (structure, steps,
+    portability, secrets, marketplace limits). Exits `1` on an error, `0` on
+    warnings only, so it drops into CI. `--json` for machine-readable findings.
   - `amc-automation publish` — validates, authenticates, and submits for review.
     `--dry-run`, `--as <user>`, `--version`, `--category`, `--changelog`.
   - `amc-automation status` — the review verdict, scoped to the automation in the
@@ -43,9 +43,10 @@ together.
   worst failure is a *missed warning* — they can never wrongly reject a valid
   automation. That asymmetry is why they need no parity guard.
 
-  `validate --check` depends on a `validateAutomation` endpoint. Where it is not
-  deployed, it prints a notice and the local result stands; an unreachable server
-  is never treated as a validation failure.
+  `validate --check` and `status` depend on the marketplace's `validateAutomation`
+  and `getMyAutomations` endpoints. Where `validateAutomation` is not deployed,
+  `--check` prints a notice and the local result stands; an unreachable server is
+  never treated as a validation failure.
 
 - **`amc-automation validate` takes `--version` and `--category`.** `--check`
   used to build its dry-run envelope with a placeholder version, which made the
