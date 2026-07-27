@@ -85,6 +85,23 @@ export function pickPortableSteps(steps: unknown): Record<string, unknown>[] {
 }
 
 /**
+ * Keys that cannot be copied onto a plain object by assignment.
+ *
+ * A pipeline name is the one attacker-or-typo-controlled KEY in the envelope, and
+ * `JSON.parse` creates `__proto__` as an ordinary own enumerable property — so
+ * `out[name] = steps` for a pipeline named `__proto__` hits the prototype SETTER
+ * instead of adding a key. The pipeline then vanishes from the output and the
+ * container is left with an attacker-chosen prototype, which is then handed to
+ * `JSON.stringify` and on to the server.
+ *
+ * It is not privilege escalation — `Object.prototype` itself is untouched — but it is
+ * silent data loss and a malformed object, out of a function whose entire job is to
+ * copy exactly the allow-listed data and nothing else. Skipped deliberately and
+ * loudly rather than left to the setter.
+ */
+const UNSAFE_PIPELINE_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype'])
+
+/**
  * Apply the step allow-list across a `pipelines` map, preserving its keys.
  *
  * A pipeline whose value is not an array is dropped rather than passed through: the
@@ -96,6 +113,7 @@ export function pickPortablePipelines(pipelines: unknown): Record<string, Record
   const out: Record<string, Record<string, unknown>[]> = {}
   for (const [name, steps] of Object.entries(pipelines)) {
     if (!Array.isArray(steps)) continue
+    if (UNSAFE_PIPELINE_KEYS.has(name)) continue
     out[name] = pickPortableSteps(steps)
   }
   return out
