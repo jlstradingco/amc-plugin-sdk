@@ -137,6 +137,97 @@ describe('runPublish', () => {
     expect(body.automationId).toBe('my-cool-thing')
   })
 
+  // The silent-account trap. `--yes` was declared and documented as skipping this
+  // confirmation for over a release without any confirmation existing, so every publish
+  // went out unconfirmed under whatever account the browser was signed into — and a
+  // published automation carries that name permanently.
+  describe('identity confirmation', () => {
+    it('asks before publishing when --yes was not passed', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+      const confirmIdentity = vi.fn().mockResolvedValue(true)
+
+      const res = await runPublish({ cwd: dir, token, confirmIdentity })
+
+      expect(confirmIdentity).toHaveBeenCalledWith('octocat')
+      expect(res.exitCode).toBe(0)
+    })
+
+    it('uploads nothing when the author declines', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        confirmIdentity: vi.fn().mockResolvedValue(false)
+      })
+
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(res.submissionId).toBeUndefined()
+    })
+
+    it('skips the prompt entirely under --yes, for CI', async () => {
+      write(good)
+      vi.stubGlobal('fetch', okUpload())
+      const confirmIdentity = vi.fn().mockResolvedValue(true)
+
+      await runPublish({ cwd: dir, token, yes: true, confirmIdentity })
+
+      expect(confirmIdentity).not.toHaveBeenCalled()
+    })
+
+    it('confirms before a dry run too, so --dry-run rehearses the real flow', async () => {
+      write(good)
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      const confirmIdentity = vi.fn().mockResolvedValue(true)
+
+      const res = await runPublish({ cwd: dir, token, dryRun: true, confirmIdentity })
+
+      expect(confirmIdentity).toHaveBeenCalled()
+      expect(res.exitCode).toBe(0)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('never asks when --as already aborted the publish', async () => {
+      // The abort is the stronger answer: there is nothing to confirm.
+      write(good)
+      vi.stubGlobal('fetch', vi.fn())
+      const confirmIdentity = vi.fn().mockResolvedValue(true)
+
+      const res = await runPublish({ cwd: dir, token, as: 'someone-else', confirmIdentity })
+
+      expect(res.exitCode).toBe(1)
+      expect(confirmIdentity).not.toHaveBeenCalled()
+    })
+
+    it('still asks when --as matches, since matching is not consenting', async () => {
+      write(good)
+      vi.stubGlobal('fetch', okUpload())
+      const confirmIdentity = vi.fn().mockResolvedValue(true)
+
+      await runPublish({ cwd: dir, token, as: 'octocat', confirmIdentity })
+
+      expect(confirmIdentity).toHaveBeenCalledWith('octocat')
+    })
+
+    it('asks before local validation has been skipped away', async () => {
+      // --skip-validation bypasses the recipe checks, never the identity gate.
+      write({ ...good, steps: [{ name: 'a', prompt: '' }] })
+      vi.stubGlobal('fetch', okUpload())
+      const confirmIdentity = vi.fn().mockResolvedValue(false)
+
+      const res = await runPublish({ cwd: dir, token, skipValidation: true, confirmIdentity })
+
+      expect(confirmIdentity).toHaveBeenCalled()
+      expect(res.exitCode).toBe(1)
+    })
+  })
+
   it('sends the declared version, category and changelog', async () => {
     write(good)
     const fetchMock = okUpload()
