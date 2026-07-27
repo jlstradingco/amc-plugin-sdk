@@ -42,14 +42,19 @@ This page covers only what is specific to *publishing* one.
 amc-automation validate
 ```
 
-Four groups of checks run locally:
+Five groups of checks run locally:
 
 - **Structure** — a name, at least one step, a known `executionMode`.
 - **Steps** — every step has a name and a non-empty prompt. AMC's own pre-flight
   blocks a run on an empty prompt, so a published automation with one can never
   actually run.
 - **Portability** — nothing the person installing it will not have. See below.
-- **Secrets** — anything key-shaped or a path pointing into your home directory.
+- **Secrets** — anything key-shaped or a path pointing into your home directory,
+  anywhere in what gets published.
+- **Marketplace limits** — the hard caps a submission is refused for: at most 200
+  steps, 256 KB of shareable definition, and a name that turns into a usable
+  marketplace id. These fail here rather than as a bare `400` after an upload
+  attempt is already spent.
 
 Errors block a publish; warnings do not. Exit code is `0` when clean or
 warning-only, `1` when anything errored — so it drops straight into CI. Add
@@ -85,12 +90,15 @@ refuses it — with the fix:
 | **Project scope** | The whole automation is tied to a local project | Set `"scope": "global"` |
 
 These are checked in your `steps` **and** in every named array under
-`pipelines`. Both are published, so both have to be portable.
+`pipelines`. Both are published, so both have to be portable — and the same goes
+for the step checks: a pipeline step with an empty prompt is caught too, because
+it would stop the automation just as surely as a top-level one.
 
-The same is true of the advisory secret scan: a pasted API key warns wherever it
-sits, top-level prompt or pipeline prompt. It only ever warns — a published
-automation is world-readable, so a false positive must never block you, and only
-you can tell.
+The same is true of the advisory secret scan, which sweeps everything a publish
+ships — prompts, parameter defaults, `onComplete`, `supervisors` — not just the
+description. A pasted API key warns wherever it sits. It only ever warns: a
+published automation is world-readable, so a false positive must never block you,
+and only you can tell.
 
 ## Publish it
 
@@ -116,8 +124,10 @@ name permanently. If it is the wrong one, answer `n` and re-run with
 Useful flags:
 
 - `--dry-run` — do everything except the upload. Good for CI.
-- `--version <v>` and `--category <c>` — the six categories are `planning`,
-  `development`, `testing`, `devops`, `productivity`, `other`.
+- `--version <v>` and `--category <c>` — the version is three numbers separated by
+  dots (`1.0.0`, never `v1.0.0` or `1.0`), and the six categories are `planning`,
+  `development`, `testing`, `devops`, `productivity`, `other`. Both are checked
+  before anything is uploaded, so a typo costs you nothing.
 - `--as <github-user>` — abort unless that account is the one signed in. Worth
   using in CI so a stray token cannot publish under the wrong name.
 - `-y` / `--yes` — skip the confirmation question. For CI, where nobody is there
