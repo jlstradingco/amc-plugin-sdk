@@ -9,10 +9,19 @@ import * as path from 'node:path'
 // failure mode stays silent and falls back to the interactive flow rather than
 // crashing a publish.
 
-const TOKEN_DIR = path.join(os.homedir(), '.amc')
-const TOKEN_PATH = path.join(TOKEN_DIR, 'marketplace-token')
+// These tests must never touch the developer's real ~/.amc/marketplace-token.
+// auth.ts derives TOKEN_PATH from os.homedir() at MODULE scope, and os.homedir()
+// reads $HOME (POSIX) / $USERPROFILE (Windows) — so redirecting both env vars at
+// a throwaway directory and resetting the module registry before each dynamic
+// import lands the whole suite in a sandbox. Backing up and restoring the real
+// file instead would still lose a live credential to a crash or a Ctrl-C.
+// Resolve the tmp root before any stubbing, so os.tmpdir() sees a clean env.
+const TMP_ROOT = os.tmpdir()
+const REAL_HOME = os.homedir()
 
-let backup: string | null = null
+let tmpHome: string
+let TOKEN_DIR: string
+let TOKEN_PATH: string
 
 function writeToken(token: Record<string, unknown>): void {
   fs.mkdirSync(TOKEN_DIR, { recursive: true })
@@ -32,14 +41,33 @@ function expiredToken(overrides: Record<string, unknown> = {}): Record<string, u
 
 describe('CLI marketplace token refresh', () => {
   beforeEach(() => {
-    backup = fs.existsSync(TOKEN_PATH) ? fs.readFileSync(TOKEN_PATH, 'utf-8') : null
+    tmpHome = fs.mkdtempSync(path.join(TMP_ROOT, 'amc-cli-auth-'))
+    TOKEN_DIR = path.join(tmpHome, '.amc')
+    TOKEN_PATH = path.join(TOKEN_DIR, 'marketplace-token')
+
+    vi.stubEnv('HOME', tmpHome)
+    vi.stubEnv('USERPROFILE', tmpHome)
+    // auth.ts caches TOKEN_PATH at import time, so the registry has to be reset
+    // for the stubbed home to take effect on the next dynamic import.
+    vi.resetModules()
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
-    if (backup !== null) writeToken(JSON.parse(backup))
-    else if (fs.existsSync(TOKEN_PATH)) fs.unlinkSync(TOKEN_PATH)
-    backup = null
+    vi.unstubAllEnvs()
+    fs.rmSync(tmpHome, { recursive: true, force: true })
+  })
+
+  it('sandboxes the token path away from the real home directory', async () => {
+    // The guard on the guard: if the env stubbing ever stops working, this fails
+    // rather than the suite silently going back to eating the real credential.
+    writeToken(expiredToken())
+    const { getStoredTokenIgnoringExpiry } = await import('../lib/auth.js')
+
+    expect(getStoredTokenIgnoringExpiry()?.github).toBe('octocat')
+    expect(TOKEN_PATH.startsWith(tmpHome)).toBe(true)
+    expect(os.homedir()).toBe(tmpHome)
+    expect(os.homedir()).not.toBe(REAL_HOME)
   })
 
   describe('isTokenFresh', () => {
