@@ -60,7 +60,11 @@ export default defineConfig({
             { text: 'Logging', link: '/api/logging' },
             { text: 'Inbox', link: '/api/inbox' },
             { text: 'Auth', link: '/api/auth' },
-            { text: 'Recording', link: '/api/recording' }
+            { text: 'Recording', link: '/api/recording' },
+            { text: 'Text to Speech', link: '/api/tts' },
+            { text: 'Session History', link: '/api/session-history' },
+            { text: 'Firebase', link: '/api/firebase' },
+            { text: 'Spend', link: '/api/spend' }
           ]
         }
       ]
