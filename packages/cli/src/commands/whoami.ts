@@ -17,6 +17,10 @@ export const whoamiCommand = new Command('whoami')
     }
     ok(`Signed in as: ${token.github} (uid: ${token.uid})`)
     if (!isTokenFresh(token)) {
-      info('Access token has expired; it will renew silently on the next command.')
+      // Deliberately "should", not "will": renewal needs the refresh token to still be
+      // accepted, and a revoked session fails exactly here. Promising a silent renewal
+      // for a credential that is actually dead sends the user to the wrong diagnosis.
+      info('Access token has expired; the next command should renew it without a browser.')
+      info('If it asks you to sign in again, the session was revoked.')
     }
   })
