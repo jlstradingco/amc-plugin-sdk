@@ -191,6 +191,40 @@ describe('pickPortablePipelines', () => {
   it('keeps an empty pipeline as an empty array', () => {
     expect(pickPortablePipelines({ empty: [] })).toEqual({ empty: [] })
   })
+
+  // A pipeline name is the one caller-controlled KEY in the envelope, and `JSON.parse`
+  // makes `__proto__` an ordinary own property — so a plain `out[name] = …` hits the
+  // prototype setter, losing the pipeline and leaving the container malformed.
+  describe('keys that cannot be assigned onto a plain object', () => {
+    const parse = (json: string): Record<string, unknown> =>
+      JSON.parse(json) as Record<string, unknown>
+
+    it('leaves the output with an ordinary prototype', () => {
+      const out = pickPortablePipelines(parse('{"__proto__": [{"name": "a"}]}'))
+      expect(Object.getPrototypeOf(out)).toBe(Object.prototype)
+    })
+
+    it('never pollutes the global prototype', () => {
+      pickPortablePipelines(parse('{"__proto__": [{"name": "a"}]}'))
+      expect(({} as Record<string, unknown>).name).toBeUndefined()
+    })
+
+    it('drops a pipeline named __proto__ rather than half-writing it', () => {
+      expect(pickPortablePipelines(parse('{"__proto__": [{"name": "a"}]}'))).toEqual({})
+    })
+
+    it('drops constructor and prototype for the same reason', () => {
+      const out = pickPortablePipelines(parse('{"constructor": [], "prototype": []}'))
+      expect(Object.keys(out)).toEqual([])
+    })
+
+    it('keeps the ordinary pipelines beside a dangerous key', () => {
+      const out = pickPortablePipelines(
+        parse('{"__proto__": [{"name": "x"}], "review": [{"name": "r", "prompt": "p"}]}')
+      )
+      expect(out).toEqual({ review: [{ name: 'r', prompt: 'p' }] })
+    })
+  })
 })
 
 describe('collectStrippedStepFields', () => {
