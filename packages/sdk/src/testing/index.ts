@@ -24,8 +24,27 @@ import type {
   PluginAuthUser,
   PluginAuthSession,
   Recording,
-  QueryOptions
+  QueryOptions,
+  HistoryProject,
+  HistorySession,
+  HistoryMessage,
+  FirebaseAccount,
+  FirebaseProject,
+  FirebaseSetupStatus,
+  SpendReportBreakdown
 } from '../types/index.js'
+
+/** Zeroed spend breakdown — the shape a brand-new install reports. */
+function emptySpendBreakdown(): SpendReportBreakdown {
+  const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+  return {
+    generatedAt: new Date(0).toISOString(),
+    windows: { yesterday: { ...zeroWindow }, week: { ...zeroWindow }, month: { ...zeroWindow } },
+    codingEngines: [],
+    backgroundFeatures: [],
+    notableCharges: []
+  }
+}
 
 export interface CapturedLog {
   level: 'info' | 'warn' | 'error' | 'debug'
@@ -52,6 +71,34 @@ export interface TestContextOptions {
     googleIdToken?: string | null
     session?: PluginAuthSession | null
   }
+  /** Override ctx.tts. Unset, TTS reports unavailable and synthesize() rejects — the host's
+   *  behaviour when the user has configured no voice. */
+  tts?: {
+    available?: boolean
+    synthesize?: (text: string) => Promise<{ audioBase64: string; mime: 'audio/mpeg' }>
+  }
+  /**
+   * Seed what the user has granted to ctx.sessionHistory. Defaults to nothing granted,
+   * matching the host's default-deny posture — getMessages() on an unseeded session
+   * throws exactly as the real bridge does.
+   */
+  sessionHistory?: {
+    projects?: HistoryProject[]
+    sessions?: HistorySession[]
+    /** Keyed by session id. Only ids present here are readable. */
+    messages?: Record<string, HistoryMessage[]>
+    /** What requestAccess() resolves to. Defaults to a cancelled grant. */
+    grantResult?: { cancelled?: boolean; sessionIds?: string[]; projectIds?: string[] }
+  }
+  /** Seed ctx.firebase. Every list defaults to empty, like a machine with no Firebase CLI. */
+  firebase?: {
+    accounts?: FirebaseAccount[]
+    projects?: FirebaseProject[]
+    projectsByAccount?: Record<string, FirebaseProject[]>
+    setupStatus?: Partial<FirebaseSetupStatus>
+  }
+  /** Seed ctx.spend.getBreakdown(). Defaults to an all-zero breakdown. */
+  spend?: Partial<SpendReportBreakdown>
 }
 
 export interface TestHarness {
@@ -308,6 +355,74 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       list: () => Promise.resolve([...recordings]),
       getShareUrl: (recordingId) => Promise.resolve(`https://test.local/recordings/${recordingId}`),
       delete: () => Promise.resolve()
+    },
+
+    tts: {
+      isAvailable: () => Promise.resolve(opts.tts?.available ?? false),
+      synthesize: (text) => {
+        if (opts.tts?.synthesize) return opts.tts.synthesize(text)
+        // Mirrors the host: synthesis without a configured voice throws rather
+        // than returning silent/empty audio.
+        if (!(opts.tts?.available ?? false)) {
+          return Promise.reject(
+            new Error('Text-to-speech is not configured. Add a voice in Settings.')
+          )
+        }
+        return Promise.resolve({
+          audioBase64: Buffer.from(`test-audio:${text}`).toString('base64'),
+          mime: 'audio/mpeg' as const
+        })
+      }
+    },
+
+    sessionHistory: {
+      listProjects: () => Promise.resolve([...(opts.sessionHistory?.projects ?? [])]),
+      listSessions: () => Promise.resolve([...(opts.sessionHistory?.sessions ?? [])]),
+      getMessages: ({ sessionId }) => {
+        const granted = opts.sessionHistory?.messages ?? {}
+        // Default-deny, exactly like the host bridge: an ungranted session is an
+        // error, never an empty array (which would read as "no messages").
+        if (!Object.prototype.hasOwnProperty.call(granted, sessionId)) {
+          return Promise.reject(new Error('session not granted to this plugin'))
+        }
+        return Promise.resolve([...(granted[sessionId] ?? [])])
+      },
+      requestAccess: () => {
+        const seeded = opts.sessionHistory?.grantResult
+        const requestId = `test-history-grant-${crypto.randomUUID().slice(0, 8)}`
+        if (!seeded || seeded.cancelled) {
+          return Promise.resolve({ requestId, cancelled: true, sessionIds: [], projectIds: [] })
+        }
+        return Promise.resolve({
+          requestId,
+          cancelled: false,
+          sessionIds: seeded.sessionIds ?? [],
+          projectIds: seeded.projectIds ?? []
+        })
+      }
+    },
+
+    firebase: {
+      listAccounts: () => Promise.resolve([...(opts.firebase?.accounts ?? [])]),
+      listProjects: () => Promise.resolve([...(opts.firebase?.projects ?? [])]),
+      // Unknown account resolves to [] rather than throwing — the host swallows
+      // every CLI failure into an empty list.
+      listProjectsForAccount: (email) =>
+        Promise.resolve([...(opts.firebase?.projectsByAccount?.[email] ?? [])]),
+      setupStatus: () =>
+        Promise.resolve({
+          cliInstalled: false,
+          signedIn: false,
+          accounts: [],
+          firebaseAccess: 'unknown' as const,
+          billing: { checked: false, hasOpenAccount: false },
+          ...(opts.firebase?.setupStatus ?? {})
+        }),
+      startLogin: () => Promise.resolve({ started: true })
+    },
+
+    spend: {
+      getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
     }
   }
 
