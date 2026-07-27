@@ -84,6 +84,43 @@ describe('checkSecrets', () => {
     expect(found[0]?.stepName).toBe('a')
   })
 
+  // AMC's own share-time scanner has always walked pipelines; the CLI did not, so a
+  // key pasted into a pipeline prompt was published with no warning.
+  describe('pipelines', () => {
+    it('flags a secret in a pipeline prompt', () => {
+      const found = checkSecrets({
+        pipelines: { review: [{ name: 'check', prompt: 'use ghp_AAAAAAAAAAAAAAAAAAAAAAAA' }] }
+      })
+      expect(found.map((f) => f.code)).toContain('possible-secret')
+    })
+
+    it('flags a secret in a pipeline exitMessage', () => {
+      const found = checkSecrets({
+        pipelines: { review: [{ name: 'check', exitMessage: 'token ghp_AAAAAAAAAAAAAAAAAAAAAAAA' }] }
+      })
+      expect(found.map((f) => f.code)).toContain('possible-secret')
+    })
+
+    it('paths the match inside the pipeline', () => {
+      const found = checkSecrets({
+        pipelines: { review: [{ prompt: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' }] }
+      })
+      expect(found[0]?.message).toContain('pipelines.review[0].prompt')
+    })
+
+    it('stays advisory — a pipeline secret warns, it never blocks', () => {
+      const found = checkSecrets({
+        pipelines: { review: [{ prompt: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' }] }
+      })
+      expect(found.every((f) => f.severity === 'warning')).toBe(true)
+    })
+
+    it('does not throw on malformed pipelines', () => {
+      expect(() => checkSecrets({ pipelines: 'nope' })).not.toThrow()
+      expect(() => checkSecrets({ pipelines: { a: [null, 3] } })).not.toThrow()
+    })
+  })
+
   it('does not throw on malformed input', () => {
     expect(() => checkSecrets({})).not.toThrow()
     expect(() => checkSecrets({ steps: [null, 3], description: 42 })).not.toThrow()
