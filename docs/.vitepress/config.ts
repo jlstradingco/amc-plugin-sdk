@@ -12,9 +12,19 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/quickstart' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
-      { text: 'CLI', link: '/reference/cli' }
+      { text: 'CLI', link: '/reference/cli' },
+      { text: 'Automations', link: '/guide/automations' }
     ],
     sidebar: {
+      '/reference/': [
+        {
+          text: 'CLI Reference',
+          items: [
+            { text: 'amc-plugin', link: '/reference/cli' },
+            { text: 'amc-automation', link: '/reference/automation-cli' }
+          ]
+        }
+      ],
       '/guide/': [
         {
           text: 'Guide',
@@ -25,7 +35,8 @@ export default defineConfig({
             { text: 'Manifest', link: '/guide/manifest' },
             { text: 'Permissions', link: '/guide/permissions' },
             { text: 'Dev Shell', link: '/guide/dev-shell' },
-            { text: 'Publishing', link: '/guide/publishing' }
+            { text: 'Publishing', link: '/guide/publishing' },
+            { text: 'Automations', link: '/guide/automations' }
           ]
         }
       ],
