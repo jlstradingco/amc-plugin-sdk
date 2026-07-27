@@ -4,14 +4,21 @@ import { collectAllSteps } from '../lib/recipe-steps.js'
 /**
  * Does this recipe depend on anything the importer will not have?
  *
- * A simplified re-implementation of AMC's assessRecipePortability — the SPIRIT,
- * not the letter. It is deliberately NOT a mirror: the server decides whether a
- * publish succeeds, so the worst this can do is miss a warning (spec §4). Every
- * finding names a remedy, because "not portable" without one is a dead end.
+ * A simplified re-implementation of AMC's assessRecipePortability — the SPIRIT, not
+ * the letter. The server decides whether a publish succeeds; this exists to fail the
+ * hopeless cases locally rather than spend an upload slot discovering them.
  *
- * Walks pipeline steps as well as top-level ones. `pipelines` is on the publish
- * envelope's allow-list, so a script or sub-recipe step inside one used to travel
- * unflagged — and the server does not walk pipelines either, so nothing caught it.
+ * DELIBERATELY STRICTER THAN THE SERVER on one axis, and it is worth being explicit
+ * about it. Both AMC's own share gate and the marketplace validator walk the
+ * top-level `steps` array only, so a script or sub-recipe step inside a PIPELINE is
+ * accepted by both — while `pipelines` rides the publish envelope's allow-list, so
+ * the step really does travel, and really is unrunnable for whoever imports it. The
+ * choice here is to block it: an automation that installs and then cannot run is a
+ * worse outcome for the importer than a publish the author has to think about, and
+ * `--skip-validation` remains the documented way past a local error.
+ *
+ * The consequence to keep in mind when reading a finding from this module: an error
+ * here does NOT imply the server would have refused the submission.
  */
 export function checkPortability(recipe: Record<string, unknown>): Finding[] {
   const findings: Finding[] = []
