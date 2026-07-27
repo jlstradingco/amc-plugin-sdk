@@ -192,6 +192,73 @@ describe('checkSecrets', () => {
     })
   })
 
+  // A step is swept through the step-level allow-list too, so the scan covers every
+  // field a step publishes. Naming `prompt` and `exitMessage` by hand missed the two
+  // fields below, which AMC's own share-time scanner has always checked.
+  describe('the rest of the shareable step', () => {
+    const KEY = 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA'
+
+    it('flags a secret in an approval gate message', () => {
+      const found = checkSecrets({ steps: [{ name: 'ship', approvalGate: { message: KEY } }] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('steps[0].approvalGate.message')
+      expect(found[0]?.stepName).toBe('ship')
+    })
+
+    it('flags a secret in a per-step supervisor prompt', () => {
+      const found = checkSecrets({
+        steps: [{ name: 'watch', supervisor: { systemPrompt: `auth with ${KEY}` } }]
+      })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('steps[0].supervisor.systemPrompt')
+      expect(found[0]?.stepName).toBe('watch')
+    })
+
+    it('flags a secret in a step exit message, as before', () => {
+      const found = checkSecrets({ steps: [{ name: 'a', exitMessage: KEY }] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('steps[0].exitMessage')
+    })
+
+    it('flags the same fields inside a pipeline step', () => {
+      const found = checkSecrets({
+        pipelines: { review: [{ name: 'r', approvalGate: { message: KEY } }] }
+      })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('pipelines.review[0].approvalGate.message')
+      expect(found[0]?.stepName).toBe('r')
+    })
+
+    it('never scans a step field the envelope would strip', () => {
+      // `script` does not travel, so a key sitting in it is not a publication risk —
+      // and `checkPortability` already blocks the step outright for a better reason.
+      const found = checkSecrets({ steps: [{ name: 'a', prompt: 'clean', script: KEY }] })
+      expect(found).toEqual([])
+    })
+
+    it('does not scan an unknown local step field', () => {
+      const found = checkSecrets({ steps: [{ name: 'a', prompt: 'clean', localNote: KEY }] })
+      expect(found).toEqual([])
+    })
+
+    it('reports each offending field separately', () => {
+      const found = checkSecrets({
+        steps: [{ name: 'a', prompt: KEY, exitMessage: KEY, approvalGate: { message: KEY } }]
+      })
+      expect(found).toHaveLength(3)
+      expect(found.every((f) => f.severity === 'warning')).toBe(true)
+      expect(found.every((f) => f.stepName === 'a')).toBe(true)
+    })
+
+    it('labels an unnamed step positionally rather than dropping the location', () => {
+      const found = checkSecrets({ steps: [{ approvalGate: { message: KEY } }] })
+      expect(found).toHaveLength(1)
+      // No declared name, so no stepName rides along — the path still pinpoints it.
+      expect(found[0]?.stepName).toBeUndefined()
+      expect(found[0]?.message).toContain('steps[0].approvalGate.message')
+    })
+  })
+
   it('does not throw on malformed input', () => {
     expect(() => checkSecrets({})).not.toThrow()
     expect(() => checkSecrets({ steps: [null, 3], description: 42 })).not.toThrow()
