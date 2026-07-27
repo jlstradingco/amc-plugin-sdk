@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { randomBytes } from 'node:crypto'
-import { execSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 
 const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
 
@@ -54,9 +54,23 @@ export function getStoredTokenIgnoringExpiry(): StoredToken | null {
 function readStoredTokenRaw(): StoredToken | null {
   if (!fs.existsSync(TOKEN_PATH)) return null
   try {
-    const raw = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'))
-    if (!raw.token || !raw.expiresAt) return null
-    return raw as StoredToken
+    const raw = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8')) as Record<string, unknown>
+    // Type-checked, not merely truthy. A half-written or hand-edited file could carry
+    // an object or a number where a string belongs, and the cast below would let it
+    // through to `Authorization: Bearer [object Object]` — a 401 whose real cause is a
+    // corrupt local file, which is the least debuggable form of this failure. Treating
+    // it as "no token" instead sends the user through sign-in, which repairs it.
+    if (typeof raw?.token !== 'string' || raw.token.length === 0) return null
+    if (typeof raw.expiresAt !== 'string' || raw.expiresAt.length === 0) return null
+    return {
+      token: raw.token,
+      // The optional fields degrade rather than reject: an old file written before
+      // refresh tokens existed is still a usable credential until it expires.
+      refreshToken: typeof raw.refreshToken === 'string' ? raw.refreshToken : '',
+      uid: typeof raw.uid === 'string' ? raw.uid : '',
+      github: typeof raw.github === 'string' ? raw.github : 'unknown',
+      expiresAt: raw.expiresAt
+    }
   } catch {
     return null
   }
@@ -163,8 +177,24 @@ export function saveToken(token: StoredToken): void {
   }
 }
 
-export function clearToken(): void {
-  if (fs.existsSync(TOKEN_PATH)) fs.unlinkSync(TOKEN_PATH)
+/**
+ * Delete the stored credential. Returns false when a file was there and could not be
+ * removed, so the caller can say so rather than claiming a sign-out that did not happen.
+ *
+ * The unlink is guarded because it genuinely fails: on Windows a file held open by
+ * another AMC process raises EBUSY, and a read-only home raises EPERM. Unguarded, that
+ * turned `logout` — the command a user reaches for when they are worried about a
+ * credential — into an unhandled exception and a stack trace, with the token still on
+ * disk and no clear statement that it still was.
+ */
+export function clearToken(): boolean {
+  if (!fs.existsSync(TOKEN_PATH)) return true
+  try {
+    fs.unlinkSync(TOKEN_PATH)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -186,20 +216,12 @@ export async function authenticate(): Promise<StoredToken> {
   // (RT-F008 hardening) rejects any id that doesn't match /^[A-Za-z0-9_-]{20,200}$/,
   // so mint 24 hex chars — matching the length the endpoint documents as expected.
   const sessionId = randomBytes(12).toString('hex')
-  const authUrl = `${AUTH_PAGE_URL}?session=${sessionId}`
+  const authUrl = buildAuthUrl(sessionId)
 
   console.log('\nOpening browser for GitHub sign-in...')
   console.log(`If the browser doesn't open, visit: ${authUrl}\n`)
 
-  // Open browser (cross-platform)
-  try {
-    const platform = os.platform()
-    if (platform === 'win32') execSync(`start "" "${authUrl}"`, { stdio: 'ignore' })
-    else if (platform === 'darwin') execSync(`open "${authUrl}"`, { stdio: 'ignore' })
-    else execSync(`xdg-open "${authUrl}"`, { stdio: 'ignore' })
-  } catch {
-    // Browser open failed — user can visit URL manually
-  }
+  openInBrowser(authUrl)
 
   // Poll Firestore for token via a lightweight HTTP endpoint
   console.log('Waiting for sign-in...')
@@ -234,6 +256,73 @@ export async function authenticate(): Promise<StoredToken> {
   }
 
   throw new Error('Authentication timed out. Please try again.')
+}
+
+/**
+ * Build the sign-in URL, normalized so it is safe to hand to a command line.
+ *
+ * `AUTH_PAGE_URL` comes from `AMC_MARKETPLACE_AUTH_URL`, and the value used to be
+ * interpolated straight into a shell string (`start "" "<url>"`). A value containing a
+ * quote would close that quote and run whatever followed. Setting the variable already
+ * implies a good deal of access, so this was never the weakest link — but "the attacker
+ * needed some access already" is not a reason to leave a shell injection in the one
+ * command that opens a browser and mints a credential.
+ *
+ * Parsing through `URL` fixes it at the source: the constructor rejects a value that is
+ * not a URL at all, and `toString()` percent-encodes quotes, spaces and newlines, so
+ * nothing that survives can terminate an argument.
+ *
+ * @throws if the configured auth URL is not a valid http(s) URL.
+ */
+export function buildAuthUrl(sessionId: string, base: string = AUTH_PAGE_URL): string {
+  let url: URL
+  try {
+    url = new URL(base)
+  } catch {
+    throw new Error(
+      `AMC_MARKETPLACE_AUTH_URL is not a valid URL: ${base}. Unset it to use the default.`
+    )
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error(
+      `AMC_MARKETPLACE_AUTH_URL must be an http(s) URL, got "${url.protocol}". Unset it to use the default.`
+    )
+  }
+  url.searchParams.set('session', sessionId)
+  return url.toString()
+}
+
+/**
+ * Hand a URL to the platform's browser opener. Never throws: a machine with no
+ * graphical browser is an ordinary case, and the URL was printed above for the user to
+ * open by hand.
+ *
+ * Arguments are passed as an ARGV array rather than a shell string wherever the
+ * platform allows it, so the URL is never re-parsed by a shell. `start` is a `cmd`
+ * builtin and cannot be spawned directly, so Windows still goes through `cmd /c` — with
+ * a URL that `buildAuthUrl` has already normalized past the characters that would
+ * matter there.
+ */
+function openInBrowser(url: string): void {
+  try {
+    const platform = os.platform()
+    if (platform === 'win32') {
+      // The empty string is `start`'s title argument; without it a quoted URL is
+      // treated as the window title and no browser opens.
+      spawnSync('cmd', ['/c', 'start', '', url], { stdio: 'ignore' })
+    } else if (platform === 'darwin') {
+      spawnSync('open', [url], { stdio: 'ignore' })
+    } else {
+      spawnSync('xdg-open', [url], { stdio: 'ignore' })
+    }
+  } catch {
+    // No browser, no display, or the opener is missing — the URL is on screen.
+  }
+}
+
+/** Where the credential lives, for messages that ask the user to act on the file. */
+export function getTokenPath(): string {
+  return TOKEN_PATH
 }
 
 export function getBaseUrl(): string {
