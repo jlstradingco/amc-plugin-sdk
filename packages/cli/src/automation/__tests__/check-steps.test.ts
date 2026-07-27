@@ -51,7 +51,7 @@ describe('checkSteps', () => {
 
   it('reports the step position when it has no name to report', () => {
     const found = checkSteps({ steps: [{ prompt: 'go' }] })
-    expect(found[0]?.message).toContain('Step 1')
+    expect(found[0]?.message).toContain('step 1')
   })
 
   it('gives every finding a remedy', () => {
@@ -69,5 +69,59 @@ describe('checkSteps', () => {
   it('skips a non-object entry rather than throwing', () => {
     expect(() => checkSteps({ steps: [null, 'x', 3] })).not.toThrow()
     expect(checkSteps({ steps: [null, 'x', 3] })).toEqual([])
+  })
+
+  // `pipelines` rides the publish envelope's allow-list, so its steps are published and
+  // run. This check walked only `steps`, so an empty prompt in a pipeline shipped clean
+  // and then could not run — the one outcome the check exists to prevent.
+  describe('pipelines', () => {
+    it('flags an empty prompt inside a pipeline', () => {
+      const found = checkSteps({
+        steps: [{ name: 'a', prompt: 'go' }],
+        pipelines: { review: [{ name: 'check', prompt: '' }] }
+      })
+      expect(found.map((f) => f.code)).toContain('empty-prompt')
+    })
+
+    it('flags an unnamed step inside a pipeline', () => {
+      const found = checkSteps({ pipelines: { review: [{ prompt: 'go' }] } })
+      expect(found.map((f) => f.code)).toContain('unnamed-step')
+    })
+
+    it('says which pipeline the step came from', () => {
+      // A step name is not unique across pipelines, so "check" alone would be ambiguous.
+      const found = checkSteps({ pipelines: { review: [{ name: 'check', prompt: '' }] } })
+      expect(found[0]?.message).toContain('review')
+      expect(found[0]?.message).toContain('check')
+    })
+
+    it('catches a recipe whose only broken step is in a pipeline', () => {
+      const found = checkSteps({
+        steps: [{ name: 'a', prompt: 'go' }],
+        pipelines: { deploy: [{ name: 'ship', prompt: '   ' }] }
+      })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.code).toBe('empty-prompt')
+    })
+
+    it('never nests quotes in a pipeline step label', () => {
+      const found = checkSteps({ pipelines: { review: [{ name: 'check', prompt: '' }] } })
+      expect(found[0]?.message).not.toContain('""')
+    })
+
+    it('does not throw on malformed pipelines', () => {
+      expect(() => checkSteps({ pipelines: 'nope' })).not.toThrow()
+      expect(() => checkSteps({ pipelines: { a: 'nope' } })).not.toThrow()
+      expect(() => checkSteps({ pipelines: { a: [null, 3] } })).not.toThrow()
+    })
+
+    it('stays quiet on a pipeline whose steps are all well formed', () => {
+      expect(
+        checkSteps({
+          steps: [{ name: 'a', prompt: 'go' }],
+          pipelines: { review: [{ name: 'check', prompt: 'look' }] }
+        })
+      ).toEqual([])
+    })
   })
 })
