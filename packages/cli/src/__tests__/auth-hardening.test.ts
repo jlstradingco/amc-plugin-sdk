@@ -145,15 +145,27 @@ describe('clearToken', () => {
   })
 
   it('reports failure instead of throwing when the unlink fails', async () => {
-    // On Windows a file held open by another AMC process raises EBUSY; unguarded,
-    // that turned `logout` into a stack trace with the credential still on disk.
-    writeToken(freshToken())
+    // A real unlink failure, not a mocked one. `vi.spyOn(fs, 'unlinkSync')` does not
+    // intercept here: auth.ts holds the module namespace from `import * as fs`, whose
+    // properties are not writable, so the spy never sits in the call path and the
+    // guard would go untested while appearing to pass.
+    //
+    // Making the token path a DIRECTORY produces the genuine article on every
+    // platform — EPERM on Windows, EISDIR on POSIX — which is the same class of
+    // failure as the file being held open by another AMC process.
+    fs.mkdirSync(TOKEN_PATH, { recursive: true })
     const { clearToken } = await import('../lib/auth.js')
-    vi.spyOn(fs, 'unlinkSync').mockImplementation(() => {
-      throw Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' })
-    })
     expect(() => clearToken()).not.toThrow()
     expect(clearToken()).toBe(false)
+  })
+
+  it('still reports failure when the path is real but undeletable', async () => {
+    fs.mkdirSync(TOKEN_PATH, { recursive: true })
+    const { clearToken } = await import('../lib/auth.js')
+    expect(clearToken()).toBe(false)
+    // And the path is still there, which is exactly what the caller must not
+    // misreport as a successful sign-out.
+    expect(fs.existsSync(TOKEN_PATH)).toBe(true)
   })
 })
 
