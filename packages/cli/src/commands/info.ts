@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, label, heading, manifestNotFound } from '../lib/output.js'
-import { getStoredToken } from '../lib/auth.js'
+import { getStoredTokenOrRefresh } from '../lib/auth.js'
 import { getMyPlugins } from '../lib/marketplace-api.js'
 
 export const infoCommand = new Command('info')
@@ -89,8 +89,12 @@ export const infoCommand = new Command('info')
       result.errors.forEach((e) => console.error(`  - ${e}`))
     }
 
-    // Marketplace status (if authenticated)
-    const token = getStoredToken()
+    // Marketplace status (if authenticated). Renews silently when the ID token
+    // has lapsed — this call needs a usable credential, and reporting "not
+    // authenticated" for an account whose refresh token is still good sends the
+    // user off to re-run publish for no reason. Never interactive: a failed
+    // renewal falls through to the same "not authenticated" line as before.
+    const token = await getStoredTokenOrRefresh()
     if (token && p.id) {
       try {
         const myPlugins = await getMyPlugins(token)
