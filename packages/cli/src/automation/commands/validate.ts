@@ -10,6 +10,7 @@ import {
   DEFAULT_PUBLISH_CATEGORY,
   type AutomationCategory
 } from '../lib/envelope.js'
+import { checkPublishInputs, inputProblemsAsFindings } from '../lib/publish-inputs.js'
 import { validateAutomationRemote, type ServerValidation } from '../api/automation-api.js'
 import { getStoredTokenOrRefresh, type StoredToken } from '../../lib/auth.js'
 import { ok, fail, warn, info, heading, actionableError } from '../../lib/output.js'
@@ -45,8 +46,27 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
     throw err
   }
 
-  const findings = runAllChecks(recipe)
+  // Flag problems join the recipe's own findings rather than aborting: `validate` is
+  // asking "what is wrong with this publish?", and a bad --version is one answer among
+  // several, not a reason to stop looking for the others.
+  const inputProblems = checkPublishInputs({ version: opts.version, category: opts.category })
+  const findings = [...inputProblemsAsFindings(inputProblems), ...runAllChecks(recipe)]
   let server: ServerValidation | null = null
+
+  // A malformed version or category cannot be asked ABOUT — the envelope would be
+  // rejected on shape before the server reached the collision and ownership checks
+  // that are the only reason to make the call.
+  if (opts.check && inputProblems.length > 0) {
+    if (!opts.json) {
+      heading('Local checks')
+      reportFindings(findings)
+      heading('Marketplace check')
+      warn('Skipped — fix the version and category first.')
+    } else {
+      console.log(JSON.stringify({ ...findingsToJson(findings), server: null }, null, 2))
+    }
+    return { exitCode: 1, findings, server: null }
+  }
 
   if (opts.check) {
     // Renews silently rather than declaring the author signed out the moment the
