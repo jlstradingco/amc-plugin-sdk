@@ -1,5 +1,5 @@
 import type { Finding } from '../lib/findings.js'
-import { collectAllSteps } from '../lib/recipe-steps.js'
+import { collectAllSteps, collectMalformedSteps } from '../lib/recipe-steps.js'
 
 /**
  * Step-level checks that mirror AMC's own pre-flight gates (checks 3 and 4 in
@@ -14,6 +14,21 @@ import { collectAllSteps } from '../lib/recipe-steps.js'
  */
 export function checkSteps(recipe: Record<string, unknown>): Finding[] {
   const findings: Finding[] = []
+
+  // An entry that is not a step at all — a stray `null`, a bare string left behind by
+  // a hand edit. The step collectors SKIP these so a malformed entry cannot renumber
+  // the steps around it, which meant nothing reported them and the publish envelope
+  // then dropped them without a word: the automation quietly lost a step somewhere
+  // between the author's file and the catalog. An error, because the shipped
+  // automation would not be the one they wrote.
+  for (const path of collectMalformedSteps(recipe)) {
+    findings.push({
+      severity: 'error',
+      code: 'malformed-step',
+      message: `${path} is not a step, so it would be dropped from the published automation.`,
+      fix: 'Make it an object with a "name" and a "prompt", or remove the entry.'
+    })
+  }
 
   for (const { step: s, label, declaredName } of collectAllSteps(recipe)) {
     // The label already names the step — or its position, and the pipeline it came
