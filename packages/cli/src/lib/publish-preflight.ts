@@ -2,6 +2,8 @@
 // The command module gathers the raw inputs (manifest, registry, package size)
 // and passes them in; everything here is unit-testable without fs/network.
 
+import { PLUGIN_PERMISSIONS } from '@agent-mc/plugin-sdk'
+
 export type PreflightStatus = 'pass' | 'warn' | 'fail'
 
 export interface PreflightResult {
@@ -11,21 +13,13 @@ export interface PreflightResult {
   suggestion?: string
 }
 
-const VALID_PERMISSIONS = new Set([
-  'storage',
-  'sessions',
-  'ai',
-  'network',
-  'cron',
-  'cli',
-  'notifications',
-  'rss',
-  'auth',
-  'auth.session',
-  'recording',
-  'inbox',
-  'navigation'
-])
+// Derived from the SDK's enum, never re-listed. A hand-copy here is what let
+// `tts`, `sessions.readHistory`, `firebase` and `spend` stay unpublishable after
+// the SDK enum itself had been fixed: `checkDeclaredPermissions` returns `fail`
+// on an unknown string and `publish` exits 1 on any failure, so a stale copy
+// blocks the exact plugins the enum was widened to allow. It had also silently
+// omitted `system` and `chrome` since before those four were added.
+const VALID_PERMISSIONS: ReadonlySet<string> = new Set<string>(PLUGIN_PERMISSIONS)
 
 const MB = 1024 * 1024
 const HARD_LIMIT_MB = 50
