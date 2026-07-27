@@ -2,6 +2,17 @@ packages:
   - 'packages/*'
   - 'docs'
 
+# Both are build-script dependencies we deliberately allow. Left as unanswered
+# `pnpm approve-builds` placeholders, pnpm 11 aborts EVERY install and script in
+# the workspace with ERR_PNPM_IGNORED_BUILDS — so a fresh clone could not run
+# `pnpm build` at all. CI is unaffected either way (it passes --ignore-scripts).
+allowBuilds:
+  # Needed for real: `amc-plugin dev` launches the dev-shell in Electron, which
+  # requires the postinstall-downloaded binary.
+  electron: true
+  # Build tooling for the docs site bundle.
+  esbuild: true
+
 # pnpm 10 reads dependency overrides from HERE, not from package.json's
 # `pnpm.overrides` field (which it now ignores). These pin transitive vite /
 # esbuild past the advisories fixed in the 1.1.0 release train.
