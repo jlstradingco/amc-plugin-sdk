@@ -334,6 +334,8 @@ Read text aloud using whichever voice the user configured in AMC. `isAvailable()
 Synthesis costs real money and is billed to the user. AMC enforces its own per-plugin daily cap (shared with the `ai` capability) and `synthesize()` **rejects** once that cap is hit. Treat the rejection as an expected runtime state, not a bug — surface it to the user rather than retrying.
 :::
 
+See the [Text to Speech API](../api/tts).
+
 ---
 
 ### `sessions.readHistory`
@@ -350,6 +352,8 @@ This is the most privacy-sensitive permission in the SDK, and it is default-deny
 
 Handle a cancelled grant (`result.cancelled === true`) as a normal outcome — declining is the expected default.
 
+See the [Session History API](../api/session-history).
+
 ---
 
 ### `firebase`
@@ -362,6 +366,8 @@ List the Firebase accounts the user is signed into, list their projects, and sta
 Every list method resolves to an **empty array** when the CLI is missing, times out, or returns something unparseable — none of them reject. So an empty result does not mean "no projects". Call `setupStatus()` to tell a genuinely empty account apart from a machine with no Firebase CLI, and branch on `cliInstalled` / `signedIn` before showing an empty state.
 :::
 
+See the [Firebase API](../api/firebase).
+
 ---
 
 ### `spend`
@@ -373,6 +379,8 @@ Read the user's AI spend breakdown — headline totals for yesterday, the last 7
 Read-only, and there is nothing to pass: the host resolves the time windows and the user's timezone itself, so there is no window to widen. Note that the numbers are the user's **global** spend across all their accounts, not a slice scoped to your plugin.
 
 `codingValue` is a shadow figure — what the agent-coding work would have cost at API rates, though it is covered by the flat plan. `outOfPocket` is the money actually spent. Do not present the two as the same thing.
+
+See the [Spend API](../api/spend).
 
 ---
 
