@@ -59,6 +59,45 @@ together.
 
 ### Fixed
 
+- **The four namespaces this release adds are now importable by name.** `tts`,
+  `sessions.readHistory`, `firebase` and `spend` got typed `ctx` namespaces and
+  were re-exported from `src/types/index.ts` — which is INTERNAL. The package
+  exposes `.`, `./browser`, `./validators` and `./testing` and nothing else, so
+  `SpendReportBreakdown`, `PluginTts`, `HistoryMessage` and the rest could not be
+  imported from `@agent-mc/plugin-sdk` at all. The namespaces still worked
+  structurally through `PluginContext`, which is exactly why nothing caught it:
+  an author could use them but not name them. A guard test now compares the two
+  barrels as source text, so the next namespace cannot repeat it.
+
+- **`--version` and `--category` are checked before an upload is spent.** Both
+  were passed straight through to the marketplace, which refuses a non-semver
+  version or an unknown category with a bare `400`. A refused upload still costs
+  one of the five attempts an account gets per hour — the exact waste the local
+  checks exist to prevent — and both flags are retyped on every publish, so they
+  are where a typo lands. `init` had validated its own `--category` since it
+  shipped; `publish` and `validate` trusted the same flag. Neither
+  `--skip-validation` nor `--dry-run` bypasses this: a malformed version is not
+  advice about your file, it is something the server cannot accept either way.
+
+- **The step checks walk pipelines.** `recipe-steps.ts` was introduced so that
+  every check reasoning about steps goes through one collector; `checkSteps` was
+  the one that still read `recipe.steps` directly. A step inside a `pipelines`
+  array with an empty prompt or no name published clean and then could not run —
+  the precise outcome that check exists to prevent, since `pipelines` rides the
+  publish envelope's allow-list and is executed like any other step.
+
+- **The secret scan covers everything a publish ships.** It named `description`
+  and `runLabel` by hand, leaving `parameters`, `onComplete` and `supervisors` —
+  all on the envelope's allow-list, all able to carry an author's string —
+  swept by nothing. It is now driven off `SHAREABLE_FIELDS` itself and descends
+  into nested objects and arrays, so a field added to the envelope is scanned the
+  day it is added. Still warnings only.
+
+- **`validate` honours an explicit `null` token.** The option is typed
+  `StoredToken | null`, so `null` means "signed out" — but `??` treated it as
+  absent and fell through to the real disk-and-network lookup. `status` already
+  had this right; the two now agree.
+
 - **`amc-automation publish` now actually confirms the publishing account.**
   `-y` / `--yes` was declared, documented as "skip the identity confirmation
   prompt", threaded through the options and passed by every test — but never
