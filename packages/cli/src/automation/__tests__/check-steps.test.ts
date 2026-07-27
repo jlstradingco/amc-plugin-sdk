@@ -124,4 +124,60 @@ describe('checkSteps', () => {
       ).toEqual([])
     })
   })
+
+  // An entry that is not a step was invisible to every check and then silently
+  // dropped by the envelope, so the published automation was missing a step and
+  // nothing anywhere said so.
+  describe('entries that are not steps', () => {
+    it('reports a null entry as an error', () => {
+      const found = checkSteps({ steps: [{ name: 'a', prompt: 'go' }, null] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.code).toBe('malformed-step')
+      expect(found[0]?.severity).toBe('error')
+    })
+
+    it('names the slot so the author can find it', () => {
+      const found = checkSteps({ steps: [{ name: 'a', prompt: 'go' }, null] })
+      expect(found[0]?.message).toContain('steps[1]')
+    })
+
+    it('says the entry would be dropped, which is the consequence that matters', () => {
+      const found = checkSteps({ steps: [null] })
+      expect(found[0]?.message).toContain('dropped')
+    })
+
+    it('carries a remedy', () => {
+      expect(checkSteps({ steps: [null] })[0]?.fix).toBeTruthy()
+    })
+
+    it('reports a malformed entry inside a pipeline', () => {
+      const found = checkSteps({ pipelines: { review: ['oops'] } })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.code).toBe('malformed-step')
+      expect(found[0]?.message).toContain('pipelines.review[0]')
+    })
+
+    it('reports every malformed entry in one pass', () => {
+      const found = checkSteps({ steps: [null, 'x', 42] })
+      expect(found.filter((f) => f.code === 'malformed-step')).toHaveLength(3)
+    })
+
+    it('reports malformed entries alongside the ordinary step findings', () => {
+      // A recipe can be wrong in both ways at once; one must not mask the other.
+      const found = checkSteps({ steps: [null, { prompt: '' }] })
+      expect(found.map((f) => f.code).sort()).toEqual([
+        'empty-prompt',
+        'malformed-step',
+        'unnamed-step'
+      ])
+    })
+
+    it('carries no stepName, since there is no step to name', () => {
+      expect(checkSteps({ steps: [null] })[0]?.stepName).toBeUndefined()
+    })
+
+    it('stays quiet when every entry is a real step', () => {
+      expect(checkSteps({ steps: [{ name: 'a', prompt: 'go' }] })).toEqual([])
+    })
+  })
 })
