@@ -47,6 +47,71 @@ together.
   deployed, it prints a notice and the local result stands; an unreachable server
   is never treated as a validation failure.
 
+- **`amc-automation validate` takes `--version` and `--category`.** `--check`
+  used to build its dry-run envelope with a placeholder version, which made the
+  server's version-collision verdict meaningless. It now sends the same
+  submission `publish` would, so "the marketplace accepts this" is an answer
+  about the publish you are actually about to make.
+
+- **`amc-automation publish` takes `--switch-account`,** matching `amc-plugin
+  publish`. Both binaries share one token file, so switching here switches both.
+
+### Fixed
+
+- **`amc-automation publish` now actually confirms the publishing account.**
+  `-y` / `--yes` was declared, documented as "skip the identity confirmation
+  prompt", threaded through the options and passed by every test — but never
+  read, because no confirmation existed. Every publish went out unconfirmed
+  under whatever account the browser happened to be signed into, while the
+  plugin CLI has gated that same trap since it shipped. A published automation
+  carries the author's name permanently, so this was the more consequential half
+  of the pair. It now routes through the plugin CLI's own
+  `evaluatePublishAccount` rather than a second copy, so the two binaries cannot
+  drift apart again.
+
+- **The local checks now walk `pipelines`.** A recipe holds steps in two places:
+  the top-level `steps` array and the named arrays under `pipelines`. Both are
+  published — `pipelines` is on the publish envelope's allow-list — but the
+  portability and secret checks only ever walked `steps`, and the server does not
+  walk pipelines either. So a `script` step or a pasted API key inside a pipeline
+  reached the marketplace with no warning from either side. AMC's own share-time
+  scanner has always walked both.
+
+- **`validate` catches the marketplace's hard limits before an upload is spent.**
+  The automation id is derived from the recipe name and never typed, so the
+  server's `400` naming it was baffling. The marketplace requires 2–64
+  characters: a one-character name slugged to one character, and the local
+  100-character name limit slugged past 64 — both passed `validate` clean and
+  were then refused. Step count (200) and definition size (256 KB) are checked
+  locally for the same reason.
+
+- **`amc-automation status` and `validate --check` renew the token silently.**
+  Both read the stored token directly, so both announced "Not signed in" the
+  moment the hour-long ID token lapsed — the same bug 1.2.0 fixed for `whoami`
+  and `info`, left behind on the newer surface. The automation API client also
+  now renews and retries a credential refused mid-flight, which only the plugin
+  client did.
+
+- **`amc-automation status` reports the server's own reason.** Every failure was
+  reported as "Could not reach the marketplace. Check your connection", so a
+  rejection the server had already explained sent authors off to debug their
+  network instead.
+
+- **A permanent `403` no longer re-uploads the package.** The renew-and-retry
+  path treated every `401` and `403` as a stale credential, but the marketplace's
+  `403` is `FORBIDDEN` — publishing into a namespace another developer owns —
+  which no fresh token can change. The retry re-sent the entire request: up to
+  50 MB of package bytes for a guaranteed failure, plus a second slot burned
+  against the hourly upload limit. `401` still always retries; a `403` earns one
+  only if its body says `AUTH_REQUIRED`.
+
+- **`whoami` no longer promises a renewal it cannot guarantee.** A revoked
+  session fails at exactly the renewal the message called silent.
+
+- **The dev shell's mock spend report is stamped at the epoch,** matching
+  `createTestContext`. A wall-clock timestamp made the two mocks disagree about
+  the same host and made a plugin's own snapshot tests non-deterministic.
+
 ## [1.2.0]
 
 ### Added
