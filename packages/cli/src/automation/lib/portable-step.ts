@@ -108,8 +108,8 @@ export function pickPortablePipelines(pipelines: unknown): Record<string, Record
  * Silent stripping is the wrong shape for an author-facing tool: a field that
  * vanishes between the file on disk and the published automation should be NAMED, or
  * the author debugs its absence against a catalog they cannot see into. AMC reports
- * the same thing as its "removed" list at share time; `checkEnvelope` turns this into
- * one advisory finding.
+ * the same thing as its "removed" list at share time; `checks/stripped-fields.ts`
+ * turns this into one advisory finding.
  */
 export function collectStrippedStepFields(steps: Iterable<Record<string, unknown>>): string[] {
   const stripped = new Set<string>()
