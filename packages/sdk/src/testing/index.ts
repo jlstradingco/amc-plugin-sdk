@@ -96,6 +96,11 @@ export interface TestContextOptions {
     projects?: FirebaseProject[]
     projectsByAccount?: Record<string, FirebaseProject[]>
     setupStatus?: Partial<FirebaseSetupStatus>
+    /**
+     * What startLogin() reports. Defaults to false, matching the rest of these
+     * defaults: no CLI is installed, so the spawn could not have succeeded.
+     */
+    loginStarts?: boolean
   }
   /** Seed ctx.spend.getBreakdown(). Defaults to an all-zero breakdown. */
   spend?: Partial<SpendReportBreakdown>
@@ -418,7 +423,10 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           billing: { checked: false, hasOpenAccount: false },
           ...(opts.firebase?.setupStatus ?? {})
         }),
-      startLogin: () => Promise.resolve({ started: true })
+      // Defaults false to agree with the dev-shell mock and with the other
+      // defaults here: cliInstalled is false, so a spawn cannot have succeeded.
+      // Returning true made the two mocks disagree about the same host.
+      startLogin: () => Promise.resolve({ started: opts.firebase?.loginStarts ?? false })
     },
 
     spend: {
