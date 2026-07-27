@@ -23,8 +23,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Pinned to the `packageManager` major, as in ci.yml.
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@11
       - name: Install dependencies
         run: pnpm install --ignore-scripts
       - name: Build docs
