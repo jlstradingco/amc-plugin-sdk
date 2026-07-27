@@ -48,6 +48,25 @@ together.
   versions in one afternoon meant several trips through GitHub OAuth. Renewal is
   silent, and every failure (expired, revoked, offline) still falls back to the
   interactive flow.
+
+  Renewal also reaches the read-only commands. `whoami` and `info` read the
+  stored token directly, so they announced "Not signed in" the moment the
+  hour-long ID token lapsed — the very symptom the refresh exists to end. `info`
+  now renews silently before checking marketplace status; `whoami` reports the
+  stored identity (a local fact, no network) and says when renewal is pending.
+  Neither can trigger a browser.
+- **`logout` now clears an expired token instead of ignoring it.** It read
+  through the same expiry check, so an expired token made it print "Not signed
+  in" and return *without* deleting the file — stranding the long-lived refresh
+  token on disk, which silent renewal then turns back into a working credential.
+  Signing out has to remove the credential precisely when it looks stale.
+- **`publish` no longer rejects the four permissions this release adds.** The
+  preflight check kept its own hand-copied permission list, so a manifest
+  declaring `tts`, `sessions.readHistory`, `firebase` or `spend` still failed at
+  "Unknown permission(s)" and exited 1 — the SDK enum was fixed but the gate one
+  layer out was not. That list is now derived from the SDK enum rather than
+  restated, which also restores `system` and `chrome`, missing from it since
+  before this release.
 - **A fresh clone can build again.** `pnpm-workspace.yaml` carried unanswered
   `pnpm approve-builds` placeholders, which made pnpm 11 abort every install and
   script in the workspace with `ERR_PNPM_IGNORED_BUILDS`. CI never hit it because
