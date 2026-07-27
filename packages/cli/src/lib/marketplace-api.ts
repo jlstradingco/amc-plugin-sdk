@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { getBaseUrl, type StoredToken } from './auth.js'
+import { getBaseUrl, tryRefreshStoredToken, type StoredToken } from './auth.js'
 
 interface ApiErrorResponse {
   error: true
@@ -23,6 +23,34 @@ export class MarketplaceApiError extends Error {
 
 function authHeaders(token: StoredToken): Record<string, string> {
   return { Authorization: `Bearer ${token.token}` }
+}
+
+/**
+ * Send an authenticated request, renewing once if the server rejects the token.
+ *
+ * The freshness check happens before a command runs, so a token can still be
+ * refused mid-flight: a long upload can outlive it, the local clock can be off
+ * by more than the 5-minute buffer, or the session can be revoked server-side.
+ * Without this, publishing failed outright with a raw 401 while a perfectly
+ * good refresh token sat on disk.
+ *
+ * `send` is re-invoked rather than a saved Response being replayed, so each
+ * attempt builds its own request body. Retrying is safe because a 401/403 means
+ * the server rejected the call before doing any work — no double publish.
+ */
+async function sendAuthed(
+  token: StoredToken,
+  send: (t: StoredToken) => Promise<Response>
+): Promise<Response> {
+  const res = await send(token)
+  if (res.status !== 401 && res.status !== 403) return res
+
+  const refreshed = await tryRefreshStoredToken()
+  // Nothing to renew with, or the refresh token is dead too — let the caller
+  // surface the original rejection rather than inventing a different error.
+  if (!refreshed) return res
+
+  return send(refreshed)
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -70,15 +98,18 @@ export async function uploadPackage(
   const fileBuffer = fs.readFileSync(packagePath)
   const fileName = path.basename(packagePath)
 
-  // Build multipart form data (Node.js 22 has native FormData)
-  const formData = new FormData()
-  formData.append('package', new Blob([fileBuffer]), fileName)
-  if (changelog) formData.append('changelog', changelog)
+  const res = await sendAuthed(token, (t) => {
+    // Rebuilt per attempt: a retry needs its own body, and a large upload is
+    // exactly the case that outlives its token.
+    const formData = new FormData()
+    formData.append('package', new Blob([fileBuffer]), fileName)
+    if (changelog) formData.append('changelog', changelog)
 
-  const res = await globalThis.fetch(`${getBaseUrl()}/uploadPlugin`, {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: formData
+    return globalThis.fetch(`${getBaseUrl()}/uploadPlugin`, {
+      method: 'POST',
+      headers: authHeaders(t),
+      body: formData
+    })
   })
 
   return handleResponse(res)
@@ -87,9 +118,11 @@ export async function uploadPackage(
 export async function getMyPlugins(
   token: StoredToken
 ): Promise<{ submissions: Array<{ id: string; pluginId: string; version: string; status: string; submittedAt: string; reviewNotes: string | null }> }> {
-  const res = await globalThis.fetch(`${getBaseUrl()}/getMyPlugins`, {
-    headers: authHeaders(token)
-  })
+  const res = await sendAuthed(token, (t) =>
+    globalThis.fetch(`${getBaseUrl()}/getMyPlugins`, {
+      headers: authHeaders(t)
+    })
+  )
   return handleResponse(res)
 }
 
