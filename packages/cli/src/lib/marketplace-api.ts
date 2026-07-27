@@ -26,6 +26,43 @@ function authHeaders(token: StoredToken): Record<string, string> {
 }
 
 /**
+ * Error codes for which a renewed credential could plausibly succeed. Anything
+ * else is a decision about WHO you are, not about whether your token is fresh,
+ * and retrying it just repeats the request.
+ */
+const RENEWABLE_ERROR_CODES = new Set(['AUTH_REQUIRED'])
+
+/**
+ * Is this rejection worth spending a token renewal and a second request on?
+ *
+ * 401 always is — that is what the server's `authenticate` middleware returns for
+ * a missing, malformed, or expired ID token.
+ *
+ * 403 usually is NOT. The marketplace's 403 is `FORBIDDEN`, raised for things a
+ * new token cannot change: publishing into a namespace another developer owns,
+ * or calling an admin endpoint without the role. Retrying those re-sends the
+ * ENTIRE request — for `uploadPlugin` that is up to 50 MB of package bytes, sent
+ * a second time for a guaranteed failure, and a second slot burned against the
+ * hourly upload limit. So a 403 only earns a retry when the body identifies it
+ * as an auth-freshness problem after all (a proxy or a future server revision
+ * answering `AUTH_REQUIRED` with the wrong status).
+ *
+ * The body is read from a CLONE: the original response still has to be readable
+ * by `handleResponse` when we decide not to retry.
+ */
+async function isRenewableRejection(res: Response): Promise<boolean> {
+  if (res.status === 401) return true
+  if (res.status !== 403) return false
+  try {
+    const body = (await res.clone().json()) as Partial<ApiErrorResponse>
+    return typeof body.code === 'string' && RENEWABLE_ERROR_CODES.has(body.code)
+  } catch {
+    // Not JSON, or unreadable — treat an unexplained 403 as the permanent kind.
+    return false
+  }
+}
+
+/**
  * Send an authenticated request, renewing once if the server rejects the token.
  *
  * The freshness check happens before a command runs, so a token can still be
@@ -35,15 +72,16 @@ function authHeaders(token: StoredToken): Record<string, string> {
  * good refresh token sat on disk.
  *
  * `send` is re-invoked rather than a saved Response being replayed, so each
- * attempt builds its own request body. Retrying is safe because a 401/403 means
- * the server rejected the call before doing any work — no double publish.
+ * attempt builds its own request body. Retrying is safe for the rejections
+ * `isRenewableRejection` admits: the server rejects them in its auth middleware,
+ * before the handler runs, so there is no double publish.
  */
 async function sendAuthed(
   token: StoredToken,
   send: (t: StoredToken) => Promise<Response>
 ): Promise<Response> {
   const res = await send(token)
-  if (res.status !== 401 && res.status !== 403) return res
+  if (!(await isRenewableRejection(res))) return res
 
   const refreshed = await tryRefreshStoredToken()
   // Nothing to renew with, or the refresh token is dead too — let the caller
