@@ -22,8 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Pinned to the major that package.json's `packageManager` field names.
+      # Unpinned, this tracks whatever npm calls latest, so a pnpm major release
+      # lands in CI unannounced — and `allowBuilds` in pnpm-workspace.yaml is a
+      # v11 setting that replaced onlyBuiltDependencies.
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@11
       # --ignore-scripts skips electron's binary download (a dev-shell dep);
       # tsc and the mock-context tests never launch a real Electron window.
       - name: Install dependencies
