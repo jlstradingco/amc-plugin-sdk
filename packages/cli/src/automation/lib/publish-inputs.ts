@@ -1,4 +1,5 @@
 import { AUTOMATION_CATEGORIES, type AutomationCategory } from './envelope.js'
+import type { Finding } from './findings.js'
 
 /**
  * Validation of the FLAGS a publish carries, as opposed to the recipe file's contents.
@@ -22,6 +23,8 @@ import { AUTOMATION_CATEGORIES, type AutomationCategory } from './envelope.js'
 export const VERSION_PATTERN = /^\d+\.\d+\.\d+$/
 
 export interface InputProblem {
+  /** Stable machine code, so `validate --json` can report these beside the recipe findings. */
+  code: 'bad-version' | 'bad-category'
   message: string
   suggestion: string
 }
@@ -46,6 +49,7 @@ export function checkPublishInputs(opts: {
 
   if (opts.version !== undefined && !isValidVersion(opts.version)) {
     problems.push({
+      code: 'bad-version',
       message: `"${opts.version}" is not a valid version.`,
       suggestion:
         'Use three numbers separated by dots, e.g. 1.0.0. The marketplace accepts nothing else.'
@@ -54,10 +58,24 @@ export function checkPublishInputs(opts: {
 
   if (opts.category !== undefined && !isValidCategory(opts.category)) {
     problems.push({
+      code: 'bad-category',
       message: `"${opts.category}" is not a valid category.`,
       suggestion: `Use one of: ${AUTOMATION_CATEGORIES.join(', ')}.`
     })
   }
 
   return problems
+}
+
+/**
+ * The same problems shaped as recipe findings, so `validate` can report a bad flag
+ * in the same list — and the same `--json` payload — as everything else it found.
+ */
+export function inputProblemsAsFindings(problems: InputProblem[]): Finding[] {
+  return problems.map((p) => ({
+    severity: 'error' as const,
+    code: p.code,
+    message: p.message,
+    fix: p.suggestion
+  }))
 }
