@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   collectAllSteps,
   collectTopLevelSteps,
-  collectPipelineSteps
+  collectPipelineSteps,
+  collectMalformedSteps
 } from '../lib/recipe-steps.js'
 
 const labels = (recipe: Record<string, unknown>): string[] =>
@@ -120,5 +121,75 @@ describe('collectAllSteps', () => {
   it('does not throw on an empty recipe', () => {
     expect(() => collectAllSteps({})).not.toThrow()
     expect(collectAllSteps({})).toEqual([])
+  })
+})
+
+describe('collectMalformedSteps', () => {
+  it('returns nothing for a well-formed recipe', () => {
+    expect(collectMalformedSteps({ steps: [{ name: 'a', prompt: 'b' }] })).toEqual([])
+  })
+
+  it('returns nothing for a recipe with no steps at all', () => {
+    expect(collectMalformedSteps({})).toEqual([])
+  })
+
+  it('names a null entry by its slot', () => {
+    expect(collectMalformedSteps({ steps: [{ name: 'a' }, null] })).toEqual(['steps[1]'])
+  })
+
+  it('names every non-object entry kind', () => {
+    expect(collectMalformedSteps({ steps: [null, 'x', 42, true, []] })).toEqual([
+      'steps[0]',
+      'steps[1]',
+      'steps[2]',
+      'steps[3]',
+      'steps[4]'
+    ])
+  })
+
+  it('treats a nested array as malformed, not as a step', () => {
+    expect(collectMalformedSteps({ steps: [[{ name: 'a' }]] })).toEqual(['steps[0]'])
+  })
+
+  it('keeps the index the author sees, not the index after skipping', () => {
+    // The whole reason the collectors skip rather than drop: a malformed entry must
+    // not renumber the steps around it.
+    expect(collectMalformedSteps({ steps: [{ name: 'a' }, null, { name: 'c' }, null] })).toEqual([
+      'steps[1]',
+      'steps[3]'
+    ])
+  })
+
+  it('finds malformed entries inside pipelines', () => {
+    expect(
+      collectMalformedSteps({ pipelines: { review: [{ name: 'r' }, null] } })
+    ).toEqual(['pipelines.review[1]'])
+  })
+
+  it('reports top-level entries before pipeline ones', () => {
+    expect(
+      collectMalformedSteps({ steps: [null], pipelines: { a: [null] } })
+    ).toEqual(['steps[0]', 'pipelines.a[0]'])
+  })
+
+  it('orders pipelines by name so the output does not shuffle', () => {
+    expect(
+      collectMalformedSteps({ pipelines: { zeta: [null], alpha: [null] } })
+    ).toEqual(['pipelines.alpha[0]', 'pipelines.zeta[0]'])
+  })
+
+  it('ignores a non-array steps field, which is a different problem', () => {
+    // `checkStructure` reports "no steps" for this; claiming a malformed entry too
+    // would be two findings for one mistake.
+    expect(collectMalformedSteps({ steps: 'nope' })).toEqual([])
+  })
+
+  it('ignores a pipeline whose value is not an array', () => {
+    expect(collectMalformedSteps({ pipelines: { a: 'nope' } })).toEqual([])
+  })
+
+  it('does not throw on malformed pipelines', () => {
+    expect(() => collectMalformedSteps({ pipelines: 'nope' })).not.toThrow()
+    expect(collectMalformedSteps({ pipelines: 'nope' })).toEqual([])
   })
 })
