@@ -300,5 +300,66 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         Promise.resolve(`https://mock.local/recordings/${recordingId}`),
       delete: () => Promise.resolve(),
     },
+
+    // The four namespaces below mirror the HOST's real posture rather than
+    // returning friendly stubs, so a plugin developed against the dev shell hits
+    // the same branches it will hit in AMC. A permissive mock here would let an
+    // author ship code that has never once handled "the user said no".
+    tts: {
+      // No voice is configured in the dev shell, exactly like a fresh install.
+      isAvailable: () => Promise.resolve(false),
+      synthesize: () =>
+        Promise.reject(new Error('Text-to-speech is not configured. Add a voice in Settings.')),
+    },
+
+    sessionHistory: {
+      listProjects: () => Promise.resolve([]),
+      listSessions: () => Promise.resolve([]),
+      // Default-deny: nothing is granted in the dev shell, so every read throws
+      // just as it would for an ungranted session in AMC.
+      getMessages: () => Promise.reject(new Error('session not granted to this plugin')),
+      // There is no user to show a picker to — report a cancelled grant, the
+      // outcome a plugin must handle anyway.
+      requestAccess: () =>
+        Promise.resolve({
+          requestId: `mock-history-grant-${Date.now()}`,
+          cancelled: true,
+          sessionIds: [],
+          projectIds: [],
+        }),
+    },
+
+    firebase: {
+      // Empty, never rejecting — the host swallows every CLI failure into [].
+      listAccounts: () => Promise.resolve([]),
+      listProjects: () => Promise.resolve([]),
+      listProjectsForAccount: () => Promise.resolve([]),
+      setupStatus: () =>
+        Promise.resolve({
+          cliInstalled: false,
+          signedIn: false,
+          accounts: [],
+          firebaseAccess: 'unknown' as const,
+          billing: { checked: false, hasOpenAccount: false },
+        }),
+      startLogin: () => Promise.resolve({ started: false }),
+    },
+
+    spend: {
+      getBreakdown: () => {
+        const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+        return Promise.resolve({
+          generatedAt: new Date().toISOString(),
+          windows: {
+            yesterday: { ...zeroWindow },
+            week: { ...zeroWindow },
+            month: { ...zeroWindow },
+          },
+          codingEngines: [],
+          backgroundFeatures: [],
+          notableCharges: [],
+        })
+      },
+    },
   }
 }
