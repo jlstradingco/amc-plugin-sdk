@@ -1,6 +1,6 @@
 {
   "name": "@agent-mc/plugin-sdk",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "SDK for building Agent Mission Control plugins",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,7 +31,9 @@
       "default": "./dist/testing/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && node -e \"require('fs').writeFileSync('dist/cjs/package.json',JSON.stringify({type:'commonjs'}))\"",
     "clean": "rm -rf dist",
