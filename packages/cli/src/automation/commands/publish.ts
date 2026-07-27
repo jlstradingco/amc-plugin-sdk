@@ -11,9 +11,32 @@ import {
   type AutomationCategory
 } from '../lib/envelope.js'
 import { uploadAutomation } from '../api/automation-api.js'
-import { authenticate, type StoredToken } from '../../lib/auth.js'
+import { authenticate, getStoredToken, clearToken, type StoredToken } from '../../lib/auth.js'
 import { MarketplaceApiError } from '../../lib/marketplace-api.js'
-import { ok, fail, info, heading, actionableError } from '../../lib/output.js'
+import { evaluatePublishAccount, SWITCH_ACCOUNT_GUIDANCE } from '../../lib/publish-account.js'
+import { ok, fail, info, label, heading, actionableError } from '../../lib/output.js'
+
+/** The interactive identity confirmation, isolated so tests can drive it without a TTY. */
+export type ConfirmIdentity = (github: string) => Promise<boolean>
+
+/**
+ * Ask, out loud, whether this is the right account to publish under.
+ *
+ * Loaded lazily so `runPublish` stays importable (and testable) without pulling in
+ * a TTY-dependent prompt library, and so `--yes` runs never construct one at all.
+ */
+const promptForIdentity: ConfirmIdentity = async (github) => {
+  const { default: prompts } = await import('prompts')
+  const { default: chalk } = await import('chalk')
+  label('\nPublishing as:', chalk.bold(github))
+  const { confirmed } = await prompts({
+    type: 'confirm',
+    name: 'confirmed',
+    message: `Publish this automation to the marketplace as "${github}"?`,
+    initial: false
+  })
+  return confirmed === true
+}
 
 export interface PublishOptions {
   cwd: string
@@ -24,8 +47,11 @@ export interface PublishOptions {
   changelog?: string
   as?: string
   yes?: boolean
+  switchAccount?: boolean
   dryRun?: boolean
   skipValidation?: boolean
+  /** Overrides the interactive confirmation. Tests inject; the CLI never passes it. */
+  confirmIdentity?: ConfirmIdentity
 }
 
 export async function runPublish(
@@ -58,14 +84,40 @@ export async function runPublish(
     }
   }
 
+  // --switch-account forces a fresh sign-in before anything else reads the token.
+  if (opts.switchAccount && !opts.token) {
+    const prev = getStoredToken()
+    clearToken()
+    if (prev) info(`Signed out (was: ${prev.github})`)
+    heading('Switching GitHub account')
+    console.log(SWITCH_ACCOUNT_GUIDANCE)
+    console.log('')
+  }
+
   const token = opts.token ?? (await authenticate())
 
-  if (opts.as && opts.as !== token.github) {
-    actionableError(
-      `Signed in as ${token.github}, not ${opts.as}.`,
-      'Sign out with `amc-plugin logout` and publish again, or drop --as.'
-    )
+  // The silent-account trap: GitHub OAuth reuses whatever account the default browser
+  // is already signed into, so a publish can go out under an identity the author never
+  // chose — and a published automation carries that name permanently. The plugin
+  // surface has confirmed this since it shipped; the automation surface declared a
+  // --yes flag to SKIP the confirmation without ever having one, so every publish went
+  // out unconfirmed. Same shared gate, so the two binaries cannot drift apart again.
+  const gate = evaluatePublishAccount(token.github, {
+    as: opts.as,
+    yes: opts.yes,
+    commandName: 'amc-automation publish'
+  })
+  if (gate.action === 'abort') {
+    actionableError(gate.message, gate.suggestion)
     return { exitCode: 1 }
+  }
+  if (gate.action === 'confirm') {
+    const confirmed = await (opts.confirmIdentity ?? promptForIdentity)(gate.github)
+    if (!confirmed) {
+      info('Cancelled — nothing was published.')
+      info("Wrong account? Run 'amc-automation publish --switch-account'.")
+      return { exitCode: 1 }
+    }
   }
 
   const envelope = buildEnvelope(recipe, {
@@ -109,7 +161,8 @@ export const publishCommand = new Command('publish')
   )
   .option('--changelog <text>', 'What changed in this version')
   .option('--as <github-user>', 'Assert the expected GitHub account; aborts on mismatch')
-  .option('-y, --yes', 'Skip the identity confirmation prompt')
+  .option('--switch-account', 'Sign out first and re-authenticate as a different account')
+  .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
   .option('--dry-run', 'Do everything except the upload')
   .option('--skip-validation', 'Publish even if local checks report errors')
   .action(async (file: string | undefined, options: Record<string, unknown>) => {
@@ -120,6 +173,7 @@ export const publishCommand = new Command('publish')
       category: options.category as AutomationCategory,
       changelog: options.changelog as string,
       as: options.as as string,
+      switchAccount: options.switchAccount as boolean,
       yes: options.yes as boolean,
       dryRun: options.dryRun as boolean,
       skipValidation: options.skipValidation as boolean
