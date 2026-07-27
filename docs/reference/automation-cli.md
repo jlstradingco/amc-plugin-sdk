@@ -45,10 +45,18 @@ An existing `README.md` is left alone unless you pass `--force`.
 Runs the local checks. `[file]` is optional when the directory holds exactly one
 `*.recipe.json`; with several, the CLI names them and asks you to pick.
 
-| Option | Description |
-|---|---|
-| `--check` | Also ask the marketplace for the authoritative verdict |
-| `--json` | Emit machine-readable findings |
+| Option | Default | Description |
+|---|---|---|
+| `--check` | off | Also ask the marketplace for the authoritative verdict |
+| `--version <version>` | `1.0.0` | The version to validate as, so `--check` can answer about version collisions |
+| `--category <category>` | `other` | The category to validate as |
+| `--json` | off | Emit machine-readable findings |
+
+`--check` builds the same submission `publish` would send, so its verdict covers
+the two rejections that only the server can see: the automation id belonging to
+another developer, and this version already being published. Pass the same
+`--version` you intend to publish with, or the collision answer is about a
+version you were never going to submit.
 
 ```bash
 $ amc-automation validate
@@ -88,6 +96,11 @@ validation failure.
 | `bad-schema-version` | error | `schemaVersion` is not `1` |
 | `unnamed-step` | error | A step has no `name` |
 | `empty-prompt` | error | A step has no usable `prompt` |
+| `automation-id-too-short` | error | The name slugs to fewer than 2 characters |
+| `automation-id-too-long` | error | The name slugs to more than 64 characters |
+| `automation-id-invalid` | error | The name slugs to something the marketplace will not accept |
+| `too-many-steps` | error | More than 200 steps |
+| `definition-too-large` | error | The shareable part exceeds 256 KB |
 | `project-scope` | error | `scope` is `project` |
 | `sub-recipe-step` | error | A step calls another recipe |
 | `script-step` | error | A step runs a local script |
@@ -107,20 +120,44 @@ Validates, authenticates, and uploads for review.
 | `--category <category>` | `other` | As per `init` |
 | `--changelog <text>` | empty | What changed in this version |
 | `--as <github-user>` | — | Abort unless this account is signed in |
-| `-y, --yes` | off | Skip the identity confirmation |
+| `--switch-account` | off | Sign out first and re-authenticate as a different account |
+| `-y, --yes` | off | Skip the identity confirmation prompt (for CI) |
 | `--dry-run` | off | Everything except the upload |
 | `--skip-validation` | off | Publish despite local errors |
 
 ```bash
 $ amc-automation publish --changelog "first release"
+
+Publishing as: octocat
+? Publish this automation to the marketplace as "octocat"? › (y/N)
 ℹ Publishing daily-digest v1.0.0 as octocat...
 ✓ Submitted for review (submission abc123)
 ℹ Run `amc-automation status` to follow the review.
 ```
 
-The automation id is derived from the recipe's `name` — `"Daily Digest"` becomes
+### The account it publishes under
+
+GitHub sign-in silently reuses whatever account your default browser is already
+logged into, so a publish can go out under an identity you never chose — and a
+published automation carries that name permanently. Every publish therefore
+confirms the account first, defaulting to **no**.
+
+- Wrong account? Answer `n`, then `amc-automation publish --switch-account`.
+- Automating it? `-y` skips the question, and `--as <user>` aborts outright if
+  the signed-in account is not the one you named. Use both together in CI.
+
+The sign-in is shared with `amc-plugin`, so switching the account here switches
+it for both.
+
+### The automation id
+
+The id is derived from the recipe's `name` — `"Daily Digest"` becomes
 `daily-digest`. Rename the automation and you publish a *different* one, so
 choose the name before the first publish.
+
+The marketplace requires that derived id to be 2–64 characters, so a
+single-character name and a name near the 100-character limit are both rejected.
+`validate` reports either one before you spend an upload.
 
 In CI, pair `--as` with `-y`:
 
@@ -149,6 +186,10 @@ daily-digest v1.0.0 Pending review
 
 Statuses are **Pending review**, **Published**, and **Changes requested**;
 reviewer notes print underneath when present.
+
+Only your own submissions are listed, most recent 50 first. When the marketplace
+refuses the request it prints the server's own reason; "Could not reach the
+marketplace" means exactly that and nothing else.
 
 ---
 
