@@ -151,6 +151,45 @@ describe('CLI marketplace token refresh', () => {
       expect(ttlMs).toBeLessThanOrEqual(3_600_000)
     })
 
+    it.each(['0', '-3600', '30'])(
+      'floors an unusably short expires_in of %s at the freshness buffer',
+      async (expiresIn) => {
+        // Honouring these literally minted a token isTokenFresh rejects on
+        // sight, so every later command burned a refresh and still reported
+        // itself signed out.
+        writeToken(expiredToken())
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ id_token: 'fresh-id-token', expires_in: expiresIn })
+          })
+        )
+
+        const { tryRefreshStoredToken, isTokenFresh } = await import('../lib/auth.js')
+        const result = await tryRefreshStoredToken()
+
+        expect(result).not.toBeNull()
+        expect(isTokenFresh(result!)).toBe(true)
+      }
+    )
+
+    it('honours a normal expires_in rather than flooring everything', async () => {
+      writeToken(expiredToken())
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({ id_token: 'fresh-id-token', expires_in: '7200' })
+        })
+      )
+
+      const { tryRefreshStoredToken } = await import('../lib/auth.js')
+      const result = await tryRefreshStoredToken()
+      const ttlMs = new Date(result!.expiresAt).getTime() - Date.now()
+      expect(ttlMs).toBeGreaterThan(7_000_000)
+    })
+
     it('returns null when no token is stored', async () => {
       if (fs.existsSync(TOKEN_PATH)) fs.unlinkSync(TOKEN_PATH)
       const { tryRefreshStoredToken } = await import('../lib/auth.js')
@@ -268,6 +307,25 @@ describe('CLI marketplace token refresh', () => {
       fs.writeFileSync(TOKEN_PATH, 'not json at all', 'utf-8')
       const { getStoredTokenIgnoringExpiry } = await import('../lib/auth.js')
       expect(getStoredTokenIgnoringExpiry()).toBeNull()
+    })
+
+    it('writes the token file 0600, not world-readable', async () => {
+      // The stored refresh token is an indefinitely reusable publish credential
+      // once silent renewal is in play, so the default mode is not acceptable.
+      const { saveToken } = await import('../lib/auth.js')
+      saveToken({
+        token: 't',
+        refreshToken: 'r',
+        uid: 'u',
+        github: 'octocat',
+        expiresAt: new Date(Date.now() + 3600_000).toISOString()
+      })
+
+      expect(fs.existsSync(TOKEN_PATH)).toBe(true)
+      if (process.platform !== 'win32') {
+        // Windows has no POSIX modes; asserting there would fail for no reason.
+        expect(fs.statSync(TOKEN_PATH).mode & 0o777).toBe(0o600)
+      }
     })
 
     it('leaves no credential behind when logout clears an expired token', async () => {
