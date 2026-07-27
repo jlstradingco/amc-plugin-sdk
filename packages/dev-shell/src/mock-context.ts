@@ -349,7 +349,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       getBreakdown: () => {
         const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
         return Promise.resolve({
-          generatedAt: new Date().toISOString(),
+          // Epoch, matching createTestContext's emptySpendBreakdown. A wall-clock
+          // timestamp made the dev shell and the test harness disagree about the same
+          // host, and made a plugin's own snapshot tests non-deterministic.
+          generatedAt: new Date(0).toISOString(),
           windows: {
             yesterday: { ...zeroWindow },
             week: { ...zeroWindow },
