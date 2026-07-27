@@ -28,6 +28,18 @@ const FIREBASE_WEB_API_KEY =
 
 const SECURE_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token'
 
+/**
+ * Read the token file as-is, ignoring expiry. Returns null when absent/corrupt.
+ *
+ * For callers that need the stored IDENTITY rather than a usable credential:
+ * `whoami` reports who you are (a local fact, no network), and `logout` must be
+ * able to delete a credential precisely when it has gone stale. Anything that
+ * calls the marketplace API wants `getStoredTokenOrRefresh()` instead.
+ */
+export function getStoredTokenIgnoringExpiry(): StoredToken | null {
+  return readStoredTokenRaw()
+}
+
 /** Read the token file as-is, ignoring expiry. Returns null when absent/corrupt. */
 function readStoredTokenRaw(): StoredToken | null {
   if (!fs.existsSync(TOKEN_PATH)) return null
@@ -103,6 +115,21 @@ export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
   } catch {
     return null
   }
+}
+
+/**
+ * The stored token, silently renewed if it has expired. Never opens a browser.
+ *
+ * The read-only commands cannot call `authenticate()` — that would hijack, say,
+ * `amc-plugin info` into an interactive sign-in — but reading the file directly
+ * meant they reported "Not signed in" the moment the hour-long ID token lapsed,
+ * even though the refresh token beside it was still good. Returns null only when
+ * there is genuinely nothing usable, which is the honest "signed out" answer.
+ */
+export async function getStoredTokenOrRefresh(): Promise<StoredToken | null> {
+  const existing = getStoredToken()
+  if (existing) return existing
+  return tryRefreshStoredToken()
 }
 
 export function saveToken(token: StoredToken): void {
