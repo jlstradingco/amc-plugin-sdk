@@ -93,6 +93,78 @@ describe('buildEnvelope', () => {
     expect('description' in env.definition).toBe(false)
   })
 
+  it('strips non-shareable fields from inside a top-level step', () => {
+    // The top-level allow-list alone never protected this: `steps` was copied
+    // verbatim, so anything an author's step carried was published.
+    const env = buildEnvelope(
+      { ...recipe, steps: [{ name: 'a', prompt: 'go', id: 'local', script: './x.sh' }] },
+      opts
+    )
+    const [step] = env.definition.steps as Record<string, unknown>[]
+    expect(step).toEqual({ name: 'a', prompt: 'go' })
+  })
+
+  it('strips non-shareable fields from inside a pipeline step', () => {
+    const env = buildEnvelope(
+      {
+        ...recipe,
+        pipelines: { review: [{ name: 'r', prompt: 'p', targetProjectId: 'proj-1' }] }
+      },
+      opts
+    )
+    const pipelines = env.definition.pipelines as Record<string, Record<string, unknown>[]>
+    expect(pipelines.review).toEqual([{ name: 'r', prompt: 'p' }])
+  })
+
+  it('keeps every allow-listed step field', () => {
+    const env = buildEnvelope(
+      {
+        ...recipe,
+        steps: [
+          {
+            name: 'a',
+            prompt: 'go',
+            approvalGate: { message: 'ok?' },
+            supervisor: { systemPrompt: 'watch' },
+            timeoutMinutes: 5
+          }
+        ]
+      },
+      opts
+    )
+    const [step] = env.definition.steps as Record<string, unknown>[]
+    expect(step).toEqual({
+      name: 'a',
+      prompt: 'go',
+      approvalGate: { message: 'ok?' },
+      supervisor: { systemPrompt: 'watch' },
+      timeoutMinutes: 5
+    })
+  })
+
+  it('leaves steps absent when the recipe has none, rather than inventing an array', () => {
+    const { steps: _drop, ...noSteps } = recipe
+    expect('steps' in buildEnvelope(noSteps, opts).definition).toBe(false)
+  })
+
+  it('leaves pipelines absent when the recipe has none', () => {
+    expect('pipelines' in buildEnvelope(recipe, opts).definition).toBe(false)
+  })
+
+  it('normalizes a non-array steps field to an empty array', () => {
+    // Reaching this needs --skip-validation (checkStructure errors on it first), but
+    // the envelope must still emit a shape the server can parse rather than forwarding
+    // whatever the file held.
+    const env = buildEnvelope({ ...recipe, steps: 'nope' }, opts)
+    expect(env.definition.steps).toEqual([])
+  })
+
+  it('does not mutate the caller\'s recipe while filtering', () => {
+    const source = { ...recipe, steps: [{ name: 'a', prompt: 'go', script: './x.sh' }] }
+    buildEnvelope(source, opts)
+    expect(source.steps[0]!.script).toBe('./x.sh')
+  })
+
   it('exposes the six categories', () => {
     expect([...AUTOMATION_CATEGORIES]).toEqual([
       'planning',
