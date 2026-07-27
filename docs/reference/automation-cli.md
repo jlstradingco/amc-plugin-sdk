@@ -89,11 +89,15 @@ validation failure.
 
 | Code | Severity | Meaning |
 |---|---|---|
+| `recipe-file` | error | The recipe file is missing, unreadable, not JSON, or ambiguous |
+| `bad-version` | error | `--version` is not three dot-separated numbers |
+| `bad-category` | error | `--category` is not one of the six |
 | `missing-name` | error | No `name`, or it is blank |
 | `name-too-long` | error | Over 100 characters |
 | `no-steps` | error | `steps` missing or empty |
 | `bad-execution-mode` | error | Not `multi-session` / `same-session` / `parallel` |
 | `bad-schema-version` | error | `schemaVersion` is not `1` |
+| `malformed-step` | error | An entry in a steps array is not a step, so it would be dropped |
 | `unnamed-step` | error | A step has no `name` |
 | `empty-prompt` | error | A step has no usable `prompt` |
 | `automation-id-too-short` | error | The name slugs to fewer than 2 characters |
@@ -107,6 +111,14 @@ validation failure.
 | `prompt-file` | error | A step reads its prompt from disk |
 | `target-project` | error | A step is pinned to a local project |
 | `possible-secret` | warning | Something key-shaped or an absolute user path |
+| `field-not-published` | info | A top-level field the envelope does not carry |
+| `step-field-not-published` | info | A step field the envelope does not carry |
+
+`recipe-file`, `bad-version` and `bad-category` are about the *inputs* rather than
+the recipe's contents, so they can be the only finding present. `validate --json`
+emits the same payload shape for them as for everything else — including when the
+file could not be loaded at all, so a CI step never has to tell empty stdout from
+a crashed process.
 
 ---
 
