@@ -121,6 +121,77 @@ describe('checkSecrets', () => {
     })
   })
 
+  // The scan is driven off the publish envelope's allow-list, so it covers exactly what a
+  // publish ships. Naming fields by hand reached description and runLabel only.
+  describe('the rest of the shareable envelope', () => {
+    const KEY = 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA'
+
+    it('flags a secret in a parameter default', () => {
+      const found = checkSecrets({ parameters: [{ name: 'token', default: KEY }] })
+      expect(found.map((f) => f.code)).toContain('possible-secret')
+      expect(found[0]?.message).toContain('parameters[0].default')
+    })
+
+    it('flags a secret in onComplete', () => {
+      const found = checkSecrets({ onComplete: { notify: `Bearer ${KEY}` } })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('onComplete.notify')
+    })
+
+    it('flags a secret in a supervisor prompt', () => {
+      const found = checkSecrets({ supervisors: [{ prompt: `use ${KEY}` }] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('supervisors[0].prompt')
+    })
+
+    it('flags an absolute user path in the name', () => {
+      const found = checkSecrets({ name: 'Digest for C:\\Users\\jordan' })
+      expect(found[0]?.message).toContain('name')
+      expect(found[0]?.message).toContain('Windows user path')
+    })
+
+    it('descends through nested objects and arrays', () => {
+      const found = checkSecrets({ parameters: { outer: { inner: [{ deep: KEY }] } } })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('parameters.outer.inner[0].deep')
+    })
+
+    it('stops descending at the depth guard rather than recursing forever', () => {
+      // 12 levels deep — past MAX_SCAN_DEPTH, so the value is not reached and, more to
+      // the point, the walk terminates.
+      let nested: Record<string, unknown> = { leaf: KEY }
+      for (let i = 0; i < 12; i++) nested = { down: nested }
+      expect(() => checkSecrets({ parameters: nested })).not.toThrow()
+      expect(checkSecrets({ parameters: nested })).toEqual([])
+    })
+
+    it('ignores non-string leaves', () => {
+      expect(checkSecrets({ maxRetries: 3, resumable: true, totalBudget: null })).toEqual([])
+    })
+
+    it('never reads a field the envelope would not ship', () => {
+      // `scope` is local-only and deliberately absent from SHAREABLE_FIELDS, so a path
+      // sitting in it is not the author's problem — it never travels.
+      expect(checkSecrets({ scope: 'C:\\Users\\jordan\\projects' })).toEqual([])
+    })
+
+    it('stays advisory for every one of them', () => {
+      const found = checkSecrets({
+        parameters: [{ default: KEY }],
+        onComplete: { notify: KEY },
+        supervisors: [{ prompt: KEY }]
+      })
+      expect(found.length).toBeGreaterThan(0)
+      expect(found.every((f) => f.severity === 'warning')).toBe(true)
+    })
+
+    it('does not double-report a step, which is walked with its own label', () => {
+      const found = checkSecrets({ steps: [{ name: 'a', prompt: KEY }] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.message).toContain('steps[0].prompt')
+    })
+  })
+
   it('does not throw on malformed input', () => {
     expect(() => checkSecrets({})).not.toThrow()
     expect(() => checkSecrets({ steps: [null, 3], description: 42 })).not.toThrow()
