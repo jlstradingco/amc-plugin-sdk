@@ -28,6 +28,16 @@ const FIREBASE_WEB_API_KEY =
 
 const SECURE_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token'
 
+/** Clock-skew allowance applied by `isTokenFresh`, in seconds. */
+const TOKEN_FRESHNESS_BUFFER_SECONDS = 5 * 60
+
+/**
+ * Shortest lifetime a renewed token is allowed to claim. A token that expires
+ * inside the freshness buffer is born unusable, so anything shorter is treated
+ * as a bad server response rather than honoured literally.
+ */
+const MIN_TOKEN_TTL_SECONDS = TOKEN_FRESHNESS_BUFFER_SECONDS + 60
+
 /**
  * Read the token file as-is, ignoring expiry. Returns null when absent/corrupt.
  *
@@ -56,7 +66,7 @@ function readStoredTokenRaw(): StoredToken | null {
 export function isTokenFresh(token: StoredToken, now: number = Date.now()): boolean {
   const expiresAt = new Date(token.expiresAt).getTime()
   if (Number.isNaN(expiresAt)) return false
-  return now <= expiresAt - 5 * 60 * 1000
+  return now <= expiresAt - TOKEN_FRESHNESS_BUFFER_SECONDS * 1000
 }
 
 export function getStoredToken(): StoredToken | null {
@@ -100,15 +110,19 @@ export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
     if (!data.id_token) return null
 
     // expires_in is seconds-as-string; default to Firebase's standard hour.
-    const ttlSeconds = Number.parseInt(data.expires_in ?? '3600', 10)
+    // Floored at the freshness buffer: a zero/negative/absurdly-short TTL would
+    // mint a token `isTokenFresh` rejects on sight, so every later command would
+    // burn a refresh round trip and still consider itself signed out.
+    const parsedTtl = Number.parseInt(data.expires_in ?? '3600', 10)
+    const ttlSeconds = Number.isFinite(parsedTtl)
+      ? Math.max(parsedTtl, MIN_TOKEN_TTL_SECONDS)
+      : 3600
     const refreshed: StoredToken = {
       ...stored,
       token: data.id_token,
       // Google may rotate the refresh token — keep the new one when offered.
       refreshToken: data.refresh_token ?? stored.refreshToken,
-      expiresAt: new Date(
-        Date.now() + (Number.isFinite(ttlSeconds) ? ttlSeconds : 3600) * 1000
-      ).toISOString()
+      expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString()
     }
     saveToken(refreshed)
     return refreshed
