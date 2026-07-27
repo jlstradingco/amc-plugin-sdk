@@ -1,6 +1,7 @@
 import type { Finding } from '../lib/findings.js'
 import { collectAllSteps } from '../lib/recipe-steps.js'
 import { SHAREABLE_FIELDS } from '../lib/envelope.js'
+import { pickPortableStep } from '../lib/portable-step.js'
 
 /**
  * Key/path shapes worth a second look. Mirrors the spirit of AMC's own
@@ -58,20 +59,33 @@ function inspect(findings: Finding[], path: string, value: unknown, stepName?: s
   })
 }
 
-/** Recurse into arrays and plain objects, scanning every string underneath. */
-function inspectDeep(findings: Finding[], path: string, value: unknown, depth = 0): void {
+/**
+ * Recurse into arrays and plain objects, scanning every string underneath.
+ *
+ * `stepName` rides along so a finding raised deep inside a step still names the step
+ * the author has to go and edit, rather than only a field path.
+ */
+function inspectDeep(
+  findings: Finding[],
+  path: string,
+  value: unknown,
+  depth = 0,
+  stepName?: string
+): void {
   if (typeof value === 'string') {
-    inspect(findings, path, value)
+    inspect(findings, path, value, stepName)
     return
   }
   if (depth >= MAX_SCAN_DEPTH || value === null || typeof value !== 'object') return
 
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => inspectDeep(findings, `${path}[${index}]`, entry, depth + 1))
+    value.forEach((entry, index) =>
+      inspectDeep(findings, `${path}[${index}]`, entry, depth + 1, stepName)
+    )
     return
   }
   for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    inspectDeep(findings, `${path}.${key}`, entry, depth + 1)
+    inspectDeep(findings, `${path}.${key}`, entry, depth + 1, stepName)
   }
 }
 
@@ -88,12 +102,21 @@ export function checkSecrets(recipe: Record<string, unknown>): Finding[] {
     inspectDeep(findings, field, recipe[field])
   }
 
-  // Pipeline steps are scanned too. `pipelines` rides the publish envelope's
-  // allow-list, so a key pasted into a pipeline prompt was published unflagged —
-  // and AMC's own share-time scanner has always walked them.
+  // Steps are swept the same way, through the step-level allow-list, so the scan
+  // covers exactly the fields a step PUBLISHES rather than a hand-picked pair.
+  //
+  // Naming `prompt` and `exitMessage` by hand missed `approvalGate.message` and
+  // `supervisor.systemPrompt` — both free text, both shareable, and both scanned by
+  // AMC's own share-time scanner, so a key pasted into either was flagged in the app
+  // and waved through by the CLI. Filtering through `pickPortableStep` first also
+  // means a local-only field is not scanned at all, which is correct: it never
+  // travels, so a "secret" in it is not a publication risk and the warning would be
+  // noise the author cannot act on.
+  //
+  // Pipeline steps go through the same loop. `pipelines` rides the publish envelope's
+  // allow-list, so a key pasted into a pipeline prompt was published unflagged.
   for (const { step: s, path, declaredName } of collectAllSteps(recipe)) {
-    inspect(findings, `${path}.prompt`, s.prompt, declaredName)
-    inspect(findings, `${path}.exitMessage`, s.exitMessage, declaredName)
+    inspectDeep(findings, path, pickPortableStep(s), 0, declaredName)
   }
 
   return findings
