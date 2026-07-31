@@ -6,8 +6,16 @@ import { spawnSync } from 'node:child_process'
 
 const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
 
-// Cloud Function base URL — override with AMC_MARKETPLACE_API_URL env var
-const BASE_URL = process.env.AMC_MARKETPLACE_API_URL ?? 'https://us-central1-amc-marketplace-jls.cloudfunctions.net'
+// Marketplace API base URL — override with the AMC_MARKETPLACE_API_URL env var.
+//
+// The API moved off Firebase Cloud Functions into amc-back, where it is mounted on the shared
+// `amc-backend` Cloud Run service at /marketplace. Every Cloud Function name is preserved verbatim
+// as a path segment (`/marketplace/getAuthSession`), so this constant is the whole cutover and no
+// call site below changed.
+//
+// The Cloud Functions are still deployed against the same Firestore, so an older published CLI
+// pointing at the previous URL keeps working until they are switched off.
+const BASE_URL = process.env.AMC_MARKETPLACE_API_URL ?? 'https://amcback.jls.dev/marketplace'
 const AUTH_PAGE_URL = process.env.AMC_MARKETPLACE_AUTH_URL ?? 'https://amc-marketplace-jls.web.app'
 
 export interface StoredToken {
