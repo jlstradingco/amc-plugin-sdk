@@ -19,7 +19,40 @@ function authHeaders(token: StoredToken): Record<string, string> {
   return { Authorization: `Bearer ${token.token}` }
 }
 
+/** HTTP 426 — this CLI is older than the marketplace's minimum supported client. */
+export const UPGRADE_REQUIRED_STATUS = 426
+
+/**
+ * Raised when the marketplace refuses this CLI as too old.
+ *
+ * Separate from a generic {@link MarketplaceApiError} because no amount of retrying, re-auth or
+ * waiting fixes it — the only remedy is `npm i -g @agent-mc/plugin-cli@latest`. The published CLI
+ * has hardcoded its API URL since 1.0.x, so this is the one signal that can tell an old install
+ * why it stopped working once the legacy Cloud Functions are switched off.
+ */
+export class MarketplaceUpgradeRequiredError extends MarketplaceApiError {
+  constructor(message: string) {
+    super('UPGRADE_REQUIRED', message)
+    this.name = 'MarketplaceUpgradeRequiredError'
+  }
+}
+
+const UPGRADE_REQUIRED_FALLBACK =
+  'This version of the AMC plugin CLI is too old to use the marketplace. Update it with: npm i -g @agent-mc/plugin-cli@latest'
+
 async function handleResponse<T>(res: Response): Promise<T> {
+  if (res.status === UPGRADE_REQUIRED_STATUS) {
+    let body: ApiErrorResponse | null = null
+    try { body = await res.json() as ApiErrorResponse } catch { /* not JSON */ }
+    const serverMessage = typeof body?.message === 'string' ? body.message.trim() : ''
+    // The server message is echoed only when it is short and plain — an unbounded, server-chosen
+    // string must not become the CLI's terminal output.
+    const message = serverMessage !== '' && serverMessage.length <= 300
+      ? `${serverMessage}\n\nUpdate with: npm i -g @agent-mc/plugin-cli@latest`
+      : UPGRADE_REQUIRED_FALLBACK
+    throw new MarketplaceUpgradeRequiredError(message)
+  }
+
   if (!res.ok) {
     let body: ApiErrorResponse | null = null
     try { body = await res.json() as ApiErrorResponse } catch { /* not JSON */ }
