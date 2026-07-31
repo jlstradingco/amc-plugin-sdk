@@ -209,7 +209,7 @@ marketplace" means exactly that and nothing else.
 
 | Variable | Purpose |
 |---|---|
-| `AMC_MARKETPLACE_API_URL` | Override the Cloud Functions base URL |
+| `AMC_MARKETPLACE_API_URL` | Override the marketplace API base URL (default `https://amcback.jls.dev/marketplace`) |
 | `AMC_MARKETPLACE_AUTH_URL` | Override the sign-in page |
 
 The stored token lives at `~/.amc/marketplace-token` and is shared with
