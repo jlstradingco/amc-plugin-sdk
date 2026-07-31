@@ -77,6 +77,27 @@ together.
   that are expected rather than exceptional, and how to seed it in
   `createTestContext()`.
 
+### Changed
+
+- **The marketplace API moved off Firebase Cloud Functions.** It now runs inside
+  AMC's own backend, mounted at `/marketplace` on the shared `amc-backend`
+  service, and the CLI's default base URL points there. Every endpoint kept its
+  exact name as a path segment, so nothing about the request or response shape
+  changed and no command behaves differently.
+
+  Both front doors read and write the same Firestore, so the previous Cloud
+  Functions URL continues to serve while it remains deployed — an older installed
+  CLI keeps working, and `AMC_MARKETPLACE_API_URL` still overrides the default for
+  a staging or fork deploy.
+
+- **An out-of-date CLI is now told so, instead of failing opaquely.** The
+  marketplace can answer `426 Upgrade Required` once the legacy Cloud Functions
+  are switched off. Because a published CLI hardcodes its API URL, that response
+  is the only way an old install can learn why it stopped working — so it is
+  raised as a distinct `MarketplaceUpgradeRequiredError` naming the exact fix
+  (`npm i -g @agent-mc/plugin-cli@latest`) rather than a generic HTTP failure that
+  looks retryable.
+
 ### Fixed
 
 - **A published step no longer carries whatever the author's file happened to
