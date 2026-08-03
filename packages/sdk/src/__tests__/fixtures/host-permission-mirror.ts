@@ -14,7 +14,8 @@
 // host adds/removes a permission, update this mirror in the SAME change that
 // updates the SDK enum, then reconcile the allow-lists below.
 //
-// Last reconciled: 2026-07-27 against src/shared/plugin-permissions.ts.
+// Last reconciled: 2026-08-03 against src/shared/plugin-permissions.ts, by GENERATING
+// the list from that file rather than hand-copying it (see HISTORY).
 //
 // HISTORY — why this file is worth distrusting. Between 2026-07-15 and
 // 2026-07-27 this mirror claimed the host union was 14 permissions and that
@@ -27,12 +28,21 @@
 // unreachable from the public SDK. A local mirror can only catch drift it is
 // itself reconciled against — so re-derive it from the host source when you
 // touch it, never from this file's own prior reasoning.
+//
+// It happened AGAIN, within a week. By 2026-08-03 the host union had grown to 22
+// while this mirror still claimed 19: `secrets` (shipped 2026-08-01, and the one
+// advertised in Omniscio v0.1.90's release notes), `boards.read` and
+// `sessions.launchAny`. `secrets` is now typed end-to-end; the other two are
+// declared host-ahead below because inventing a `boards` ctx shape or a
+// `sessions.fanout` signature nobody needs yet is precisely how the July mirror
+// went wrong. This time the 22 strings were GENERATED from the host union rather
+// than retyped, because the count assertion cannot catch a misspelling.
 
 /** The exact permission strings the host recognizes and gates. */
 export const HOST_PERMISSIONS = [
   'storage',
+  'secrets',
   'sessions',
-  'sessions.readHistory',
   'ai',
   'tts',
   'network',
@@ -43,11 +53,14 @@ export const HOST_PERMISSIONS = [
   'rss',
   'auth',
   'auth.session',
+  'sessions.readHistory',
+  'boards.read',
+  'sessions.launchAny',
+  'inbox',
+  'navigation',
   'chrome',
   'firebase',
   'recording',
-  'inbox',
-  'navigation',
   'spend',
 ] as const
 
@@ -72,10 +85,17 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  * no typed SDK `ctx` namespace, so a plugin built with this SDK cannot request
  * them. Tracked so the gap is named, not silently tolerated.
  *
- * Currently EMPTY: the host's 19-permission union is fully covered by the SDK
- * enum, and each one has a typed `ctx` namespace.
+ * - `boards.read`: gates the host's `boards` namespace and `assembleBoardContext`
+ *   (plugin-bridge-handler.ts). No SDK `ctx.boards` type exists yet.
+ * - `sessions.launchAny`: gates the `sessions.fanout` method on the EXISTING
+ *   sessions namespace (plugin-permission-map.ts) — a method gap, not a namespace
+ *   one. The host describes it as "Granted only to built-in plugins", so a
+ *   third-party author cannot use it regardless.
+ *
+ * Both are listed rather than typed on purpose: guessing at a host runtime shape
+ * is the exact mistake the HISTORY note above records.
  */
-export const HOST_AHEAD_PERMISSIONS = [] as const
+export const HOST_AHEAD_PERMISSIONS = ['boards.read', 'sessions.launchAny'] as const
 
 /**
  * Permissions whose string is recognized+gated by BOTH sides, but whose backend

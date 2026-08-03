@@ -22,6 +22,7 @@ export type {
   CliResponse,
   CliHandler,
   PluginStorage,
+  PluginSecrets,
   PluginDb,
   PluginSettings,
   PluginLogger,

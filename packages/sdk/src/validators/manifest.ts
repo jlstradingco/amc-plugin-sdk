@@ -97,6 +97,7 @@ const resourceLimitsSchema = z.object({
  */
 export const PLUGIN_PERMISSIONS = [
   'storage',
+  'secrets',
   'sessions',
   'sessions.readHistory',
   'ai',

@@ -7,6 +7,7 @@ The AMC Plugin SDK exposes 20 APIs to plugins. Some are available on both the fr
 | API | Description | Availability | Permission |
 |---|---|---|---|
 | [Storage](./storage) | Key-value storage | Both | `storage` |
+| [Secrets](./secrets) | Keychain-encrypted credentials | Both | `secrets` |
 | [Database](./db) | Collection-based CRUD | Both | `storage` |
 | [Sessions](./sessions) | Spawn and manage Claude sessions | Both | `sessions` |
 | [AI](./ai) | Generate text with AI models | Both | `ai` |

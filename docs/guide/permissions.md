@@ -79,6 +79,31 @@ All filesystem paths are relative to the plugin's data directory. Plugins cannot
 
 ---
 
+### `secrets`
+
+**Grants access to:** `PluginSecrets`
+
+Store and read your plugin's own credentials -- API keys, database passwords, access tokens --
+encrypted by the operating system's keychain (macOS Keychain, Windows DPAPI, libsecret).
+
+```typescript
+await ctx.secrets.set('db-password', password)
+const password = await ctx.secrets.get('db-password')   // string | null
+const keys = await ctx.secrets.list()                    // keys only, never values
+await ctx.secrets.delete('db-password')
+```
+
+Separate from `storage`, and deliberately so: secrets live in their own table, so a plugin
+granted `storage` but not `secrets` cannot read your values or even enumerate their keys.
+
+::: warning
+`set` **throws** on a machine with no available keyring rather than falling back to a plaintext
+write, and `get` returns `null` for both "never set" and "no longer decryptable". See
+[the Secrets API](/api/secrets) before you rely on either.
+:::
+
+---
+
 ### `sessions`
 
 **Grants access to:** `PluginSessions`
@@ -401,6 +426,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | Permission | APIs Granted | Use Case |
 |---|---|---|
 | `storage` | `PluginStorage`, `PluginDb`, `PluginFs` | Persist data, query collections, read/write files |
+| `secrets` | `PluginSecrets` | Store credentials encrypted by the OS keychain |
 | `sessions` | `PluginSessions` | Create/manage Claude Code sessions |
 | `sessions.readHistory` | `PluginSessionHistory` | Read PAST sessions/projects the user explicitly grants |
 | `ai` | `PluginAi` | Direct AI text generation |
