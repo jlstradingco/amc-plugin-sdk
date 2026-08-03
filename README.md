@@ -19,7 +19,7 @@
 
 AMC Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Agent Mission Control](https://github.com/jlstradingco/agent-mission-control) (AMC) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
 
-The SDK gives plugin authors a sandboxed `PluginContext` with 13 capability interfaces, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
+The SDK gives plugin authors a sandboxed `PluginContext` with 20 capability interfaces, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
 
 ## Features
 
@@ -43,7 +43,7 @@ Full TypeScript types and Zod validators for the plugin manifest format. Catches
 <tr>
 <td>
 
-**13 Sandboxed APIs**
+**20 Sandboxed APIs**
 
 Storage, database, sessions, AI, filesystem, HTTP, cron, CLI endpoints, sidebar, toasts, events, settings, and logging — all scoped per-plugin.
 
@@ -116,7 +116,7 @@ Every plugin receives a `PluginContext` object with these sandboxed capabilities
 | `sidebar` | `PluginSidebar` | Control sidebar badge and navigation items (`setBadge`, `setItems`) |
 | `toast` | `PluginToast` | Show toast notifications and OS-level alerts (`show`, `notify`) |
 
-UI plugins also get `window.AgentMC` — a browser-side bridge exposing `storage`, `db`, `settings`, `theme`, `toast`, `session`, `ai`, `export`, `project`, `sidebar`, and `assets`.
+UI plugins also get `window.AgentMC` — a browser-side bridge exposing `storage`, `db`, `settings`, `events`, `theme`, `toast`, `session`, `ai`, `export`, `project`, `sidebar`, `assets`, `inbox`, `auth`, and `recording`.
 
 ## Plugin Backend Lifecycle
 
@@ -225,7 +225,7 @@ amc-plugin-sdk/
 │   │   │   ├── index.ts          # Barrel exports (types + validators)
 │   │   │   ├── types/
 │   │   │   │   ├── manifest.ts   # PluginManifest, settings, permissions, migrations
-│   │   │   │   ├── context.ts    # PluginContext + 13 capability interfaces
+│   │   │   │   ├── context.ts    # PluginContext + 20 capability interfaces
 │   │   │   │   ├── backend.ts    # PluginBackend lifecycle, PluginActivate
 │   │   │   │   └── bridge.ts     # Browser-side AgentMC window bridge
 │   │   │   └── validators/
@@ -336,7 +336,7 @@ Plugins declare required permissions in `manifest.json`. AMC enforces these at r
 Full documentation is available at the [AMC Plugin SDK docs site](https://jlstradingco.github.io/amc-plugin-sdk/), covering:
 
 - **[Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started)** — scaffold, build, and install your first plugin
-- **[API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/)** — all 13 capability interfaces documented
+- **[API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/)** — all 20 capability interfaces documented
 - **[Publishing](https://jlstradingco.github.io/amc-plugin-sdk/guide/publishing)** — submit to the AMC Marketplace
 - **[Examples](https://jlstradingco.github.io/amc-plugin-sdk/examples/)** — four reference plugins with full source
 

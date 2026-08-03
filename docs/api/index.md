@@ -17,7 +17,7 @@ The AMC Plugin SDK exposes 20 APIs to plugins. Some are available on both the fr
 | [Sidebar](./sidebar) | Badge count and item list | Both | None |
 | [Toast](./toast) | In-app and OS notifications | Both | `notifications` (for `notify`) |
 | [Settings](./settings) | Read plugin settings | Both | None |
-| [Events](./events) | Pub/sub messaging | Backend only | None |
+| [Events](./events) | Messaging between your UI and backend | Both | None |
 | [Logging](./logging) | Structured log output | Backend only | None |
 | [Inbox](./inbox) | Surface items in AMC's inbox | Both | `inbox` |
 | [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
