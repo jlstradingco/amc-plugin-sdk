@@ -101,9 +101,43 @@ export interface PluginSessions {
   onStatusChange(sessionId: string, handler: (status: string) => void): () => void
 }
 
+/**
+ * Options for {@link PluginAi.generateStructured}. The host forces the model to
+ * call `tool`, so the JSON Schema you want filled goes in `tool.inputSchema` —
+ * there is no separate `schema` field. `prompt` and `systemPrompt` are each
+ * capped at 32 KB host-side (a spend guard), and every call counts against a
+ * per-plugin daily cost ceiling.
+ */
+export interface PluginAiStructuredRequest {
+  /** The user-turn text the model reads. */
+  prompt: string
+  /** The tool the model is forced to call; its input is what you get back. */
+  tool: {
+    name: string
+    description?: string
+    /** JSON Schema describing the object the model must produce. */
+    inputSchema: Record<string, unknown>
+  }
+  systemPrompt?: string
+  /** Route to the premium model instead of the default. Costs more. */
+  premium?: boolean
+}
+
 export interface PluginAi {
   generateMessage(systemPrompt: string, userPrompt: string): Promise<string>
   generateTitle(text: string): Promise<string>
+  /**
+   * Whether an Anthropic API-key account exists. The other methods need one
+   * (the Messages API cannot use OAuth tokens), so check this to fail loudly
+   * up front instead of letting generation fail opaquely.
+   */
+  isConfigured(): Promise<boolean>
+  /**
+   * Forced-tool generation — resolves with the model's raw structured output
+   * (the tool input), already matching `tool.inputSchema`. Available to plugin
+   * webviews and worker backends alike.
+   */
+  generateStructured(opts: PluginAiStructuredRequest): Promise<unknown>
 }
 
 export interface PluginFs {

@@ -23,6 +23,7 @@ import type {
   InboxItem,
   PluginAuthUser,
   PluginAuthSession,
+  PluginAiStructuredRequest,
   Recording,
   QueryOptions,
   HistoryProject,
@@ -64,6 +65,14 @@ export interface TestContextOptions {
   ai?: {
     generateMessage?: (systemPrompt: string, userPrompt: string) => Promise<string> | string
     generateTitle?: (text: string) => Promise<string> | string
+    /** Defaults to true, so a plugin gating on it takes the configured path. */
+    isConfigured?: () => Promise<boolean> | boolean
+    /**
+     * Stub structured generation. Without an override the harness echoes an
+     * empty object — enough to satisfy the call, but a plugin asserting on real
+     * fields should supply its own shape here.
+     */
+    generateStructured?: (opts: PluginAiStructuredRequest) => Promise<unknown> | unknown
   }
   /** Seed an authenticated user / session. */
   auth?: {
@@ -302,6 +311,11 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       generateTitle: (text) =>
         Promise.resolve(
           opts.ai?.generateTitle ? opts.ai.generateTitle(text) : `[test-ai] ${text.slice(0, 40)}`
+        ),
+      isConfigured: () => Promise.resolve(opts.ai?.isConfigured ? opts.ai.isConfigured() : true),
+      generateStructured: (structuredOpts) =>
+        Promise.resolve(
+          opts.ai?.generateStructured ? opts.ai.generateStructured(structuredOpts) : {}
         )
     },
 
