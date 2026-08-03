@@ -28,6 +28,7 @@ export type {
   PluginEvents,
   PluginSessions,
   PluginAi,
+  PluginAiStructuredRequest,
   PluginFs,
   PluginHttp,
   PluginCron,
