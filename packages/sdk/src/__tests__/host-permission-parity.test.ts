@@ -90,7 +90,7 @@ describe('SDK <-> host permission parity', () => {
     // count means shrinking the mirror can only happen deliberately, in a diff a
     // reviewer sees. Bump it ONLY after re-deriving from the host's
     // src/shared/plugin-permissions.ts union.
-    expect(HOST_PERMISSIONS.length).toBe(19)
+    expect(HOST_PERMISSIONS.length).toBe(22)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
@@ -101,6 +101,7 @@ describe('SDK <-> host permission parity', () => {
     // (or to null when it gates no backend namespace at all).
     const namespaceForPermission: Record<string, string | null> = {
       storage: 'storage',
+      secrets: 'secrets',
       sessions: 'sessions',
       'sessions.readHistory': 'sessionHistory',
       ai: 'ai',

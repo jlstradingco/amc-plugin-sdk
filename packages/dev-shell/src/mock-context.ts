@@ -65,6 +65,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     ? path.join(opts.dataDir, 'amc-dev-storage.json')
     : null
   const store = new Map<string, unknown>()
+  const secretStore = new Map<string, string>()
   if (storageFile && fs.existsSync(storageFile)) {
     try {
       const raw = JSON.parse(fs.readFileSync(storageFile, 'utf-8')) as Record<string, unknown>
@@ -156,6 +157,16 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           .map(([key, value]) => ({ key, value }))
         return Promise.resolve(items)
       },
+    },
+
+    // In-memory only, and a SEPARATE map from `store`: the real host keeps secrets in
+    // their own keychain-backed table, so nothing a dev-shell run writes here should
+    // ever land in the storage file `flushStorage()` persists.
+    secrets: {
+      get: (key) => Promise.resolve(secretStore.get(key) ?? null),
+      set: (key, value) => { secretStore.set(key, value); return Promise.resolve() },
+      delete: (key) => { secretStore.delete(key); return Promise.resolve() },
+      list: () => Promise.resolve([...secretStore.keys()].sort()),
     },
 
     db: {

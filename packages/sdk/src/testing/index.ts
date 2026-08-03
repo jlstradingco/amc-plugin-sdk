@@ -176,6 +176,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const pluginVersion = opts.pluginVersion ?? '1.0.0'
 
   const storageMap = new Map<string, unknown>()
+  const secretsMap = new Map<string, string>()
   const collections = new Map<string, Record<string, unknown>[]>()
   const fsFiles = new Map<string, string>()
   const eventBus = new EventEmitter()
@@ -221,6 +222,16 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           .filter(([k]) => !prefix || k.startsWith(prefix))
           .map(([key, value]) => ({ key, value }))
       )
+    },
+
+    // Deliberately a SEPARATE map from `storageMap`: the host keeps secrets in their own
+    // table so a plugin holding `storage` alone cannot enumerate them, and a test double
+    // that shared one map would let a test pass that the real bridge would reject.
+    secrets: {
+      get: (key) => Promise.resolve(secretsMap.get(key) ?? null),
+      set: (key, value) => { secretsMap.set(key, value); return Promise.resolve() },
+      delete: (key) => { secretsMap.delete(key); return Promise.resolve() },
+      list: () => Promise.resolve([...secretsMap.keys()].sort())
     },
 
     db: {
