@@ -55,8 +55,11 @@ export interface PluginSettingDefinition {
 
 export type PluginPermission =
   | 'storage'
+  | 'secrets'
   | 'sessions'
+  | 'sessions.readHistory'
   | 'ai'
+  | 'tts'
   | 'network'
   | 'cron'
   | 'cli'
@@ -66,10 +69,11 @@ export type PluginPermission =
   | 'auth'
   | 'auth.session'
   | 'chrome'
+  | 'firebase'
   | 'recording'
   | 'inbox'
   | 'navigation'
-  | 'tts'
+  | 'spend'
 
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'

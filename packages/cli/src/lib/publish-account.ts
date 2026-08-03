@@ -10,16 +10,23 @@ export type PublishAccountGate =
   | { action: 'confirm'; github: string }
   | { action: 'abort'; message: string; suggestion: string }
 
+/**
+ * The publish command whose `--switch-account` the abort advice should name.
+ * Both binaries share ONE token file, so either command can perform the switch —
+ * but the advice should name the one the author is actually running.
+ */
+const DEFAULT_PUBLISH_COMMAND = 'amc-plugin publish'
+
 export function evaluatePublishAccount(
   storedGithub: string | null,
-  opts: { as?: string; yes?: boolean } = {}
+  opts: { as?: string; yes?: boolean; commandName?: string } = {}
 ): PublishAccountGate {
+  const command = opts.commandName ?? DEFAULT_PUBLISH_COMMAND
   if (opts.as && storedGithub && storedGithub.toLowerCase() !== opts.as.toLowerCase()) {
     return {
       action: 'abort',
       message: `Signed in as "${storedGithub}", but --as expected "${opts.as}"`,
-      suggestion:
-        "Run 'amc-plugin publish --switch-account' to sign in as the intended GitHub account."
+      suggestion: `Run '${command} --switch-account' to sign in as the intended GitHub account.`
     }
   }
   if (opts.yes) return { action: 'proceed' }

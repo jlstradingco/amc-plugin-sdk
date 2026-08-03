@@ -1,0 +1,9 @@
+{
+  // Type-checks EVERYTHING, tests included, and emits nothing.
+  // See packages/sdk/tsconfig.typecheck.json for why this is separate from the build.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src"]
+}

@@ -12,9 +12,19 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/quickstart' },
       { text: 'API', link: '/api/' },
       { text: 'Examples', link: '/examples/' },
-      { text: 'CLI', link: '/reference/cli' }
+      { text: 'CLI', link: '/reference/cli' },
+      { text: 'Automations', link: '/guide/automations' }
     ],
     sidebar: {
+      '/reference/': [
+        {
+          text: 'CLI Reference',
+          items: [
+            { text: 'amc-plugin', link: '/reference/cli' },
+            { text: 'amc-automation', link: '/reference/automation-cli' }
+          ]
+        }
+      ],
       '/guide/': [
         {
           text: 'Guide',
@@ -25,7 +35,8 @@ export default defineConfig({
             { text: 'Manifest', link: '/guide/manifest' },
             { text: 'Permissions', link: '/guide/permissions' },
             { text: 'Dev Shell', link: '/guide/dev-shell' },
-            { text: 'Publishing', link: '/guide/publishing' }
+            { text: 'Publishing', link: '/guide/publishing' },
+            { text: 'Automations', link: '/guide/automations' }
           ]
         }
       ],
@@ -35,6 +46,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/api/' },
             { text: 'Storage', link: '/api/storage' },
+            { text: 'Secrets', link: '/api/secrets' },
             { text: 'Database', link: '/api/db' },
             { text: 'Sessions', link: '/api/sessions' },
             { text: 'AI', link: '/api/ai' },
@@ -49,7 +61,11 @@ export default defineConfig({
             { text: 'Logging', link: '/api/logging' },
             { text: 'Inbox', link: '/api/inbox' },
             { text: 'Auth', link: '/api/auth' },
-            { text: 'Recording', link: '/api/recording' }
+            { text: 'Recording', link: '/api/recording' },
+            { text: 'Text to Speech', link: '/api/tts' },
+            { text: 'Session History', link: '/api/session-history' },
+            { text: 'Firebase', link: '/api/firebase' },
+            { text: 'Spend', link: '/api/spend' }
           ]
         }
       ]

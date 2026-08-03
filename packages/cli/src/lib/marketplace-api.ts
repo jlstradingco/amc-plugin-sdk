@@ -1,13 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { getBaseUrl, type StoredToken } from './auth.js'
-
-interface ApiErrorResponse {
-  error: true
-  code: string
-  message: string
-  details?: unknown[]
-}
+import { sendAuthed, type ApiErrorResponse } from './authed-fetch.js'
 
 export class MarketplaceApiError extends Error {
   code: string
@@ -70,15 +64,18 @@ export async function uploadPackage(
   const fileBuffer = fs.readFileSync(packagePath)
   const fileName = path.basename(packagePath)
 
-  // Build multipart form data (Node.js 22 has native FormData)
-  const formData = new FormData()
-  formData.append('package', new Blob([fileBuffer]), fileName)
-  if (changelog) formData.append('changelog', changelog)
+  const res = await sendAuthed(token, (t) => {
+    // Rebuilt per attempt: a retry needs its own body, and a large upload is
+    // exactly the case that outlives its token.
+    const formData = new FormData()
+    formData.append('package', new Blob([fileBuffer]), fileName)
+    if (changelog) formData.append('changelog', changelog)
 
-  const res = await globalThis.fetch(`${getBaseUrl()}/uploadPlugin`, {
-    method: 'POST',
-    headers: authHeaders(token),
-    body: formData
+    return globalThis.fetch(`${getBaseUrl()}/uploadPlugin`, {
+      method: 'POST',
+      headers: authHeaders(t),
+      body: formData
+    })
   })
 
   return handleResponse(res)
@@ -87,9 +84,11 @@ export async function uploadPackage(
 export async function getMyPlugins(
   token: StoredToken
 ): Promise<{ submissions: Array<{ id: string; pluginId: string; version: string; status: string; submittedAt: string; reviewNotes: string | null }> }> {
-  const res = await globalThis.fetch(`${getBaseUrl()}/getMyPlugins`, {
-    headers: authHeaders(token)
-  })
+  const res = await sendAuthed(token, (t) =>
+    globalThis.fetch(`${getBaseUrl()}/getMyPlugins`, {
+      headers: authHeaders(t)
+    })
+  )
   return handleResponse(res)
 }
 

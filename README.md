@@ -188,6 +188,23 @@ Validated at build time by Zod schemas — see `manifestSchema` in `@agent-mc/pl
 | `amc-plugin validate` | Run all validation checks without emitting output (CI-friendly) |
 | `amc-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback) |
 
+## Automations
+
+The same package ships a second binary, `amc-automation`, for publishing AMC
+**automations** — multi-step recipes AMC runs for you, as opposed to plugins,
+which extend AMC itself. Both publish to the same marketplace and share one
+sign-in.
+
+| Command | Description |
+|---|---|
+| `amc-automation init <name>` | Scaffold a `.recipe.json` that validates clean out of the box |
+| `amc-automation validate` | Local checks; `--check` adds the marketplace's verdict |
+| `amc-automation publish` | Submit for review |
+| `amc-automation status` | Follow the review |
+
+See the [Automations guide](docs/guide/automations.md) and the
+[`amc-automation` reference](docs/reference/automation-cli.md).
+
 ## Tech Stack
 
 | Layer | Technology | Purpose |

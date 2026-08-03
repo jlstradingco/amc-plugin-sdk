@@ -9,6 +9,296 @@ Versions listed here cover the published packages `@agent-mc/plugin-sdk`,
 `@agent-mc/plugin-cli`, and `@agent-mc/plugin-dev-shell`, which are released
 together.
 
+## [Unreleased]
+
+### Added
+
+- **`amc-automation` — a second binary for publishing AMC automations.** Until
+  now the only way to share an automation was to build a recipe inside AMC's UI
+  and click Publish; there was no way to validate one, publish from a repo or CI,
+  or keep a published automation under version control. The automation catalog
+  has been live and empty since it shipped.
+
+  Four commands, mirroring the plugin CLI so anyone who has published a plugin
+  already knows it:
+
+  - `amc-automation init <name>` — scaffolds a `.recipe.json` plus a README. The
+    template is a working two-step automation, not a stub: a test asserts that
+    `init` followed by `validate` reports zero findings.
+  - `amc-automation validate` — six groups of local checks (structure, steps,
+    portability, secrets, marketplace limits, and an advisory list of fields the
+    envelope will not carry). Exits `1` on an error, `0` on advisories only, so it
+    drops into CI. `--json` for machine-readable findings.
+  - `amc-automation publish` — validates, authenticates, and submits for review.
+    `--dry-run`, `--as <user>`, `--version`, `--category`, `--changelog`.
+  - `amc-automation status` — the review verdict, scoped to the automation in the
+    current directory.
+
+  It ships from `@agent-mc/plugin-cli` rather than a new package, so it shares
+  the existing marketplace token, sign-in flow, docs site and release train.
+
+  **Validation is deliberately split.** The share envelope's schema lives in AMC
+  and is version-gated; copying it wholesale would recreate exactly the drift that
+  stranded four permissions in 1.2.0. So the server holds the authoritative
+  verdict (`validate --check`), and the local checks exist to fail the hopeless
+  cases before an upload slot is spent.
+
+  Two caveats, because the original framing of this split was too neat. First, the
+  local checks are **not** purely advisory: `checkPortability` walks pipeline steps,
+  which neither AMC's share gate nor the marketplace validator does, so it can
+  refuse a submission the server would have accepted. That is intentional — a
+  pipeline step running a local script installs fine and then cannot run, which is
+  worse for the importer than a publish the author has to think about — and
+  `--skip-validation` remains the way past it. Second, the values that *are*
+  mirrored from the server (the id pattern, the version pattern, the categories,
+  the step and definition allow-lists, the 200-step and 256 KB caps) do need parity
+  guards, and now carry them: each is pinned by a test naming the file it was
+  derived from.
+
+  `validate --check` and `status` depend on the marketplace's `validateAutomation`
+  and `getMyAutomations` endpoints. Where `validateAutomation` is not deployed,
+  `--check` prints a notice and the local result stands; an unreachable server is
+  never treated as a validation failure.
+
+- **`amc-automation validate` takes `--version` and `--category`.** `--check`
+  used to build its dry-run envelope with a placeholder version, which made the
+  server's version-collision verdict meaningless. It now sends the same
+  submission `publish` would, so "the marketplace accepts this" is an answer
+  about the publish you are actually about to make.
+
+- **`amc-automation publish` takes `--switch-account`,** matching `amc-plugin
+  publish`. Both binaries share one token file, so switching here switches both.
+
+- **API reference pages for the four 1.2.0 namespaces.** `tts`,
+  `sessions.readHistory`, `firebase` and `spend` were typed, mocked and permitted,
+  but every other namespace had a page under `/api/` and these four did not — so
+  the headline capabilities of the release were the only ones an author browsing
+  the reference could not find. Each page documents the surface, the failure modes
+  that are expected rather than exceptional, and how to seed it in
+  `createTestContext()`.
+
+### Fixed
+
+- **A published step no longer carries whatever the author's file happened to
+  hold.** The envelope's allow-list stopped at the top level: `steps` and
+  `pipelines` were copied VERBATIM, so every field inside a step travelled. The
+  guarantee the allow-list exists to make — "anything not named here does not
+  travel" — was therefore true of the recipe and false of its steps, which is
+  where the author's own content lives. AMC's share path never had the hole; it
+  maps every step through a 21-field allow-list first. Reachable by the ordinary
+  workflow: copy a recipe out of AMC to edit as a file, and its step ids, local
+  project references and engine pins all published. The same allow-list is now
+  applied at both levels, and mirrored server-side so it no longer depends on
+  every client choosing to honour it.
+
+- **The secret scan covers every field a step publishes.** It named `prompt` and
+  `exitMessage` by hand, which missed `approvalGate.message` and
+  `supervisor.systemPrompt` — both free text, both shareable, and both scanned by
+  AMC's own share-time scanner. A key pasted into either was flagged in the app
+  and waved through by the CLI. The scan is now driven off the step allow-list, so
+  a field added to the envelope is swept the day it is added, and a local-only
+  field is deliberately not swept at all.
+
+- **An entry that is not a step is reported instead of silently dropped.** The
+  step collectors skip a `null` or a stray string so a malformed entry cannot
+  renumber the steps around it — correct for labelling, but it meant no check ever
+  saw them and the envelope then dropped them without a word. The author's
+  published automation was missing a step, and nothing anywhere said so.
+
+- **`validate --json` always emits a payload.** When the recipe file was missing,
+  unreadable, not JSON, or ambiguous, it exited `1` having printed nothing — so a
+  CI step parsing stdout received an empty string and had to special-case "no
+  output" to tell a missing recipe from a crashed process. The file problem is now
+  a `recipe-file` finding in the same payload shape as everything else.
+
+- **The four namespaces this release adds are now importable by name.** `tts`,
+  `sessions.readHistory`, `firebase` and `spend` got typed `ctx` namespaces and
+  were re-exported from `src/types/index.ts` — which is INTERNAL. The package
+  exposes `.`, `./browser`, `./validators` and `./testing` and nothing else, so
+  `SpendReportBreakdown`, `PluginTts`, `HistoryMessage` and the rest could not be
+  imported from `@agent-mc/plugin-sdk` at all. The namespaces still worked
+  structurally through `PluginContext`, which is exactly why nothing caught it:
+  an author could use them but not name them. A guard test now compares the two
+  barrels as source text, so the next namespace cannot repeat it.
+
+- **`--version` and `--category` are checked before an upload is spent.** Both
+  were passed straight through to the marketplace, which refuses a non-semver
+  version or an unknown category with a bare `400`. A refused upload still costs
+  one of the five attempts an account gets per hour — the exact waste the local
+  checks exist to prevent — and both flags are retyped on every publish, so they
+  are where a typo lands. `init` had validated its own `--category` since it
+  shipped; `publish` and `validate` trusted the same flag. Neither
+  `--skip-validation` nor `--dry-run` bypasses this: a malformed version is not
+  advice about your file, it is something the server cannot accept either way.
+
+- **The step checks walk pipelines.** `recipe-steps.ts` was introduced so that
+  every check reasoning about steps goes through one collector; `checkSteps` was
+  the one that still read `recipe.steps` directly. A step inside a `pipelines`
+  array with an empty prompt or no name published clean and then could not run —
+  the precise outcome that check exists to prevent, since `pipelines` rides the
+  publish envelope's allow-list and is executed like any other step.
+
+- **The secret scan covers everything a publish ships.** It named `description`
+  and `runLabel` by hand, leaving `parameters`, `onComplete` and `supervisors` —
+  all on the envelope's allow-list, all able to carry an author's string —
+  swept by nothing. It is now driven off `SHAREABLE_FIELDS` itself and descends
+  into nested objects and arrays, so a field added to the envelope is scanned the
+  day it is added. Still warnings only.
+
+- **`validate` honours an explicit `null` token.** The option is typed
+  `StoredToken | null`, so `null` means "signed out" — but `??` treated it as
+  absent and fell through to the real disk-and-network lookup. `status` already
+  had this right; the two now agree.
+
+- **`amc-automation publish` now actually confirms the publishing account.**
+  `-y` / `--yes` was declared, documented as "skip the identity confirmation
+  prompt", threaded through the options and passed by every test — but never
+  read, because no confirmation existed. Every publish went out unconfirmed
+  under whatever account the browser happened to be signed into, while the
+  plugin CLI has gated that same trap since it shipped. A published automation
+  carries the author's name permanently, so this was the more consequential half
+  of the pair. It now routes through the plugin CLI's own
+  `evaluatePublishAccount` rather than a second copy, so the two binaries cannot
+  drift apart again.
+
+- **The local checks now walk `pipelines`.** A recipe holds steps in two places:
+  the top-level `steps` array and the named arrays under `pipelines`. Both are
+  published — `pipelines` is on the publish envelope's allow-list — but the
+  portability and secret checks only ever walked `steps`, and the server does not
+  walk pipelines either. So a `script` step or a pasted API key inside a pipeline
+  reached the marketplace with no warning from either side. AMC's own share-time
+  scanner has always walked both.
+
+- **`validate` catches the marketplace's hard limits before an upload is spent.**
+  The automation id is derived from the recipe name and never typed, so the
+  server's `400` naming it was baffling. The marketplace requires 2–64
+  characters: a one-character name slugged to one character, and the local
+  100-character name limit slugged past 64 — both passed `validate` clean and
+  were then refused. Step count (200) and definition size (256 KB) are checked
+  locally for the same reason.
+
+- **`amc-automation status` and `validate --check` renew the token silently.**
+  Both read the stored token directly, so both announced "Not signed in" the
+  moment the hour-long ID token lapsed — the same bug 1.2.0 fixed for `whoami`
+  and `info`, left behind on the newer surface. The automation API client also
+  now renews and retries a credential refused mid-flight, which only the plugin
+  client did.
+
+- **`amc-automation status` reports the server's own reason.** Every failure was
+  reported as "Could not reach the marketplace. Check your connection", so a
+  rejection the server had already explained sent authors off to debug their
+  network instead.
+
+- **A permanent `403` no longer re-uploads the package.** The renew-and-retry
+  path treated every `401` and `403` as a stale credential, but the marketplace's
+  `403` is `FORBIDDEN` — publishing into a namespace another developer owns —
+  which no fresh token can change. The retry re-sent the entire request: up to
+  50 MB of package bytes for a guaranteed failure, plus a second slot burned
+  against the hourly upload limit. `401` still always retries; a `403` earns one
+  only if its body says `AUTH_REQUIRED`.
+
+- **`whoami` no longer promises a renewal it cannot guarantee.** A revoked
+  session fails at exactly the renewal the message called silent.
+
+- **The dev shell's mock spend report is stamped at the epoch,** matching
+  `createTestContext`. A wall-clock timestamp made the two mocks disagree about
+  the same host and made a plugin's own snapshot tests non-deterministic.
+
+## [1.2.0]
+
+### Added
+
+- **Four permissions the SDK was missing.** `tts`, `sessions.readHistory`,
+  `firebase` and `spend` are all gated by the AMC host and accepted by the
+  marketplace validator, but the SDK's enum rejected them — so `amc-plugin
+  validate` failed any plugin that declared one, and four shipped host
+  capabilities were unbuildable with the public SDK. Among them
+  `sessions.readHistory`, which backs AMC's documented "Session history access"
+  feature, and `spend`, which AMC's own `daily-spend-report` plugin uses.
+
+  Each also gets a typed `ctx` namespace, since a permission you can declare but
+  not call is barely better than one that is rejected:
+
+  - `ctx.tts` — `isAvailable()`, `synthesize(text)`. Metered; the host enforces a
+    per-plugin daily cap and `synthesize()` rejects once it is hit.
+  - `ctx.sessionHistory` — `requestAccess()`, `listProjects()`, `listSessions()`,
+    `getMessages({ sessionId })`. Default-deny and text-only; `getMessages()`
+    throws for a session the user never granted.
+  - `ctx.firebase` — `listAccounts()`, `listProjects()`,
+    `listProjectsForAccount(email)`, `setupStatus()`, `startLogin()`. Lists
+    resolve empty rather than rejecting when the Firebase CLI is absent.
+  - `ctx.spend` — `getBreakdown()`, returning the host's global spend report.
+
+  Signatures were taken from the host's bridge handlers rather than an idealized
+  shape, to avoid repeating the type drift 1.1.0 had to correct.
+
+- `createTestContext()` mocks all four, reproducing the host's real posture —
+  `sessionHistory` is default-deny, `tts` rejects with no voice configured, and
+  the `firebase` lists resolve empty.
+
+### Fixed
+
+- **The CLI no longer makes you sign in again roughly every hour.** It has stored
+  a refresh token since the first sign-in and never used it, so publishing a few
+  versions in one afternoon meant several trips through GitHub OAuth. Renewal is
+  silent, and every failure (expired, revoked, offline) still falls back to the
+  interactive flow.
+
+  Renewal also reaches the read-only commands. `whoami` and `info` read the
+  stored token directly, so they announced "Not signed in" the moment the
+  hour-long ID token lapsed — the very symptom the refresh exists to end. `info`
+  now renews silently before checking marketplace status; `whoami` reports the
+  stored identity (a local fact, no network) and says when renewal is pending.
+  Neither can trigger a browser.
+- **`logout` now clears an expired token instead of ignoring it.** It read
+  through the same expiry check, so an expired token made it print "Not signed
+  in" and return *without* deleting the file — stranding the long-lived refresh
+  token on disk, which silent renewal then turns back into a working credential.
+  Signing out has to remove the credential precisely when it looks stale.
+- **`publish` no longer rejects the four permissions this release adds.** The
+  preflight check kept its own hand-copied permission list, so a manifest
+  declaring `tts`, `sessions.readHistory`, `firebase` or `spend` still failed at
+  "Unknown permission(s)" and exited 1 — the SDK enum was fixed but the gate one
+  layer out was not. That list is now derived from the SDK enum rather than
+  restated, which also restores `system` and `chrome`, missing from it since
+  before this release.
+- **The marketplace token is stored `0600`.** Silent renewal turns the stored
+  refresh token into an indefinitely reusable publish credential, so the default
+  world-readable mode was no longer acceptable. Existing files are tightened on
+  the next write.
+- **A rejected token is renewed mid-flight.** Freshness is only checked before a
+  command runs, so a long upload, a clock skewed past the 5-minute buffer, or a
+  server-side revocation still met a raw `401`. Authenticated calls now renew and
+  retry once — never twice, and never for non-auth failures.
+- A renewed token's lifetime is floored at the freshness buffer, so a zero or
+  negative `expires_in` can no longer mint a token that is expired on arrival.
+- `createTestContext().ctx.firebase.startLogin()` now reports `started: false` by
+  default (seedable via `firebase.loginStarts`), agreeing with the dev-shell mock
+  and with its own `cliInstalled: false` default instead of contradicting both.
+- **A fresh clone can build again.** `pnpm-workspace.yaml` carried unanswered
+  `pnpm approve-builds` placeholders, which made pnpm 11 abort every install and
+  script in the workspace with `ERR_PNPM_IGNORED_BUILDS`. CI never hit it because
+  it passes `--ignore-scripts`. Also pins `packageManager`.
+- The SDK↔host permission parity mirror claimed a 14-permission host union and
+  reasoned that `firebase` was an ungated browser namespace. Both were wrong — the
+  host declares 19 and denies the `firebase` namespace without the permission.
+  Because the guard compared the SDK enum against that mirror, a wrong mirror and
+  a wrong enum agreed and the suite stayed green while the gap above shipped. The
+  guard now pins the host union size and requires every permission to have a typed
+  namespace.
+- Corrected the sign-in URL in the publishing guide (it named a host the CLI does
+  not open) and documented all four new permissions, which had no reference entry.
+
+### Compatibility
+
+No breaking changes. Every 1.1.0 plugin builds unchanged; this release only widens
+what a manifest may declare.
+
+Note that AMC now enforces the `sdkVersion` field, which was never checked before.
+A **bare** version (`"sdkVersion": "1.0.7"`) is read as a **minimum**, not an exact
+pin, so existing plugins keep loading as the host SDK version advances. Only a real
+range like `^2.0.0` can refuse, and an unparseable value is ignored.
+
 ## [1.1.0]
 
 ### Changed

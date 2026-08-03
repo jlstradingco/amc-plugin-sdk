@@ -1,16 +1,18 @@
 {
   "name": "@agent-mc/plugin-cli",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "description": "CLI tool for building AMC plugins",
   "type": "module",
   "bin": {
-    "amc-plugin": "./dist/index.js"
+    "amc-plugin": "./dist/index.js",
+    "amc-automation": "./dist/automation-index.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "clean": "rm -rf dist",
     "dev": "tsc --watch",
     "test": "vitest run"
@@ -24,6 +26,7 @@
   },
   "devDependencies": {
     "@types/archiver": "^7.0.0",
+    "@types/node": "^22.0.0",
     "@types/prompts": "^2.4.9",
     "typescript": "^5.5.0",
     "vitest": "^3.2.6"

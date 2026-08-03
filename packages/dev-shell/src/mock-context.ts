@@ -21,6 +21,36 @@ function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
 }
 
+/**
+ * Build a placeholder object matching a generateStructured tool's inputSchema, so
+ * the dev shell returns something the plugin can actually render. Only the top
+ * level is walked — deeper nesting falls back to the same per-type placeholders.
+ */
+function mockToolInput(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties = (schema['properties'] ?? {}) as Record<string, { type?: string }>
+  const out: Record<string, unknown> = {}
+  for (const [key, spec] of Object.entries(properties)) {
+    switch (spec?.type) {
+      case 'array':
+        out[key] = [`[AI mock] ${key} 1`, `[AI mock] ${key} 2`]
+        break
+      case 'number':
+      case 'integer':
+        out[key] = 0
+        break
+      case 'boolean':
+        out[key] = false
+        break
+      case 'object':
+        out[key] = {}
+        break
+      default:
+        out[key] = `[AI mock] ${key}`
+    }
+  }
+  return out
+}
+
 export function createMockContext(opts: MockContextOptions): PluginContext {
   const eventBus = new EventEmitter()
   const prefix = `[plugin:${opts.pluginId}]`
@@ -35,6 +65,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     ? path.join(opts.dataDir, 'amc-dev-storage.json')
     : null
   const store = new Map<string, unknown>()
+  const secretStore = new Map<string, string>()
   if (storageFile && fs.existsSync(storageFile)) {
     try {
       const raw = JSON.parse(fs.readFileSync(storageFile, 'utf-8')) as Record<string, unknown>
@@ -126,6 +157,16 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           .map(([key, value]) => ({ key, value }))
         return Promise.resolve(items)
       },
+    },
+
+    // In-memory only, and a SEPARATE map from `store`: the real host keeps secrets in
+    // their own keychain-backed table, so nothing a dev-shell run writes here should
+    // ever land in the storage file `flushStorage()` persists.
+    secrets: {
+      get: (key) => Promise.resolve(secretStore.get(key) ?? null),
+      set: (key, value) => { secretStore.set(key, value); return Promise.resolve() },
+      delete: (key) => { secretStore.delete(key); return Promise.resolve() },
+      list: () => Promise.resolve([...secretStore.keys()].sort()),
     },
 
     db: {
@@ -231,6 +272,14 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     ai: {
       generateMessage: (_sys, user) => Promise.resolve(`[AI mock] Response to: ${user.slice(0, 100)}`),
       generateTitle: (text) => Promise.resolve(`[AI mock] Title: ${text.slice(0, 50)}`),
+      isConfigured: () => Promise.resolve(true),
+      // Shape the mock from the tool's own inputSchema rather than returning {} —
+      // a plugin that renders `tldr` and `bullets` gets something to render in
+      // `amc-plugin dev` instead of a screen of undefined.
+      generateStructured: (opts) => {
+        if (shouldLog) console.log(`${prefix} [ai] generateStructured(${opts.tool.name})`)
+        return Promise.resolve(mockToolInput(opts.tool.inputSchema))
+      },
     },
 
     fs: fsRoot ? realFs : memFs,
@@ -299,6 +348,70 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       getShareUrl: (recordingId) =>
         Promise.resolve(`https://mock.local/recordings/${recordingId}`),
       delete: () => Promise.resolve(),
+    },
+
+    // The four namespaces below mirror the HOST's real posture rather than
+    // returning friendly stubs, so a plugin developed against the dev shell hits
+    // the same branches it will hit in AMC. A permissive mock here would let an
+    // author ship code that has never once handled "the user said no".
+    tts: {
+      // No voice is configured in the dev shell, exactly like a fresh install.
+      isAvailable: () => Promise.resolve(false),
+      synthesize: () =>
+        Promise.reject(new Error('Text-to-speech is not configured. Add a voice in Settings.')),
+    },
+
+    sessionHistory: {
+      listProjects: () => Promise.resolve([]),
+      listSessions: () => Promise.resolve([]),
+      // Default-deny: nothing is granted in the dev shell, so every read throws
+      // just as it would for an ungranted session in AMC.
+      getMessages: () => Promise.reject(new Error('session not granted to this plugin')),
+      // There is no user to show a picker to — report a cancelled grant, the
+      // outcome a plugin must handle anyway.
+      requestAccess: () =>
+        Promise.resolve({
+          requestId: `mock-history-grant-${Date.now()}`,
+          cancelled: true,
+          sessionIds: [],
+          projectIds: [],
+        }),
+    },
+
+    firebase: {
+      // Empty, never rejecting — the host swallows every CLI failure into [].
+      listAccounts: () => Promise.resolve([]),
+      listProjects: () => Promise.resolve([]),
+      listProjectsForAccount: () => Promise.resolve([]),
+      setupStatus: () =>
+        Promise.resolve({
+          cliInstalled: false,
+          signedIn: false,
+          accounts: [],
+          firebaseAccess: 'unknown' as const,
+          billing: { checked: false, hasOpenAccount: false },
+        }),
+      startLogin: () => Promise.resolve({ started: false }),
+    },
+
+    spend: {
+      getBreakdown: () => {
+        const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+        return Promise.resolve({
+          // Epoch, matching createTestContext's emptySpendBreakdown. A wall-clock
+          // timestamp made the dev shell and the test harness disagree about the same
+          // host, and made a plugin's own snapshot tests non-deterministic.
+          generatedAt: new Date(0).toISOString(),
+          windows: {
+            yesterday: { ...zeroWindow },
+            week: { ...zeroWindow },
+            month: { ...zeroWindow },
+          },
+          codingEngines: [],
+          backgroundFeatures: [],
+          notableCharges: [],
+        })
+      },
     },
   }
 }

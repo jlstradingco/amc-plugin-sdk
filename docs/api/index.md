@@ -1,12 +1,13 @@
 # API Reference
 
-The AMC Plugin SDK exposes 16 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The AMC Plugin SDK exposes 20 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
 | API | Description | Availability | Permission |
 |---|---|---|---|
 | [Storage](./storage) | Key-value storage | Both | `storage` |
+| [Secrets](./secrets) | Keychain-encrypted credentials | Both | `secrets` |
 | [Database](./db) | Collection-based CRUD | Both | `storage` |
 | [Sessions](./sessions) | Spawn and manage Claude sessions | Both | `sessions` |
 | [AI](./ai) | Generate text with AI models | Both | `ai` |
@@ -22,6 +23,10 @@ The AMC Plugin SDK exposes 16 APIs to plugins. Some are available on both the fr
 | [Inbox](./inbox) | Surface items in AMC's inbox | Both | `inbox` |
 | [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
 | [Recording](./recording) | Screen recording (bridge not yet wired) | Both | `recording` |
+| [Text to Speech](./tts) | Speak text with the user's configured voice | Backend only | `tts` |
+| [Session History](./session-history) | Read past sessions the user has granted | Backend only | `sessions.readHistory` |
+| [Firebase](./firebase) | The user's Firebase accounts and projects | Backend only | `firebase` |
+| [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
 
 ## Access Patterns
 
