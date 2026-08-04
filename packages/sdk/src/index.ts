@@ -16,6 +16,10 @@ export type {
   PluginCronDefinition,
   PluginManifest,
   PluginRegistryEntry,
+  // Workspace manifest block - see the workspace permissions
+  PluginWorkspaceCommandSlot,
+  PluginWorkspaceBinding,
+  PluginWorkspace,
   // Context types
   QueryOptions,
   SidebarItem,
@@ -70,6 +74,20 @@ export type {
   SpendCharge,
   SpendReportBreakdown,
   PluginSpend,
+  // Workspace - the workspace.read / .write / .exec capability
+  WorktreeRef,
+  WorktreeStatus,
+  WorktreeInfo,
+  WorkspaceScope,
+  WorkspaceHandle,
+  WorkspaceEntry,
+  WorkspaceCheckout,
+  WorkspaceGlobOpts,
+  WorkspaceExecStatus,
+  WorkspaceExecResults,
+  WorkspaceBinding,
+  WorkspaceBindingResult,
+  WorkspaceApi,
   // Backend types
   PluginBackend,
   PluginActivate,
@@ -78,3 +96,13 @@ export type {
 // Validators (runtime value exports)
 export { manifestSchema, validateManifest, PLUGIN_PERMISSIONS } from './validators/manifest.js'
 export type { ManifestValidationResult } from './validators/manifest.js'
+
+// Tool-activity transcript markers (runtime value exports). Import these rather
+// than hardcoding the glyphs - see the module for provenance and codepoints.
+export {
+  TOOL_CALL_MARKER,
+  TOOL_RESULT_MARKER,
+  TOOL_CALL_RE,
+  TOOL_RESULT_RE,
+  stripToolLines,
+} from './types/markers.js'

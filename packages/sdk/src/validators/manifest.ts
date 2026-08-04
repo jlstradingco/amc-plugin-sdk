@@ -151,6 +151,20 @@ const uiSchema = z.object({
     .optional(),
 })
 
+// The `ctx.workspace` manifest block. `args` may legitimately be EMPTY — the
+// spec's own `generic.run` slot declares `"args": []` — so no `.min(1)` here.
+// Duplicate slot names are not rejected: the host has no such rule to mirror,
+// and inventing one is how this SDK's host mirror went wrong before.
+const workspaceCommandSlotSchema = z.object({
+  name: z.string().min(1),
+  args: z.array(z.string()),
+})
+
+const workspaceSchema = z.object({
+  binding: z.object({ granularity: z.literal('package') }).optional(),
+  commandSlots: z.array(workspaceCommandSlotSchema).optional(),
+})
+
 const cliEndpointSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE']),
   path: z.string().min(1),
@@ -199,6 +213,12 @@ export const PLUGIN_PERMISSIONS = [
   'inbox',
   'navigation',
   'spend',
+  // SDK-ahead of the host — see SDK_AHEAD_PERMISSIONS in
+  // src/__tests__/fixtures/host-permission-mirror.ts for why these three are
+  // recognized here before the host gates them.
+  'workspace.read',
+  'workspace.write',
+  'workspace.exec',
 ] as const satisfies readonly PluginPermission[]
 
 // Compile-time completeness: fails to type-check if a PluginPermission is added
@@ -226,6 +246,7 @@ export const manifestSchema = z.object({
   permissions: z.array(permissionSchema).optional(),
   cli: z.object({ endpoints: z.array(cliEndpointSchema) }).optional(),
   cron: z.object({ jobs: z.array(cronJobSchema) }).optional(),
+  workspace: workspaceSchema.optional(),
 })
 
 export interface ManifestValidationResult {

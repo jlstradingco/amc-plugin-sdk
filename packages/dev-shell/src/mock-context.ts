@@ -22,6 +22,50 @@ function clone<T>(value: T): T {
 }
 
 /**
+ * `ctx.workspace` rejects here rather than pretending to work.
+ *
+ * The host has no `workspace` namespace on any branch, so a real call rejects
+ * with `Unknown namespace: "workspace"`. A dev-shell that faked it would let a
+ * plugin look finished in the shell and fail the moment it was installed — the
+ * same trap `ctx.events` set when the SDK mocked it as a live EventEmitter while
+ * the production path was dead.
+ *
+ * Kept identical to the test harness's stub in
+ * packages/sdk/src/testing/index.ts — the two mocks must agree about the host.
+ */
+const WORKSPACE_NOT_IMPLEMENTED =
+  'ctx.workspace is not implemented by the AMC host yet, so the dev shell ' +
+  'refuses to fake it — a plugin that works here and nowhere else is worse ' +
+  'than one that fails immediately. The SDK types the capability ahead of the ' +
+  'host so plugins can be authored and packaged against it; a real call ' +
+  'currently rejects with `Unknown namespace: "workspace"`.'
+
+function workspaceNotImplemented(): PluginContext['workspace'] {
+  // One nullary thunk for all 17 methods — assignable to every signature, and
+  // declares no parameter so `noUnusedParameters` stays satisfied.
+  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_IMPLEMENTED))
+  return {
+    listProjects: reject,
+    listWorktrees: reject,
+    requestAccess: reject,
+    resolve: reject,
+    glob: reject,
+    stat: reject,
+    exists: reject,
+    readFile: reject,
+    readFiles: reject,
+    listBindings: reject,
+    writeFile: reject,
+    deleteFile: reject,
+    requestBinding: reject,
+    exec: reject,
+    execStatus: reject,
+    execResults: reject,
+    execCancel: reject,
+  }
+}
+
+/**
  * Build a placeholder object matching a generateStructured tool's inputSchema, so
  * the dev shell returns something the plugin can actually render. Only the top
  * level is walked — deeper nesting falls back to the same per-type placeholders.
@@ -422,5 +466,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         })
       },
     },
+
+    workspace: workspaceNotImplemented(),
   }
 }
