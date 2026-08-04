@@ -11,6 +11,8 @@ together.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-28
+
 ### Added
 
 - **`amc-automation` — a second binary for publishing AMC automations.** Until
