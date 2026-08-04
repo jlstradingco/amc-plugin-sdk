@@ -19,3 +19,11 @@ allowBuilds:
 overrides:
   vite@>=7.0.0 <7.3.5: '>=7.3.5'
   esbuild@>=0.27.0 <0.28.1: '>=0.28.1'
+
+# pnpm 10 blocks dependency build scripts by default. Electron's postinstall is
+# what downloads the platform binary, so without this allow-list a fresh clone
+# installs a NON-FUNCTIONAL electron ("Electron failed to install correctly")
+# and the dev shell cannot launch — neither `pnpm start` nor `amc-plugin dev`.
+onlyBuiltDependencies:
+  - electron
+  - esbuild

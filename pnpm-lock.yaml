@@ -30,6 +30,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@agent-mc/plugin-dev-shell':
+        specifier: workspace:^
+        version: link:../dev-shell
       '@agent-mc/plugin-sdk':
         specifier: workspace:^
         version: link:../sdk
@@ -70,13 +73,13 @@ importers:
       chokidar:
         specifier: ^4.0.0
         version: 4.0.3
+      electron:
+        specifier: ^39.0.0
+        version: 39.8.10
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.19
-      electron:
-        specifier: ^39.0.0
-        version: 39.8.10
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
