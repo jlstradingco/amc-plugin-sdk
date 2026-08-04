@@ -175,6 +175,13 @@ The frontend `BridgeSession` interface is available as `AgentMC.session`.
 - `getMessages()` names the message body **`content`**, where the backend names it `text`, and it
   drops still-streaming rows the backend keeps.
 - `sendMessage()` takes an options object instead of a plain string.
+- `create()` accepts only `prompt` -- the bridge's schema strips `userInitiated`, so passing it
+  here has no effect. (Neither surface accepts `projectId`.)
+- `getStatus()` resolves to `{ status, pendingAction }` here, but to a bare `string` on the
+  backend. Check which surface you are on before destructuring.
+- `getMessages()` puts the message body on `content` here; the backend puts it on `text`. This
+  split is deliberate on the host's side, so do not write `m.text ?? m.content ?? ''` -- pick
+  the surface you are on.
 - `rename()` is available only on the frontend.
 - `launchWithDraft()` is available only on the frontend.
 - `onStatusChange()` is not available on the frontend.

@@ -1,6 +1,6 @@
 # API Reference
 
-The AMC Plugin SDK exposes 20 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The AMC Plugin SDK exposes 21 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -27,6 +27,7 @@ The AMC Plugin SDK exposes 20 APIs to plugins. Some are available on both the fr
 | [Session History](./session-history) | Read past sessions the user has granted | Backend only | `sessions.readHistory` |
 | [Firebase](./firebase) | The user's Firebase accounts and projects | Backend only | `firebase` |
 | [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
+| [Workspace](./workspace) | The user's real project checkouts and worktrees (**host runtime not implemented yet**) | Backend only | `workspace.read` / `.write` / `.exec` |
 
 ## Access Patterns
 

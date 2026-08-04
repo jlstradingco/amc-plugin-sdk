@@ -37,6 +37,18 @@ like it was doing.
 
 ### Added
 
+- **The `workspace.*` permissions and `ctx.workspace` — typed ahead of AMC, and
+  deliberately marked as such.** Read, write, and run user-bound test or build
+  commands against real project checkouts and worktrees. **AMC does not implement
+  this yet** — there is no host `workspace` namespace on any build, so every call
+  rejects at runtime. It is typed here so a plugin can be authored and packaged
+  against it; `amc-plugin preflight` passing validates shape, not host support.
+  Both SDK mocks reject on every `ctx.workspace.*` method rather than faking one,
+  so a plugin's unit tests cannot go green against a capability that cannot run.
+  See [the Workspace API docs](docs/api/workspace.md).
+- **The host's tool-content markers** (`TOOL_CALL_MARKER`, `TOOL_RESULT_MARKER`
+  and their regexes) plus a fence-aware `stripToolLines`, so plugins parsing
+  session transcripts stop hardcoding `▸` and `←`.
 - **`ui.hideProjectPanel`, `ui.sessions`, `ui.overlay` and `storage.uniqueIndexes` now survive
   validation.** All four are real in AMC — `uniqueIndexes` materialises real unique indexes and is
   what makes `collectionUpsert` atomic — but a non-strict parse stripped them from this SDK's
