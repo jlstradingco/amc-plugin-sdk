@@ -2,16 +2,22 @@ import { describe, it, expect } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { validateManifest, manifestSchema } from '../index.js'
-import { createTestContext } from '../testing/index.js'
-import type { WorkspaceScope, WorkspaceHandle, WorktreeRef } from '../index.js'
+// Everything is imported through the PACKAGE BARREL, never through
+// '../types/markers.js' directly. package.json exposes only '.', './browser',
+// './validators' and './testing', so the deep path is unreachable to a plugin
+// author — testing through it would let someone delete the barrel's re-export
+// block and break every consumer while this suite stayed green.
 import {
+  validateManifest,
+  manifestSchema,
   TOOL_CALL_MARKER,
   TOOL_RESULT_MARKER,
   TOOL_CALL_RE,
   TOOL_RESULT_RE,
   stripToolLines,
-} from '../types/markers.js'
+} from '../index.js'
+import { createTestContext } from '../testing/index.js'
+import type { WorkspaceScope, WorkspaceHandle, WorktreeRef } from '../index.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
@@ -388,12 +394,28 @@ describe('the binding surface has no setter', () => {
     const api = source.slice(source.indexOf('interface WorkspaceApi'))
     const body = api.slice(0, api.indexOf('\n}'))
 
-    for (const forbidden of ['setBinding', 'createBinding', 'updateBinding', 'writeBinding']) {
-      expect(body).not.toContain(forbidden)
-    }
-    // The two sanctioned binding methods are present, so the check above is
-    // testing a real surface rather than passing on an empty string.
-    expect(body).toContain('requestBinding')
-    expect(body).toContain('listBindings')
+    // Method declarations sit at exactly two spaces of indent; JSDoc lines and
+    // wrapped parameters do not, so this picks up signatures only.
+    const methods = [...body.matchAll(/^ {2}([a-zA-Z][A-Za-z0-9_]*)\s*\(/gm)].map((m) => m[1])
+
+    // Vacuity guard first: if the slice or the regex ever stops matching, an
+    // empty list would satisfy everything below. It has earned its keep — it
+    // fired for real during the build, when the interface had not landed yet.
+    expect(methods.length).toBeGreaterThan(0)
+
+    // THE SECURITY ASSERTION. An allowlist, not a denylist: naming a handful of
+    // forbidden spellings would let a setter called `bindCommand`,
+    // `acceptBinding` or `saveBinding` straight through. The plugin never
+    // supplies a command string, so there must be exactly two binding methods —
+    // one that ASKS the host to open its own modal, and one that READS.
+    //
+    // Matched on /bind/i, not /binding/i, deliberately: `bindCommand` contains
+    // no "binding" and would otherwise slip past the very check written to stop it.
+    const bindingMethods = methods.filter((n) => /bind/i.test(n)).sort()
+    expect(bindingMethods).toEqual(['listBindings', 'requestBinding'])
+
+    // Tripwire: any change to this interface's size is a reviewed change. Bump
+    // it deliberately when the spec genuinely grows — never to make a red go away.
+    expect(methods).toHaveLength(17)
   })
 })
