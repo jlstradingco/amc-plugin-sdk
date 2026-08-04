@@ -85,21 +85,27 @@ export const TOOL_RESULT_RE = /^←\s/
  * The host ships two related functions with confusingly similar names, and
  * this export deliberately mirrors only one of them:
  *
- *   - host `stripToolLines`           — fence-BLIND. A flat line filter
- *     that WILL strip a '▸'/'←' line even inside a ``` fence, corrupting
- *     any transcript that quotes tool-marker syntax as an example.
+ *   - host `stripToolLines`           — fence-BLIND. It WILL strip a
+ *     '▸'/'←' line even inside a ``` fence, corrupting any transcript that
+ *     quotes tool-marker syntax as an example.
  *   - host `stripToolLinesFenceAware` — fence-AWARE. Tracks fence state and
- *     leaves fenced content untouched. THIS is the function this SDK
- *     export mirrors, despite sharing its unqualified name with the
- *     host's fence-blind one.
+ *     leaves fenced content untouched.
  *
- * In short: this SDK's `stripToolLines` has the host's fence-blind
- * function's NAME but the host's fence-aware function's BEHAVIOR. That is
- * intentional — a plugin author reaching for "strip the tool lines out of
- * this transcript" almost always wants the fence-safe result, so the
- * simpler name is given to the safer behavior. Do not "fix" this by making
- * it fence-blind to match the host's `stripToolLines` more literally; that
- * would reintroduce the exact corruption this function exists to avoid.
+ * This export takes the simpler name and the SAFER behaviour: a plugin
+ * author reaching for "strip the tool lines out of this transcript" almost
+ * always wants the fence-safe result. Do not "fix" it to match the host's
+ * fence-blind `stripToolLines` more literally — that would reintroduce the
+ * exact corruption this function exists to avoid.
+ *
+ * It mirrors the host's FENCE-AWARENESS, not the whole of
+ * `stripToolLinesFenceAware`. Deliberately omitted, because each is a
+ * host-internal presentation concern a plugin has no business inheriting:
+ * collapsing blank gaps left by removed lines, trimming the result,
+ * filtering the host's `[[AMC_FINAL]]` sentinel, and the
+ * `stripAgentTailMarkers` / `normalizeGluedFinalMarker` preprocessing. So
+ * given the same input the two can differ in whitespace and in whether a
+ * host sentinel line survives — they agree on which lines are tool lines,
+ * which is the contract this module exists to share.
  */
 export function stripToolLines(content: string): string {
   const kept: string[] = []

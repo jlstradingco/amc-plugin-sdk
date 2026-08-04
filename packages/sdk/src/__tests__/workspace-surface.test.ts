@@ -15,6 +15,9 @@ import {
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
+/** The `ui` entry point this schema demands on every `ui` block (see S6). */
+const UI_ENTRY = 'i.html'
+
 /** The minimum valid manifest every case below builds on. */
 function baseManifest(): Record<string, unknown> {
   return {
@@ -57,8 +60,12 @@ describe('workspace permissions', () => {
 })
 
 describe('workspace manifest block', () => {
-  it('accepts the capability spec\'s own example manifest verbatim', () => {
-    // Transcribed from docs/spec/01-capabilities.md, section "Manifest". If this
+  it('accepts the spec\'s example manifest, plus the ui fields this schema demands', () => {
+    // Command slots transcribed from the Test Tracker plugin spec
+    // (test-tracker-plugin repo, docs/spec/01-capabilities.md), section
+    // "Manifest". The spec's own `ui` block is just `{ hideProjectPanel: true }`;
+    // `entryPoint` and `sidebar` are added here only because THIS schema requires
+    // them and the host does not — see the note in validators/manifest.ts. If this
     // ever fails, the SDK schema and the specification have diverged — fix the
     // schema, or amend the spec deliberately.
     const result = validateManifest({
@@ -156,7 +163,7 @@ describe('B2 drift: fields that were host-real but SDK-invisible', () => {
   it('keeps ui.hideProjectPanel through the parse', () => {
     const result = validateManifest({
       ...baseManifest(),
-      ui: { entryPoint: 'i.html', sidebar: { title: 'T', icon: 'i' }, hideProjectPanel: true },
+      ui: { entryPoint: UI_ENTRY, sidebar: { title: 'T', icon: 'i' }, hideProjectPanel: true },
     })
     expect(result.manifest?.ui?.hideProjectPanel).toBe(true)
   })
@@ -165,7 +172,7 @@ describe('B2 drift: fields that were host-real but SDK-invisible', () => {
     const result = validateManifest({
       ...baseManifest(),
       ui: {
-        entryPoint: 'i.html',
+        entryPoint: UI_ENTRY,
         sidebar: { title: 'T', icon: 'i' },
         sessions: { contextTemplate: 'You are working on {{projectName}}.' },
       },
@@ -181,7 +188,7 @@ describe('B2 drift: fields that were host-real but SDK-invisible', () => {
     const build = (n: number) => ({
       ...baseManifest(),
       ui: {
-        entryPoint: 'i.html',
+        entryPoint: UI_ENTRY,
         sidebar: { title: 'T', icon: 'i' },
         sessions: { suggestedPrompts: prompts(n) },
       },
@@ -332,7 +339,7 @@ describe('the mock refuses to fake ctx.workspace', () => {
 describe('an author can actually write against the typed surface', () => {
   // The it.each above calls methods through an index signature, which proves
   // they reject but proves NOTHING about their signatures. This block calls them
-  // the way a plugin author would — if a parameter or return type is wrong, this
+  // the way a plugin author would — if a parameter type is wrong, this
   // file stops compiling, which is the point.
   it('typechecks a realistic read/write/exec flow', async () => {
     const ctx = createTestContext().ctx

@@ -16,7 +16,7 @@ export type {
   PluginCronDefinition,
   PluginManifest,
   PluginRegistryEntry,
-  // Workspace manifest block - see the workspace permissions
+  // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
   PluginWorkspaceCommandSlot,
   PluginWorkspaceBinding,
   PluginWorkspace,
@@ -74,7 +74,7 @@ export type {
   SpendCharge,
   SpendReportBreakdown,
   PluginSpend,
-  // Workspace - the workspace.read / .write / .exec capability
+  // Workspace (`workspace.read` / `.write` / `.exec`)
   WorktreeRef,
   WorktreeStatus,
   WorktreeInfo,

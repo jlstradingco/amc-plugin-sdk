@@ -565,7 +565,8 @@ export interface WorktreeInfo {
   /** `'main'` for the main checkout, otherwise the worktree's basename with any
    *  trailing `-<TS>` suffix split off. */
   label: string
-  /** Parsed from the `label`'s `-<TS>` suffix when present, else `null`. */
+  /** Parsed from the worktree basename's `-<TS>` suffix when present, else
+   *  `null`. Note `label` above has that suffix already split off. */
   createdAt: string | null
   checkouts: WorkspaceCheckout[]
   session: { id: string; name: string; status: WorktreeStatus } | null
@@ -660,7 +661,8 @@ export type WorkspaceBindingResult =
  * Discovery methods need none of the three beyond holding any `workspace.*`
  * permission at all — without them the plugin cannot construct its first handle.
  *
- * Transcribed from "The interface" in `docs/spec/01-capabilities.md`, which
+ * Transcribed from "The interface" in the Test Tracker plugin spec
+ * (test-tracker-plugin repo, `docs/spec/01-capabilities.md`), which
  * remains the source of truth if this file and that document ever disagree.
  *
  * Three contracts matter most and none of them are visible in the signatures:

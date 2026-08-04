@@ -5,7 +5,7 @@ export type {
   PluginSuggestedPrompt,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
   PluginManifest, PluginRegistryEntry,
-  // Workspace manifest block - see the workspace permissions
+  // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
   PluginWorkspaceCommandSlot, PluginWorkspaceBinding, PluginWorkspace,
 } from './manifest.js'
 
@@ -20,7 +20,7 @@ export type {
   HistoryProject, HistorySession, HistoryMessage, HistoryGrantResult, PluginSessionHistory,
   FirebaseAccount, FirebaseProject, FirebaseSetupStatus, PluginFirebase,
   SpendWindow, SpendEngineLine, SpendFeatureLine, SpendCharge, SpendReportBreakdown, PluginSpend,
-  // Workspace - the workspace.read / .write / .exec capability
+  // Workspace (`workspace.read` / `.write` / `.exec`)
   WorktreeRef, WorktreeStatus, WorktreeInfo,
   WorkspaceScope, WorkspaceHandle, WorkspaceEntry, WorkspaceCheckout, WorkspaceGlobOpts,
   WorkspaceExecStatus, WorkspaceExecResults, WorkspaceBinding, WorkspaceBindingResult,
