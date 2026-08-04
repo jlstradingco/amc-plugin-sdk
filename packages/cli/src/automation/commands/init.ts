@@ -55,25 +55,35 @@ export function runInit(opts: InitOptions): { recipePath: string; readmePath: st
   return { recipePath, readmePath }
 }
 
-export const initCommand = new Command('init')
-  .description('Scaffold a new automation (.recipe.json)')
-  .argument('<name>', 'Display name for the automation')
-  .option('--description <text>', 'One-line description')
-  .option('--category <category>', `One of: ${AUTOMATION_CATEGORIES.join(', ')}`, 'other')
-  .option('--force', 'Overwrite an existing file')
-  .action((name: string, options: { description?: string; category?: string; force?: boolean }) => {
-    try {
-      const { recipePath } = runInit({
-        name,
-        cwd: process.cwd(),
-        description: options.description,
-        category: options.category as AutomationCategory,
-        force: options.force
-      })
-      ok(`Created ${filePath(path.basename(recipePath))}`)
-      info('Next: edit the steps, then run `amc-automation validate`.')
-    } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
-    }
-  })
+/**
+ * Build a FRESH `init` command.
+ *
+ * A factory, not a module-level singleton. Commander stores parsed option values ON the
+ * Command object, so a shared instance carries `--version 1.0.0` from one parse into the
+ * next — which made `buildAutomationProgram` return programs that silently shared mutable
+ * state and defaulted differently depending on what had already run.
+ */
+export function createInitCommand(): Command {
+  return new Command('init')
+    .description('Scaffold a new automation (.recipe.json)')
+    .argument('<name>', 'Display name for the automation')
+    .option('--description <text>', 'One-line description')
+    .option('--category <category>', `One of: ${AUTOMATION_CATEGORIES.join(', ')}`, 'other')
+    .option('--force', 'Overwrite an existing file')
+    .action((name: string, options: { description?: string; category?: string; force?: boolean }) => {
+      try {
+        const { recipePath } = runInit({
+          name,
+          cwd: process.cwd(),
+          description: options.description,
+          category: options.category as AutomationCategory,
+          force: options.force
+        })
+        ok(`Created ${filePath(path.basename(recipePath))}`)
+        info('Next: edit the steps, then run `amc-automation validate`.')
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : String(err))
+        process.exit(1)
+      }
+    })
+}
