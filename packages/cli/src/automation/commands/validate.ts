@@ -131,30 +131,40 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
   return { exitCode: failed ? 1 : 0, findings, server }
 }
 
-export const validateCommand = new Command('validate')
-  .description('Check an automation before publishing')
-  .argument('[file]', 'Path to the .recipe.json (defaults to the one in this directory)')
-  .option('--check', 'Also ask the marketplace for the authoritative verdict')
-  .option(
-    '--version <version>',
-    'Version to validate as, so --check can answer about version collisions',
-    DEFAULT_PUBLISH_VERSION
-  )
-  .option('--category <category>', `One of: ${AUTOMATION_CATEGORIES.join(', ')}`, DEFAULT_PUBLISH_CATEGORY)
-  .option('--json', 'Emit machine-readable findings')
-  .action(
-    async (
-      file: string | undefined,
-      options: { check?: boolean; json?: boolean; version?: string; category?: string }
-    ) => {
-      const res = await runValidate({
-        cwd: process.cwd(),
-        file,
-        check: options.check,
-        json: options.json,
-        version: options.version,
-        category: options.category as AutomationCategory
-      })
-      process.exit(res.exitCode)
-    }
-  )
+/**
+ * Build a FRESH `validate` command.
+ *
+ * A factory, not a module-level singleton. Commander stores parsed option values ON the
+ * Command object, so a shared instance carries `--version 1.0.0` from one parse into the
+ * next — which made `buildAutomationProgram` return programs that silently shared mutable
+ * state and defaulted differently depending on what had already run.
+ */
+export function createValidateCommand(): Command {
+  return new Command('validate')
+    .description('Check an automation before publishing')
+    .argument('[file]', 'Path to the .recipe.json (defaults to the one in this directory)')
+    .option('--check', 'Also ask the marketplace for the authoritative verdict')
+    .option(
+      '--version <version>',
+      'Version to validate as, so --check can answer about version collisions',
+      DEFAULT_PUBLISH_VERSION
+    )
+    .option('--category <category>', `One of: ${AUTOMATION_CATEGORIES.join(', ')}`, DEFAULT_PUBLISH_CATEGORY)
+    .option('--json', 'Emit machine-readable findings')
+    .action(
+      async (
+        file: string | undefined,
+        options: { check?: boolean; json?: boolean; version?: string; category?: string }
+      ) => {
+        const res = await runValidate({
+          cwd: process.cwd(),
+          file,
+          check: options.check,
+          json: options.json,
+          version: options.version,
+          category: options.category as AutomationCategory
+        })
+        process.exit(res.exitCode)
+      }
+    )
+}

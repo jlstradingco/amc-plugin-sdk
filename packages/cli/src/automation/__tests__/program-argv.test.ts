@@ -11,9 +11,11 @@ import { DEFAULT_PUBLISH_VERSION, DEFAULT_PUBLISH_CATEGORY } from '../lib/envelo
 const CLI_VERSION = '9.9.9'
 
 /**
- * The subcommands are module-level singletons shared by every program instance, so replacing
- * an action handler persists across builds. Each test installs its own spy, which is why that
- * is safe — but a test that needs the REAL handler must not rely on a fresh program giving it.
+ * Each `buildAutomationProgram` call now yields FRESH subcommand instances, so spying an
+ * action here cannot leak into another test — and, more importantly, neither can a parsed
+ * option value. They were module-level singletons until 2026-08-04, which meant commander
+ * carried `--version 1.0.0` from one parse into the next and the default-value tests below
+ * passed alone but failed in a full run.
  */
 function programWithSpiedAction(name: string): {
   program: Command

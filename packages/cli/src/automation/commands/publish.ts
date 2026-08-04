@@ -160,33 +160,43 @@ export async function runPublish(
   }
 }
 
-export const publishCommand = new Command('publish')
-  .description('Publish an automation to the AMC Marketplace for review')
-  .argument('[file]', 'Path to the .recipe.json')
-  .option('--version <version>', 'Version for this submission', DEFAULT_PUBLISH_VERSION)
-  .option(
-    '--category <category>',
-    `One of: ${AUTOMATION_CATEGORIES.join(', ')}`,
-    DEFAULT_PUBLISH_CATEGORY
-  )
-  .option('--changelog <text>', 'What changed in this version')
-  .option('--as <github-user>', 'Assert the expected GitHub account; aborts on mismatch')
-  .option('--switch-account', 'Sign out first and re-authenticate as a different account')
-  .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
-  .option('--dry-run', 'Do everything except the upload')
-  .option('--skip-validation', 'Publish even if local checks report errors')
-  .action(async (file: string | undefined, options: Record<string, unknown>) => {
-    const res = await runPublish({
-      cwd: process.cwd(),
-      file,
-      version: options.version as string,
-      category: options.category as AutomationCategory,
-      changelog: options.changelog as string,
-      as: options.as as string,
-      switchAccount: options.switchAccount as boolean,
-      yes: options.yes as boolean,
-      dryRun: options.dryRun as boolean,
-      skipValidation: options.skipValidation as boolean
+/**
+ * Build a FRESH `publish` command.
+ *
+ * A factory, not a module-level singleton. Commander stores parsed option values ON the
+ * Command object, so a shared instance carries `--version 1.0.0` from one parse into the
+ * next — which made `buildAutomationProgram` return programs that silently shared mutable
+ * state and defaulted differently depending on what had already run.
+ */
+export function createPublishCommand(): Command {
+  return new Command('publish')
+    .description('Publish an automation to the AMC Marketplace for review')
+    .argument('[file]', 'Path to the .recipe.json')
+    .option('--version <version>', 'Version for this submission', DEFAULT_PUBLISH_VERSION)
+    .option(
+      '--category <category>',
+      `One of: ${AUTOMATION_CATEGORIES.join(', ')}`,
+      DEFAULT_PUBLISH_CATEGORY
+    )
+    .option('--changelog <text>', 'What changed in this version')
+    .option('--as <github-user>', 'Assert the expected GitHub account; aborts on mismatch')
+    .option('--switch-account', 'Sign out first and re-authenticate as a different account')
+    .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
+    .option('--dry-run', 'Do everything except the upload')
+    .option('--skip-validation', 'Publish even if local checks report errors')
+    .action(async (file: string | undefined, options: Record<string, unknown>) => {
+      const res = await runPublish({
+        cwd: process.cwd(),
+        file,
+        version: options.version as string,
+        category: options.category as AutomationCategory,
+        changelog: options.changelog as string,
+        as: options.as as string,
+        switchAccount: options.switchAccount as boolean,
+        yes: options.yes as boolean,
+        dryRun: options.dryRun as boolean,
+        skipValidation: options.skipValidation as boolean
+      })
+      process.exit(res.exitCode)
     })
-    process.exit(res.exitCode)
-  })
+}

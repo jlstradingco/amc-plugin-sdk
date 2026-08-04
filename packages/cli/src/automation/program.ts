@@ -1,8 +1,8 @@
 import { Command } from 'commander'
-import { initCommand } from './commands/init.js'
-import { validateCommand } from './commands/validate.js'
-import { publishCommand } from './commands/publish.js'
-import { statusCommand } from './commands/status.js'
+import { createInitCommand } from './commands/init.js'
+import { createValidateCommand } from './commands/validate.js'
+import { createPublishCommand } from './commands/publish.js'
+import { createStatusCommand } from './commands/status.js'
 
 /**
  * Build the `amc-automation` command tree.
@@ -37,10 +37,13 @@ export function buildAutomationProgram(version: string): Command {
     // the subcommand name, never after it.
     .enablePositionalOptions()
 
-  program.addCommand(initCommand)
-  program.addCommand(validateCommand)
-  program.addCommand(publishCommand)
-  program.addCommand(statusCommand)
+  // FRESH instances per build. Commander stores parsed option values on the Command
+  // object, so sharing module-level singletons here made every "new" program inherit the
+  // last parse's flags — two builds were never independent.
+  program.addCommand(createInitCommand())
+  program.addCommand(createValidateCommand())
+  program.addCommand(createPublishCommand())
+  program.addCommand(createStatusCommand())
 
   return program
 }
@@ -57,10 +60,17 @@ export function buildAutomationProgram(version: string): Command {
  * @returns The same program, for chaining.
  */
 export function configureProgramForTest(program: Command, sink: string[]): Command {
+  const capture = {
+    writeOut: (str: string) => sink.push(str),
+    writeErr: (str: string) => sink.push(str)
+  }
+  // exitOverride() and configureOutput() are PER-COMMAND, not inherited. Applying them to the
+  // program alone left every subcommand still calling process.exit — so `validate --nope`
+  // (unknown option), `validate --version` (missing argument) and `validate --help` killed the
+  // test worker instead of throwing a CommanderError the assertion could inspect.
+  program.exitOverride().configureOutput(capture)
+  for (const sub of program.commands) {
+    sub.exitOverride().configureOutput(capture)
+  }
   return program
-    .exitOverride()
-    .configureOutput({
-      writeOut: (str) => sink.push(str),
-      writeErr: (str) => sink.push(str)
-    })
 }

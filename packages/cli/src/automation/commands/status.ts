@@ -76,10 +76,20 @@ export async function runStatus(
   return { exitCode: 0, rows }
 }
 
-export const statusCommand = new Command('status')
-  .description('Check the review status of your submitted automations')
-  .option('--all', 'Show every submission, not just this directory')
-  .action(async (options: { all?: boolean }) => {
-    const res = await runStatus({ cwd: process.cwd(), all: options.all })
-    process.exit(res.exitCode)
-  })
+/**
+ * Build a FRESH `status` command.
+ *
+ * A factory, not a module-level singleton. Commander stores parsed option values ON the
+ * Command object, so a shared instance carries `--version 1.0.0` from one parse into the
+ * next — which made `buildAutomationProgram` return programs that silently shared mutable
+ * state and defaulted differently depending on what had already run.
+ */
+export function createStatusCommand(): Command {
+  return new Command('status')
+    .description('Check the review status of your submitted automations')
+    .option('--all', 'Show every submission, not just this directory')
+    .action(async (options: { all?: boolean }) => {
+      const res = await runStatus({ cwd: process.cwd(), all: options.all })
+      process.exit(res.exitCode)
+    })
+}
