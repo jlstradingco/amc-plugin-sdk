@@ -3,3 +3,6 @@ dist/
 *.tgz
 *.amcplugin
 .DS_Store
+
+# Git worktrees live inside the repo (personal convention)
+.worktrees/

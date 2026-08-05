@@ -55,6 +55,7 @@ export interface PluginSettingDefinition {
 
 export type PluginPermission =
   | 'storage'
+  | 'secrets'
   | 'sessions'
   | 'sessions.readHistory'
   | 'ai'

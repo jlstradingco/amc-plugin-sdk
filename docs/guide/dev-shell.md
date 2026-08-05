@@ -53,7 +53,7 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy` (`{ col: 'asc' | 'desc' }`), `limit`/`offset`; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
 | **settings** | Seeded from an `amc-dev-settings.json` dev config file next to your plugin; `getAll()`/`get(key)` read from it (empty when the file is absent) |
 | **log** | Prints to the terminal with a `[plugin:your-id]` prefix |
-| **events** | Fully functional in-memory `EventEmitter` |
+| **events** | In-memory `EventEmitter`, backend-only. Backend-to-backend delivery matches AMC, but an emit does NOT reach the dev shell's webview -- in AMC it reaches both surfaces. Exercise UI-facing events in AMC itself |
 | **sessions** | `create` returns a mock session ID; `getStatus` always returns `"running"`; `getMessages` returns `[]` |
 | **ai** | Returns `"[AI mock] Response to: ..."` and `"[AI mock] Title: ..."` |
 | **fs** | Rejects read/write/delete with an error; `exists` returns `false`; `listDir` returns `[]` |

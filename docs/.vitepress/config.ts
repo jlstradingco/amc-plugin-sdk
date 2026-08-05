@@ -46,6 +46,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/api/' },
             { text: 'Storage', link: '/api/storage' },
+            { text: 'Secrets', link: '/api/secrets' },
             { text: 'Database', link: '/api/db' },
             { text: 'Sessions', link: '/api/sessions' },
             { text: 'AI', link: '/api/ai' },

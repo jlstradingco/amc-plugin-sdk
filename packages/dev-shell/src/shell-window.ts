@@ -1,8 +1,15 @@
 import { app, BrowserWindow } from 'electron'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createMockContext } from './mock-context.js'
 import { startHotReload } from './hot-reload.js'
+
+// This package is ESM ("type": "module"), where Node does not define __dirname.
+// Derive it from import.meta.url so path.join(__dirname, 'shell.html') resolves
+// the bundled shell HTML at runtime (previously threw "__dirname is not defined"
+// and the window never rendered — on every platform, not just Windows).
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const pluginDir = process.argv[2] || process.cwd()
 const manifestPath = path.join(pluginDir, 'manifest.json')

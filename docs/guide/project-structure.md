@@ -155,7 +155,7 @@ async function init() {
 init()
 ```
 
-The `AgentMC` bridge is injected into the webview by AMC before your script runs. It provides access to storage, database, settings, sessions, AI, theme, toasts, export, project management, sidebar control, and static assets.
+The `AgentMC` bridge is injected into the webview by AMC before your script runs. It provides access to storage, database, settings, events, theme, toasts, sessions, AI, export, project management, sidebar control, static assets, inbox, authentication, and screen recording.
 
 ### `src/backend/index.ts` (optional)
 

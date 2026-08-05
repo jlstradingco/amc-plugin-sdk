@@ -23,6 +23,7 @@ import type {
   InboxItem,
   PluginAuthUser,
   PluginAuthSession,
+  PluginAiStructuredRequest,
   Recording,
   QueryOptions,
   HistoryProject,
@@ -64,6 +65,14 @@ export interface TestContextOptions {
   ai?: {
     generateMessage?: (systemPrompt: string, userPrompt: string) => Promise<string> | string
     generateTitle?: (text: string) => Promise<string> | string
+    /** Defaults to true, so a plugin gating on it takes the configured path. */
+    isConfigured?: () => Promise<boolean> | boolean
+    /**
+     * Stub structured generation. Without an override the harness echoes an
+     * empty object — enough to satisfy the call, but a plugin asserting on real
+     * fields should supply its own shape here.
+     */
+    generateStructured?: (opts: PluginAiStructuredRequest) => Promise<unknown> | unknown
   }
   /** Seed an authenticated user / session. */
   auth?: {
@@ -167,6 +176,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const pluginVersion = opts.pluginVersion ?? '1.0.0'
 
   const storageMap = new Map<string, unknown>()
+  const secretsMap = new Map<string, string>()
   const collections = new Map<string, Record<string, unknown>[]>()
   const fsFiles = new Map<string, string>()
   const eventBus = new EventEmitter()
@@ -212,6 +222,16 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           .filter(([k]) => !prefix || k.startsWith(prefix))
           .map(([key, value]) => ({ key, value }))
       )
+    },
+
+    // Deliberately a SEPARATE map from `storageMap`: the host keeps secrets in their own
+    // table so a plugin holding `storage` alone cannot enumerate them, and a test double
+    // that shared one map would let a test pass that the real bridge would reject.
+    secrets: {
+      get: (key) => Promise.resolve(secretsMap.get(key) ?? null),
+      set: (key, value) => { secretsMap.set(key, value); return Promise.resolve() },
+      delete: (key) => { secretsMap.delete(key); return Promise.resolve() },
+      list: () => Promise.resolve([...secretsMap.keys()].sort())
     },
 
     db: {
@@ -291,6 +311,11 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       generateTitle: (text) =>
         Promise.resolve(
           opts.ai?.generateTitle ? opts.ai.generateTitle(text) : `[test-ai] ${text.slice(0, 40)}`
+        ),
+      isConfigured: () => Promise.resolve(opts.ai?.isConfigured ? opts.ai.isConfigured() : true),
+      generateStructured: (structuredOpts) =>
+        Promise.resolve(
+          opts.ai?.generateStructured ? opts.ai.generateStructured(structuredOpts) : {}
         )
     },
 

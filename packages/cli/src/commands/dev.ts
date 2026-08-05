@@ -52,15 +52,20 @@ export const devCommand = new Command('dev')
       }
     }
 
-    // Find electron binary
+    // Resolve the Electron BINARY. The `electron` package's main export is the
+    // absolute path to the platform binary (electron.exe on Windows), so spawn
+    // THAT. The previous code spawned electron/cli.js directly, which is EFTYPE
+    // on Windows (a .js file is not an executable) — it crashed `amc-plugin dev`
+    // on every Windows machine.
     let electronPath: string
     try {
-      const electronPkg = path.dirname(require.resolve('electron/package.json'))
-      const electronCli = path.join(electronPkg, 'cli.js')
-      electronPath = electronCli
+      electronPath = require('electron') as unknown as string
     } catch {
-      // Fallback: try npx electron
-      electronPath = 'npx'
+      actionableError(
+        'Electron is not installed',
+        "Run 'pnpm add -D electron' in your plugin, or reinstall @agent-mc/plugin-dev-shell (which now brings Electron with it)."
+      )
+      process.exit(1)
     }
 
     // Find dev-shell entry point
@@ -79,10 +84,8 @@ export const devCommand = new Command('dev')
       `Launching dev shell for ${filePath(manifest.plugin?.name ?? manifest.plugin?.id ?? 'plugin')}`
     )
 
-    // Launch Electron dev shell
-    const args = electronPath === 'npx' ? ['electron', shellEntry, cwd] : [shellEntry, cwd]
-
-    const child = spawn(electronPath, args, {
+    // Launch the Electron dev shell (spawn the binary with the shell entry).
+    const child = spawn(electronPath, [shellEntry, cwd], {
       cwd,
       stdio: 'inherit',
       env: { ...process.env }

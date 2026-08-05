@@ -36,6 +36,36 @@ export interface PluginStorage {
   list(prefix?: string): Promise<{ key: string; value: unknown }[]>
 }
 
+/**
+ * Store and read this plugin's own credentials, encrypted by the operating system's
+ * keychain (macOS Keychain, Windows DPAPI, libsecret) rather than kept as plaintext
+ * rows the way `PluginStorage` and `PluginDb` are.
+ * Requires the `secrets` permission.
+ *
+ * Scoped to this plugin, in its own table: a plugin holding `storage` but not
+ * `secrets` cannot read these values or even enumerate their keys.
+ *
+ * Four behaviours matter and none of them are visible in the signatures:
+ *
+ * - `set` THROWS when the machine has no available keyring. There is no plaintext
+ *   fallback anywhere, so a `set` that resolves was definitely encrypted.
+ * - `get` returns `null` for BOTH "never set" and "stored but no longer
+ *   decryptable". Do not read `null` as "nothing here, safe to overwrite".
+ * - `list` returns KEYS only. No layer exposes a read-all-values primitive.
+ * - A key is 1–256 characters and a value 1–8192. An empty value is rejected
+ *   rather than stored, so `''` is never a value you can read back.
+ */
+export interface PluginSecrets {
+  /** The stored secret, or `null` if it is missing OR no longer decryptable. */
+  get(key: string): Promise<string | null>
+  /** Encrypt and store. Throws if this computer has no available keychain. */
+  set(key: string, value: string): Promise<void>
+  /** Remove a secret. Succeeds whether or not the key existed. */
+  delete(key: string): Promise<void>
+  /** The keys this plugin has stored, sorted. Never the values. */
+  list(): Promise<string[]>
+}
+
 export interface PluginDb {
   insert(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>
   query(collection: string, options?: QueryOptions): Promise<Record<string, unknown>[]>
@@ -71,9 +101,43 @@ export interface PluginSessions {
   onStatusChange(sessionId: string, handler: (status: string) => void): () => void
 }
 
+/**
+ * Options for {@link PluginAi.generateStructured}. The host forces the model to
+ * call `tool`, so the JSON Schema you want filled goes in `tool.inputSchema` —
+ * there is no separate `schema` field. `prompt` and `systemPrompt` are each
+ * capped at 32 KB host-side (a spend guard), and every call counts against a
+ * per-plugin daily cost ceiling.
+ */
+export interface PluginAiStructuredRequest {
+  /** The user-turn text the model reads. */
+  prompt: string
+  /** The tool the model is forced to call; its input is what you get back. */
+  tool: {
+    name: string
+    description?: string
+    /** JSON Schema describing the object the model must produce. */
+    inputSchema: Record<string, unknown>
+  }
+  systemPrompt?: string
+  /** Route to the premium model instead of the default. Costs more. */
+  premium?: boolean
+}
+
 export interface PluginAi {
   generateMessage(systemPrompt: string, userPrompt: string): Promise<string>
   generateTitle(text: string): Promise<string>
+  /**
+   * Whether an Anthropic API-key account exists. The other methods need one
+   * (the Messages API cannot use OAuth tokens), so check this to fail loudly
+   * up front instead of letting generation fail opaquely.
+   */
+  isConfigured(): Promise<boolean>
+  /**
+   * Forced-tool generation — resolves with the model's raw structured output
+   * (the tool input), already matching `tool.inputSchema`. Available to plugin
+   * webviews and worker backends alike.
+   */
+  generateStructured(opts: PluginAiStructuredRequest): Promise<unknown>
 }
 
 export interface PluginFs {
@@ -345,6 +409,7 @@ export interface PluginContext {
   pluginVersion: string
   dataDir: string
   storage: PluginStorage
+  secrets: PluginSecrets
   db: PluginDb
   settings: PluginSettings
   log: PluginLogger
