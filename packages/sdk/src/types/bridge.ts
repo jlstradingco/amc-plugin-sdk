@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording } from './context.js'
 
 export interface BridgeTheme {
   get(): { mode: string; visualTheme: string }
@@ -36,10 +36,42 @@ export interface BridgeAssets {
   listFiles(path: string): Promise<string[]>
 }
 
+/**
+ * The renderer half of your plugin's event bus, on `AgentMC.events`.
+ *
+ * `emit` and `on` are exactly `PluginEvents`, so one bus spans both of your
+ * plugin's surfaces and a channel means the same thing on either side. The host
+ * conforms to this deliberately: its renderer bridge declares `emit` as `void`
+ * *because* the SDK does. Extending rather than re-declaring is what makes that
+ * shared half impossible to drift.
+ *
+ * How delivery works, and its limits — enforced by the host, not by this type:
+ * - An `emit` fans out to BOTH surfaces: your webview subscribers and your
+ *   backend worker's `ctx.events.on`. Delivery is self-inclusive, like any
+ *   pub/sub — the surface that emitted also receives, if it subscribed to that
+ *   channel. Re-emitting from your own handler therefore loops; that is yours to
+ *   avoid, the host does not guard it.
+ * - `emit` is fire-and-forget. It returns nothing and tells you nothing about
+ *   whether anyone was listening, and a failure surfaces only in your devtools
+ *   console — not as a thrown error you can catch.
+ * - Everything is scoped to your own plugin. You cannot reach, or be reached by,
+ *   another plugin's channels.
+ * - Payloads must survive JSON: a `Date` arrives as an ISO string, `undefined`
+ *   object properties are dropped, and a `Map` or `Set` arrives as `{}`.
+ * - A channel name is capped at 200 characters and a payload at 1 MiB. Over
+ *   either, the emit fails silently per the previous point.
+ * - You may hold at most 200 live subscriptions at once.
+ */
+export interface BridgeEvents extends PluginEvents {
+  /** Listen for status changes on sessions your plugin launched. Call the returned function to stop. */
+  onSessionStatus(callback: (event: unknown) => void): () => void
+}
+
 export interface AgentMC {
   storage: PluginStorage
   db: PluginDb
   settings: PluginSettings
+  events: BridgeEvents
   theme: BridgeTheme
   toast: PluginToast
   session: BridgeSession

@@ -139,7 +139,7 @@ Full guides, API reference, and examples: **[AMC Plugin SDK Docs](https://jlstra
 - [Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started) — scaffold your first plugin
 - [Manifest Reference](https://jlstradingco.github.io/amc-plugin-sdk/guide/manifest) — full manifest.json spec
 - [Permissions](https://jlstradingco.github.io/amc-plugin-sdk/guide/permissions) — what each permission grants
-- [API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/) — all 13 capability interfaces
+- [API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/) — all 20 capability interfaces
 
 ## License
 

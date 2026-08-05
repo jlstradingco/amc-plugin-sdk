@@ -15,6 +15,31 @@ together.
 
 ### Added
 
+- **`AgentMC.events` — the renderer half of the plugin event bus is now typed.**
+  The bus spans both of a plugin's surfaces, but the SDK could only describe the
+  backend side, so the UI side was invisible to authors: a plugin panel had no
+  documented way to reach its own backend and the workaround was polling a shared
+  collection. The new `BridgeEvents` type is exported from the `./browser` entry
+  point alongside the other bridge types.
+
+  ```ts
+  // In your UI
+  window.AgentMC.events.emit('run.start', { id })
+  const off = window.AgentMC.events.on('run.progress', (data) => render(data))
+  ```
+
+  `BridgeEvents extends PluginEvents` — `emit` and `on` are identical on both
+  surfaces, so a channel means the same thing on either side and the shared half
+  cannot drift. The UI adds `onSessionStatus`, which the backend has no use for.
+
+  An `emit` fans out to both surfaces and is self-inclusive: the surface that
+  emitted also receives, if it subscribed to that channel. It is fire-and-forget
+  and returns nothing — a refusal (oversized payload, over-long channel) is
+  logged to the plugin's own devtools console, not thrown. Payloads must survive
+  JSON, so a `Date` arrives as an ISO string, and channels are scoped to your own
+  plugin. See [Events](https://jlstradingco.github.io/amc-plugin-sdk/api/events)
+  for the full rules.
+
 - **`amc-automation` — a second binary for publishing AMC automations.** Until
   now the only way to share an automation was to build a recipe inside AMC's UI
   and click Publish; there was no way to validate one, publish from a repo or CI,
