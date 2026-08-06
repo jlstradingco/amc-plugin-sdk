@@ -2,6 +2,7 @@ export type {
   PluginLicenseType, PluginCategory, PluginSource, PluginCollectionColumnType,
   PluginCollectionSchema, PluginMigrationOperation, PluginMigration,
   PluginSettingOption, PluginSettingTestAction, PluginSettingDefinition,
+  PluginSuggestedPrompt,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
   PluginManifest, PluginRegistryEntry,
 } from './manifest.js'
@@ -9,7 +10,7 @@ export type {
 export type {
   QueryOptions, SidebarItem, CliRequest, CliResponse, CliHandler,
   PluginStorage, PluginSecrets, PluginDb, PluginSettings, PluginLogger, PluginEvents,
-  PluginSessions, PluginAi, PluginAiStructuredRequest, PluginFs, PluginHttp, PluginCron, PluginCli,
+  PluginSessions, SessionStatus, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginFs, PluginHttp, PluginCron, PluginCli,
   PluginSidebar, PluginToast, PluginContext,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, PluginInbox,
   RecordingHandle, Recording, PluginRecording,
