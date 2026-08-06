@@ -11,6 +11,17 @@ together.
 
 ## [Unreleased]
 
+### Documented
+
+- **`AgentMC.events.onSessionStatus` is not what its own comment claimed.** It said "sessions your
+  plugin launched"; the host broadcasts every session's status change to every subscriber, with no
+  ownership filter and no permission gate, so filter on `sessionId` yourself. It also fires **only
+  in an overlay window** — the method exists in an in-panel webview because both share a preload,
+  but nothing delivers the channel there, so a panel subscription is silently never called.
+  `BridgeSessionStatusEvent` is now exported to document the payload; the callback parameter stays
+  `unknown` deliberately, because the host validates that payload advisory-only and narrowing it
+  would promise a guarantee nothing enforces.
+
 ### Fixed (dev shell)
 
 - **The dev shell's mock session status was frozen.** `getStatus` hardcoded `'running'` and
@@ -50,6 +61,7 @@ like it was doing.
   validation.** All four are real in AMC — `uniqueIndexes` materialises real unique indexes and is
   what makes `collectionUpsert` atomic — but a non-strict parse stripped them from this SDK's
   output, so a packaged plugin could not rely on them.
+- **`HistorySession.status` is typed `SessionStatus`** rather than a bare `string`.
 - **`SessionStatus`, `SessionPendingAction`, `SessionMessage` and `PluginSuggestedPrompt`** are
   exported. The status unions are deliberately open (`| (string & {})`): they keep autocomplete for
   the known values without going stale — and silently misrouting an exhaustive `switch` — the day

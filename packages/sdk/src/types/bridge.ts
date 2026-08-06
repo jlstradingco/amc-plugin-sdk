@@ -131,8 +131,63 @@ export interface BridgeAssets {
  *   either, the emit fails silently per the previous point.
  * - You may hold at most 200 live subscriptions at once.
  */
+/**
+ * The payload handed to an {@link BridgeEvents.onSessionStatus} subscriber.
+ *
+ * Only `sessionId` and `status` are dependable. The host broadcasts this from
+ * roughly twenty different producers and validates the payload **advisory-only**
+ * — a producer that omits a field logs a warning and the event is forwarded
+ * anyway — so every other field is genuinely optional at runtime, whatever a
+ * given producer happens to send.
+ */
+export interface BridgeSessionStatusEvent {
+  sessionId: string
+  status: SessionStatus
+  previousStatus?: SessionStatus
+  pendingAction?: SessionPendingAction | null
+  /** Seconds the session has been actively working. */
+  activeSeconds?: number
+  statusChangedAt?: string
+  snoozedUntil?: string | null
+  recoveryTerminal?: boolean
+  lastAgentMessageContent?: string | null
+}
+
 export interface BridgeEvents extends PluginEvents {
-  /** Listen for status changes on sessions your plugin launched. Call the returned function to stop. */
+  /**
+   * Subscribe to session status changes. Call the returned function to stop.
+   *
+   * ::: Two things this does NOT do :::
+   *
+   * **It is not scoped to your plugin.** Despite what earlier versions of this
+   * comment claimed, the host broadcasts every session's status change to every
+   * open subscriber — including sessions belonging to the user and to other
+   * plugins. There is no ownership filter and no permission gate on this
+   * channel. Filter on `sessionId` yourself against sessions you created.
+   *
+   * **It only fires in an overlay window.** The host sends this channel solely
+   * to plugin overlay windows. The method exists in an in-panel plugin webview
+   * because both surfaces share a preload, but nothing delivers the channel
+   * there, so a subscription from a panel is silently never called. For a panel,
+   * poll `AgentMC.session.getStatus()` instead.
+   *
+   * The backend's `ctx.sessions.onStatusChange(sessionId, handler)` is NOT the
+   * same shape: it takes a session id, is ownership-checked, and hands the
+   * handler a bare status string rather than this object.
+   *
+   * The parameter stays `unknown` on purpose. {@link BridgeSessionStatusEvent}
+   * documents the shape the host sends, but the host validates that payload
+   * advisory-only — a producer that sends the wrong thing logs a warning and the
+   * event is forwarded regardless — so narrowing this to a struct would promise a
+   * guarantee no code enforces. Narrow it yourself:
+   *
+   * ```ts
+   * AgentMC.events.onSessionStatus((e) => {
+   *   const { sessionId, status } = e as BridgeSessionStatusEvent
+   *   if (sessionId !== mySessionId) return
+   * })
+   * ```
+   */
   onSessionStatus(callback: (event: unknown) => void): () => void
 }
 

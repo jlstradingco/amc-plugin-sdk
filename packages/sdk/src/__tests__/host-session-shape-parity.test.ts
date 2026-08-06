@@ -11,7 +11,7 @@ import {
   HOST_MESSAGE_SURFACES,
   HOST_SESSION_STATUSES,
   HOST_SOURCES,
-} from './fixtures/host-manifest-mirror.js'
+} from './fixtures/host-mirror.js'
 
 /**
  * Closes the session half of the documented drift list (spec 09-dependencies

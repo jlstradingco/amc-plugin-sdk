@@ -6,7 +6,7 @@ import {
   HOST_RESERVED_COLUMNS,
   HOST_SOURCES,
   HOST_UI_BOUNDS,
-} from './fixtures/host-manifest-mirror.js'
+} from './fixtures/host-mirror.js'
 
 /**
  * Closes the manifest half of the documented drift list (spec 09-dependencies
