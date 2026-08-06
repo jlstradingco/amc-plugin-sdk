@@ -336,6 +336,41 @@ describe('createMockContext — settings from dev config', () => {
   })
 })
 
+describe('sessions mock does not freeze the status', () => {
+  it('reports ended after stop(), not running forever', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const { sessionId } = await ctx.sessions.create({ prompt: 'hi' })
+    expect(await ctx.sessions.getStatus(sessionId)).toBe('running')
+
+    await ctx.sessions.stop(sessionId)
+    // Hardcoding 'running' here made a plugin that polls until the session ends
+    // loop forever against the dev shell while working fine against the host.
+    expect(await ctx.sessions.getStatus(sessionId)).toBe('ended')
+  })
+
+  it('tracks each session independently', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const a = await ctx.sessions.create({ prompt: 'a' })
+    const b = await ctx.sessions.create({ prompt: 'b' })
+    await ctx.sessions.stop(a.sessionId)
+
+    expect(await ctx.sessions.getStatus(a.sessionId)).toBe('ended')
+    expect(await ctx.sessions.getStatus(b.sessionId)).toBe('running')
+  })
+})
+
+describe('sessions mock issues distinct ids', () => {
+  it('does not collide for sessions created in the same millisecond', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const ids = await Promise.all(
+      Array.from({ length: 5 }, () => ctx.sessions.create({ prompt: 'x' }).then((r) => r.sessionId))
+    )
+    // Date.now() as an id made all five identical, silently merging their
+    // status and message history into one session.
+    expect(new Set(ids).size).toBe(5)
+  })
+})
+
 describe('ctx.workspace refuses to fake an unimplemented host capability', () => {
   // Deliberately NOT a working in-memory fake. The host has no `workspace`
   // namespace on any branch, so a plugin that worked in the dev shell and

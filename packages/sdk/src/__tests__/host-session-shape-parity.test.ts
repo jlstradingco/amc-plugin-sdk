@@ -1,5 +1,5 @@
 import { describe, it, expect, expectTypeOf } from 'vitest'
-import { createTestContext } from '../testing/index.js'
+import { createTestContext, createMockSessionMessage } from '../testing/index.js'
 import type {
   HistoryMessage,
   PluginSessions,
@@ -11,7 +11,7 @@ import {
   HOST_MESSAGE_SURFACES,
   HOST_SESSION_STATUSES,
   HOST_SOURCES,
-} from './fixtures/host-manifest-mirror.js'
+} from './fixtures/host-mirror.js'
 
 /**
  * Closes the session half of the documented drift list (spec 09-dependencies
@@ -126,5 +126,26 @@ describe('the mock does not invent host behaviour', () => {
     // statuses in session-status.ts:22-40. Asserting membership rather than a
     // hardcoded sentinel keeps this honest if the mock's choice changes.
     expect(HOST_SESSION_STATUSES).toContain(await h.ctx.sessions.getStatus(sessionId))
+  })
+})
+
+describe('createMockSessionMessage — one definition of the backend row', () => {
+  it('builds the shape the backend surface really returns', () => {
+    const row = createMockSessionMessage('mock-message', 3, 'hello')
+    // Named `text`, not `content` — the split this whole suite exists to pin.
+    expect(row).toMatchObject({ id: 'mock-message-3', role: 'user', text: 'hello' })
+    expect(row).not.toHaveProperty('content')
+    expect(Date.parse(row.timestamp)).not.toBeNaN()
+  })
+
+  it('is shared by both mocks, so neither can drift from the host alone', async () => {
+    // The dev shell imports this same function from @agent-mc/plugin-sdk/testing.
+    const h = createTestContext({ pluginId: 'p' })
+    const { sessionId } = await h.ctx.sessions.create({ prompt: 'hi' })
+    await h.ctx.sessions.sendMessage(sessionId, 'a question')
+
+    const [recorded] = await h.ctx.sessions.getMessages(sessionId)
+    const direct = createMockSessionMessage('test-message', 1, 'a question')
+    expect(Object.keys(recorded!).sort()).toEqual(Object.keys(direct).sort())
   })
 })
