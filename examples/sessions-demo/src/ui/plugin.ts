@@ -1,4 +1,4 @@
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+import type { AgentMC, BridgeSessionMessage } from '@agent-mc/plugin-sdk/browser'
 
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
@@ -22,20 +22,20 @@ function setStatus(status: string) {
   stopBtn.style.display = isActive ? '' : 'none'
 }
 
-function renderMessages(messages: unknown[]) {
+function renderMessages(messages: BridgeSessionMessage[]) {
   if (messages.length === 0) {
     messagesDiv.innerHTML = '<div class="empty">Waiting for response...</div>'
     return
   }
 
   messagesDiv.innerHTML = messages
-    .map((msg: unknown) => {
-      const m = msg as { source?: string; text?: string; content?: string }
-      const source = m.source ?? 'system'
-      const text = m.text ?? m.content ?? ''
+    .map((m) => {
+      // On this webview surface the row is `{ id, role, content, timestamp }`.
+      // The backend's ctx.sessions.getMessages() names the body `text` instead,
+      // which is why plugin code used to hedge `m.text ?? m.content ?? ''`.
       const cls =
-        source === 'operator' ? 'msg-operator' : source === 'agent' ? 'msg-agent' : 'msg-system'
-      return `<div class="message ${cls}"><strong>${escapeHtml(source)}:</strong> ${escapeHtml(String(text))}</div>`
+        m.role === 'user' ? 'msg-operator' : m.role === 'assistant' ? 'msg-agent' : 'msg-system'
+      return `<div class="message ${cls}"><strong>${escapeHtml(m.role)}:</strong> ${escapeHtml(m.content)}</div>`
     })
     .join('')
 
@@ -79,7 +79,10 @@ function startPolling() {
     if (!currentSessionId) return
 
     try {
-      const status = await amc.session.getStatus(currentSessionId)
+      // getStatus resolves an OBJECT on this surface, not a bare string. The
+      // backend's ctx.sessions.getStatus() resolves the string. Comparing the
+      // object to a string here silently never matched, so polling never stopped.
+      const { status } = await amc.session.getStatus(currentSessionId)
       const messages = await amc.session.getMessages(currentSessionId)
       renderMessages(messages)
 

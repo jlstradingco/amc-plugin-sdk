@@ -1,18 +1,75 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording, SessionStatus, SessionPendingAction } from './context.js'
 
 export interface BridgeTheme {
   get(): { mode: string; visualTheme: string }
   onChange(callback: (theme: { mode: string; visualTheme: string }) => void): () => void
 }
 
+/**
+ * One message from `AgentMC.session.getMessages()` — the WEBVIEW shape.
+ *
+ * The body field is called `content` here, where the backend's
+ * `ctx.sessions.getMessages()` calls it `text`. Same underlying row, two field
+ * names, depending on which surface you asked from.
+ */
+export interface BridgeSessionMessage {
+  id: string
+  /**
+   * `'user'` for operator turns, `'assistant'` for agent turns, otherwise the
+   * host's raw source. `system` rows are NOT filtered out on this surface.
+   */
+  role: 'user' | 'assistant' | 'system' | (string & {})
+  /** The message body. Raw: tool calls and tool output are NOT stripped here. */
+  content: string
+  timestamp: string
+}
+
+/** What `AgentMC.session.getStatus()` resolves to — an object, not a bare string. */
+export interface BridgeSessionStatus {
+  status: SessionStatus
+  /** `null` unless the session is waiting on something. */
+  pendingAction: SessionPendingAction | null
+}
+
 export interface BridgeSession {
+  /**
+   * Create a session on your plugin's own virtual project.
+   *
+   * `prompt` is the only option this surface reads. The backend's
+   * `ctx.sessions.create` additionally takes `userInitiated`, but the host
+   * strips unknown keys here before the handler sees them, so passing it from a
+   * webview would silently do nothing — hence its absence.
+   *
+   * Concurrent calls with an identical prompt are de-duplicated host-side and
+   * resolve to the SAME `sessionId`.
+   */
   create(opts: { prompt?: string }): Promise<{ sessionId: string }>
   sendMessage(sessionId: string, opts: { text: string }): Promise<void>
-  getMessages(sessionId: string): Promise<unknown[]>
-  getStatus(sessionId: string): Promise<string>
+  /**
+   * The transcript, with still-streaming rows dropped.
+   *
+   * `system` rows ARE included and the body is raw — tool calls and tool output
+   * are not stripped. For a cleaned, user/assistant-only transcript use
+   * `ctx.sessionHistory.getMessages()` on the backend instead.
+   */
+  getMessages(sessionId: string): Promise<BridgeSessionMessage[]>
+  /**
+   * Resolves `{ status, pendingAction }` — an OBJECT.
+   *
+   * The backend's `ctx.sessions.getStatus` resolves a bare string for the same
+   * method name. Comparing this result directly to a string (`status ===
+   * 'ended'`) is always false and is a mistake this type now catches at compile
+   * time; read `.status` instead.
+   */
+  getStatus(sessionId: string): Promise<BridgeSessionStatus>
   rename(sessionId: string, name: string): Promise<void>
   stop(sessionId: string): Promise<void>
-  launchWithDraft(opts: { projectId: string; draftText: string }): Promise<void>
+  /** `autoSend` submits the draft immediately instead of leaving it in the composer. */
+  launchWithDraft(opts: {
+    projectId: string
+    draftText: string
+    autoSend?: boolean
+  }): Promise<void>
 }
 
 export interface BridgeExport {

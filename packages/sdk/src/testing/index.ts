@@ -29,6 +29,7 @@ import type {
   HistoryProject,
   HistorySession,
   HistoryMessage,
+  SessionMessage,
   FirebaseAccount,
   FirebaseProject,
   FirebaseSetupStatus,
@@ -183,6 +184,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const cronHandlers = new Map<string, () => Promise<void>>()
   const cliHandlers = new Map<string, CliHandler>()
   const sessionStatus = new Map<string, string>()
+  const sessionMessages = new Map<string, SessionMessage[]>()
   const recordings: Recording[] = []
   const settings = { ...(opts.settings ?? {}) }
 
@@ -291,13 +293,29 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       create: (createOpts) => {
         const sessionId = `test-session-${crypto.randomUUID().slice(0, 8)}`
         sessionStatus.set(sessionId, 'running')
+        sessionMessages.set(sessionId, [])
         void createOpts
         return Promise.resolve({ sessionId })
       },
-      sendMessage: () => Promise.resolve(),
+      sendMessage: (sessionId, text) => {
+        // Recorded so getMessages() can hand back a real row in the real shape.
+        // A mock that always returns [] can never teach you that this surface
+        // names the body `text` while both webview surfaces name it `content`.
+        const messages = sessionMessages.get(sessionId) ?? []
+        messages.push({
+          id: `test-message-${messages.length + 1}`,
+          role: 'user',
+          text,
+          timestamp: new Date().toISOString()
+        })
+        sessionMessages.set(sessionId, messages)
+        return Promise.resolve()
+      },
       getStatus: (sessionId) => Promise.resolve(sessionStatus.get(sessionId) ?? 'running'),
-      getMessages: () => Promise.resolve([]),
-      stop: (sessionId) => { sessionStatus.set(sessionId, 'stopped'); return Promise.resolve() },
+      getMessages: (sessionId) => Promise.resolve([...(sessionMessages.get(sessionId) ?? [])]),
+      // 'ended' is a real AMC status; 'stopped' — which this mock used to
+      // invent — is not one of the eleven the host can report.
+      stop: (sessionId) => { sessionStatus.set(sessionId, 'ended'); return Promise.resolve() },
       onStatusChange: () => () => {}
     },
 
