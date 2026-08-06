@@ -11,6 +11,79 @@ together.
 
 ## [Unreleased]
 
+### Changed — BREAKING
+
+These correct types that described behaviour AMC does not have. Each was a silent wrong answer
+before, so the break is the point: code that stops compiling was already not doing what it looked
+like it was doing.
+
+- **`ctx.sessions.create()` no longer accepts `projectId`.** AMC has always derived the project
+  from the plugin's own virtual project (`__plugin_<id>__`) and never read a caller-supplied one,
+  so passing it appeared to target a project and silently did not. *Migration:* delete the option.
+  If you need to launch into one of the user's real projects, use
+  `AgentMC.session.launchWithDraft({ projectId, draftText })` from a webview.
+- **`AgentMC.session.getStatus()` is typed `Promise<{ status, pendingAction }>`**, not
+  `Promise<string>` — which is what AMC has always returned. *Migration:* read `.status`. Any
+  `const s = await getStatus(id); if (s === 'ended')` was comparing an object to a string and was
+  always false; that bug is now a compile error. Our own `sessions-demo` had it, and consequently
+  polled forever.
+- **`PluginMigrationOperation.type` is now `add_column | add_index | drop_index`.**
+  `remove_column` and `remove_index` were SDK-only fictions AMC has never accepted; `drop_index`
+  was missing. `column` is now required on every operation (AMC has no `.optional()` on it) and the
+  `index` field is gone — an index operation identifies its index by a single column.
+- **`amc-plugin validate` now refuses `id`, `created_at` and `updated_at`** as column names, in
+  both a collection schema and a migration operation. AMC manages those three itself and rejects
+  them at install, so a manifest declaring one passed validation here and then failed to install.
+
+### Added
+
+- **`ui.hideProjectPanel`, `ui.sessions`, `ui.overlay` and `storage.uniqueIndexes` now survive
+  validation.** All four are real in AMC — `uniqueIndexes` materialises real unique indexes and is
+  what makes `collectionUpsert` atomic — but a non-strict parse stripped them from this SDK's
+  output, so a packaged plugin could not rely on them.
+- **`SessionStatus`, `SessionPendingAction`, `SessionMessage` and `PluginSuggestedPrompt`** are
+  exported. The status unions are deliberately open (`| (string & {})`): they keep autocomplete for
+  the known values without going stale — and silently misrouting an exhaustive `switch` — the day
+  AMC adds one.
+- **`BridgeSessionMessage` and `BridgeSessionStatus`** describe the webview surface, whose message
+  body is named `content` where the backend names it `text`. Naming the two shapes separately makes
+  mixing them a compile error instead of the `m.text ?? m.content ?? ''` hedge plugins have been
+  writing.
+- **`BridgeSession.launchWithDraft` accepts `autoSend`**, which AMC reads.
+
+### Fixed
+
+- **`ui.entryPoint` and `ui.sidebar` are optional**, as they have always been in AMC, and now carry
+  its length bounds (500 / 50 / 50). A manifest declaring only `ui: { hideProjectPanel: true }`
+  installed fine and failed `amc-plugin validate` — the parity inversion pointing the wrong way.
+- **`ctx.sessions.getMessages()` is typed** as `{ id, role, text, timestamp }` rather than
+  `unknown[]`, and documented as the only one of the three message reads that filters nothing.
+- **The mocks stopped inventing AMC behaviour.** `getMessages` resolved `[]` on every surface,
+  which could never teach an author which field to read; both mocks now replay what they were sent
+  in the real shape. The testing harness's `stop()` set the status to `'stopped'`, which is not one
+  of the eleven statuses AMC can report.
+- **Docs corrected.** `api/sessions.md` documented the `projectId` option, both wrong return types,
+  and a `needs_input` status that does not exist. `guide/manifest.md` documented the two fictional
+  migration ops and claimed migrations "run in order by version".
+
+### Documented
+
+- **Declared `migrations` are never executed by AMC.** They are parsed, validated, retained, and
+  read by nothing — there is no migration runner and no path that can drop a plugin column or
+  index. What actually evolves a schema is an automatic ADD COLUMN sweep on a version bump. The
+  capability is kept and still validates so existing manifests work, but plugin authors had every
+  reason to believe it did something.
+- **The `ui` block stays optional here though AMC requires it** — a deliberate SDK-is-looser gap, so
+  this SDK keeps accepting the backend-only manifests it always has.
+
+**How this was verified.** Every item was checked against the AMC host source
+(`Agent-Orchestrator` at `origin/master` 9a95c573fa), reading the actual handlers, Zod schemas and
+the host's own locking tests — not against this SDK's mock. That distinction is the lesson behind
+this whole changeset: the mock previously implemented `ctx.events` as a real in-memory emitter, so
+plugin unit tests passed for months while the production path was dead in both directions. The
+vendored values now live in `src/__tests__/fixtures/host-manifest-mirror.ts` with per-value
+`file:line` citations.
+
 ## [1.3.0] - 2026-07-28
 
 ### Added
