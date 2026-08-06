@@ -56,7 +56,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
   const prefix = `[plugin:${opts.pluginId}]`
   const shouldLog = opts.logToConsole ?? true
   const seededSettings = { ...(opts.settings ?? {}) }
-  const mockSessionMessages = new Map<string, SessionMessage[]>()
+  const sessionMessages = new Map<string, SessionMessage[]>()
 
   // --- Persisted KV storage -------------------------------------------------
   // With a real `dataDir` the KV store is flushed to `<dataDir>/amc-dev-storage.json`
@@ -255,26 +255,22 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       create: (_opts) => {
         const sessionId = `mock-session-${Date.now()}`
         if (shouldLog) console.log(`${prefix} [sessions] create -> ${sessionId}`)
-        mockSessionMessages.set(sessionId, [])
+        sessionMessages.set(sessionId, [])
         return Promise.resolve({ sessionId })
       },
       sendMessage: (sid, text) => {
         if (shouldLog) console.log(`${prefix} [sessions] sendMessage(${sid}): ${text.slice(0, 80)}...`)
-        // Recorded so getMessages() returns a row in the real backend shape.
-        // This surface names the body `text`; both webview surfaces name it
-        // `content`. A mock that always returned [] hid that split.
-        const messages = mockSessionMessages.get(sid) ?? []
+        const messages = sessionMessages.get(sid) ?? []
         messages.push({
           id: `mock-message-${messages.length + 1}`,
           role: 'user',
           text,
           timestamp: new Date().toISOString(),
         })
-        mockSessionMessages.set(sid, messages)
         return Promise.resolve()
       },
       getStatus: () => Promise.resolve('running'),
-      getMessages: (sid) => Promise.resolve([...(mockSessionMessages.get(sid) ?? [])]),
+      getMessages: (sid) => Promise.resolve([...(sessionMessages.get(sid) ?? [])]),
       stop: (sid) => {
         if (shouldLog) console.log(`${prefix} [sessions] stop(${sid})`)
         return Promise.resolve()

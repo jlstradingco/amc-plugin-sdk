@@ -50,6 +50,7 @@ export interface PluginMigrationOperation {
    */
   column: string
   columnType?: PluginCollectionColumnType
+  /** `z.union([z.string(), z.number()])` host-side — `plugin-manifest-validator.ts:193-219`. */
   default?: string | number
 }
 

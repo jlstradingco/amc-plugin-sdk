@@ -35,23 +35,18 @@ const baseManifest = {
   sdkVersion: '^1.0.0',
 }
 
-const parsed = (input: unknown) => {
-  const result = validateManifest(input)
-  return result
-}
-
 describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
   it('accepts a ui block carrying only hideProjectPanel', () => {
     // The host has always had entryPoint and sidebar optional, so this manifest
     // installs fine. An SDK that rejects it fails `amc-plugin validate` on a
     // legal plugin — the parity inversion pointing the wrong way.
-    const result = parsed({ ...baseManifest, ui: { hideProjectPanel: true } })
+    const result = validateManifest({ ...baseManifest, ui: { hideProjectPanel: true } })
     expect(result.errors, 'host validator:221-238 makes entryPoint/sidebar optional').toEqual([])
     expect(result.valid).toBe(true)
   })
 
   it('preserves hideProjectPanel instead of silently stripping it', () => {
-    const result = parsed({ ...baseManifest, ui: { hideProjectPanel: true } })
+    const result = validateManifest({ ...baseManifest, ui: { hideProjectPanel: true } })
     expect(
       result.manifest?.ui?.hideProjectPanel,
       `host types/plugins.ts:127 declares it and DashboardDesktopLayout.tsx:565-570 reads it`
@@ -59,7 +54,7 @@ describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
   })
 
   it('preserves ui.sessions, including the contextTemplate the host renders', () => {
-    const result = parsed({
+    const result = validateManifest({
       ...baseManifest,
       ui: {
         entryPoint: 'ui/index.html',
@@ -80,7 +75,7 @@ describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
   })
 
   it('preserves ui.overlay, which the host declares and opens a window for', () => {
-    const result = parsed({
+    const result = validateManifest({
       ...baseManifest,
       ui: { overlay: { entryPoint: 'overlay/index.html' } },
     })
@@ -94,13 +89,13 @@ describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
   it('enforces the host length bounds rather than being merely permissive', () => {
     // An unbounded optional would pass `amc-plugin validate` and then fail at
     // install — the same inversion in the other direction.
-    const tooLongEntry = parsed({
+    const tooLongEntry = validateManifest({
       ...baseManifest,
       ui: { entryPoint: 'x'.repeat(HOST_UI_BOUNDS.entryPointMax + 1) },
     })
     expect(tooLongEntry.valid, `host caps entryPoint at ${HOST_UI_BOUNDS.entryPointMax}`).toBe(false)
 
-    const tooLongTitle = parsed({
+    const tooLongTitle = validateManifest({
       ...baseManifest,
       ui: {
         entryPoint: 'ui/index.html',
@@ -111,7 +106,7 @@ describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
       false
     )
 
-    const tooLongTemplate = parsed({
+    const tooLongTemplate = validateManifest({
       ...baseManifest,
       ui: { sessions: { contextTemplate: 'x'.repeat(HOST_UI_BOUNDS.contextTemplateMax + 1) } },
     })
@@ -126,14 +121,14 @@ describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
     // whitespace-only template as absent at runtime (plugin-provider.ts:229)
     // rather than rejecting it. Adding a min(1) here would reject a manifest
     // that installs fine.
-    const result = parsed({ ...baseManifest, ui: { sessions: { contextTemplate: '' } } })
+    const result = validateManifest({ ...baseManifest, ui: { sessions: { contextTemplate: '' } } })
     expect(result.valid).toBe(true)
   })
 })
 
 describe(`storage.uniqueIndexes parity (${HOST_SOURCES.storage}:511-538)`, () => {
   it('preserves uniqueIndexes, which the host turns into real unique indexes', () => {
-    const result = parsed({
+    const result = validateManifest({
       ...baseManifest,
       storage: {
         collections: {
@@ -152,7 +147,7 @@ describe(`storage.uniqueIndexes parity (${HOST_SOURCES.storage}:511-538)`, () =>
   })
 
   it('rejects an empty unique-index tuple, matching the host min(1)', () => {
-    const result = parsed({
+    const result = validateManifest({
       ...baseManifest,
       storage: {
         collections: { findings: { columns: { scan_id: 'text' }, uniqueIndexes: [[]] } },
@@ -169,13 +164,13 @@ describe(`migrations parity (${HOST_SOURCES.manifestValidator}:193-219)`, () => 
   })
 
   it.each(HOST_MIGRATION_OPS)('accepts the host op %s', (type) => {
-    const result = parsed(migrationWith({ type, collection: 'items', column: 'note' }))
+    const result = validateManifest(migrationWith({ type, collection: 'items', column: 'note' }))
     expect(result.errors).toEqual([])
     expect(result.valid).toBe(true)
   })
 
   it.each(HOST_REJECTED_MIGRATION_OPS)('rejects %s, which the host has never accepted', (type) => {
-    const result = parsed(migrationWith({ type, collection: 'items', column: 'note' }))
+    const result = validateManifest(migrationWith({ type, collection: 'items', column: 'note' }))
     expect(
       result.valid,
       `${type} traces to a stale host design plan, not the shipped enum (validator:199)`
@@ -185,12 +180,12 @@ describe(`migrations parity (${HOST_SOURCES.manifestValidator}:193-219)`, () => 
   it('requires column on every operation, including the index ops', () => {
     // Surprising but real: host validator:201-212 has no .optional() on column,
     // so an index op identifies its index solely by a single column.
-    const result = parsed(migrationWith({ type: 'add_index', collection: 'items' }))
+    const result = validateManifest(migrationWith({ type: 'add_index', collection: 'items' }))
     expect(result.valid, 'host requires column for every op type').toBe(false)
   })
 
   it.each(HOST_RESERVED_COLUMNS)('refuses the host-owned column %s', (column) => {
-    const result = parsed(migrationWith({ type: 'add_column', collection: 'items', column }))
+    const result = validateManifest(migrationWith({ type: 'add_column', collection: 'items', column }))
     expect(
       result.valid,
       `host refuses its own columns (types/plugins.ts:34-42, validator:206-212)`

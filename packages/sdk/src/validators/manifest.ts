@@ -43,10 +43,15 @@ const settingSchema = z.object({
 })
 
 /**
- * Columns the host owns and refuses to let a plugin declare or migrate —
- * `types/plugins.ts:34-42`, enforced at `plugin-manifest-validator.ts:167-172`
- * and `:206-212`. Rejecting them here means `amc-plugin validate` fails fast
- * instead of the plugin failing at install.
+ * Columns the host owns — `types/plugins.ts:34-42`. Rejecting them here means
+ * `amc-plugin validate` fails fast instead of the plugin failing at install.
+ *
+ * KNOWN GAP: the host refuses these in BOTH a collection schema
+ * (`plugin-manifest-validator.ts:167-172`) and a migration operation (`:206-212`).
+ * This list is currently applied to migration operations only, so a manifest
+ * declaring `columns: { id: 'text' }` still passes here and fails host-side.
+ * Closing that is a validation-behaviour change — manifests accepted today would
+ * start being rejected — so it is deliberately not bundled into this one.
  */
 const RESERVED_COLUMNS = ['id', 'created_at', 'updated_at']
 
