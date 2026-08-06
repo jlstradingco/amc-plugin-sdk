@@ -66,8 +66,8 @@ export const HOST_REJECTED_MIGRATION_OPS = ['remove_column', 'remove_index'] as 
  * (`plugin-manifest-validator.ts:167-172`) and a migration operation (`:206-212`)
  * — `types/plugins.ts:34-42`.
  *
- * This SDK currently enforces the migration half only; see the KNOWN GAP note on
- * `RESERVED_COLUMNS` in ../../validators/manifest.ts.
+ * This SDK enforces both halves — see `RESERVED_COLUMNS` in
+ * ../../validators/manifest.ts.
  */
 export const HOST_RESERVED_COLUMNS = ['id', 'created_at', 'updated_at'] as const
 

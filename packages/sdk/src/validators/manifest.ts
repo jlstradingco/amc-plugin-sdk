@@ -43,27 +43,42 @@ const settingSchema = z.object({
 })
 
 /**
- * Columns the host owns — `types/plugins.ts:34-42`. Rejecting them here means
- * `amc-plugin validate` fails fast instead of the plugin failing at install.
+ * Columns the host manages itself and refuses to let a plugin declare — it
+ * stamps `id`, `created_at` and `updated_at` on every row
+ * (`types/plugins.ts:34-42`).
  *
- * KNOWN GAP: the host refuses these in BOTH a collection schema
- * (`plugin-manifest-validator.ts:167-172`) and a migration operation (`:206-212`).
- * This list is currently applied to migration operations only, so a manifest
- * declaring `columns: { id: 'text' }` still passes here and fails host-side.
- * Closing that is a validation-behaviour change — manifests accepted today would
- * start being rejected — so it is deliberately not bundled into this one.
+ * The host enforces this in BOTH places, so this SDK does too: in a collection
+ * schema (`plugin-manifest-validator.ts:167-172`) and in a migration operation
+ * (`:206-212`). Rejecting them here means `amc-plugin validate` fails fast
+ * instead of the plugin failing at install.
  */
 const RESERVED_COLUMNS = ['id', 'created_at', 'updated_at']
 
-const collectionSchema = z.object({
-  columns: z.record(z.enum(['text', 'integer', 'real', 'json'])),
-  indexes: z.array(z.string()).optional(),
-  // Host-real and, until now, SDK-invisible: a non-strict parse silently
-  // stripped this, so a packaged plugin could not rely on it. The host emits a
-  // real CREATE UNIQUE INDEX per tuple, and `collectionUpsert`'s atomicity
-  // depends on the tuple existing (plugin-storage.ts:511-513, :528-538).
-  uniqueIndexes: z.array(z.array(z.string()).min(1)).optional(),
-})
+const reservedColumnMessage = `column may not be one of ${RESERVED_COLUMNS.join(
+  ', '
+)} — the host manages these itself`
+
+const collectionSchema = z
+  .object({
+    columns: z.record(z.enum(['text', 'integer', 'real', 'json'])),
+    indexes: z.array(z.string()).optional(),
+    // Host-real and, until now, SDK-invisible: a non-strict parse silently
+    // stripped this, so a packaged plugin could not rely on it. The host emits a
+    // real CREATE UNIQUE INDEX per tuple, and `collectionUpsert`'s atomicity
+    // depends on the tuple existing (plugin-storage.ts:511-513, :528-538).
+    uniqueIndexes: z.array(z.array(z.string()).min(1)).optional(),
+  })
+  .superRefine((collection, ctx) => {
+    for (const column of Object.keys(collection.columns)) {
+      if (RESERVED_COLUMNS.includes(column)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['columns', column],
+          message: reservedColumnMessage,
+        })
+      }
+    }
+  })
 
 // Mirrors the host's op enum exactly (plugin-manifest-validator.ts:199).
 // `remove_column` / `remove_index` were SDK-only fictions the host has never
@@ -78,7 +93,7 @@ const migrationOperationSchema = z.object({
   // Required for every op type, index ops included — the host has no
   // .optional() here (validator:201-212).
   column: z.string().refine((name) => !RESERVED_COLUMNS.includes(name), {
-    message: `column may not be one of ${RESERVED_COLUMNS.join(', ')} (the host owns these)`,
+    message: reservedColumnMessage,
   }),
   columnType: z.enum(['text', 'integer', 'real', 'json']).optional(),
   default: z.union([z.string(), z.number()]).optional(),
