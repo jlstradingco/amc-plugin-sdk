@@ -1,6 +1,6 @@
 /**
- * Vendored mirror of what the AMC host ACTUALLY validates and reads, so this
- * SDK cannot silently drift from it again.
+ * Vendored mirror of what the AMC host ACTUALLY validates and reads — manifest
+ * bounds AND session shapes — so this SDK cannot silently drift from it again.
  *
  * ## Provenance — read this before trusting anything here
  *

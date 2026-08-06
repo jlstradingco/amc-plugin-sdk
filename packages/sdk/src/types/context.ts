@@ -361,7 +361,7 @@ export interface HistorySession {
   id: string
   name: string
   projectId: string
-  status: string
+  status: SessionStatus
   lastActiveAt: string
 }
 

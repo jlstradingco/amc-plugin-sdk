@@ -2,6 +2,10 @@ import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plugin-sdk'
+// The dev shell is itself a development tool, so depending on the SDK's testing
+// entry is in-band: it keeps ONE definition of the backend message row rather
+// than a second copy that can drift from the host.
+import { createMockSessionMessage } from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -57,6 +61,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
   const shouldLog = opts.logToConsole ?? true
   const seededSettings = { ...(opts.settings ?? {}) }
   const sessionMessages = new Map<string, SessionMessage[]>()
+  const sessionStatus = new Map<string, string>()
+  let sessionCounter = 0
 
   // --- Persisted KV storage -------------------------------------------------
   // With a real `dataDir` the KV store is flushed to `<dataDir>/amc-dev-storage.json`
@@ -253,26 +259,29 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
     sessions: {
       create: (_opts) => {
-        const sessionId = `mock-session-${Date.now()}`
+        // A counter, not Date.now(): two creates inside the same millisecond
+        // produced the SAME id, so a plugin spawning sessions in a loop saw
+        // them silently merge into one — shared status and shared messages.
+        const sessionId = `mock-session-${++sessionCounter}`
         if (shouldLog) console.log(`${prefix} [sessions] create -> ${sessionId}`)
         sessionMessages.set(sessionId, [])
+        sessionStatus.set(sessionId, 'running')
         return Promise.resolve({ sessionId })
       },
       sendMessage: (sid, text) => {
         if (shouldLog) console.log(`${prefix} [sessions] sendMessage(${sid}): ${text.slice(0, 80)}...`)
         const messages = sessionMessages.get(sid) ?? []
-        messages.push({
-          id: `mock-message-${messages.length + 1}`,
-          role: 'user',
-          text,
-          timestamp: new Date().toISOString(),
-        })
+        messages.push(createMockSessionMessage('mock-message', messages.length + 1, text))
         return Promise.resolve()
       },
-      getStatus: () => Promise.resolve('running'),
+      getStatus: (sid) => Promise.resolve(sessionStatus.get(sid) ?? 'running'),
       getMessages: (sid) => Promise.resolve([...(sessionMessages.get(sid) ?? [])]),
       stop: (sid) => {
         if (shouldLog) console.log(`${prefix} [sessions] stop(${sid})`)
+        // A stopped session must stop reporting 'running'. This mock used to
+        // hardcode the status, so a plugin polling until the session ended
+        // looped forever against the dev shell while working against the host.
+        sessionStatus.set(sid, 'ended')
         return Promise.resolve()
       },
       onStatusChange: () => () => {},
