@@ -504,6 +504,261 @@ export interface PluginSpend {
   getBreakdown(): Promise<SpendReportBreakdown>
 }
 
+/** Absolute worktree ROOT path. `null` means the main checkout. */
+export type WorktreeRef = string | null
+
+/**
+ * Identifies a project, and optionally one of its worktrees, that a
+ * `WorkspaceApi` call targets.
+ */
+export interface WorkspaceScope {
+  projectId: string
+  worktree: WorktreeRef
+}
+
+/**
+ * A scoped, RELATIVE path into a project. `path` is deliberately relative: the
+ * host joins it onto the scope's root and re-checks the result, so a forged
+ * absolute or `..`-escaping path cannot reach outside the grant. `resolve()` is
+ * the only door an absolute path enters by.
+ */
+export interface WorkspaceHandle extends WorkspaceScope {
+  path: string
+}
+
+/** One filesystem entry, as returned by `glob()` and `stat()`. */
+export interface WorkspaceEntry {
+  path: string
+  size: number
+  mtimeMs: number
+  isDir: boolean
+}
+
+/** One repo backing a project. `branch` is `null` when the checkout is detached. */
+export interface WorkspaceCheckout {
+  repoPath: string
+  branch: string | null
+}
+
+/**
+ * Lifecycle status of the AMC session attached to a worktree, as reported by
+ * `listWorktrees()`.
+ *
+ * - `'cleanup'` has zero assignment sites host-side. It is carried for parity
+ *   with the host's own union — never expect to observe it.
+ */
+export type WorktreeStatus = 'active' | 'merging' | 'merged' | 'cleanup' | 'conflict' | 'failed'
+
+/**
+ * One worktree of a project, or the main checkout, as returned by `listWorktrees()`.
+ *
+ * - `checkouts` has one entry for a repo-rooted project, and one entry per repo
+ *   for an umbrella project.
+ * - `session` is `null` when no AMC session is currently attached to this worktree.
+ */
+export interface WorktreeInfo {
+  /** Absolute root path. For the main checkout, this is the project folder itself. */
+  path: string
+  /** `null` for the main checkout — the value to put in a `WorkspaceScope.worktree`. */
+  ref: WorktreeRef
+  isMain: boolean
+  /** `'main'` for the main checkout, otherwise the worktree's basename with any
+   *  trailing `-<TS>` suffix split off. */
+  label: string
+  /** Parsed from the worktree basename's `-<TS>` suffix when present, else
+   *  `null`. Note `label` above has that suffix already split off. */
+  createdAt: string | null
+  checkouts: WorkspaceCheckout[]
+  session: { id: string; name: string; status: WorktreeStatus } | null
+  updatedAt: string | null
+}
+
+/** Options for `glob()`. */
+export interface WorkspaceGlobOpts {
+  /** Added to the host's default excludes (`.git`, `node_modules`, the project's
+   *  own worktree roots, and `.gitignore` walked as ignore rules) — not a
+   *  replacement for them. */
+  exclude?: string[]
+  includeIgnored?: boolean
+  includeNodeModules?: boolean
+  includeWorktrees?: boolean
+}
+
+/**
+ * Polled state of one `exec()` job, as returned by `execStatus()`.
+ *
+ * - `chunk` is console output produced since the `since` cursor passed in, not
+ *   the whole run's output to date.
+ * - `truncated` is true once the on-disk cap for this job's output is hit; the
+ *   head and tail are retained and the middle is dropped.
+ * - `'idle-timeout'` reflects that exec has no wall-clock cap — a run is only
+ *   killed after a period of no output, so a legitimately slow suite is not
+ *   killed at the same threshold as a deadlocked one.
+ */
+export interface WorkspaceExecStatus {
+  state: 'running' | 'exited' | 'cancelled' | 'idle-timeout'
+  exitCode: number | null
+  chunk: string
+  cursor: number
+  truncated: boolean
+}
+
+/**
+ * A CURSOR read of one `exec()` job's JSONL results stream, as returned by
+ * `execResults()` — not a whole-artifact read. There is deliberately no
+ * `execArtifact`: no end-of-run blob survives an interrupted run, so a cursor
+ * read is the only durable read that exists.
+ *
+ * - `lines` holds whole JSONL records only. A partial trailing line is held
+ *   back host-side until it completes — you will never see one here.
+ */
+export interface WorkspaceExecResults {
+  lines: string[]
+  cursor: number
+  truncated: boolean
+}
+
+/**
+ * A user-approved binding of a base command to one (project, package) pair, as
+ * returned by `listBindings()`. There is no setter for this type anywhere in
+ * `WorkspaceApi` — see `WorkspaceApi.requestBinding()`.
+ */
+export interface WorkspaceBinding {
+  /** Relative to the project root. `''` means the root package. */
+  packagePath: string
+  /** The user's own, verbatim base command text, e.g. `'npm test'`. */
+  baseCommand: string
+  /** User override of the auto-detected runner adapter; `null` when
+   *  auto-detection applies. */
+  adapterOverride: string | null
+  /** Recomputed whenever `baseCommand`, the resolved adapter, or the plugin
+   *  version changes; downstream caches key on it, so a rebind invalidates
+   *  them implicitly. */
+  bindingHash: string
+  acceptedAt: string
+}
+
+/** Outcome of `WorkspaceApi.requestBinding()`. */
+export type WorkspaceBindingResult =
+  | { accepted: true; binding: WorkspaceBinding }
+  | { accepted: false }
+
+/**
+ * Read, write, and run test/build commands against the user's real project
+ * checkouts and worktrees, scoped per project by a runtime grant the user makes
+ * (and can revoke) independently of the install-time permission below; a
+ * worktree inherits its project's grant.
+ *
+ * **NOT YET IMPLEMENTED BY THE HOST.** No host-side `workspace` namespace exists
+ * on any branch as of 2026-08-04 (host `master@9c21044ee0`) — every method on
+ * this interface currently rejects at runtime with `Unknown namespace:
+ * "workspace"`. Declaring `workspace.*` permissions in a manifest and passing
+ * `amc-plugin preflight` validates SHAPE only; neither is evidence the host
+ * supports this capability yet.
+ *
+ * Gated by three hierarchical permissions, split per method group below:
+ * `workspace.read`, `workspace.write` (implies read), `workspace.exec`.
+ * Discovery methods need none of the three beyond holding any `workspace.*`
+ * permission at all — without them the plugin cannot construct its first handle.
+ *
+ * Transcribed from "The interface" in the Test Tracker plugin spec
+ * (test-tracker-plugin repo, `docs/spec/01-capabilities.md`), which
+ * remains the source of truth if this file and that document ever disagree.
+ *
+ * Three contracts matter most and none of them are visible in the signatures:
+ *
+ * - In `exec()`, a list-valued entry in `vars` expands to N argv entries
+ *   host-side — or ZERO entries when the list is empty. Values are never
+ *   concatenated into a shell string; there is no shell.
+ * - `execResults` is a CURSOR read of a JSONL stream, not a whole-artifact
+ *   read. `lines` holds whole JSONL records only, never a partial line. There
+ *   is deliberately no `execArtifact`: no end-of-run blob survives an
+ *   interrupted run, so the cursor read is the only durable read that exists.
+ * - There is deliberately NO method anywhere on this interface that writes,
+ *   sets, or creates a command binding — `requestBinding` itself carries no
+ *   command text, not at exec time and not even as a suggested default. The
+ *   user binds a base command to a (project, package) pair by editing the
+ *   host's own proposal, and the host appends the slot's manifest-static args
+ *   at exec time. This is what closes command injection by construction:
+ *   there is no plugin-supplied string for anything to inject into.
+ */
+export interface WorkspaceApi {
+  // ── discovery — no permission beyond holding any workspace.* ──
+  /** Projects this plugin currently holds a runtime grant for. */
+  listProjects(): Promise<Array<{ projectId: string; name: string }>>
+  /** Blocking and live — reflects the filesystem and running sessions at call
+   *  time, not a cached snapshot. */
+  listWorktrees(projectId: string): Promise<WorktreeInfo[]>
+  /** Opens the host's project-grant picker. Resolves with the resulting set of
+   *  projects this plugin can reach, unchanged if the user declines. */
+  requestAccess(): Promise<Array<{ projectId: string; name: string }>>
+  /** The only door an absolute path enters by. `null` when the path falls
+   *  outside every project and worktree this plugin can currently reach. */
+  resolve(absolutePath: string): Promise<WorkspaceHandle | null>
+
+  // ── workspace.read ──
+  glob(
+    s: WorkspaceScope,
+    patterns: string[],
+    o?: WorkspaceGlobOpts
+  ): Promise<WorkspaceEntry[]>
+  stat(h: WorkspaceHandle): Promise<WorkspaceEntry | null>
+  exists(h: WorkspaceHandle): Promise<boolean>
+  /** `encoding` is reserved for future binary support; unused in v1, which is
+   *  UTF-8 text only. If passed, `'utf-8'` is the only legal value. */
+  readFile(h: WorkspaceHandle, o?: { encoding?: 'utf-8' }): Promise<string>
+  /** Chunked host-side at 500 files / ~4.8 MB per call — a large batch takes
+   *  several round trips transparently, well inside the 240 s RPC timeout. */
+  readFiles(
+    hs: WorkspaceHandle[]
+  ): Promise<Array<{ handle: WorkspaceHandle } & ({ content: string } | { error: string })>>
+  /** No setter for this type exists anywhere in this API — see `requestBinding()`. */
+  listBindings(s: WorkspaceScope): Promise<WorkspaceBinding[]>
+
+  // ── workspace.write (implies read) ──
+  /**
+   * `expectedMtimeMs` is a required compare-and-swap token: `null` means the
+   * file must NOT already exist. It closes both torn writes and lost updates,
+   * and costs nothing to obtain because `glob()` already returned it.
+   * `encoding` is reserved for future binary support and unused in v1 (UTF-8
+   * text only).
+   */
+  writeFile(
+    h: WorkspaceHandle,
+    content: string,
+    o: { expectedMtimeMs: number | null; encoding?: 'utf-8' }
+  ): Promise<{ mtimeMs: number }>
+  /** `expectedMtimeMs` is the same required compare-and-swap token as
+   *  `writeFile` — it must match the file's current `mtimeMs` or this rejects. */
+  deleteFile(h: WorkspaceHandle, o: { expectedMtimeMs: number }): Promise<void>
+
+  // ── workspace.exec ──
+  /** Carries NO command text — not even as a suggested default. The host reads
+   *  the package's own `test` script and shows that as the editable proposal
+   *  in its own modal; the plugin supplies nothing beyond which package to bind. */
+  requestBinding(s: WorkspaceScope, packagePath: string): Promise<WorkspaceBindingResult>
+  /**
+   * Runs a manifest-declared command slot for this scope. The host allows at
+   * most one running job per (project, worktree); calling this again on the
+   * same scope before the prior job finishes or is cancelled rejects host-side.
+   *
+   * A list-valued entry in `vars` expands to N argv entries host-side, or ZERO
+   * when the list is empty — values are never concatenated into a shell
+   * string. Host-reserved placeholders in the slot's arg template (e.g.
+   * `{outFile}`) are substituted by the host itself and never sourced from
+   * `vars`.
+   */
+  exec(
+    s: WorkspaceScope,
+    slot: string,
+    vars?: Record<string, string | string[]>
+  ): Promise<{ jobId: string }>
+  execStatus(jobId: string, o?: { since?: number }): Promise<WorkspaceExecStatus>
+  /** A cursor read, not a whole-artifact read — see `WorkspaceExecResults`. */
+  execResults(jobId: string, o?: { since?: number }): Promise<WorkspaceExecResults>
+  execCancel(jobId: string): Promise<void>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -529,4 +784,10 @@ export interface PluginContext {
   sessionHistory: PluginSessionHistory
   firebase: PluginFirebase
   spend: PluginSpend
+  /**
+   * NOT YET IMPLEMENTED BY THE HOST — see {@link WorkspaceApi}. Typed so a
+   * plugin can be authored and packaged against it; every call currently
+   * rejects at runtime, and both SDK mocks refuse to fake it.
+   */
+  workspace: WorkspaceApi
 }

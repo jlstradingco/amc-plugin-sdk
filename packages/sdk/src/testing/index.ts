@@ -138,6 +138,57 @@ export interface TestHarness {
   callCli(path: string, req: CliRequest): Promise<CliResponse>
 }
 
+/**
+ * Why `ctx.workspace` is a wall of rejections rather than a working fake.
+ *
+ * The host has no `workspace` namespace — not on master, not on any branch — so
+ * every real call rejects with `Unknown namespace: "workspace"`. An in-memory
+ * fake here would make plugin tests pass against a capability that cannot run,
+ * which is exactly how `ctx.events` stayed broken for months: this harness
+ * implemented it as a real EventEmitter, so unit tests were green the whole time
+ * the production path was dead in both directions.
+ *
+ * So the mock refuses. A test that needs workspace must inject its own double
+ * and thereby state, in its own source, that it is testing against a shape
+ * nobody has implemented.
+ *
+ * Delete this and write a real fake ONLY when the host ships the namespace.
+ */
+const WORKSPACE_NOT_IMPLEMENTED =
+  'ctx.workspace is not implemented by the AMC host yet, so this test harness ' +
+  'refuses to fake it — a passing test against a fake workspace would be ' +
+  'evidence of nothing. The SDK types the capability ahead of the host so ' +
+  'plugins can be authored and packaged against it; a real call currently ' +
+  'rejects with `Unknown namespace: "workspace"`.'
+
+/** Every method rejects. Kept in sync with the dev-shell's identical stub. */
+function workspaceNotImplemented(): PluginContext['workspace'] {
+  // One nullary thunk reused for all 17 methods: it is assignable to every
+  // signature (fewer params is fine, and Promise<never> satisfies any Promise<T>)
+  // and declares no parameter, so `noUnusedParameters` has nothing to complain
+  // about.
+  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_IMPLEMENTED))
+  return {
+    listProjects: reject,
+    listWorktrees: reject,
+    requestAccess: reject,
+    resolve: reject,
+    glob: reject,
+    stat: reject,
+    exists: reject,
+    readFile: reject,
+    readFiles: reject,
+    listBindings: reject,
+    writeFile: reject,
+    deleteFile: reject,
+    requestBinding: reject,
+    exec: reject,
+    execStatus: reject,
+    execResults: reject,
+    execCancel: reject
+  }
+}
+
 function nowIso(): string {
   return new Date().toISOString()
 }
@@ -495,7 +546,9 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
 
     spend: {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
-    }
+    },
+
+    workspace: workspaceNotImplemented()
   }
 
   harness.ctx = ctx

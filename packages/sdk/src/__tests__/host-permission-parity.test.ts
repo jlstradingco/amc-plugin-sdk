@@ -90,7 +90,12 @@ describe('SDK <-> host permission parity', () => {
     // count means shrinking the mirror can only happen deliberately, in a diff a
     // reviewer sees. Bump it ONLY after re-deriving from the host's
     // src/shared/plugin-permissions.ts union.
-    expect(HOST_PERMISSIONS.length).toBe(22)
+    //
+    // 22 -> 26 on 2026-08-04: the mirror had gone stale a THIRD time (see the
+    // fixture's HISTORY block). Re-derived by generation from host
+    // master@9c21044ee0; the four added are `launch`, `coreRead`, `oauth`,
+    // `channel`, all Tier-1 elevated and all host-ahead.
+    expect(HOST_PERMISSIONS.length).toBe(26)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
@@ -123,6 +128,12 @@ describe('SDK <-> host permission parity', () => {
       recording: 'recording',
       inbox: 'inbox',
       spend: 'spend',
+      // All three tiers of the workspace capability are carried by the single
+      // `ctx.workspace` namespace; the host splits read/write/exec per METHOD
+      // rather than per namespace (write implies read).
+      'workspace.read': 'workspace',
+      'workspace.write': 'workspace',
+      'workspace.exec': 'workspace',
     }
 
     // Every permission the SDK exposes must be classified above — no silent omissions.

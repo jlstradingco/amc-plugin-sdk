@@ -370,3 +370,41 @@ describe('sessions mock issues distinct ids', () => {
     expect(new Set(ids).size).toBe(5)
   })
 })
+
+describe('ctx.workspace refuses to fake an unimplemented host capability', () => {
+  // Deliberately NOT a working in-memory fake. The host has no `workspace`
+  // namespace on any branch, so a plugin that worked in the dev shell and
+  // nowhere else would be worse than one that failed immediately. This mirrors
+  // the identical stub in packages/sdk/src/testing/index.ts — the two mocks must
+  // agree about what the host can do.
+  const ws = () =>
+    createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false }).workspace
+
+  it('is present as an own enumerable key', () => {
+    const ctx = createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false })
+    expect(Object.keys(ctx)).toContain('workspace')
+  })
+
+  it.each([
+    'listProjects',
+    'listWorktrees',
+    'requestAccess',
+    'resolve',
+    'glob',
+    'stat',
+    'exists',
+    'readFile',
+    'readFiles',
+    'listBindings',
+    'writeFile',
+    'deleteFile',
+    'requestBinding',
+    'exec',
+    'execStatus',
+    'execResults',
+    'execCancel',
+  ] as const)('rejects %s', async (method) => {
+    const fn = ws()[method] as (...args: unknown[]) => Promise<unknown>
+    await expect(fn()).rejects.toThrow(/not implemented by the AMC host/i)
+  })
+})

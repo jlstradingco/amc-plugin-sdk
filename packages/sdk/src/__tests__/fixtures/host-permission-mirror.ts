@@ -14,29 +14,39 @@
 // host adds/removes a permission, update this mirror in the SAME change that
 // updates the SDK enum, then reconcile the allow-lists below.
 //
-// Last reconciled: 2026-08-03 against src/shared/plugin-permissions.ts, by GENERATING
-// the list from that file rather than hand-copying it (see HISTORY).
+// ─────────────────────────────────────────────────────────────────────────────
+// LAST RECONCILED: 2026-08-04, against host commit `master@9c21044ee0`
+// (committed 2026-08-03T23:38:01-04:00), by GENERATING the 26 strings from
+// src/shared/plugin-permissions.ts rather than hand-copying them:
 //
-// HISTORY — why this file is worth distrusting. Between 2026-07-15 and
-// 2026-07-27 this mirror claimed the host union was 14 permissions and that
-// `firebase` was "an ungated browser namespace, not a host permission". Both
-// were wrong: the host union was 19, and plugin-bridge-handler.ts hard-denies
-// the `firebase` namespace without the `firebase` permission. Because the guard
-// compares the SDK enum against THIS FILE, a wrong mirror and a wrong enum
-// agreed with each other and the guard stayed green while four shipped host
-// capabilities (`tts`, `sessions.readHistory`, `firebase`, `spend`) were
-// unreachable from the public SDK. A local mirror can only catch drift it is
-// itself reconciled against — so re-derive it from the host source when you
-// touch it, never from this file's own prior reasoning.
+//   sed -n '10,36p' src/shared/plugin-permissions.ts | grep -oE "'[^']+'"
 //
-// It happened AGAIN, within a week. By 2026-08-03 the host union had grown to 22
-// while this mirror still claimed 19: `secrets` (shipped 2026-08-01, and the one
-// advertised in Omniscio v0.1.90's release notes), `boards.read` and
-// `sessions.launchAny`. `secrets` is now typed end-to-end; the other two are
-// declared host-ahead below because inventing a `boards` ctx shape or a
-// `sessions.fanout` signature nobody needs yet is precisely how the July mirror
-// went wrong. This time the 22 strings were GENERATED from the host union rather
-// than retyped, because the count assertion cannot catch a misspelling.
+// The commit SHA is recorded so the NEXT reconciliation can `git diff` that one
+// file between SHAs instead of re-reading 200 lines and eyeballing the delta.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// HISTORY — why this file is worth distrusting. It has now gone stale THREE
+// times, twice within a fortnight, and each recurrence was found only because
+// somebody happened to look:
+//
+//  1. 2026-07-15..27 — claimed 14 while the host union was 19, and claimed
+//     `firebase` was "an ungated browser namespace, not a host permission".
+//     Both wrong; plugin-bridge-handler.ts hard-denies `firebase` without the
+//     permission. Four shipped host capabilities (`tts`, `sessions.readHistory`,
+//     `firebase`, `spend`) were unreachable from the public SDK.
+//  2. 2026-08-03 — claimed 19 while the host held 22. Missing: `secrets`
+//     (shipped 2026-08-01 and advertised in Omniscio v0.1.90), `boards.read`,
+//     `sessions.launchAny`.
+//  3. 2026-08-04 (this change) — claimed 22 while the host held 26. Missing:
+//     `launch`, `coreRead`, `oauth`, `channel` — all four Tier-1 `elevated`.
+//
+// The mechanism that keeps failing: the parity assertions compare the SDK enum
+// against THIS FILE, so a wrong mirror and a wrong enum agree with each other
+// and the suite stays green. The pinned count below cannot save you either —
+// it is itself part of what goes stale, and it cannot catch a misspelling.
+//
+// THE RULE: re-derive from the host source when you touch this file, never from
+// this file's own prior reasoning, and never by retyping. Generate it.
 
 /** The exact permission strings the host recognizes and gates. */
 export const HOST_PERMISSIONS = [
@@ -59,9 +69,13 @@ export const HOST_PERMISSIONS = [
   'inbox',
   'navigation',
   'chrome',
+  'launch',
   'firebase',
   'recording',
   'spend',
+  'coreRead',
+  'oauth',
+  'channel',
 ] as const
 
 // --- Documented known-deltas (intentional, tracked drift) -------------------
@@ -72,12 +86,28 @@ export const HOST_PERMISSIONS = [
  * namespace) so an author can build against them, but the host does not yet
  * recognize the permission, so a real plugin's call is currently inert.
  *
- * Currently EMPTY. `recording` used to sit here on the belief that the host had
- * no `recording` permission; the host does carry it in its union and consent map
- * (as an explicitly documented gating stub), so it belongs in
- * BRIDGE_PENDING_PERMISSIONS below instead.
+ * - `workspace.read` / `workspace.write` / `workspace.exec`: the `ctx.workspace`
+ *   capability — read/write/exec against the user's real project checkouts and
+ *   worktrees. Specified in the Test Tracker spec (docs/spec/01-capabilities.md,
+ *   09-dependencies.md §B1) and typed here so `amc-plugin package` accepts a
+ *   manifest requesting them. **No host implementation exists.** As of host
+ *   `master@9c21044ee0` there is no `workspace` entry in the host union, no
+ *   `'workspace'` key in NAMESPACE_PERMISSION (plugin-bridge-handler.ts), and no
+ *   WORKSPACE_SCHEMAS in bridge-method-schemas.ts — verified across all 80 local
+ *   and remote branch tips. Every call rejects with
+ *   `Unknown namespace: "workspace"`.
+ *
+ *   Typing them is a deliberate exception to the "never invent a host runtime
+ *   shape" rule below, and it is bounded: the shape is transcribed from a
+ *   written, reviewed spec rather than guessed, and both SDK mocks REFUSE to
+ *   fake the namespace (every method rejects) so no plugin test can go green
+ *   against it. Reconcile the moment the host lands its side.
  */
-export const SDK_AHEAD_PERMISSIONS = [] as const
+export const SDK_AHEAD_PERMISSIONS = [
+  'workspace.read',
+  'workspace.write',
+  'workspace.exec',
+] as const
 
 /**
  * Permissions the HOST gates that the SDK does NOT yet expose to external
@@ -91,11 +121,28 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  *   sessions namespace (plugin-permission-map.ts) — a method gap, not a namespace
  *   one. The host describes it as "Granted only to built-in plugins", so a
  *   third-party author cannot use it regardless.
+ * - `launch` (elevated): gates `launch.open` — "Open links and files, and run
+ *   programs you confirm".
+ * - `coreRead` (elevated): gates the `core.*` namespace — `core.sessions.list`,
+ *   `core.sessions.get`, `core.projects.list`, `core.projects.get`,
+ *   `core.messages.list`. A blanket read of all sessions and projects, distinct
+ *   from the opt-in, per-session `sessions.readHistory` grant the SDK does type.
+ * - `oauth` (elevated): gates `oauth.authorize` — third-party sign-in.
+ * - `channel` (elevated): gates `channel.connect` / `channel.send` /
+ *   `channel.close` — a live connection to an external service.
  *
- * Both are listed rather than typed on purpose: guessing at a host runtime shape
- * is the exact mistake the HISTORY note above records.
+ * All six are listed rather than typed on purpose: guessing at a host runtime
+ * shape is the exact mistake the HISTORY note above records, and the parity
+ * guard already asserts a host-ahead permission has NOT leaked into the SDK enum.
  */
-export const HOST_AHEAD_PERMISSIONS = ['boards.read', 'sessions.launchAny'] as const
+export const HOST_AHEAD_PERMISSIONS = [
+  'boards.read',
+  'sessions.launchAny',
+  'launch',
+  'coreRead',
+  'oauth',
+  'channel',
+] as const
 
 /**
  * Permissions whose string is recognized+gated by BOTH sides, but whose backend
@@ -121,6 +168,10 @@ export const BRIDGE_PENDING_PERMISSIONS = ['recording'] as const
  *   `Record<string, 'asc' | 'desc'>` — SDK now matches the host object form.
  * - `PluginDb.update`: was SDK returning the updated row vs host returning
  *   `void` — SDK now returns `Promise<void>`.
+ *
+ * Note `ctx.workspace` is deliberately NOT a delta: the host has no workspace
+ * runtime at all, which is a whole-namespace gap tracked in
+ * SDK_AHEAD_PERMISSIONS above, not a shape mismatch between two live surfaces.
  *
  * Append a new entry here (and bump the guard's expected count) only when a
  * fresh, deliberately-deferred type delta is introduced.

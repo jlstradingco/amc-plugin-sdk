@@ -372,7 +372,44 @@ installed happily could fail `amc-plugin validate`.)
 `date`, `projectName`, `sessionName`, `workDir` and `pluginName`. A whitespace-only template is
 treated as absent rather than rejected.
 
-Omit the entire `ui` block if your plugin is backend-only.
+`entryPoint` and `sidebar` are both **optional**, matching AMC. A `ui` block carrying only
+`hideProjectPanel` or `sessions` is valid -- those are useful without a webview. Omit the whole
+block if you need none of them.
+
+`contextTemplate` is folded *after* AMC's built-in plugin context, so your text adds to the
+system context rather than replacing it.
+
+## `workspace` Block
+
+Declares the [Workspace capability](../api/workspace)'s command slots and binding granularity.
+Requires one or more `workspace.*` permissions.
+
+```json
+{
+  "workspace": {
+    "binding": { "granularity": "package" },
+    "commandSlots": [
+      { "name": "vitest.run",  "args": ["--config", "{reporterConfig}", "{files}"] },
+      { "name": "generic.run", "args": [] }
+    ]
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `binding.granularity` | `"package"` | No | How command bindings are keyed. `"package"` is the only value. |
+| `commandSlots[].name` | string | Yes | Slot name you pass to `exec()` |
+| `commandSlots[].args` | string[] | Yes | Static argument template. May be empty. |
+
+`args` is **manifest-static by design** -- there is no runtime placeholder -- so every flag your
+plugin can pass is visible at marketplace review. The user supplies the base command; AMC
+appends these arguments and spawns without a shell.
+
+::: danger No host runtime yet
+AMC does not implement the `workspace` namespace. This block validates and packages, but every
+`ctx.workspace.*` call rejects at runtime. See the [Workspace API](../api/workspace).
+:::
 
 ## `backend` Block
 

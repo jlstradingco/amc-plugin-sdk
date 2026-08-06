@@ -111,7 +111,9 @@ write, and `get` returns `null` for both "never set" and "no longer decryptable"
 Create and manage Claude Code sessions programmatically:
 
 ```typescript
-// Create a new session
+// Create a new session on your plugin's own virtual project.
+// There is no `projectId` option -- the host always derives the project from
+// your plugin ID. See the Sessions API reference.
 const { sessionId } = await ctx.sessions.create({
   prompt: 'Analyze the codebase for security issues',
   userInitiated: true,
@@ -445,4 +447,13 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate AMC to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
+| `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
+| `workspace.write` | `WorkspaceApi.writeFile` / `deleteFile` | Write to the user's real project files (implies `workspace.read`) |
+| `workspace.exec` | `WorkspaceApi` (exec half) | Run a user-bound test/build command in a project |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |
+
+::: danger The `workspace.*` permissions have no host runtime yet
+`amc-plugin` accepts them so a plugin can be authored and packaged, but AMC has no `workspace`
+namespace — every call rejects at runtime. See the [Workspace API](../api/workspace) for what
+is and is not real. Passing `preflight` is not evidence the host supports it.
+:::

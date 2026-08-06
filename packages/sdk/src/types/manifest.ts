@@ -83,6 +83,49 @@ export interface PluginSuggestedPrompt {
   prompt: string
 }
 
+/**
+ * One named command slot. The plugin declares slots; the USER binds a base
+ * command per (project, package); the host appends these args and spawns with
+ * `shell: false`.
+ *
+ * `args` is deliberately **manifest-static** — there is no runtime `{args}`
+ * placeholder. That is what makes every flag the plugin can ever pass visible
+ * at marketplace review, and it is why command injection is closed by
+ * construction: there is no plugin-supplied string to inject into.
+ *
+ * Placeholders are substituted host-side, single-pass, into an argv ARRAY —
+ * never concatenated into a shell string. A list-valued variable expands to N
+ * argv entries, or zero when the list is empty. `{reporter}` and
+ * `{reporterConfig}` are host-reserved and host-minted; `{outFile}` is reserved
+ * too and does NOT belong in `args` at all — the results path travels to the
+ * child as an environment variable so it never appears in argv.
+ *
+ * The SDK does not police placeholder names: the host is the enforcement point
+ * and has no such rule yet, so validating one here would invent policy.
+ */
+export interface PluginWorkspaceCommandSlot {
+  name: string
+  args: string[]
+}
+
+/**
+ * How the user's command bindings are keyed.
+ *
+ * A single-member union on purpose — `'package'` is the only granularity the
+ * capability spec defines, and the binding table is keyed
+ * `(plugin_id, project_id, package_path)` to match. Adding a member later is
+ * additive and non-breaking; inventing one now would not be.
+ */
+export interface PluginWorkspaceBinding {
+  granularity: 'package'
+}
+
+/** Manifest declaration for the `ctx.workspace` capability. */
+export interface PluginWorkspace {
+  binding?: PluginWorkspaceBinding
+  commandSlots?: PluginWorkspaceCommandSlot[]
+}
+
 export interface PluginSettingOption {
   value: string
   label: string
@@ -127,6 +170,16 @@ export type PluginPermission =
   | 'inbox'
   | 'navigation'
   | 'spend'
+  // Workspace — read/write/exec against the user's real project checkouts and
+  // worktrees, gated per project by a runtime grant. `workspace.write` implies
+  // `workspace.read`. NOT YET IMPLEMENTED BY THE HOST: no `workspace` namespace
+  // exists on any host branch as of 2026-08-04 (host master@9c21044ee0), so a
+  // call currently rejects with `Unknown namespace: "workspace"`. Declared here
+  // ahead of the host so `amc-plugin package` accepts a manifest that requests
+  // them; see SDK_AHEAD_PERMISSIONS in the parity fixture.
+  | 'workspace.read'
+  | 'workspace.write'
+  | 'workspace.exec'
 
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -210,6 +263,14 @@ export interface PluginManifest {
   cron?: {
     jobs: PluginCronDefinition[]
   }
+  /**
+   * Declaration for the `ctx.workspace` capability. Requires one or more of the
+   * `workspace.*` permissions.
+   *
+   * NOT YET IMPLEMENTED BY THE HOST — see the `workspace.*` members of
+   * {@link PluginPermission}.
+   */
+  workspace?: PluginWorkspace
 }
 
 export interface PluginRegistryEntry {

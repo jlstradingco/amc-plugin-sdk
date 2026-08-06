@@ -11,35 +11,6 @@ together.
 
 ## [Unreleased]
 
-### Documented
-
-- **`AgentMC.events.onSessionStatus` is not what its own comment claimed.** It said "sessions your
-  plugin launched"; the host broadcasts every session's status change to every subscriber, with no
-  ownership filter and no permission gate, so filter on `sessionId` yourself. It also fires **only
-  in an overlay window** — the method exists in an in-panel webview because both share a preload,
-  but nothing delivers the channel there, so a panel subscription is silently never called.
-  `BridgeSessionStatusEvent` is now exported to document the payload; the callback parameter stays
-  `unknown` deliberately, because the host validates that payload advisory-only and narrowing it
-  would promise a guarantee nothing enforces.
-
-### Added (testing)
-
-- **`createMockSessionMessage` is exported from `@agent-mc/plugin-sdk/testing`.** The SDK's test
-  harness and the dev shell's mock now share one definition of the backend message row instead of
-  keeping a copy each. The point is not the lines saved: that surface names the body `text` while
-  both webview surfaces name it `content`, so a mock drifting from the host teaches plugin authors
-  the wrong field. A plugin author hand-rolling a session mock can use it rather than inventing a
-  fourth shape.
-
-### Fixed (dev shell)
-
-- **The dev shell's mock session status was frozen.** `getStatus` hardcoded `'running'` and
-  `stop()` never changed it, so a plugin polling until its session ended looped forever against
-  the dev shell while working correctly against AMC.
-- **Two dev-shell sessions created in the same millisecond shared one ID.** The mock built its ID
-  from `Date.now()`, so a plugin spawning sessions in a loop saw them silently merge — one status
-  and one message history across what should have been separate sessions. It now uses a counter.
-
 ### Changed — BREAKING
 
 These correct types that described behaviour AMC does not have. Each was a silent wrong answer
@@ -66,6 +37,18 @@ like it was doing.
 
 ### Added
 
+- **The `workspace.*` permissions and `ctx.workspace` — typed ahead of AMC, and
+  deliberately marked as such.** Read, write, and run user-bound test or build
+  commands against real project checkouts and worktrees. **AMC does not implement
+  this yet** — there is no host `workspace` namespace on any build, so every call
+  rejects at runtime. It is typed here so a plugin can be authored and packaged
+  against it; `amc-plugin preflight` passing validates shape, not host support.
+  Both SDK mocks reject on every `ctx.workspace.*` method rather than faking one,
+  so a plugin's unit tests cannot go green against a capability that cannot run.
+  See [the Workspace API docs](docs/api/workspace.md).
+- **The host's tool-content markers** (`TOOL_CALL_MARKER`, `TOOL_RESULT_MARKER`
+  and their regexes) plus a fence-aware `stripToolLines`, so plugins parsing
+  session transcripts stop hardcoding `▸` and `←`.
 - **`ui.hideProjectPanel`, `ui.sessions`, `ui.overlay` and `storage.uniqueIndexes` now survive
   validation.** All four are real in AMC — `uniqueIndexes` materialises real unique indexes and is
   what makes `collectionUpsert` atomic — but a non-strict parse stripped them from this SDK's
@@ -80,9 +63,21 @@ like it was doing.
   mixing them a compile error instead of the `m.text ?? m.content ?? ''` hedge plugins have been
   writing.
 - **`BridgeSession.launchWithDraft` accepts `autoSend`**, which AMC reads.
+- **`createMockSessionMessage` is exported from `@agent-mc/plugin-sdk/testing`.** The SDK's test
+  harness and the dev shell's mock now share one definition of the backend message row instead of
+  keeping a copy each. The point is not the lines saved: that surface names the body `text` while
+  both webview surfaces name it `content`, so a mock drifting from the host teaches plugin authors
+  the wrong field. A plugin author hand-rolling a session mock can use it rather than inventing a
+  fourth shape.
 
 ### Fixed
 
+- **The dev shell's mock session status was frozen.** `getStatus` hardcoded `'running'` and
+  `stop()` never changed it, so a plugin polling until its session ended looped forever against
+  the dev shell while working correctly against AMC.
+- **Two dev-shell sessions created in the same millisecond shared one ID.** The mock built its ID
+  from `Date.now()`, so a plugin spawning sessions in a loop saw them silently merge — one status
+  and one message history across what should have been separate sessions. It now uses a counter.
 - **`ui.entryPoint` and `ui.sidebar` are optional**, as they have always been in AMC, and now carry
   its length bounds (500 / 50 / 50). A manifest declaring only `ui: { hideProjectPanel: true }`
   installed fine and failed `amc-plugin validate` — the parity inversion pointing the wrong way.
@@ -98,6 +93,14 @@ like it was doing.
 
 ### Documented
 
+- **`AgentMC.events.onSessionStatus` is not what its own comment claimed.** It said "sessions your
+  plugin launched"; the host broadcasts every session's status change to every subscriber, with no
+  ownership filter and no permission gate, so filter on `sessionId` yourself. It also fires **only
+  in an overlay window** — the method exists in an in-panel webview because both share a preload,
+  but nothing delivers the channel there, so a panel subscription is silently never called.
+  `BridgeSessionStatusEvent` is now exported to document the payload; the callback parameter stays
+  `unknown` deliberately, because the host validates that payload advisory-only and narrowing it
+  would promise a guarantee nothing enforces.
 - **Declared `migrations` are never executed by AMC.** They are parsed, validated, retained, and
   read by nothing — there is no migration runner and no path that can drop a plugin column or
   index. What actually evolves a schema is an automatic ADD COLUMN sweep on a version bump. The
@@ -111,7 +114,7 @@ like it was doing.
 the host's own locking tests — not against this SDK's mock. That distinction is the lesson behind
 this whole changeset: the mock previously implemented `ctx.events` as a real in-memory emitter, so
 plugin unit tests passed for months while the production path was dead in both directions. The
-vendored values now live in `src/__tests__/fixtures/host-manifest-mirror.ts` with per-value
+vendored values now live in `src/__tests__/fixtures/host-mirror.ts` with per-value
 `file:line` citations.
 
 ## [1.3.0] - 2026-07-28
