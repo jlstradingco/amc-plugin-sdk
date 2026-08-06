@@ -172,6 +172,35 @@ function applyQuery(
   return out.slice(offset, end)
 }
 
+/**
+ * Build one message row in the shape `ctx.sessions.getMessages()` really returns.
+ *
+ * Shared by this harness and the dev shell's mock so there is ONE definition of
+ * the backend row. That matters more than the line count it saves: this surface
+ * names the body `text` while both webview surfaces name it `content`, and a
+ * mock that drifts from the host teaches plugin authors the wrong field — the
+ * exact failure this SDK's parity tests exist to prevent.
+ *
+ * Exported so a plugin author hand-rolling a session mock gets the real shape
+ * too, instead of inventing a fourth one.
+ *
+ * @param idPrefix distinguishes rows per harness, e.g. `'test-message'`.
+ * @param index    1-based position in the session's transcript.
+ */
+export function createMockSessionMessage(
+  idPrefix: string,
+  index: number,
+  text: string,
+  role: SessionMessage['role'] = 'user'
+): SessionMessage {
+  return {
+    id: `${idPrefix}-${index}`,
+    role,
+    text,
+    timestamp: new Date().toISOString()
+  }
+}
+
 export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const pluginId = opts.pluginId ?? 'test-plugin'
   const pluginVersion = opts.pluginVersion ?? '1.0.0'
@@ -300,12 +329,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       sendMessage: (sessionId, text) => {
         // Recorded so getMessages() hands back a real row in the real shape.
         const messages = sessionMessages.get(sessionId) ?? []
-        messages.push({
-          id: `test-message-${messages.length + 1}`,
-          role: 'user',
-          text,
-          timestamp: new Date().toISOString()
-        })
+        messages.push(createMockSessionMessage('test-message', messages.length + 1, text))
         return Promise.resolve()
       },
       getStatus: (sessionId) => Promise.resolve(sessionStatus.get(sessionId) ?? 'running'),

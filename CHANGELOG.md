@@ -22,6 +22,15 @@ together.
   `unknown` deliberately, because the host validates that payload advisory-only and narrowing it
   would promise a guarantee nothing enforces.
 
+### Added (testing)
+
+- **`createMockSessionMessage` is exported from `@agent-mc/plugin-sdk/testing`.** The SDK's test
+  harness and the dev shell's mock now share one definition of the backend message row instead of
+  keeping a copy each. The point is not the lines saved: that surface names the body `text` while
+  both webview surfaces name it `content`, so a mock drifting from the host teaches plugin authors
+  the wrong field. A plugin author hand-rolling a session mock can use it rather than inventing a
+  fourth shape.
+
 ### Fixed (dev shell)
 
 - **The dev shell's mock session status was frozen.** `getStatus` hardcoded `'running'` and

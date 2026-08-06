@@ -2,6 +2,10 @@ import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plugin-sdk'
+// The dev shell is itself a development tool, so depending on the SDK's testing
+// entry is in-band: it keeps ONE definition of the backend message row rather
+// than a second copy that can drift from the host.
+import { createMockSessionMessage } from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -267,12 +271,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       sendMessage: (sid, text) => {
         if (shouldLog) console.log(`${prefix} [sessions] sendMessage(${sid}): ${text.slice(0, 80)}...`)
         const messages = sessionMessages.get(sid) ?? []
-        messages.push({
-          id: `mock-message-${messages.length + 1}`,
-          role: 'user',
-          text,
-          timestamp: new Date().toISOString(),
-        })
+        messages.push(createMockSessionMessage('mock-message', messages.length + 1, text))
         return Promise.resolve()
       },
       getStatus: (sid) => Promise.resolve(sessionStatus.get(sid) ?? 'running'),
