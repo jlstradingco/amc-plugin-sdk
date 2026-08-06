@@ -1,5 +1,13 @@
 import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording, SessionStatus, SessionPendingAction } from './context.js'
 
+/**
+ * Re-exported so a webview author can NAME the types they now receive.
+ * `@agent-mc/plugin-sdk/browser` maps straight to this file, so a type declared
+ * only in `./context.js` is unreachable from a webview — `BridgeSessionStatus`
+ * would hand back a `status` whose type could not be written down.
+ */
+export type { SessionStatus, SessionPendingAction } from './context.js'
+
 export interface BridgeTheme {
   get(): { mode: string; visualTheme: string }
   onChange(callback: (theme: { mode: string; visualTheme: string }) => void): () => void

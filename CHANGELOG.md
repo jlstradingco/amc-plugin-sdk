@@ -11,6 +11,15 @@ together.
 
 ## [Unreleased]
 
+### Fixed (dev shell)
+
+- **The dev shell's mock session status was frozen.** `getStatus` hardcoded `'running'` and
+  `stop()` never changed it, so a plugin polling until its session ended looped forever against
+  the dev shell while working correctly against AMC.
+- **Two dev-shell sessions created in the same millisecond shared one ID.** The mock built its ID
+  from `Date.now()`, so a plugin spawning sessions in a loop saw them silently merge — one status
+  and one message history across what should have been separate sessions. It now uses a counter.
+
 ### Changed — BREAKING
 
 These correct types that described behaviour AMC does not have. Each was a silent wrong answer

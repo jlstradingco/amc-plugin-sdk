@@ -57,6 +57,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
   const shouldLog = opts.logToConsole ?? true
   const seededSettings = { ...(opts.settings ?? {}) }
   const sessionMessages = new Map<string, SessionMessage[]>()
+  const sessionStatus = new Map<string, string>()
+  let sessionCounter = 0
 
   // --- Persisted KV storage -------------------------------------------------
   // With a real `dataDir` the KV store is flushed to `<dataDir>/amc-dev-storage.json`
@@ -253,9 +255,13 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
     sessions: {
       create: (_opts) => {
-        const sessionId = `mock-session-${Date.now()}`
+        // A counter, not Date.now(): two creates inside the same millisecond
+        // produced the SAME id, so a plugin spawning sessions in a loop saw
+        // them silently merge into one — shared status and shared messages.
+        const sessionId = `mock-session-${++sessionCounter}`
         if (shouldLog) console.log(`${prefix} [sessions] create -> ${sessionId}`)
         sessionMessages.set(sessionId, [])
+        sessionStatus.set(sessionId, 'running')
         return Promise.resolve({ sessionId })
       },
       sendMessage: (sid, text) => {
@@ -269,10 +275,14 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         })
         return Promise.resolve()
       },
-      getStatus: () => Promise.resolve('running'),
+      getStatus: (sid) => Promise.resolve(sessionStatus.get(sid) ?? 'running'),
       getMessages: (sid) => Promise.resolve([...(sessionMessages.get(sid) ?? [])]),
       stop: (sid) => {
         if (shouldLog) console.log(`${prefix} [sessions] stop(${sid})`)
+        // A stopped session must stop reporting 'running'. This mock used to
+        // hardcode the status, so a plugin polling until the session ended
+        // looped forever against the dev shell while working against the host.
+        sessionStatus.set(sid, 'ended')
         return Promise.resolve()
       },
       onStatusChange: () => () => {},
