@@ -30,9 +30,6 @@ function renderMessages(messages: BridgeSessionMessage[]) {
 
   messagesDiv.innerHTML = messages
     .map((m) => {
-      // On this webview surface the row is `{ id, role, content, timestamp }`.
-      // The backend's ctx.sessions.getMessages() names the body `text` instead,
-      // which is why plugin code used to hedge `m.text ?? m.content ?? ''`.
       const cls =
         m.role === 'user' ? 'msg-operator' : m.role === 'assistant' ? 'msg-agent' : 'msg-system'
       return `<div class="message ${cls}"><strong>${escapeHtml(m.role)}:</strong> ${escapeHtml(m.content)}</div>`
@@ -79,9 +76,8 @@ function startPolling() {
     if (!currentSessionId) return
 
     try {
-      // getStatus resolves an OBJECT on this surface, not a bare string. The
-      // backend's ctx.sessions.getStatus() resolves the string. Comparing the
-      // object to a string here silently never matched, so polling never stopped.
+      // Resolves an OBJECT here, a bare string on the backend. Comparing the
+      // object to a string never matched, so polling never stopped.
       const { status } = await amc.session.getStatus(currentSessionId)
       const messages = await amc.session.getMessages(currentSessionId)
       renderMessages(messages)

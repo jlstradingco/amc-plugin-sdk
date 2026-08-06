@@ -23,14 +23,8 @@
 export const HOST_SOURCES = {
   manifestValidator:
     'src/main/services/plugin/plugin-manifest-validator.ts',
-  pluginTypes: 'src/shared/types/plugins.ts',
   storage: 'src/main/db/plugin-storage.ts',
   sessionBridge: 'src/main/services/plugin/plugin-session-bridge.ts',
-  sessionHandler: 'src/main/ipc/plugin-bridge/session-handler.ts',
-  sessionHistoryHandler: 'src/main/ipc/plugin-bridge/session-history-handler.ts',
-  bridgeMethodSchemas: 'src/main/ipc/bridge-method-schemas.ts',
-  responseSchemas: 'src/shared/plugin-bridge-response-schemas.ts',
-  sessionStatusTypes: 'src/shared/types/session-status.ts',
   contextProvider: 'src/main/services/session-context/plugin-provider.ts',
 } as const
 
@@ -68,23 +62,14 @@ export const HOST_MIGRATION_OPS = ['add_column', 'add_index', 'drop_index'] as c
 export const HOST_REJECTED_MIGRATION_OPS = ['remove_column', 'remove_index'] as const
 
 /**
- * Columns the host refuses inside a collection schema and inside a migration
- * operation — `types/plugins.ts:34-42`, enforced at `plugin-manifest-validator.ts:167-172`
- * and `:206-212`. It owns these three itself.
+ * Columns the host owns, and refuses inside BOTH a collection schema
+ * (`plugin-manifest-validator.ts:167-172`) and a migration operation (`:206-212`)
+ * — `types/plugins.ts:34-42`.
+ *
+ * This SDK currently enforces the migration half only; see the KNOWN GAP note on
+ * `RESERVED_COLUMNS` in ../../validators/manifest.ts.
  */
 export const HOST_RESERVED_COLUMNS = ['id', 'created_at', 'updated_at'] as const
-
-/**
- * `migrations` is parsed, type-checked, retained on the registry entry — and
- * then NEVER executed. A repo-wide search for reads of `.migrations` in the
- * host returns zero consumers; the same search for `.collections` returns eight,
- * so the search itself is sound.
- *
- * What actually evolves a plugin's schema is an automatic ADD COLUMN sweep on a
- * version bump (`plugin-storage.ts:605-629`), whose own log line reads
- * "...without declared migrations. Falling back to ADD COLUMN sweep from manifest".
- */
-export const HOST_EXECUTES_MIGRATIONS = false
 
 /** `ALL_SESSION_STATUSES` — `session-status.ts:22-40`. */
 export const HOST_SESSION_STATUSES = [
@@ -99,23 +84,6 @@ export const HOST_SESSION_STATUSES = [
   'archived',
   'paused',
   'waiting',
-] as const
-
-/** `pendingAction` — `session-status.ts:209-239`; nullable. */
-export const HOST_PENDING_ACTIONS = [
-  'question',
-  'plan_approval',
-  'permission_request',
-  'rate_limited',
-  'api_error',
-  'auth_error',
-  'user_stopped',
-  'subagent_timeout',
-  'wait_timeout',
-  'response_aborted',
-  'recovery_failed',
-  'mission',
-  'suspended',
 ] as const
 
 /**
@@ -155,20 +123,3 @@ export const HOST_MESSAGE_SURFACES = {
   },
 } as const
 
-/**
- * `ctx.sessions.create` — `plugin-session-bridge.ts:95-110`.
- *
- * The host reads exactly these two keys. It has NEVER read `projectId`: the
- * project is always derived from the plugin's own virtual project
- * `__plugin_<id>__` (`plugin-session-bridge.ts:28-42`), so a caller-supplied
- * project silently did nothing.
- */
-export const HOST_SESSION_CREATE_KEYS = ['prompt', 'userInitiated'] as const
-
-/**
- * `AgentMC.session.create` — the WEBVIEW surface — reads only `prompt`.
- * `bridge-method-schemas.ts:197-199` is a non-strict zod tuple, so any extra
- * key (including `userInitiated`) is silently stripped before the handler runs.
- * Adding `userInitiated` to the webview type would swap one lie for another.
- */
-export const HOST_BRIDGE_SESSION_CREATE_KEYS = ['prompt'] as const

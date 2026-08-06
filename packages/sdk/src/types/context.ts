@@ -112,7 +112,6 @@ export type SessionStatus =
   | 'archived'
   | 'paused'
   | 'waiting'
-  // eslint-disable-next-line @typescript-eslint/ban-types
   | (string & {})
 
 /**
@@ -134,7 +133,6 @@ export type SessionPendingAction =
   | 'recovery_failed'
   | 'mission'
   | 'suspended'
-  // eslint-disable-next-line @typescript-eslint/ban-types
   | (string & {})
 
 /**
@@ -367,7 +365,6 @@ export interface HistorySession {
   lastActiveAt: string
 }
 
-/** One text-only turn of a granted session. */
 /**
  * One message from `ctx.sessionHistory.getMessages()` — the cleanest of the
  * three message-read surfaces, and the only one with a closed role union.

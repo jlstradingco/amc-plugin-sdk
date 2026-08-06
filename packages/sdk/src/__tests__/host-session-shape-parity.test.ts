@@ -1,11 +1,15 @@
 import { describe, it, expect, expectTypeOf } from 'vitest'
 import { createTestContext } from '../testing/index.js'
-import type { SessionMessage, SessionStatus } from '../types/context.js'
+import type {
+  HistoryMessage,
+  PluginSessions,
+  SessionMessage,
+  SessionStatus,
+} from '../types/context.js'
 import type { BridgeSession, BridgeSessionMessage } from '../types/bridge.js'
 import {
   HOST_MESSAGE_SURFACES,
-  HOST_SESSION_CREATE_KEYS,
-  HOST_BRIDGE_SESSION_CREATE_KEYS,
+  HOST_SESSION_STATUSES,
   HOST_SOURCES,
 } from './fixtures/host-manifest-mirror.js'
 
@@ -35,14 +39,18 @@ describe(`sessions.create parity (${HOST_SOURCES.sessionBridge}:95-110)`, () => 
     const create = createTestContext({ pluginId: 'p' }).ctx.sessions.create
     // @ts-expect-error projectId is not a real option — the host drops it.
     void (() => create({ prompt: 'x', projectId: 'proj-1' }))
-    expect(HOST_SESSION_CREATE_KEYS).toEqual(['prompt', 'userInitiated'])
+    // The SDK's own option type, compared to the host's read set — not the
+    // mirror compared to itself.
+    expectTypeOf<Parameters<PluginSessions['create']>[0]>().toEqualTypeOf<{
+      prompt?: string
+      userInitiated?: boolean
+    }>()
   })
 
   it('keeps userInitiated OFF the webview surface, which strips it', () => {
     // bridge-method-schemas.ts:197-199 is a non-strict zod tuple, so an extra
     // key never reaches the handler. Declaring it here would swap one silent
     // wrong answer for another.
-    expect(HOST_BRIDGE_SESSION_CREATE_KEYS).toEqual(['prompt'])
     expectTypeOf<Parameters<BridgeSession['create']>[0]>().toEqualTypeOf<{ prompt?: string }>()
   })
 })
@@ -71,13 +79,16 @@ describe('getStatus returns two different shapes on two surfaces', () => {
 
 describe('getMessages returns three different shapes on three surfaces', () => {
   it('names the body `text` on the backend and `content` on both webview surfaces', () => {
-    // The single fact behind the `m.text ?? m.content ?? ''` hedge.
-    expect(HOST_MESSAGE_SURFACES.worker.textField).toBe('text')
-    expect(HOST_MESSAGE_SURFACES.webview.textField).toBe('content')
-    expect(HOST_MESSAGE_SURFACES.sessionHistory.textField).toBe('content')
-
-    expectTypeOf<SessionMessage>().toHaveProperty('text')
-    expectTypeOf<BridgeSessionMessage>().toHaveProperty('content')
+    // The single fact behind the `m.text ?? m.content ?? ''` hedge. Asserted
+    // against the SDK's real types, so it fails if a type drifts — comparing
+    // the vendored mirror to itself would pass even if every type were wrong.
+    expectTypeOf<SessionMessage>().toHaveProperty(HOST_MESSAGE_SURFACES.worker.textField)
+    expectTypeOf<SessionMessage>().not.toHaveProperty('content')
+    expectTypeOf<BridgeSessionMessage>().toHaveProperty(HOST_MESSAGE_SURFACES.webview.textField)
+    expectTypeOf<BridgeSessionMessage>().not.toHaveProperty('text')
+    expectTypeOf<HistoryMessage>().toHaveProperty(
+      HOST_MESSAGE_SURFACES.sessionHistory.textField
+    )
   })
 
   it('returns real rows in the backend shape, not an empty array', async () => {
@@ -97,21 +108,12 @@ describe('getMessages returns three different shapes on three surfaces', () => {
     ).not.toHaveProperty('content')
   })
 
-  it('only the backend surface is genuinely unfiltered', () => {
-    // The dependency ledger calls the webview surface "raw"; it is not. It
-    // filters metadata.partial === true at session-handler.ts:318. Recording
-    // the correction here so the SDK documents what is true.
-    expect(HOST_MESSAGE_SURFACES.worker.filtersPartialRows).toBe(false)
-    expect(HOST_MESSAGE_SURFACES.webview.filtersPartialRows).toBe(true)
-    expect(HOST_MESSAGE_SURFACES.sessionHistory.filtersPartialRows).toBe(true)
-  })
-
-  it('only sessionHistory drops system rows and closes the role union', () => {
-    expect(HOST_MESSAGE_SURFACES.worker.keepsSystemRows).toBe(true)
-    expect(HOST_MESSAGE_SURFACES.webview.keepsSystemRows).toBe(true)
-    expect(HOST_MESSAGE_SURFACES.sessionHistory.keepsSystemRows).toBe(false)
-    expect(HOST_MESSAGE_SURFACES.sessionHistory.closedRoleUnion).toBe(true)
-    expect(HOST_MESSAGE_SURFACES.sessionHistory.extractsText).toBe(true)
+  it('closes the role union only on sessionHistory, which drops system rows', () => {
+    // The two unfiltered surfaces must therefore admit a `system` role; the
+    // filtered one must not. Asserted on the SDK's types, not on the mirror.
+    expectTypeOf<HistoryMessage['role']>().toEqualTypeOf<'user' | 'assistant'>()
+    expectTypeOf<'system'>().toMatchTypeOf<SessionMessage['role']>()
+    expectTypeOf<'system'>().toMatchTypeOf<BridgeSessionMessage['role']>()
   })
 })
 
@@ -121,7 +123,8 @@ describe('the mock does not invent host behaviour', () => {
     const { sessionId } = await h.ctx.sessions.create({ prompt: 'hi' })
     await h.ctx.sessions.stop(sessionId)
     // The harness used to set 'stopped', which is not one of the eleven
-    // statuses in session-status.ts:22-40.
-    expect(await h.ctx.sessions.getStatus(sessionId)).toBe('ended')
+    // statuses in session-status.ts:22-40. Asserting membership rather than a
+    // hardcoded sentinel keeps this honest if the mock's choice changes.
+    expect(HOST_SESSION_STATUSES).toContain(await h.ctx.sessions.getStatus(sessionId))
   })
 })

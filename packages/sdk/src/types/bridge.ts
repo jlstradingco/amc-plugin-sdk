@@ -41,7 +41,8 @@ export interface BridgeSession {
    * webview would silently do nothing — hence its absence.
    *
    * Concurrent calls with an identical prompt are de-duplicated host-side and
-   * resolve to the SAME `sessionId`.
+   * resolve to the SAME `sessionId` — the in-flight key is the prompt hash
+   * (`plugin-bridge/session-handler.ts:284-287`).
    */
   create(opts: { prompt?: string }): Promise<{ sessionId: string }>
   sendMessage(sessionId: string, opts: { text: string }): Promise<void>
@@ -64,7 +65,10 @@ export interface BridgeSession {
   getStatus(sessionId: string): Promise<BridgeSessionStatus>
   rename(sessionId: string, name: string): Promise<void>
   stop(sessionId: string): Promise<void>
-  /** `autoSend` submits the draft immediately instead of leaving it in the composer. */
+  /**
+   * `autoSend` submits the draft immediately instead of leaving it in the
+   * composer — `plugin-bridge/session-handler.ts:366-377` reads all three keys.
+   */
   launchWithDraft(opts: {
     projectId: string
     draftText: string

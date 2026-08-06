@@ -298,9 +298,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         return Promise.resolve({ sessionId })
       },
       sendMessage: (sessionId, text) => {
-        // Recorded so getMessages() can hand back a real row in the real shape.
-        // A mock that always returns [] can never teach you that this surface
-        // names the body `text` while both webview surfaces name it `content`.
+        // Recorded so getMessages() hands back a real row in the real shape.
         const messages = sessionMessages.get(sessionId) ?? []
         messages.push({
           id: `test-message-${messages.length + 1}`,
@@ -308,7 +306,6 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           text,
           timestamp: new Date().toISOString()
         })
-        sessionMessages.set(sessionId, messages)
         return Promise.resolve()
       },
       getStatus: (sessionId) => Promise.resolve(sessionStatus.get(sessionId) ?? 'running'),
