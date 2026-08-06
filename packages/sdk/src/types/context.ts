@@ -92,13 +92,105 @@ export interface PluginEvents {
   on(channel: string, handler: (data: unknown) => void): () => void
 }
 
+/**
+ * Every status AMC can report for a session.
+ *
+ * Deliberately an OPEN union: the `(string & {})` arm keeps editor
+ * autocomplete for the known values while still accepting a status the host
+ * adds later. A closed union would turn an exhaustive `switch` into a silent
+ * misroute the day that happens.
+ */
+export type SessionStatus =
+  | 'running'
+  | 'needs_you'
+  | 'error'
+  | 'stalled'
+  | 'starting'
+  | 'ready'
+  | 'terminating'
+  | 'ended'
+  | 'archived'
+  | 'paused'
+  | 'waiting'
+  | (string & {})
+
+/**
+ * What a session is waiting for when it reports `needs_you`, `error` or
+ * `waiting`. `null` when it is not waiting on anything. Open, for the same
+ * reason as {@link SessionStatus}.
+ */
+export type SessionPendingAction =
+  | 'question'
+  | 'plan_approval'
+  | 'permission_request'
+  | 'rate_limited'
+  | 'api_error'
+  | 'auth_error'
+  | 'user_stopped'
+  | 'subagent_timeout'
+  | 'wait_timeout'
+  | 'response_aborted'
+  | 'recovery_failed'
+  | 'mission'
+  | 'suspended'
+  | (string & {})
+
+/**
+ * One message from `ctx.sessions.getMessages()` — the BACKEND shape.
+ *
+ * The body field is called `text` here. On both webview surfaces the very same
+ * row arrives with the body in `content` instead
+ * ({@link BridgeSessionMessage}, {@link HistoryMessage}). That split is why
+ * plugin code has historically hedged with `m.text ?? m.content ?? ''`; you do
+ * not need the hedge if you use the type for the surface you are actually on.
+ */
+export interface SessionMessage {
+  id: string
+  /**
+   * `'user'` for operator turns, `'assistant'` for agent turns, otherwise the
+   * host's raw source — `'system'` rows reach you unfiltered on this surface.
+   */
+  role: 'user' | 'assistant' | 'system' | (string & {})
+  /** The message body. Raw: tool calls and tool output are NOT stripped here. */
+  text: string
+  timestamp: string
+}
+
 export interface PluginSessions {
-  create(opts: { prompt?: string; projectId?: string }): Promise<{ sessionId: string }>
+  /**
+   * Create a session on your plugin's own virtual project.
+   *
+   * There is no `projectId` option. Earlier versions of this SDK declared one
+   * and the host has never read it — the project is always derived from your
+   * plugin id (`__plugin_<id>__`), so code passing a project appeared to target
+   * it and silently did not.
+   *
+   * `userInitiated` marks the session as user-provoked rather than
+   * plugin-background, which is what decides whether AMC surfaces it in the
+   * sidebar or hides it as plugin chatter. It is read on THIS backend surface
+   * only; the webview's `AgentMC.session.create` silently discards it.
+   */
+  create(opts: { prompt?: string; userInitiated?: boolean }): Promise<{ sessionId: string }>
   sendMessage(sessionId: string, text: string): Promise<void>
-  getStatus(sessionId: string): Promise<string>
-  getMessages(sessionId: string): Promise<unknown[]>
+  /**
+   * Resolves a bare status string.
+   *
+   * Backend-only shape. The webview's `AgentMC.session.getStatus` resolves
+   * `{ status, pendingAction }` instead — same method name, two shapes. Check
+   * which surface you are on before comparing the result to a string.
+   */
+  getStatus(sessionId: string): Promise<SessionStatus>
+  /**
+   * The full transcript, unfiltered.
+   *
+   * Of the three message-read surfaces this is the only genuinely raw one:
+   * partial (still-streaming) rows are NOT filtered out and `system` rows are
+   * included, so a poll can observe a half-written assistant turn. The two
+   * webview surfaces both drop partial rows.
+   */
+  getMessages(sessionId: string): Promise<SessionMessage[]>
   stop(sessionId: string): Promise<void>
-  onStatusChange(sessionId: string, handler: (status: string) => void): () => void
+  onStatusChange(sessionId: string, handler: (status: SessionStatus) => void): () => void
 }
 
 /**
@@ -273,7 +365,15 @@ export interface HistorySession {
   lastActiveAt: string
 }
 
-/** One text-only turn of a granted session. */
+/**
+ * One message from `ctx.sessionHistory.getMessages()` — the cleanest of the
+ * three message-read surfaces, and the only one with a closed role union.
+ *
+ * The host filters `system` rows and still-streaming rows out entirely, then
+ * strips tool calls and tool output from the body. Compare
+ * {@link SessionMessage} (backend, field named `text`, nothing filtered) and
+ * the webview's `BridgeSessionMessage` (field named `content`, keeps `system`).
+ */
 export interface HistoryMessage {
   id: string
   role: 'user' | 'assistant'

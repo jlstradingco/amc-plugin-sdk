@@ -114,7 +114,7 @@ Create and manage Claude Code sessions programmatically:
 // Create a new session
 const { sessionId } = await ctx.sessions.create({
   prompt: 'Analyze the codebase for security issues',
-  projectId: 'optional-project-id',
+  userInitiated: true,
 })
 
 // Interact with the session

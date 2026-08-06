@@ -42,17 +42,61 @@ const settingSchema = z.object({
   testAction: testActionSchema.optional(),
 })
 
-const collectionSchema = z.object({
-  columns: z.record(z.enum(['text', 'integer', 'real', 'json'])),
-  indexes: z.array(z.string()).optional(),
-})
+/**
+ * Columns the host manages itself and refuses to let a plugin declare — it
+ * stamps `id`, `created_at` and `updated_at` on every row
+ * (`types/plugins.ts:34-42`).
+ *
+ * The host enforces this in BOTH places, so this SDK does too: in a collection
+ * schema (`plugin-manifest-validator.ts:167-172`) and in a migration operation
+ * (`:206-212`). Rejecting them here means `amc-plugin validate` fails fast
+ * instead of the plugin failing at install.
+ */
+const RESERVED_COLUMNS = ['id', 'created_at', 'updated_at']
 
+const reservedColumnMessage = `column may not be one of ${RESERVED_COLUMNS.join(
+  ', '
+)} — the host manages these itself`
+
+const collectionSchema = z
+  .object({
+    columns: z.record(z.enum(['text', 'integer', 'real', 'json'])),
+    indexes: z.array(z.string()).optional(),
+    // Host-real and, until now, SDK-invisible: a non-strict parse silently
+    // stripped this, so a packaged plugin could not rely on it. The host emits a
+    // real CREATE UNIQUE INDEX per tuple, and `collectionUpsert`'s atomicity
+    // depends on the tuple existing (plugin-storage.ts:511-513, :528-538).
+    uniqueIndexes: z.array(z.array(z.string()).min(1)).optional(),
+  })
+  .superRefine((collection, ctx) => {
+    for (const column of Object.keys(collection.columns)) {
+      if (RESERVED_COLUMNS.includes(column)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['columns', column],
+          message: reservedColumnMessage,
+        })
+      }
+    }
+  })
+
+// Mirrors the host's op enum exactly (plugin-manifest-validator.ts:199).
+// `remove_column` / `remove_index` were SDK-only fictions the host has never
+// accepted; they trace to a stale design plan. `drop_index` is the real name.
+//
+// Note this whole block is validated and then ignored — see the `migrations`
+// doc comment in ../types/manifest.ts. The enum is still worth getting right so
+// a manifest that validates here is one the host would also accept.
 const migrationOperationSchema = z.object({
-  type: z.enum(['add_column', 'remove_column', 'add_index', 'remove_index']),
+  type: z.enum(['add_column', 'add_index', 'drop_index']),
   collection: z.string(),
-  column: z.string().optional(),
+  // Required for every op type, index ops included — the host has no
+  // .optional() here (validator:201-212).
+  column: z.string().refine((name) => !RESERVED_COLUMNS.includes(name), {
+    message: reservedColumnMessage,
+  }),
   columnType: z.enum(['text', 'integer', 'real', 'json']).optional(),
-  index: z.string().optional(),
+  default: z.union([z.string(), z.number()]).optional(),
 })
 
 const migrationSchema = z.object({
@@ -60,12 +104,51 @@ const migrationSchema = z.object({
   operations: z.array(migrationOperationSchema),
 })
 
+// Every bound below is copied from the host validator
+// (plugin-manifest-validator.ts:220-265) so this SDK accepts exactly what the
+// host does inside a `ui` block. A stricter SDK rejects manifests that install
+// fine; a looser one lets `amc-plugin validate` pass something the host refuses.
+//
+// `entryPoint` and `sidebar` were REQUIRED here while the host has always had
+// them optional, so a `ui` block carrying only `hideProjectPanel` validated
+// host-side and failed here.
+//
+// One deliberate remaining gap, in the SDK-is-looser direction: the host
+// requires the `ui` block itself, while we keep it optional — tightening that
+// would reject the backend-only manifests this SDK has always accepted.
 const uiSchema = z.object({
-  entryPoint: z.string().min(1),
-  sidebar: z.object({
-    title: z.string().min(1),
-    icon: z.string().min(1),
-  }),
+  entryPoint: z.string().min(1).max(500).optional(),
+  sidebar: z
+    .object({
+      title: z.string().min(1).max(50),
+      icon: z.string().min(1).max(50),
+    })
+    .optional(),
+  overlay: z
+    .object({
+      entryPoint: z.string().min(1).max(500),
+    })
+    .optional(),
+  hideProjectPanel: z.boolean().optional(),
+  sessions: z
+    .object({
+      // max(5000) but deliberately NO min(1): the host accepts an empty
+      // template and treats a whitespace-only one as absent at runtime
+      // (plugin-provider.ts:229).
+      contextTemplate: z.string().max(5000).optional(),
+      label: z.string().min(1).max(100).optional(),
+      showDivider: z.boolean().optional(),
+      suggestedPrompts: z
+        .array(
+          z.object({
+            label: z.string().min(1).max(60),
+            prompt: z.string().min(1).max(2000),
+          })
+        )
+        .max(4)
+        .optional(),
+    })
+    .optional(),
 })
 
 const cliEndpointSchema = z.object({

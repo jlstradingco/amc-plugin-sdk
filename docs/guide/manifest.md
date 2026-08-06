@@ -247,13 +247,45 @@ Declare database collections your plugin uses. Each collection has named columns
 
 The optional `indexes` array lists column names to index for faster queries. Each entry creates a standard B-tree index on that column.
 
+The optional `uniqueIndexes` array declares **composite-unique tuples** — each inner array is a set
+of columns that together must be unique:
+
+```json
+{
+  "findings": {
+    "columns": { "scan_id": "text", "category": "text", "detail": "json" },
+    "uniqueIndexes": [["scan_id", "category"]]
+  }
+}
+```
+
+AMC emits a real `CREATE UNIQUE INDEX` per tuple, de-duplicating existing rows (keep-latest) the
+first time it creates one. This is not decoration: `collectionUpsert` performs an
+`INSERT ... ON CONFLICT (<tuple>) DO UPDATE`, so a tuple declared here is what makes that call
+atomic. An upsert against an undeclared tuple raises a SQLite error rather than silently inserting
+a duplicate.
+
+`id`, `created_at` and `updated_at` are managed by AMC and may not be declared as columns.
+
 ::: tip
 Every collection automatically gets an `id` column (TEXT, primary key), a `created_at` column, and an `updated_at` column. You do not need to declare these.
 :::
 
 ## `migrations` Array
 
-When you change a collection's schema in a new version, declare migration operations so existing installations update cleanly.
+::: danger Declared migrations are never executed
+AMC parses and validates this block, keeps it in memory, and then **nothing reads it**. There is no
+migration runner, no applied-migrations ledger, and no code path that can drop a plugin column or
+index. Do not plan a schema change around it.
+
+**What actually evolves your schema is an automatic ADD COLUMN sweep.** When your plugin's version
+increases, AMC diffs `storage.collections` against the live table and adds any column that is
+missing. So a new column appears if you declare it in `storage.collections` and bump
+`plugin.version` — whether or not you write a migration here. Renames and drops are not possible
+through any AMC path; migrate the data yourself in `onEnable` if you need one.
+
+Declaring migrations stays harmless and still validates, so existing manifests keep working.
+:::
 
 ```json
 {
@@ -270,22 +302,7 @@ When you change a collection's schema in a new version, declare migration operat
         {
           "type": "add_index",
           "collection": "tasks",
-          "index": "dueDate"
-        }
-      ]
-    },
-    {
-      "version": "1.2.0",
-      "operations": [
-        {
-          "type": "remove_column",
-          "collection": "tasks",
-          "column": "score"
-        },
-        {
-          "type": "remove_index",
-          "collection": "tasks",
-          "index": "title"
+          "column": "dueDate"
         }
       ]
     }
@@ -298,17 +315,21 @@ When you change a collection's schema in a new version, declare migration operat
 | Operation | Required Fields | Description |
 |---|---|---|
 | `add_column` | `collection`, `column`, `columnType` | Add a new column to an existing collection |
-| `remove_column` | `collection`, `column` | Remove a column from an existing collection |
-| `add_index` | `collection`, `index` | Create an index on a column |
-| `remove_index` | `collection`, `index` | Drop an index |
+| `add_index` | `collection`, `column` | Create an index on a column |
+| `drop_index` | `collection`, `column` | Drop the index on a column |
 
-::: warning
-Migrations run in order by `version` (semver). Each migration is applied once. Always increment your plugin version in `plugin.version` when adding migrations.
+`collection` and `column` are required on **every** operation, including the index ones — an index
+operation identifies its index by a single column, and there is no `index` field.
+
+::: warning Ops this SDK used to document
+`remove_column` and `remove_index` appeared in earlier versions of this guide. AMC has never
+accepted either, and `amc-plugin validate` now rejects them. The real drop operation is
+`drop_index`. `column` may not be `id`, `created_at` or `updated_at` — AMC manages those itself.
 :::
 
 ## `ui` Block
 
-Declares the frontend entry point and sidebar appearance.
+Declares the frontend entry point, sidebar appearance, and how AMC frames your plugin.
 
 ```json
 {
@@ -317,16 +338,39 @@ Declares the frontend entry point and sidebar appearance.
     "sidebar": {
       "title": "My Plugin",
       "icon": "puzzle"
+    },
+    "hideProjectPanel": false,
+    "sessions": {
+      "label": "My Plugin sessions",
+      "contextTemplate": "You are working inside {{projectName}} on {{date}}.",
+      "showDivider": true,
+      "suggestedPrompts": [
+        { "label": "Audit", "prompt": "Audit this project for security issues" }
+      ]
     }
   }
 }
 ```
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `entryPoint` | string | Yes | Path to the HTML file (relative to plugin root) |
-| `sidebar.title` | string | Yes | Label shown in AMC's sidebar |
-| `sidebar.icon` | string | Yes | [Lucide](https://lucide.dev/icons) icon name |
+| Field | Type | Required | Max | Description |
+|---|---|---|---|---|
+| `entryPoint` | string | No | 500 | Path to the HTML file (relative to plugin root) |
+| `sidebar.title` | string | No | 50 | Label shown in AMC's sidebar |
+| `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
+| `overlay.entryPoint` | string | No | 500 | A separate always-on-top window AMC opens on enable |
+| `hideProjectPanel` | boolean | No | — | Suppress AMC's project panel while your view is open, for a plugin that owns the full width |
+| `sessions.label` | string | No | 100 | Heading above your plugin's session list. Defaults to the plugin name |
+| `sessions.contextTemplate` | string | No | 5000 | Extra context appended to AMC's built-in primer for every session on your plugin's project |
+| `sessions.showDivider` | boolean | No | — | Defaults to `true` |
+| `sessions.suggestedPrompts` | array | No | 4 items | Tappable prompts under the session list (`label` ≤ 60, `prompt` ≤ 2000) |
+
+`entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
+alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest AMC
+installed happily could fail `amc-plugin validate`.)
+
+`contextTemplate` supports single-pass `{{placeholder}}` substitution. Available variables are
+`date`, `projectName`, `sessionName`, `workDir` and `pluginName`. A whitespace-only template is
+treated as absent rather than rejected.
 
 Omit the entire `ui` block if your plugin is backend-only.
 
