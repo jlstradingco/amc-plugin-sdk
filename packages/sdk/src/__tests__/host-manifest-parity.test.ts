@@ -146,6 +146,28 @@ describe(`storage.uniqueIndexes parity (${HOST_SOURCES.storage}:511-538)`, () =>
     ).toEqual([['scan_id', 'category']])
   })
 
+  it.each(HOST_RESERVED_COLUMNS)('refuses the host-managed column %s in a schema', (column) => {
+    // The host stamps id/created_at/updated_at on every row itself and refuses a
+    // plugin that redeclares one (plugin-manifest-validator.ts:167-172). This
+    // SDK enforced it on migration operations only, so a manifest declaring
+    // `columns: { id: 'text' }` validated here and failed at install.
+    const result = validateManifest({
+      ...baseManifest,
+      storage: { collections: { items: { columns: { [column]: 'text' } } } },
+    })
+    expect(result.valid, `host refuses ${column} in a collection schema`).toBe(false)
+  })
+
+  it('still accepts ordinary column names', () => {
+    // Guards the refinement above against over-reach: only the three host-owned
+    // names are refused, not every column.
+    const result = validateManifest({
+      ...baseManifest,
+      storage: { collections: { items: { columns: { title: 'text', note_id: 'integer' } } } },
+    })
+    expect(result.errors).toEqual([])
+  })
+
   it('rejects an empty unique-index tuple, matching the host min(1)', () => {
     const result = validateManifest({
       ...baseManifest,
