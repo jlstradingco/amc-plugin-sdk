@@ -191,6 +191,131 @@ export interface BridgeEvents extends PluginEvents {
   onSessionStatus(callback: (event: unknown) => void): () => void
 }
 
+/**
+ * One open Document, minted by {@link BridgeDocuments.open} — the host's own
+ * `DocumentHandle` (`plugin-bridge/document-handles.ts:71-77`).
+ *
+ * A Handle is a capability over exactly ONE file in exactly one mode, and it is
+ * everything a plugin gets: the host deliberately does not send the file's path.
+ */
+export interface DocumentHandle {
+  /** 16 CSPRNG bytes as hex — the host validates `/^[0-9a-f]{32}$/`. */
+  id: string
+  /** The file's base name, for display. Not a path. */
+  name: string
+  /**
+   * The Document's length in bytes, LIVE as of the moment this Handle was
+   * serialised — the host re-stats the file every time it hands one over
+   * (`plugin-bridge/documents-handler.ts`). It is NOT the length captured when
+   * the user picked the file.
+   *
+   * It still goes stale in your hands: the number froze when the call resolved,
+   * and anything may write to the file afterwards. So never feed a `size` you
+   * are holding into {@link BridgeDocuments.append}'s `expectedLength` — call
+   * {@link BridgeDocuments.stat} first, every time. A stale length asks the host
+   * to discard your own earlier saves, and it refuses.
+   */
+  size: number
+  /** Fixed at mint. A `read` Handle can never be written — `append` refuses it. */
+  mode: 'read' | 'readwrite'
+  /**
+   * An absolute loopback URL to hand straight to `fetch()`, pdf.js, or an
+   * `<img src>`. OPAQUE — never parse it, never log it, never persist it.
+   *
+   * Two reasons, both load-bearing. Its path shape is not a contract: today it
+   * is `http://127.0.0.1:<port>/plugin/<pluginId>/@doc/<handleId>`, and host
+   * PR #2216 appends a capability TOKEN to that last segment — which also makes
+   * the string a SECRET granting read access to the file, so anything that logs
+   * it or ships it in a bug report leaks the Document. Treat it as write-only
+   * into whatever consumes URLs.
+   */
+  url: string
+}
+
+/**
+ * Read and append to files the user explicitly picked, on `AgentMC.documents`.
+ *
+ * ::: Webview-only, and unusually, permission-free :::
+ *
+ * There is no `ctx.documents` — the host assembles its backend context without
+ * one, so this namespace lives on this surface alone. It also needs no manifest
+ * permission: `documents` is self-gated, because the file picker IS the consent.
+ * What a plugin gains is NARROWER than the ungated `fs` reach it already had, not
+ * wider — one file, in one fixed mode, per user gesture.
+ *
+ * The whole namespace is a read path plus exactly ONE write, {@link append}.
+ */
+export interface BridgeDocuments {
+  /**
+   * Show the OS file picker and mint a Handle for each file the user chose.
+   *
+   * Resolves `[]` when they CANCEL — not a rejection. So `const [doc] = await
+   * open(…)` leaves `doc` as `undefined` on cancel; check the length first.
+   *
+   * `options` is REQUIRED and so is `mode` — unlike `export.pickFolder`, calling
+   * `open()` bare fails host validation (`bridge-method-schemas.ts:584-592`).
+   * Ask for `read` unless you will genuinely write: the mode is frozen into
+   * every Handle this call returns and cannot be widened afterwards.
+   */
+  open(options: {
+    mode: 'read' | 'readwrite'
+    title?: string
+    filters?: { name: string; extensions: string[] }[]
+    multiple?: boolean
+  }): Promise<DocumentHandle[]>
+  /**
+   * The Handles this plugin still holds, with freshly re-stat'd sizes.
+   *
+   * Handles outlive a webview reload, so this is how a panel recovers them after
+   * one — no need to re-prompt the user for a file they already picked.
+   */
+  list(): Promise<DocumentHandle[]>
+  /**
+   * The Document's CURRENT length — the number to pass as {@link append}'s
+   * `expectedLength`.
+   *
+   * REJECTS on an unknown or closed Handle; it does not resolve `null`.
+   */
+  stat(handleId: string): Promise<{ length: number }>
+  /**
+   * Append bytes — the namespace's only write. Resolves the file's new length,
+   * re-stat'd from disk, which is exactly the `expectedLength` for your next
+   * call.
+   *
+   * **Always {@link stat} immediately before `append`.** `expectedLength` is a
+   * compare-and-swap: the host refuses `shorter-than-expected` when the file is
+   * shorter than you claim, and `discards-more-than-it-writes` when rewinding
+   * would drop more than your payload replaces
+   * (`plugin-bridge/document-append.ts:167-180`).
+   *
+   * **Mind the argument ORDER — `(handleId, base64, options)`.** Both leading
+   * arguments are `string`, so transposing them is invisible to TypeScript and
+   * no assertion in this SDK can catch it; the host simply rejects the id.
+   *
+   * `base64` must be standard base64 (NOT url-safe), non-empty, and a multiple
+   * of 4 characters long. It is capped at the host's bridge-args budget minus
+   * envelope headroom — 32 MiB less 4 KiB, so 33,550,336 characters, roughly
+   * 24 MiB of decoded bytes. Chunk anything larger across successive calls.
+   *
+   * Two refusals worth designing around:
+   * - A `read` Handle rejects `read-only-handle`; the mode is fixed at mint
+   *   (`document-append.ts:102`).
+   * - If the file was REPLACED on disk — which an ordinary Save in Preview or
+   *   Word does, renaming a new inode over the path — the host rejects
+   *   `not-the-picked-document` (`document-append.ts:156-158`). On the shipped
+   *   host that Handle is finished: `stat` does NOT re-pin it, so recover by
+   *   calling {@link open} again for a fresh gesture. Host PR #2216 adds a
+   *   re-pin to `stat`; do not rely on it yet.
+   */
+  append(
+    handleId: string,
+    base64: string,
+    options: { expectedLength: number }
+  ): Promise<{ length: number }>
+  /** Drop the Handle and its capability. The file itself is untouched. */
+  close(handleId: string): Promise<void>
+}
+
 export interface AgentMC {
   storage: PluginStorage
   db: PluginDb
@@ -207,6 +332,7 @@ export interface AgentMC {
   inbox: PluginInbox
   auth: PluginAuth
   recording: PluginRecording
+  documents: BridgeDocuments
 }
 
 declare global {
