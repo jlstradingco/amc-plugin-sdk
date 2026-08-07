@@ -10,7 +10,7 @@ import { createTestContext } from '../testing/index.js'
 //
 // Transcribed from the host at `origin/master` **dc0adf22dc**, from the three
 // files that together are the real contract:
-//   - args:    src/main/ipc/bridge-method-schemas.ts:584-605 (`DOCUMENTS_SCHEMAS`)
+//   - args:    src/main/ipc/bridge-method-schemas.ts:585-606 (`DOCUMENTS_SCHEMAS`)
 //   - returns: src/main/ipc/plugin-bridge/document-handles.ts:71-77 (`DocumentHandle`)
 //              src/main/ipc/plugin-bridge/documents-handler.ts (the per-`case` returns)
 //   - surface: src/preload/plugin-bridge-preload.ts:1432-1444 (what a webview calls)

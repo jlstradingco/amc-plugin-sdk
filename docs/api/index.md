@@ -187,15 +187,16 @@ const [doc] = await AgentMC.documents.open({
 })
 if (!doc) return
 
-// Read the bytes — hand `url` straight to fetch or pdf.js. Never parse it.
+// Read the bytes via fetch. `url` is opaque — never parse it.
 const bytes = await (await fetch(doc.url)).arrayBuffer()
 
-// Append. Always stat() first: `expectedLength` is a compare-and-swap.
+// Append. Always stat() first — expectedLength is only loosely checked.
+const base64Delta = btoa('appended text')
 const { length } = await AgentMC.documents.stat(doc.id)
 await AgentMC.documents.append(doc.id, base64Delta, { expectedLength: length })
 
 // Recover Handles after a webview reload, and release when done.
-const stillOpen = await AgentMC.documents.list()
+console.log(`${(await AgentMC.documents.list()).length} still open`)
 await AgentMC.documents.close(doc.id)
 ```
 
@@ -209,8 +210,8 @@ await AgentMC.documents.close(doc.id)
 
 A `DocumentHandle` is `{ id, name, size, mode, url }` and carries no path. Two of those fields mislead if you skim them:
 
-- **`size` is live when the Handle is serialized, not when the file was picked** — but it freezes the moment the call resolves. Never pass a `size` you are holding as `expectedLength`; call `stat()` each time, or the host refuses the write for discarding your own earlier saves.
-- **`url` is opaque.** Never parse, log, or persist it. Its path shape is not a contract, and it is on its way to carrying a capability token that grants read access to the file.
+- **`size` is live when the Handle is serialized, not when the file was picked** — but it freezes the moment the call resolves. Never pass a `size` you are holding as `expectedLength`; call `stat()` each time. A stale length is not reliably an error: the host refuses only when the region you would discard is *larger* than the payload you write, so a slightly stale one silently overwrites your own recent bytes.
+- **`url` is opaque, and only works through `fetch`.** Never parse, log, or persist it. Documents are served as `application/octet-stream` with `nosniff` and `Content-Disposition: attachment`, so it is not usable as an `<img src>` or `<iframe src>`. Its path shape is not a contract, and it is on its way to carrying a capability token that grants read access to the file.
 
 `append` takes its arguments as `(handleId, base64, options)`. Both leading arguments are strings, so transposing them still typechecks — the host rejects the id at runtime instead.
 
