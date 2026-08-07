@@ -8,7 +8,7 @@ import { createTestContext } from '../testing/index.js'
 // the shape the AMC host actually exposes on `window.AgentMC.documents`, so a
 // drift breaks the BUILD rather than a plugin at runtime.
 //
-// Transcribed from the host at `origin/master` **00feeeaad8**, from the three
+// Transcribed from the host at `origin/master` **dc0adf22dc**, from the three
 // files that together are the real contract:
 //   - args:    src/main/ipc/bridge-method-schemas.ts:584-605 (`DOCUMENTS_SCHEMAS`)
 //   - returns: src/main/ipc/plugin-bridge/document-handles.ts:71-77 (`DocumentHandle`)

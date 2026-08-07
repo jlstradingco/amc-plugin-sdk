@@ -70,7 +70,7 @@ like it was doing.
   the wrong field. A plugin author hand-rolling a session mock can use it rather than inventing a
   fourth shape.
 - **`AgentMC.documents` and `DocumentHandle`** type the host's file-picker namespace — `open`,
-  `list`, `stat`, `append` and `close` — mirrored from AMC `origin/master` `00feeeaad8` and pinned
+  `list`, `stat`, `append` and `close` — mirrored from AMC `origin/master` `dc0adf22dc` and pinned
   by a compile-time canary, so host drift breaks this build instead of a plugin at runtime.
   Webview-only and permission-free by design: the picker is the consent, and `documents` is
   deliberately absent from `PluginContext` because AMC's backend `ctx` has no such namespace.
