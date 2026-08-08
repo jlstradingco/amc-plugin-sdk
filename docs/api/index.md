@@ -173,3 +173,54 @@ const files = await AgentMC.assets.listFiles('templates')
 |---|---|---|
 | `readFile(path)` | `Promise<string>` | Read a bundled asset file as text |
 | `listFiles(path)` | `Promise<string[]>` | List files in a bundled asset directory |
+
+### Documents
+
+Read and append to files the user picked from the OS file picker. Webview-only — there is no `ctx.documents` — and it needs **no permission**, because the picker itself is the consent.
+
+```typescript
+// Ask for a file. Resolves [] if the user cancels.
+const [doc] = await AgentMC.documents.open({
+  mode: 'readwrite',
+  title: 'Choose a PDF',
+  filters: [{ name: 'PDF', extensions: ['pdf'] }]
+})
+if (!doc) return
+
+// Read the bytes via fetch. `url` is opaque — never parse it.
+const bytes = await (await fetch(doc.url)).arrayBuffer()
+
+// Append. Always stat() first — expectedLength is only loosely checked.
+const base64Delta = btoa('appended text')
+const { length } = await AgentMC.documents.stat(doc.id)
+await AgentMC.documents.append(doc.id, base64Delta, { expectedLength: length })
+
+// Recover Handles after a webview reload, and release when done.
+console.log(`${(await AgentMC.documents.list()).length} still open`)
+await AgentMC.documents.close(doc.id)
+```
+
+| Method | Returns | Description |
+|---|---|---|
+| `open(options)` | `Promise<DocumentHandle[]>` | Show the file picker and mint a Handle per chosen file; `[]` if cancelled |
+| `list()` | `Promise<DocumentHandle[]>` | The Handles this plugin still holds, with freshly re-stat'd sizes |
+| `stat(handleId)` | `Promise<{ length: number }>` | The Document's current length — the value to pass as `expectedLength` |
+| `append(handleId, base64, options)` | `Promise<{ length: number }>` | The namespace's only write; resolves the new length |
+| `close(handleId)` | `Promise<void>` | Drop the Handle; the file itself is untouched |
+
+A `DocumentHandle` is `{ id, name, size, mode, url }` and carries no path. Two of those fields mislead if you skim them:
+
+- **`size` is live when the Handle is serialized, not when the file was picked** — but it freezes the moment the call resolves. Never pass a `size` you are holding as `expectedLength`; call `stat()` each time. A stale length is not reliably an error: the host refuses only when the region you would discard is *larger* than the payload you write, so a slightly stale one silently overwrites your own recent bytes.
+- **`url` is opaque, and only works through `fetch`.** Never parse, log, or persist it. Documents are served as `application/octet-stream` with `nosniff` and `Content-Disposition: attachment`, so it is not usable as an `<img src>` or `<iframe src>`. Its path shape is not a contract, and it is on its way to carrying a capability token that grants read access to the file.
+
+`append` takes its arguments as `(handleId, base64, options)`. Both leading arguments are strings, so transposing them still typechecks — the host rejects the id at runtime instead.
+
+A `read` Handle refuses `append`; the mode is fixed when the Handle is minted. And if the file is replaced on disk — which an ordinary Save in Preview or Word does — `append` refuses `not-the-picked-document` and that Handle is finished: call `open()` again for a fresh gesture.
+
+::: warning No offline mock yet
+The SDK ships no mock for `documents`. Both its mocks — `createTestContext()` and the dev shell's context — implement `PluginContext`, the **backend** type, and `documents` is deliberately absent from it, so neither can host this namespace without typing a capability a plugin backend cannot call. Faking it would repeat the `ctx.events` failure, where an in-memory fake kept plugin tests green for months while the production path was dead in both directions. Stub it yourself until a webview mock surface exists.
+:::
+
+::: warning Gating is in flux
+`documents` is live and ungated on AMC `master`, but an in-flight host change puts it behind an in-development `plugin-documents-io` flag that defaults **off**. On a build with that flag, every call rejects with `This capability is not available.` — a passing typecheck here is not evidence the host will answer.
+:::

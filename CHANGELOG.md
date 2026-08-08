@@ -69,6 +69,18 @@ like it was doing.
   both webview surfaces name it `content`, so a mock drifting from the host teaches plugin authors
   the wrong field. A plugin author hand-rolling a session mock can use it rather than inventing a
   fourth shape.
+- **`AgentMC.documents` and `DocumentHandle`** type the host's file-picker namespace — `open`,
+  `list`, `stat`, `append` and `close` — mirrored from AMC `origin/master` `dc0adf22dc` and pinned
+  by a compile-time canary, so host drift breaks this build instead of a plugin at runtime.
+  Webview-only and permission-free by design: the picker is the consent, and `documents` is
+  deliberately absent from `PluginContext` because AMC's backend `ctx` has no such namespace.
+  Two shapes mislead on sight and are documented rather than smoothed over — `size` is live when
+  the Handle is serialized, so a copy you hold still goes stale (`stat()` before every `append()`),
+  and `url` is opaque and must never be parsed, logged, or persisted, since an in-flight host
+  change makes it carry a capability token. **No mock ships with it:** both SDK mocks implement
+  `PluginContext`, so neither can host a webview namespace without typing a capability a backend
+  cannot call — stub it yourself rather than let a fake go green over a dead path. See
+  [the Bridge-Only APIs docs](docs/api/index.md#documents).
 
 ### Fixed
 
