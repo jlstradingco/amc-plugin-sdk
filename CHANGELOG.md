@@ -11,6 +11,23 @@ together.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-10
+
+**Read this first if you are upgrading from npm: you are on 1.0.7.** Versions
+1.1.0, 1.2.0 and 1.3.0 were each stamped and changelogged in this file but never
+published, so the registry's `latest` goes straight from 1.0.7 to 2.0.0. The
+1.1.0, 1.2.0 and 1.3.0 sections below are part of *this* upgrade — everything in
+them reaches npm for the first time here, including 1.2.0's four new permissions
+(`tts`, `sessions.readHistory`, `firebase`, `spend`) and the whole
+`amc-automation` binary added in 1.3.0.
+
+**Why this is a major rather than the 1.3.0 the version files carried.** Semver
+here is measured against what is on npm, not against the last number committed.
+The breaking items below make a previously-compiling plugin stop compiling, and
+1.3.0 sits inside `^1.0.7` — so publishing under that number would have upgraded
+every consumer into these changes automatically, with no action on their part.
+2.0.0 is the number that lets `^1.x` consumers stay where they are.
+
 ### Changed — BREAKING
 
 These correct types that described behaviour AMC does not have. Each was a silent wrong answer
@@ -84,6 +101,27 @@ like it was doing.
 
 ### Fixed
 
+- **`amc-plugin dev` now launches.** The documented "test a plugin locally" command could not start
+  on Windows at all, and the dev shell rendered on no platform — so in practice it had never worked
+  for an external developer anywhere. Four defects, fixed together (#47, fixes #46):
+  - The CLI resolved Electron and then spawned `electron/cli.js` directly. A `.js` file is not
+    executable on Windows, so `spawn()` threw `EFTYPE`; the fallback then tried `npx`, which is
+    equally broken there without `shell: true`. It now spawns the platform binary that
+    `require('electron')` returns, and reports an actionable error instead of falling back.
+  - `packages/dev-shell` is ESM, but `shell-window.ts` used `__dirname`, which is undefined under
+    ESM — so `loadFile()` threw before the shell chrome could render, on every OS. It is now derived
+    from `import.meta.url`.
+  - Electron moved from a `devDependency` of `@agent-mc/plugin-dev-shell` to a `dependency`, and
+    the dev shell is now a dependency of `@agent-mc/plugin-cli`. Previously neither installing the
+    shell nor installing the CLI brought Electron, and a globally installed CLI cannot see a plugin's
+    own `node_modules`, so its advice to install the shell locally pointed somewhere it could never
+    look. **Note the tradeoff:** `amc-plugin` now pulls Electron on install, including for
+    build-only uses such as `validate`, `package` and `publish`.
+  - A fresh clone installed a non-functional Electron, because pnpm 10 blocks dependency build
+    scripts by default and Electron's postinstall is what downloads the binary. `pnpm-workspace.yaml`
+    now allow-lists it. This governs *this repo's* install only — a consumer on pnpm 10 needs the
+    same `onlyBuiltDependencies: [electron]` in their own workspace, or `amc-plugin dev` will report
+    Electron as missing.
 - **The dev shell's mock session status was frozen.** `getStatus` hardcoded `'running'` and
   `stop()` never changed it, so a plugin polling until its session ended looped forever against
   the dev shell while working correctly against AMC.
