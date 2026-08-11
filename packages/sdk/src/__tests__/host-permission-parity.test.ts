@@ -95,7 +95,18 @@ describe('SDK <-> host permission parity', () => {
     // fixture's HISTORY block). Re-derived by generation from host
     // master@9c21044ee0; the four added are `launch`, `coreRead`, `oauth`,
     // `channel`, all Tier-1 elevated and all host-ahead.
-    expect(HOST_PERMISSIONS.length).toBe(26)
+    //
+    // 26 -> 29 on 2026-08-11: stale a FOURTH time. The three `workspace.*`
+    // permissions were sitting in SDK_AHEAD_PERMISSIONS on the claim that no
+    // host implementation existed, six days after the host shipped the whole
+    // capability. Re-derived by generation from host origin/master@8722cc3fca.
+    //
+    // Note what this pin did NOT catch, and cannot: the count moved for a
+    // reason invisible to it. The mirror still had 26 strings and the SDK still
+    // had 23, so every set-algebra assertion above stayed green — the drift was
+    // entirely inside the ALLOW-LISTS. When you bump this number, re-read
+    // SDK_AHEAD/HOST_AHEAD/BRIDGE_PENDING too; the count alone is not the guard.
+    expect(HOST_PERMISSIONS.length).toBe(29)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
