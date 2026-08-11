@@ -6,7 +6,7 @@ import { createTestContext } from '../testing/index.js'
 //
 // Same idiom as bridge-events-shape.test.ts: a DELIBERATE second declaration of
 // the shape the AMC host actually exposes on `window.AgentMC.documents`, so a
-// drift breaks the BUILD rather than a plugin at runtime.
+// drift fails `pnpm run typecheck` rather than a plugin at runtime.
 //
 // Transcribed from the host at `origin/master` **dc0adf22dc**, from the three
 // files that together are the real contract:
