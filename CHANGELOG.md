@@ -11,6 +11,52 @@ together.
 
 ## [Unreleased]
 
+### Fixed — host parity reconciliation (2026-08-11)
+
+Verified the whole SDK surface against host `origin/master@8722cc3fca`. The
+suite was green throughout: every parity assertion compares the SDK against a
+vendored mirror, so a stale mirror and a stale enum agreed with each other.
+
+**Breaking — `ctx.workspace` was six methods of fiction.** The SDK declared 17
+methods transcribed from a spec the host never implemented. The host ships 14.
+Removed `listBindings`, `requestBinding`, `exec`, `execStatus`, `execResults`
+and `execCancel` (and the `WorkspaceExecStatus`, `WorkspaceExecResults`,
+`WorkspaceBinding`, `WorkspaceBindingResult` types); added `writeFiles`,
+`mkdir` and `run`. `writeFile` takes 2 arguments and returns `void`;
+`deleteFile` takes 1 — the `expectedMtimeMs` compare-and-swap token never
+existed. There is no job model: `run` is blocking and single-shot.
+
+**Breaking — `ctx.recording` could not work as typed.** `start()` takes no
+arguments and resolves `{ ok, recordingId } | { ok, error }`, not a handle;
+`stop()` takes a bare id string, so passing the old `RecordingHandle` was a
+silent no-op. Removed `getShareUrl()` and `delete()` (deliberate
+non-capabilities, not missing wiring) and `RecordingHandle`; added `get()`.
+`Recording` loses the host-redacted `filename`/`createdAt`/`sizeBytes` and
+gains `status`, `sourceType`, `sourceLabel`, `startedAt`, `endedAt`.
+
+**`amc-plugin validate` rejected manifests the host accepts.** Six of the
+host's own twelve builtins failed validation. `settings`, `storage`,
+`migrations` and `sdkVersion` are no longer required (the host defaults or
+omits all four); `cli.endpoints` accepts `PATCH` and no longer requires
+`description` or `auth`; `backend.resourceLimits.memoryMb` loses its invented
+512 ceiling.
+
+**`amc-plugin validate` passed manifests the host rejects.** Added SQL
+identifier validation at all six sites the host enforces it (it is the
+injection boundary — the host wraps these names in double quotes without
+escaping); made reserved-column matching case-insensitive, so `ID` no longer
+reaches a `duplicate column name` crash; added the rule that
+`workspace.write`/`workspace.exec` require an explicit `workspace.read`, which
+both the host loader and the marketplace publish gate enforce.
+
+**Added.** `cli.endpoints[].requiresConfirmation` — the flag that forces a
+human inbox approval before a destructive AI-callable endpoint runs, which had
+no SDK type at all. `'dev'` on `PluginSource`.
+
+**Documented as inert.** The `cron` and `workspace` manifest blocks are read by
+nothing host-side and are stripped at parse time. Cron is a runtime capability
+via `ctx.cron.register`.
+
 ## [2.0.0] - 2026-08-10
 
 **Read this first if you are upgrading from npm: you are on 1.0.7.** Versions
