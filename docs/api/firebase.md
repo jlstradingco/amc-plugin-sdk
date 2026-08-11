@@ -2,8 +2,17 @@
 
 Enumerate the user's Firebase accounts and projects, and start an interactive login.
 
-**Availability:** Backend only (`ctx.firebase`)
+**Availability:** Webview only (`AgentMC.firebase`)
 **Required Permission:** `firebase`
+
+::: danger This is a WEBVIEW capability, not a backend one
+An earlier version of this page said "Backend only (`ctx.firebase`)". That was backwards: the host
+builds its backend context **without** this namespace, so `ctx.firebase` is `undefined` and calling it
+throws a `TypeError` at activation rather than producing a permission error.
+
+Use **`AgentMC.firebase`** from your plugin's webview. If a backend needs the result, forward it over
+the shared event bus (`AgentMC.events` -> `ctx.events`).
+:::
 
 Backed by the user's **locally installed Firebase CLI**. This is not a Firebase SDK -- there is no database access here, only the account and project metadata the CLI can report.
 
@@ -71,17 +80,17 @@ interface FirebaseSetupStatus {
 ```typescript
 export function activate(ctx: PluginContext) {
   ctx.cli.handle('/firebase/projects', async () => {
-    const projects = await ctx.firebase.listProjects()
+    const projects = await AgentMC.firebase.listProjects()
     if (projects.length > 0) return { status: 200, body: { projects } }
 
     // Empty is ambiguous -- turn it into an answer the user can act on.
-    const status = await ctx.firebase.setupStatus()
+    const status = await AgentMC.firebase.setupStatus()
 
     if (!status.cliInstalled) {
       return { status: 200, body: { projects: [], hint: 'Install the Firebase CLI to continue.' } }
     }
     if (!status.signedIn) {
-      await ctx.firebase.startLogin()
+      await AgentMC.firebase.startLogin()
       return { status: 200, body: { projects: [], hint: 'A browser window was opened to sign in.' } }
     }
     if (status.firebaseAccess === 'needs-tos') {

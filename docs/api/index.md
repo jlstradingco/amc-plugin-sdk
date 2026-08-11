@@ -22,12 +22,12 @@ The AMC Plugin SDK exposes 21 APIs to plugins. Some are available on both the fr
 | [Logging](./logging) | Structured log output | Backend only | None |
 | [Inbox](./inbox) | Surface items in AMC's inbox | Both | `inbox` |
 | [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
-| [Recording](./recording) | Screen recording (bridge not yet wired) | Both | `recording` |
-| [Text to Speech](./tts) | Speak text with the user's configured voice | Backend only | `tts` |
-| [Session History](./session-history) | Read past sessions the user has granted | Backend only | `sessions.readHistory` |
-| [Firebase](./firebase) | The user's Firebase accounts and projects | Backend only | `firebase` |
+| [Recording](./recording) | Screen recording, host-mediated | Backend only | `recording` |
+| [Text to Speech](./tts) | Speak text with the user's configured voice | Webview only | `tts` |
+| [Session History](./session-history) | Read past sessions the user has granted | Webview only | `sessions.readHistory` |
+| [Firebase](./firebase) | The user's Firebase accounts and projects | Webview only | `firebase` |
 | [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
-| [Workspace](./workspace) | The user's real project checkouts and worktrees (**host runtime not implemented yet**) | Backend only | `workspace.read` / `.write` / `.exec` |
+| [Workspace](./workspace) | The user's real project checkouts and worktrees | Backend only | `workspace.read` / `.write` / `.exec` |
 
 ## Access Patterns
 
@@ -60,9 +60,10 @@ The following APIs are available **only on the frontend** through the `AgentMC` 
 Read and react to AMC's current theme.
 
 ```typescript
-// Get the current theme
-const theme = AgentMC.theme.get()
-// theme: { mode: 'dark' | 'light', visualTheme: string }
+// Get the current theme — this is a PROMISE
+const theme = await AgentMC.theme.get()
+// theme: { mode: string; accent: string; surfaces: Record<string, unknown> }
+// NOTE: static placeholder host-side — mode is always 'dark' today.
 
 // Listen for theme changes
 const unsubscribe = AgentMC.theme.onChange((theme) => {
@@ -72,7 +73,7 @@ const unsubscribe = AgentMC.theme.onChange((theme) => {
 
 | Method | Returns | Description |
 |---|---|---|
-| `get()` | `{ mode: string; visualTheme: string }` | Current theme state |
+| `get()` | `Promise<{ mode: string; accent: string; surfaces: Record<string, unknown> }>` | Current theme. `visualTheme` never existed; `get()` is async |
 | `onChange(callback)` | `() => void` | Subscribe to theme changes. Returns an unsubscribe function |
 
 ### Export
@@ -87,12 +88,12 @@ await AgentMC.export.saveFile({
   type: 'text/markdown',
 })
 
-// Generate and save a PDF
-await AgentMC.export.savePDF({
+// Generate and save a PDF — note the casing, and it takes HTML
+const saved = await AgentMC.export.savePdf({
   filename: 'report.pdf',
-  markdown: markdownContent,
-  metadata: { title: 'Weekly Report' },
+  html: renderedHtml,
 })
+if (!saved.saved) console.log('user cancelled')
 
 // Let the user pick a folder
 const folder = await AgentMC.export.pickFolder({
@@ -121,7 +122,7 @@ await AgentMC.export.openFolder({ path: folder })
 | Method | Description |
 |---|---|
 | `saveFile(opts)` | Show a Save As dialog and write a file |
-| `savePDF(opts)` | Render Markdown to PDF and save |
+| `savePdf(opts)` | Render **HTML** to PDF and save. (`savePDF` with that casing does not exist) |
 | `pickFolder(opts?)` | Show a folder picker dialog, returns the selected path |
 | `writeFiles(opts)` | Write multiple files to a directory |
 | `verifyFiles(opts)` | Check that files exist in a directory |

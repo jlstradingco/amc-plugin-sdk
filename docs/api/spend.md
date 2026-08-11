@@ -24,6 +24,7 @@ interface SpendWindow {
   codingValue: number
   backgroundTotal: number
   outOfPocket: number
+  codingOutOfPocket: number
 }
 
 interface SpendReportBreakdown {
@@ -45,9 +46,19 @@ All money is **USD**.
 |---|---|
 | `codingValue` | Agent-coding **shadow value** -- what the coding work would have cost at API rates. This is not a bill and nobody was charged it |
 | `backgroundTotal` | Total metered background-feature spend, plan-covered and real combined |
-| `outOfPocket` | The real out-of-pocket slice of `backgroundTotal`, billed to a real API key |
+| `outOfPocket` | The real out-of-pocket slice of `backgroundTotal`, billed to a real API key. **Background only** |
+| `codingOutOfPocket` | The real out-of-pocket slice of the window's **coding** sessions -- own-key metered vendors or a real Anthropic API key. Disjoint from `outOfPocket`; zero when all coding ran on a subscription |
 
-Reporting `codingValue` as money the user spent is the single easiest way to get this wrong. `outOfPocket` is the only figure that corresponds to an actual charge.
+Reporting `codingValue` as money the user spent is the single easiest way to get this wrong -- it is a shadow value nobody was charged.
+
+::: danger A window's real money is `outOfPocket + codingOutOfPocket`
+`codingOutOfPocket` was **missing from this SDK entirely** until 2026-08-11, and this page
+said `outOfPocket` was "the only figure that corresponds to an actual charge". It is not --
+it is the *background* slice only. Anything that reported it alone as "what this cost you"
+**under-reported real spend**, silently, by however much the user's own-key coding came to.
+
+Add the two. Never fold `codingOutOfPocket` into `outOfPocket`.
+:::
 
 ### Drill-down lines
 
@@ -88,14 +99,16 @@ interface SpendCharge {
 
 ```typescript
 export function activate(ctx: PluginContext) {
-  ctx.cron.register('daily-spend', '0 9 * * *', async () => {
+  void ctx.cron.register('daily-spend', '0 9 * * *', async () => {
     const report = await ctx.spend.getBreakdown()
-    const { outOfPocket, codingValue } = report.windows.yesterday
+    const { outOfPocket, codingOutOfPocket, codingValue } = report.windows.yesterday
+    // Real money is BOTH out-of-pocket terms. Neither alone is the total.
+    const realMoney = outOfPocket + codingOutOfPocket
 
     // Say what each number is. They are not the same kind of thing.
     ctx.toast.notify({
       title: 'Yesterday',
-      body: `$${outOfPocket.toFixed(2)} billed - $${codingValue.toFixed(2)} of coding at API rates`
+      body: `$${realMoney.toFixed(2)} billed - $${codingValue.toFixed(2)} of coding at API rates`
     })
 
     const biggest = report.notableCharges[0]
@@ -120,9 +133,9 @@ export function activate(ctx: PluginContext) {
 const h = createTestContext({
   spend: {
     windows: {
-      yesterday: { codingValue: 12.5, backgroundTotal: 3, outOfPocket: 1.25 },
-      week: { codingValue: 60, backgroundTotal: 10, outOfPocket: 4 },
-      month: { codingValue: 200, backgroundTotal: 40, outOfPocket: 15 }
+      yesterday: { codingValue: 12.5, backgroundTotal: 3, outOfPocket: 1.25, codingOutOfPocket: 0.4 },
+      week: { codingValue: 60, backgroundTotal: 10, outOfPocket: 4, codingOutOfPocket: 1.1 },
+      month: { codingValue: 200, backgroundTotal: 40, outOfPocket: 15, codingOutOfPocket: 3.2 }
     }
   }
 })

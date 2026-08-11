@@ -7,7 +7,7 @@ Display in-app toast messages and OS-level desktop notifications.
 
 ## Methods
 
-### `show(opts: { type: 'success' | 'error' | 'info'; message: string }): void`
+### `show(opts: { message: string; type?: 'info' | 'success' | 'warning' | 'error'; durationMs?: number }): void`
 
 Display an in-app toast message. These appear briefly in AMC's toast area and dismiss automatically.
 
@@ -17,7 +17,8 @@ Display an in-app toast message. These appear briefly in AMC's toast area and di
 
 | Name | Type | Description |
 |---|---|---|
-| `opts.type` | `'success' \| 'error' \| 'info'` | Toast style |
+| `opts.type` | `'info' \| 'success' \| 'warning' \| 'error'` | Optional toast style. `'warning'` was missing from this SDK until 2026-08-11 |
+| `opts.durationMs` | `number` | Optional, up to 60000 |
 | `opts.message` | `string` | The message to display |
 
 **Returns:** `void`
@@ -37,7 +38,7 @@ ctx.toast.show({ type: 'error', message: 'Connection lost' })
 
 ---
 
-### `notify(opts: { title: string; body: string }): void`
+### `notify(opts: { title: string; body?: string }): void`
 
 Send an OS-level desktop notification (system tray notification). These appear outside AMC's window and can reach the user even when AMC is minimized.
 

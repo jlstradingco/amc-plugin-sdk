@@ -5,6 +5,16 @@ Control your plugin's sidebar appearance -- update the badge count and manage th
 **Availability:** Both (backend `ctx.sidebar` / frontend `AgentMC.sidebar`)
 **Required Permission:** None
 
+::: danger `status` is REQUIRED, and omitting it fails silently
+This page showed `status` as optional. The host validates the whole array against a push
+schema and, on any failure, **logs a warning and drops the entire batch** -- it never throws.
+So a single item without `status` meant `setItems()` resolved successfully and *nothing*
+appeared in the sidebar.
+
+The type has required it since 2026-08-11, so the compiler catches this now. At most **200
+items** per call; a longer array is rejected outright.
+:::
+
 ## SidebarItem
 
 The `setItems()` method accepts an array of `SidebarItem` objects:
@@ -13,7 +23,7 @@ The `setItems()` method accepts an array of `SidebarItem` objects:
 interface SidebarItem {
   id: string               // Unique identifier for the item
   title: string            // Display text
-  status?: string          // Status label (shown as a chip)
+  status: string           // REQUIRED status label (shown as a chip)
   needsYou?: boolean       // If true, item shows an attention indicator
   progress?: number        // Progress percentage (0-100)
   currentStep?: number     // Current step in a multi-step process

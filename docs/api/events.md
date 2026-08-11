@@ -42,7 +42,7 @@ ctx.events.emit('sync:started', { source: 'cron' })
 
 ---
 
-### `on(channel: string, handler: (data: unknown) => void): () => void`
+### `on(channel: string, handler: (data: unknown) => void): void`
 
 Subscribe to a channel. The handler fires for events emitted anywhere in your plugin -- elsewhere in the backend, or from your UI via `AgentMC.events.emit`.
 
@@ -53,24 +53,32 @@ Subscribe to a channel. The handler fires for events emitted anywhere in your pl
 | `channel` | `string` | The event channel name to listen on |
 | `handler` | `(data: unknown) => void` | Callback invoked when an event is emitted on the channel |
 
-**Returns:** `() => void` -- call this function to unsubscribe.
+**Returns:** `void`. There is **no unsubscribe on this surface** -- see below.
 
 **Example:**
 
 ```typescript
 // Act on a request from the UI
-const unsubscribe = ctx.events.on('task:cancel', (data) => {
+ctx.events.on('task:cancel', (data) => {
   const { taskId } = data as { taskId: string }
   ctx.log.info(`UI asked to cancel ${taskId}`)
   cancelTask(taskId)
 })
-
-// Later, unsubscribe
-unsubscribe()
 ```
 
-::: warning Host gap
-The AMC host does not yet return this unsubscribe function -- you get `undefined`, so calling it throws. A host fix is in flight. The mock context and test harness both return a working unsubscribe, so this only bites in the real app. Until it lands, hold your handlers in your own `Set` if you need to detach one.
+::: danger There is no backend unsubscribe, and there is no fix in flight
+The host's `ctx.events.on` has no return statement, the worker protocol has no unsubscribe
+message, and the handler set is append-only -- so a subscription lives until the worker exits.
+
+This page previously typed the return as `() => void` and called the gap "a host fix in
+flight", **while both the mock context and the test harness returned a working
+unsubscribe.** That is the same failure this SDK cites as its cautionary tale about
+`ctx.events`: green tests over a dead production path. As of 2026-08-11 the type says
+`void` and both mocks return nothing, so the compiler now catches `off()` instead of
+letting it throw at runtime.
+
+If you need to detach a handler, gate inside it -- hold your own flag or `Set` and return
+early. Do not build teardown into `onDisable` expecting it to work.
 :::
 
 ## Frontend Methods
@@ -104,11 +112,25 @@ unsubscribe()
 
 ### `onSessionStatus(callback: (event: unknown) => void): () => void`
 
-Listen for status changes on sessions this plugin launched. Call the returned function to stop.
+Subscribe to session status changes. Call the returned function to stop.
+
+::: danger Two things this does NOT do
+**It is not scoped to your plugin.** The host broadcasts *every* session's status change to
+*every* open subscriber, including the user's own sessions and other plugins'. There is no
+ownership filter and no permission gate. Filter on `sessionId` yourself against sessions you
+created.
+
+**It only fires in an overlay window.** The host sends this channel solely to plugin overlay
+windows. The method exists in an in-panel webview because both share a preload, but nothing
+delivers the channel there, so a subscription from a panel is **silently never called**. For a
+panel, poll `AgentMC.session.getStatus()` instead.
+:::
 
 ```typescript
 const unsubscribe = AgentMC.events.onSessionStatus((event) => {
-  console.log('Session status changed:', event)
+  const { sessionId, status } = event as { sessionId: string; status: string }
+  if (sessionId !== mySessionId) return
+  console.log('My session is now:', status)
 })
 
 unsubscribe()
