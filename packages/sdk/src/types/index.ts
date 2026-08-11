@@ -4,7 +4,7 @@ export type {
   PluginSettingOption, PluginSettingTestAction, PluginSettingDefinition,
   PluginSuggestedPrompt,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
-  PluginManifest, PluginRegistryEntry,
+  PluginManifest, PluginRegistryEntry, PluginRuntimeStatus,
   // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
   PluginWorkspaceCommandSlot, PluginWorkspaceBinding, PluginWorkspace,
 } from './manifest.js'

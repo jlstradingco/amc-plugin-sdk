@@ -317,14 +317,32 @@ export interface PluginManifest {
   workspace?: PluginWorkspace
 }
 
+/** Runtime state of a plugin's backend worker. */
+export type PluginRuntimeStatus =
+  | 'stopped'
+  | 'starting'
+  | 'running'
+  | 'errored'
+  | 'crashed'
+
 export interface PluginRegistryEntry {
   id: string
   manifest: PluginManifest
   source: PluginSource
   enabled: boolean
   compatible: boolean
+  /** Why `compatible` is false — e.g. an sdkVersion the host cannot satisfy. */
+  incompatibleReason?: string
   installedVersion: string
   basePath: string
   storageInitialized: boolean
-  backendPath?: string
+  /** True when an update added permissions the user has not granted yet. */
+  needsReconsent?: boolean
+  runtimeStatus?: PluginRuntimeStatus
+  /** Last backend error, when `runtimeStatus` is `'errored'` or `'crashed'`. */
+  lastError?: string
+  // NOTE: no `backendPath`. It was declared here and the host never populates
+  // it on a registry entry — the only real occurrences are a local variable in
+  // the worker host and an env var passed to the child, neither of which
+  // reaches this shape. It read as `undefined` every time.
 }

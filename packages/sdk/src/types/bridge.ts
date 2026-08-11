@@ -38,6 +38,23 @@ export interface BridgeTheme {
 }
 
 /**
+ * `AgentMC.ai` — same methods as the backend's `PluginAi`, with one real
+ * difference the shared type was hiding.
+ *
+ * On THIS surface `generateMessage` can resolve `null`: the host's response
+ * schema for it is `z.string().nullable()`, so a failed generation comes back
+ * as `null` rather than a rejection. Typed as `Promise<string>`, the obvious
+ * `(await ai.generateMessage(...)).trim()` was a crash waiting on a bad day.
+ *
+ * The backend path returns a plain string, which is why this is narrowed here
+ * rather than widened for everyone.
+ */
+export interface BridgeAi extends Omit<PluginAi, 'generateMessage'> {
+  /** `null` when generation failed — check before using it. */
+  generateMessage(systemPrompt: string, userPrompt: string): Promise<string | null>
+}
+
+/**
  * `AgentMC.auth` — the webview's auth surface, which is ONE method.
  *
  * This is not `PluginAuth`. Earlier versions assigned the backend's six-method
@@ -524,7 +541,7 @@ export interface AgentMC {
   theme: BridgeTheme
   toast: PluginToast
   session: BridgeSession
-  ai: PluginAi
+  ai: BridgeAi
   export: BridgeExport
   project: BridgeProject
   sidebar: PluginSidebar
