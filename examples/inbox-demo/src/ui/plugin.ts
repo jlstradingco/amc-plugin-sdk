@@ -37,7 +37,7 @@ function render() {
     <li class="item" data-id="${escapeHtml(item.id)}">
       <div>
         <div class="title">${escapeHtml(item.title)}</div>
-        <div class="body">${escapeHtml(item.body ?? '')} · ${escapeHtml(item.priority ?? 'normal')}</div>
+        <div class="body">${escapeHtml(item.subtitle ?? '')}</div>
       </div>
       <button class="btn-danger remove-btn">Remove</button>
     </li>`
@@ -58,15 +58,20 @@ addBtn.addEventListener('click', async () => {
   const title = titleInput.value.trim()
   if (!title) return
 
-  const priority = prioritySelect.value as InboxItem['priority']
+  // The host's inbox row is deliberately small: id, title, a REQUIRED ISO
+  // timestamp it orders on, and two optional presentation fields. `body`,
+  // `icon`, `priority`, `actionLabel` and `actionId` were in an earlier version
+  // of this demo and none of them exist — sending them made the host drop the
+  // whole batch silently, so this demo published nothing.
+  //
+  // The priority picker now drives `dotColor`, which is the real way to signal
+  // urgency on an inbox row.
+  const priority = prioritySelect.value
   items.push({
     id: `demo-${Date.now()}`,
     title,
-    body: bodyInput.value.trim() || undefined,
-    icon: 'inbox',
-    priority,
-    actionLabel: 'Open Inbox Demo',
-    actionId: 'open',
+    subtitle: bodyInput.value.trim() || undefined,
+    dotColor: priority === 'high' ? '#ef4444' : priority === 'low' ? '#64748b' : undefined,
     timestamp: new Date().toISOString()
   })
 

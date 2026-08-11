@@ -1,6 +1,28 @@
 import { describe, it, expect } from 'vitest'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { PLUGIN_PERMISSIONS, manifestSchema } from '../index.js'
 import { createTestContext } from '../testing/index.js'
+
+const here = path.dirname(fileURLToPath(import.meta.url))
+
+/**
+ * The member names on `AgentMC`, read from source.
+ *
+ * `AgentMC` is a type, so there is nothing to enumerate at runtime — and the
+ * SDK ships no mock for the webview surface at all. Parsing the interface is
+ * the only way to assert against it without hand-maintaining a third mirror.
+ */
+function bridgeNamespaceNames(): string[] {
+  const source = fs.readFileSync(path.join(here, '..', 'types', 'bridge.ts'), 'utf-8')
+  const iface = source.slice(source.indexOf('export interface AgentMC'))
+  const body = iface.slice(0, iface.indexOf('\n}'))
+  const names = [...body.matchAll(/^ {2}([a-zA-Z][A-Za-z0-9_]*)\s*:/gm)].map((m) => m[1])
+  // Vacuity guard: an empty list would satisfy every assertion downstream.
+  expect(names.length).toBeGreaterThan(0)
+  return names
+}
 import {
   HOST_PERMISSIONS,
   SDK_AHEAD_PERMISSIONS,
@@ -95,26 +117,50 @@ describe('SDK <-> host permission parity', () => {
     // fixture's HISTORY block). Re-derived by generation from host
     // master@9c21044ee0; the four added are `launch`, `coreRead`, `oauth`,
     // `channel`, all Tier-1 elevated and all host-ahead.
-    expect(HOST_PERMISSIONS.length).toBe(26)
+    //
+    // 26 -> 29 on 2026-08-11: stale a FOURTH time. The three `workspace.*`
+    // permissions were sitting in SDK_AHEAD_PERMISSIONS on the claim that no
+    // host implementation existed, six days after the host shipped the whole
+    // capability. Re-derived by generation from host origin/master@8722cc3fca.
+    //
+    // Note what this pin did NOT catch, and cannot: the count moved for a
+    // reason invisible to it. The mirror still had 26 strings and the SDK still
+    // had 23, so every set-algebra assertion above stayed green — the drift was
+    // entirely inside the ALLOW-LISTS. When you bump this number, re-read
+    // SDK_AHEAD/HOST_AHEAD/BRIDGE_PENDING too; the count alone is not the guard.
+    expect(HOST_PERMISSIONS.length).toBe(29)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
-  it('gives every recognized permission a typed ctx namespace', () => {
+  it('gives every recognized permission a typed namespace on SOME surface', () => {
     // The other half of the same failure: a permission string with no typed
     // namespace is declarable but unusable, which is barely better than being
-    // rejected outright. Every permission maps to the ctx key that carries it
-    // (or to null when it gates no backend namespace at all).
-    const namespaceForPermission: Record<string, string | null> = {
-      storage: 'storage',
-      secrets: 'secrets',
-      sessions: 'sessions',
-      'sessions.readHistory': 'sessionHistory',
-      ai: 'ai',
-      tts: 'tts',
-      network: 'http',
-      cron: 'cron',
-      cli: 'cli',
-      notifications: 'toast',
+    // rejected outright.
+    //
+    // The surface matters, and conflating the two is its own bug. `tts`,
+    // `sessions.readHistory` and `firebase` were mapped to ctx keys here and
+    // mocked on ctx, so this assertion passed — while the host puts all three on
+    // the WEBVIEW bridge only, leaving `ctx.tts` undefined and a call to it a
+    // TypeError at activation. Each permission now names the surface that
+    // actually carries it.
+    const CTX = 'ctx' as const
+    const BRIDGE = 'bridge' as const
+    const namespaceForPermission: Record<
+      string,
+      { surface: typeof CTX | typeof BRIDGE; key: string } | null
+    > = {
+      storage: { surface: CTX, key: 'storage' },
+      secrets: { surface: CTX, key: 'secrets' },
+      sessions: { surface: CTX, key: 'sessions' },
+      // Webview-only — no ctx.sessionHistory exists.
+      'sessions.readHistory': { surface: BRIDGE, key: 'sessionHistory' },
+      ai: { surface: CTX, key: 'ai' },
+      // Webview-only — no ctx.tts exists.
+      tts: { surface: BRIDGE, key: 'tts' },
+      network: { surface: CTX, key: 'http' },
+      cron: { surface: CTX, key: 'cron' },
+      cli: { surface: CTX, key: 'cli' },
+      notifications: { surface: CTX, key: 'toast' },
       // Ungated-at-the-namespace-level host capabilities reached through other
       // surfaces (shell/clipboard/process for `system`, RSS reads, the webview
       // chrome APIs, deep-link navigation) — no single backend ctx key owns them.
@@ -122,18 +168,19 @@ describe('SDK <-> host permission parity', () => {
       rss: null,
       chrome: null,
       navigation: null,
-      auth: 'auth',
-      'auth.session': 'auth',
-      firebase: 'firebase',
-      recording: 'recording',
-      inbox: 'inbox',
-      spend: 'spend',
+      auth: { surface: CTX, key: 'auth' },
+      'auth.session': { surface: CTX, key: 'auth' },
+      // Webview-only — no ctx.firebase exists.
+      firebase: { surface: BRIDGE, key: 'firebase' },
+      recording: { surface: CTX, key: 'recording' },
+      inbox: { surface: CTX, key: 'inbox' },
+      spend: { surface: CTX, key: 'spend' },
       // All three tiers of the workspace capability are carried by the single
       // `ctx.workspace` namespace; the host splits read/write/exec per METHOD
-      // rather than per namespace (write implies read).
-      'workspace.read': 'workspace',
-      'workspace.write': 'workspace',
-      'workspace.exec': 'workspace',
+      // rather than per namespace. Backend-only — the webview case throws.
+      'workspace.read': { surface: CTX, key: 'workspace' },
+      'workspace.write': { surface: CTX, key: 'workspace' },
+      'workspace.exec': { surface: CTX, key: 'workspace' },
     }
 
     // Every permission the SDK exposes must be classified above — no silent omissions.
@@ -142,13 +189,24 @@ describe('SDK <-> host permission parity', () => {
     )
     expect(unclassified).toEqual([])
 
-    // And every classified namespace must actually exist on PluginContext.
-    const ctxKeys = new Set(Object.keys(createTestContext().ctx))
-    const missingNamespaces = [...sdk]
+    const entries = [...sdk]
       .map((p) => namespaceForPermission[p])
-      .filter((ns): ns is string => ns !== null && ns !== undefined)
-      .filter((ns) => !ctxKeys.has(ns))
-    expect(missingNamespaces).toEqual([])
+      .filter((n): n is { surface: typeof CTX | typeof BRIDGE; key: string } => n != null)
+
+    // A ctx-surface namespace must exist on the real PluginContext.
+    const ctxKeys = new Set(Object.keys(createTestContext().ctx))
+    const missingOnCtx = entries
+      .filter((n) => n.surface === CTX)
+      .map((n) => n.key)
+      .filter((key) => !ctxKeys.has(key))
+    expect(missingOnCtx).toEqual([])
+
+    // A bridge-surface namespace must be declared on AgentMC — and must NOT be
+    // on ctx, which is the specific mistake this test used to hide.
+    const bridgeKeys = new Set(bridgeNamespaceNames())
+    const bridgeEntries = entries.filter((n) => n.surface === BRIDGE)
+    expect(bridgeEntries.filter((n) => !bridgeKeys.has(n.key)).map((n) => n.key)).toEqual([])
+    expect(bridgeEntries.filter((n) => ctxKeys.has(n.key)).map((n) => n.key)).toEqual([])
   })
 
   it('has no outstanding type-shape deltas (both historical ones resolved)', () => {

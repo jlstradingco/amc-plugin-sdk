@@ -16,6 +16,7 @@ export type {
   PluginCronDefinition,
   PluginManifest,
   PluginRegistryEntry,
+  PluginRuntimeStatus,
   // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
   PluginWorkspaceCommandSlot,
   PluginWorkspaceBinding,
@@ -50,7 +51,8 @@ export type {
   PluginAuth,
   InboxItem,
   PluginInbox,
-  RecordingHandle,
+  RecordingStartResult,
+  RecordingStopResult,
   Recording,
   PluginRecording,
   // Text to speech (`tts`)
@@ -83,10 +85,10 @@ export type {
   WorkspaceEntry,
   WorkspaceCheckout,
   WorkspaceGlobOpts,
-  WorkspaceExecStatus,
-  WorkspaceExecResults,
-  WorkspaceBinding,
-  WorkspaceBindingResult,
+  WorkspaceProjectRef,
+  WorkspaceWriteFilesResult,
+  WorkspaceExecResult,
+  WorkspaceRunRequest,
   WorkspaceApi,
   // Backend types
   PluginBackend,

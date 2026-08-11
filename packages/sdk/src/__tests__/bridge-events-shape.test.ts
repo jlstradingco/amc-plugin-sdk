@@ -87,16 +87,26 @@ describe('createTestContext events bus', () => {
     expect(seen).toEqual([{ node: 'a', pct: 50 }])
   })
 
-  it('the unsubscribe returned by on() actually stops delivery', () => {
+  it('on() returns NOTHING on the backend — there is no unsubscribe', () => {
+    // The host's worker `ctx.events.on` has no return statement, and the worker
+    // protocol has no unsubscribe message at all: the handler set is
+    // append-only and a subscription lives until the worker exits.
+    //
+    // This test used to assert the opposite, against a harness that handed back
+    // a working `off()`. That is the same trap this repo cites as its
+    // cautionary tale about ctx.events — a plugin cleaning up in onDisable
+    // would have crashed with `off is not a function`.
     const h = createTestContext()
     const seen: unknown[] = []
     const off = h.ctx.events.on('run.progress', (data) => seen.push(data))
 
+    expect(off).toBeUndefined()
+
     h.ctx.events.emit('run.progress', 1)
-    off()
     h.ctx.events.emit('run.progress', 2)
 
-    expect(seen).toEqual([1])
+    // Both land, because nothing can detach the handler.
+    expect(seen).toEqual([1, 2])
   })
 
   it('does not leak an event across channels', () => {
@@ -109,18 +119,18 @@ describe('createTestContext events bus', () => {
     expect(seen).toEqual([])
   })
 
-  it('supports several subscribers on one channel and detaches only the one unsubscribed', () => {
+  it('supports several subscribers on one channel, and detaches none of them', () => {
     const h = createTestContext()
     const a: unknown[] = []
     const b: unknown[] = []
-    const offA = h.ctx.events.on('tick', (d) => a.push(d))
+    h.ctx.events.on('tick', (d) => a.push(d))
     h.ctx.events.on('tick', (d) => b.push(d))
 
     h.ctx.events.emit('tick', 1)
-    offA()
     h.ctx.events.emit('tick', 2)
 
-    expect(a).toEqual([1])
+    // Fan-out is real; selective detach is not available on this surface.
+    expect(a).toEqual([1, 2])
     expect(b).toEqual([1, 2])
   })
 

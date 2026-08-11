@@ -2,7 +2,17 @@
 
 Read the identity of the signed-in AMC user, and request scoped access tokens for Google and GitHub on their behalf.
 
-**Availability:** Both (backend `ctx.auth` / frontend `AgentMC.auth`)
+**Availability:** Backend only (`ctx.auth`)
+
+::: danger The webview's `AgentMC.auth` is a DIFFERENT, one-method namespace
+This page previously said "Both". None of the six methods below exists on the webview
+bridge -- calling `AgentMC.auth.getUser()` is a `TypeError`, not a permission error.
+
+`AgentMC.auth` has exactly one method, `getWebAuth()`, which returns AMC's Firebase config
+plus a custom token so your webview can sign into the same identity via the Firebase Web
+SDK. Everything on this page is the **backend** surface. If your UI needs any of it, call it
+from your backend and forward the result over `ctx.events` -> `AgentMC.events`.
+:::
 **Required Permission:** `auth` (identity) -- plus `auth.session` for `getSession()`
 
 There are two levels here:

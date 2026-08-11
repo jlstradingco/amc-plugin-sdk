@@ -1,79 +1,99 @@
 # Recording
 
-Start and stop screen recordings and manage the resulting files.
+Start and stop screen recordings, mediated entirely by the host.
 
-**Availability:** Both (backend `ctx.recording` / frontend `AgentMC.recording`)
-**Required Permission:** `recording`
+**Availability:** Backend only (`ctx.recording`)
+**Required Permission:** `recording` (Tier-1 **elevated**)
 
-::: warning Not yet wired
-The `recording` permission is recognized by the install-time consent dialog, and the `PluginRecording` type is part of the SDK surface, but the host bridge that backs it is **not yet available**. Calls are currently inert. Declaring `recording` today lets a plugin install cleanly (no "unknown permission" error) and be ready for when the bridge ships -- but do not depend on it doing anything yet. This page documents the intended surface.
+::: danger `getShareUrl()` and `delete()` do not exist
+Earlier versions of this SDK documented both. Neither has ever existed host-side, and their
+absence is deliberate rather than unfinished: the host redacts the share token and the file
+paths from everything a plugin can see, and it never lets a plugin delete a user's recording.
+Calling either is a `TypeError`.
+
+The same revision typed `stop()` to take the `{ recordingId }` object returned by `start()`.
+The host wants a **bare string**, and passing an object resolves `{ ok: false }` silently
+rather than throwing -- so the documented start-then-stop flow could never have worked.
 :::
+
+## What the plugin does not control
+
+The plugin never chooses a capture source, never receives frames, file descriptors or media
+files, and cannot share or delete a recording. Every `start` requires a fresh native confirm
+the plugin cannot bypass, and `list()` / `get()` only ever return recordings **this plugin**
+started.
 
 ## Methods
 
-### `start(options?: { source?: 'screen' | 'window' | 'tab' }): Promise<RecordingHandle>`
+### `start(): Promise<RecordingStartResult>`
 
-Begin a screen recording. Returns a handle you pass to `stop()`.
+Takes **no arguments.** The host owns source selection and discards anything passed.
 
-**Parameters:**
+A refusal is **not** a rejection -- the recorder being off, already busy, rate-limited, or the
+user dismissing the confirm all resolve with `{ ok: false, error }`. So `await` succeeding tells
+you nothing; branch on `ok` before touching `recordingId`.
 
-| Name | Type | Description |
-|---|---|---|
-| `options.source` | `'screen' \| 'window' \| 'tab'` | What to capture. Defaults to the host's default source |
+```typescript
+type RecordingStartResult =
+  | { ok: true; recordingId: string }
+  | { ok: false; error: string }
+```
 
-### `stop(handle: RecordingHandle): Promise<{ recordingId: string }>`
+### `stop(recordingId: string): Promise<RecordingStopResult>`
 
-Stop a recording started with `start()`. Returns the id of the saved recording.
+Takes a **bare id string**. Only works for a recording this plugin started *and* that is still
+the active one. Also resolves rather than rejecting.
+
+```typescript
+interface RecordingStopResult { ok: boolean; error?: string }
+```
 
 ### `list(): Promise<Recording[]>`
 
-List the recordings available to the plugin.
+Recordings this plugin started. `[]` when there are none.
 
-### `getShareUrl(recordingId: string): Promise<string>`
+### `get(recordingId: string): Promise<Recording | null>`
 
-Return a shareable URL for a recording.
+`null` -- never a throw -- for an unknown or non-owned id.
 
-### `delete(recordingId: string): Promise<void>`
-
-Delete a recording.
-
-## Types
+## The `Recording` row
 
 ```typescript
-interface RecordingHandle {
-  recordingId: string
-}
-
 interface Recording {
   id: string
-  filename: string
+  status: string
   durationMs: number
-  createdAt: string
-  sizeBytes: number
+  sourceType: string
+  sourceLabel: string
+  startedAt: string
+  endedAt: string | null   // null while still recording
 }
 ```
 
-| `Recording` field | Type | Description |
-|---|---|---|
-| `id` | `string` | Recording identifier |
-| `filename` | `string` | Stored filename |
-| `durationMs` | `number` | Length in milliseconds |
-| `createdAt` | `string` | ISO timestamp of when it was recorded |
-| `sizeBytes` | `number` | File size in bytes |
+This is a **redacted** view. `filename`, `createdAt` and `sizeBytes` were previously documented
+and do not exist: the first and last are withheld by design, and `startedAt` is what
+`createdAt` meant.
 
 ## Example
 
 ```typescript
-// Backend (intended surface -- currently inert, see warning above)
-const handle = await ctx.recording.start({ source: 'screen' })
-// ... later ...
-const { recordingId } = await ctx.recording.stop(handle)
+const started = await ctx.recording.start()
+if (!started.ok) {
+  ctx.log.warn(`could not start recording: ${started.error}`)
+  return
+}
 
-const url = await ctx.recording.getShareUrl(recordingId)
-ctx.log.info(`Recording available at ${url}`)
+// ... later
+const stopped = await ctx.recording.stop(started.recordingId)
+if (!stopped.ok) ctx.log.warn(`could not stop: ${stopped.error}`)
+
+const mine = await ctx.recording.list()
+ctx.log.info(`${mine.length} recording(s), latest ${mine.at(-1)?.durationMs}ms`)
 ```
 
 ## Notes
 
-- Until the host bridge ships, treat this API as forward-looking. Guard calls behind a feature check or `try/catch` so your plugin degrades gracefully.
-- `getShareUrl()` returns a URL the user can open or share; the sharing mechanism is owned by the host.
+- The `recording` permission renders the **elevated** consent notice, because a screen
+  recording is irreversible-if-raw. What makes it safe is the per-action confirm, not the
+  install-time grant.
+- Teardown deliberately does not delete recordings a plugin started.

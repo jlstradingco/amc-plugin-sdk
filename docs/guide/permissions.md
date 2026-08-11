@@ -346,7 +346,7 @@ The `navigation` permission lets a plugin ask AMC to move the user to a session,
 Start and stop screen recordings and manage the resulting files.
 
 ::: warning Bridge pending
-The `recording` permission is recognized and described by the host, and the `PluginRecording` type is part of the SDK, but the backend `ctx.recording` namespace is **not yet wired** — a call is currently inert. It is a tracked known-delta (see the SDK↔host parity guard) pending a future host release that connects the bridge. Declaring it lets a plugin install cleanly and be ready for when the bridge ships. See the [Recording API](../api/recording).
+`ctx.recording` is fully wired and Tier-1 **elevated**: `start()` / `stop()` / `list()` / `get()` are real, every `start` raises a native confirm the plugin cannot bypass, and the host redacts file paths and share tokens from everything the plugin can see. (This section previously said the bridge was "not yet wired" and that calls were inert — that stopped being true before 2026-08-11.) There is no webview equivalent: `AgentMC.recording` does not exist. See the [Recording API](../api/recording).
 :::
 
 ---
@@ -430,9 +430,9 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `storage` | `PluginStorage`, `PluginDb`, `PluginFs` | Persist data, query collections, read/write files |
 | `secrets` | `PluginSecrets` | Store credentials encrypted by the OS keychain |
 | `sessions` | `PluginSessions` | Create/manage Claude Code sessions |
-| `sessions.readHistory` | `PluginSessionHistory` | Read PAST sessions/projects the user explicitly grants |
+| `sessions.readHistory` | `PluginSessionHistory` (**webview**) | Read PAST sessions/projects the user explicitly grants |
 | `ai` | `PluginAi` | Direct AI text generation |
-| `tts` | `PluginTts` | Read text aloud with the user's configured voice (metered) |
+| `tts` | `PluginTts` (**webview**, `AgentMC.tts`) | Read text aloud with the user's configured voice (metered) |
 | `network` | `PluginHttp` | Outbound HTTP requests |
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on AMC's control server |
@@ -442,18 +442,30 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
-| `firebase` | `PluginFirebase` | List the user's Firebase accounts/projects; start a login |
-| `recording` | `PluginRecording` | Screen recording (bridge not yet wired; requests inert) |
+| `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
+| `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate AMC to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
-| `workspace.write` | `WorkspaceApi.writeFile` / `deleteFile` | Write to the user's real project files (implies `workspace.read`) |
-| `workspace.exec` | `WorkspaceApi` (exec half) | Run a user-bound test/build command in a project |
+| `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |
+| `workspace.exec` | `WorkspaceApi.run` | Run one bounded command in a granted project, behind a native confirm |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |
 
-::: danger The `workspace.*` permissions have no host runtime yet
-`amc-plugin` accepts them so a plugin can be authored and packaged, but AMC has no `workspace`
-namespace — every call rejects at runtime. See the [Workspace API](../api/workspace) for what
-is and is not real. Passing `preflight` is not evidence the host supports it.
+::: warning `workspace.*` is real, and the three do not imply one another
+This section previously said the host had no `workspace` runtime. It has had one since
+2026-08-05: fourteen backend methods, with `workspace.write` and `workspace.exec` gating real
+mutating and command-running calls.
+
+A manifest asking for `workspace.write` or `workspace.exec` **without an explicit
+`workspace.read`** is rejected — by the host loader, by the marketplace publish gate, and by
+`amc-plugin validate`. The host refuses to infer it so the consent card the user reads matches
+what the plugin actually holds. See the [Workspace API](../api/workspace).
+:::
+
+::: danger Three permissions grant a WEBVIEW namespace, not a backend one
+`tts`, `sessions.readHistory` and `firebase` gate `AgentMC.tts` / `AgentMC.sessionHistory` /
+`AgentMC.firebase`. The host builds no backend entry for any of them, so `ctx.tts` and friends
+are `undefined` — a `TypeError` at activation, not a permission error. The table above lists
+the type each grants; the surface is the webview.
 :::
