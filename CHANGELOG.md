@@ -57,6 +57,47 @@ no SDK type at all. `'dev'` on `PluginSource`.
 nothing host-side and are stripped at parse time. Cron is a runtime capability
 via `ctx.cron.register`.
 
+**Breaking — three namespaces were on the wrong surface.** `ctx.tts`,
+`ctx.sessionHistory` and `ctx.firebase` are webview-only; the host builds no
+backend entry for them, so calling one was a `TypeError` at activation rather
+than a permission error. They now live on `AgentMC`. Conversely
+`AgentMC.recording` never existed at all and is removed — recording stays on
+`ctx`, where it is real.
+
+**Breaking — `AgentMC.auth` had six methods; the host has one.** The backend's
+`PluginAuth` had been assigned to the webview namespace. Replaced with
+`BridgeAuth.getWebAuth()`.
+
+**Breaking — `export.savePDF` is `savePdf`,** takes `html` rather than
+`markdown`, and has no `metadata`. The whole namespace also stopped erasing its
+return types: `saveFile`/`savePdf` report whether the user cancelled,
+`pickFolder` resolves an object rather than a bare path string, and
+`verifyFiles` exists for a result that was being thrown away as `void`. Added
+`getDefaultFolder`.
+
+**Breaking — `theme.get()` returns a Promise** (it was typed synchronous, so
+`theme.get().mode` type-checked and was `undefined`), and its `visualTheme`
+field never existed. The real payload is `{ mode, accent, surfaces }`, and it is
+a static placeholder host-side.
+
+**Breaking — `InboxItem.timestamp` and `SidebarItem.status` are required.** This
+is the quietest failure of the set: the host validates each push against a
+schema and, on any failure, logs a warning and drops the WHOLE batch without
+throwing. `InboxItem`'s invented `body`/`icon`/`priority`/`actionLabel`/
+`actionId` (replaced by the real `subtitle`/`dotColor`) therefore made
+`setItems` resolve successfully while nothing reached the inbox. `PluginToast`
+gains `'warning'` and `durationMs` and no longer requires `body`. Added
+`inbox.postAlert`.
+
+**Added `session.create({ clientRequestId })`** — the durable idempotency key
+that prevents a retry minting a second *paid* session. A parity test had been
+pinning its absence.
+
+**Fixed three examples** that could never have run: `recording-demo` (drove a
+non-existent `AgentMC.recording`, now backend-owned and driven over the event
+bus), `auth-demo` (six webview methods that do not exist), and `inbox-demo`
+(item fields that made every publish a silent no-op).
+
 ## [2.0.0] - 2026-08-10
 
 **Read this first if you are upgrading from npm: you are on 1.0.7.** Versions
