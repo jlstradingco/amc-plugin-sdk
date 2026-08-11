@@ -108,7 +108,20 @@ export interface PluginLogger {
 
 export interface PluginEvents {
   emit(channel: string, data: unknown): void
-  on(channel: string, handler: (data: unknown) => void): () => void
+  /**
+   * Subscribe to a channel.
+   *
+   * **On the BACKEND this returns nothing.** It was typed `() => void`, so
+   * `const off = ctx.events.on(...); off()` type-checked and threw
+   * `TypeError: off is not a function`. There is no unsubscribe path at all on
+   * this surface — no `events.off`, no unsubscribe message in the worker
+   * protocol, and the handler set is append-only — so a subscription lives
+   * until the worker exits. Guard inside your handler instead.
+   *
+   * The WEBVIEW surface genuinely does return an unsubscribe; `BridgeEvents`
+   * narrows this member to say so.
+   */
+  on(channel: string, handler: (data: unknown) => void): void
 }
 
 /**
@@ -263,10 +276,24 @@ export interface PluginHttp {
   fetch(url: string, options?: RequestInit): Promise<Response>
 }
 
+/**
+ * Schedule recurring work. Requires the `cron` permission.
+ *
+ * Every method here crosses an RPC, so all three return promises — they were
+ * typed `void`/`boolean`. That is not cosmetic:
+ *
+ * - `register` REJECTS on an empty id or an invalid cron expression. Typed as
+ *   `void`, nothing awaited it, so an invalid schedule became an unhandled
+ *   rejection in the host log and the job simply never ran.
+ * - `isRegistered` was typed as a bare `boolean` while returning a Promise, so
+ *   `if (ctx.cron.isRegistered(id))` was **always truthy** — a Promise object is
+ *   never falsy. Every guarded re-register path built on it was dead code.
+ */
 export interface PluginCron {
-  register(id: string, schedule: string, handler: () => Promise<void>): void
-  unregister(id: string): void
-  isRegistered(id: string): boolean
+  register(id: string, schedule: string, handler: () => Promise<void>): Promise<void>
+  unregister(id: string): Promise<void>
+  /** Await this. See the note above — the old `boolean` made every guard true. */
+  isRegistered(id: string): Promise<boolean>
 }
 
 export interface PluginCli {
@@ -275,7 +302,16 @@ export interface PluginCli {
 }
 
 export interface PluginSidebar {
-  setBadge(count: number): void
+  /**
+   * `null` CLEARS the badge, and a short string is allowed for a non-numeric
+   * marker — both were unspellable while this took `number` alone.
+   *
+   * Requires the `notifications` permission (`setItems` does not). Since the
+   * call returns a promise nothing awaits, a denial surfaces as an unhandled
+   * rejection in the host log rather than at your call site.
+   */
+  setBadge(count: number | string | null): void
+  /** At most 200 items; a longer array is rejected outright. */
   setItems(items: SidebarItem[]): void
 }
 
@@ -556,8 +592,22 @@ export interface SpendWindow {
   codingValue: number
   /** Total metered background-feature spend, plan-covered and real combined. */
   backgroundTotal: number
-  /** The real out-of-pocket slice of `backgroundTotal` (billed to a real API key). */
+  /**
+   * The real out-of-pocket slice of `backgroundTotal` (billed to a real API
+   * key). This is the BACKGROUND slice ONLY.
+   *
+   * **A window's total real money is `outOfPocket + codingOutOfPocket`.** The
+   * SDK omitted the second term entirely, so anything reporting `outOfPocket`
+   * as "what this cost me" UNDER-REPORTED actual spend.
+   */
   outOfPocket: number
+  /**
+   * The real out-of-pocket slice of CODING sessions — billed to an own-key
+   * metered vendor or a real Anthropic API key. Disjoint from `outOfPocket`,
+   * and zero when all coding ran on a subscription. Never fold it into
+   * `outOfPocket`; add it.
+   */
+  codingOutOfPocket: number
 }
 
 /** One engine's coding line in the yesterday drill-down. */
@@ -565,6 +615,9 @@ export interface SpendEngineLine {
   engine: string
   value: number
   sessions: number
+  /** True when this engine's spend is real money (own API key) rather than
+   *  subscription-covered. Drives the report's per-engine key marker. */
+  outOfPocket: boolean
 }
 
 /** One background-feature line in the yesterday drill-down. */
@@ -894,6 +947,17 @@ export interface WorkspaceApi {
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
+  /**
+   * AMC's userData ROOT — **not** your plugin's own directory, and NOT the root
+   * `ctx.fs` is scoped to.
+   *
+   * Every plugin gets the same string here, while `ctx.fs` resolves relative
+   * paths under `<userData>/plugins/<pluginId>/data`. So
+   * `ctx.fs.readFile(path.join(ctx.dataDir, 'x.json'))` throws
+   * `Path escapes the plugin data directory` — the absolute path lands outside
+   * the fs sandbox. Pass `ctx.fs` plain relative paths and ignore this field
+   * unless you genuinely want the app-level location.
+   */
   dataDir: string
   storage: PluginStorage
   secrets: PluginSecrets

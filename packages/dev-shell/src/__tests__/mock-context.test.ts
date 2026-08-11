@@ -51,13 +51,16 @@ describe('createMockContext', () => {
     expect(received).toEqual([{ msg: 'hello' }])
   })
 
-  it('events on returns unsubscribe function', () => {
+  it('events on returns NOTHING — the host has no unsubscribe', () => {
+    // The host's backend `on` has no return statement, and there is no
+    // unsubscribe message in the worker protocol. The shell used to hand back a
+    // working `off()`, which would let a plugin clean up here and crash in AMC.
     const received: unknown[] = []
     const unsub = ctx.events.on('test', (data) => received.push(data))
+    expect(unsub).toBeUndefined()
     ctx.events.emit('test', 1)
-    unsub()
     ctx.events.emit('test', 2)
-    expect(received).toEqual([1])
+    expect(received).toEqual([1, 2])
   })
 
   it('log methods are callable', () => {

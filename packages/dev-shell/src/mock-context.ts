@@ -293,11 +293,14 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       debug: (msg, ...args) => { if (shouldLog) console.debug(`${prefix} [debug]`, msg, ...args) },
     },
 
+    // `on` returns NOTHING, matching the host: its backend `ctx.events.on` has
+    // no return statement and the worker protocol has no unsubscribe message,
+    // so a subscription lives until the worker exits. Handing back an `off()`
+    // here would let a plugin clean up in the shell and crash in AMC.
     events: {
       emit: (channel, data) => eventBus.emit(channel, data),
       on: (channel, handler) => {
         eventBus.on(channel, handler)
-        return () => eventBus.off(channel, handler)
       },
     },
 
@@ -350,14 +353,19 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       fetch: (url, options) => globalThis.fetch(url, options),
     },
 
+    // Async on the host — every cron method crosses an RPC. `isRegistered`
+    // especially: typed as a bare boolean it returned a Promise, so every
+    // `if (ctx.cron.isRegistered(id))` guard was unconditionally true.
     cron: {
       register: (id, schedule, _handler) => {
         if (shouldLog) console.log(`${prefix} [cron] register(${id}, ${schedule})`)
+        return Promise.resolve()
       },
       unregister: (id) => {
         if (shouldLog) console.log(`${prefix} [cron] unregister(${id})`)
+        return Promise.resolve()
       },
-      isRegistered: () => false,
+      isRegistered: () => Promise.resolve(false),
     },
 
     cli: {
@@ -424,7 +432,14 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     // below still mirrors the host's real posture rather than a friendly stub.
     spend: {
       getBreakdown: () => {
-        const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+        // A window's real out-of-pocket is `outOfPocket + codingOutOfPocket`;
+        // the second term is a separate field, never folded into the first.
+        const zeroWindow = {
+          codingValue: 0,
+          backgroundTotal: 0,
+          outOfPocket: 0,
+          codingOutOfPocket: 0,
+        }
         return Promise.resolve({
           // Epoch, matching createTestContext's emptySpendBreakdown. A wall-clock
           // timestamp made the dev shell and the test harness disagree about the same

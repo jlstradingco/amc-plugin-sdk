@@ -113,10 +113,25 @@ describe('cron + cli triggers', () => {
   it('runCron invokes the registered handler', async () => {
     const h = createTestContext()
     let ran = 0
-    h.ctx.cron.register('job', '* * * * *', async () => { ran++ })
-    expect(h.ctx.cron.isRegistered('job')).toBe(true)
+    // Both are async — every cron method crosses an RPC on the host. `register`
+    // REJECTS on an invalid cron expression, so awaiting it is how you find out.
+    await h.ctx.cron.register('job', '* * * * *', async () => { ran++ })
+    // AWAIT this. Unawaited it is a Promise, which is never falsy — the old
+    // `boolean` return type made `if (ctx.cron.isRegistered(id))` always true.
+    expect(await h.ctx.cron.isRegistered('job')).toBe(true)
     await h.runCron('job')
     expect(ran).toBe(1)
+  })
+
+  it('an unawaited isRegistered is truthy for a job that does not exist', () => {
+    // The shape of the bug the old `boolean` type hid, pinned so it cannot come
+    // back: the Promise itself is truthy, so a guard written against the old
+    // type took the wrong branch every single time.
+    const h = createTestContext()
+    const pending = h.ctx.cron.isRegistered('never-registered')
+    expect(pending).toBeInstanceOf(Promise)
+    expect(Boolean(pending)).toBe(true)
+    return expect(pending).resolves.toBe(false)
   })
 
   it('callCli routes to the registered handler', async () => {
@@ -178,7 +193,9 @@ describe('createTestContext — spend', () => {
 
     it('merges a seeded breakdown over the zeroed default', async () => {
       const h = createTestContext({
-        spend: { codingEngines: [{ engine: 'claude', value: 1.5, sessions: 2 }] }
+        spend: {
+          codingEngines: [{ engine: 'claude', value: 1.5, sessions: 2, outOfPocket: false }]
+        }
       })
       const b = await h.ctx.spend.getBreakdown()
       expect(b.codingEngines).toHaveLength(1)

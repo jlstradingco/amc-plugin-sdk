@@ -32,7 +32,9 @@ import type {
 
 /** Zeroed spend breakdown — the shape a brand-new install reports. */
 function emptySpendBreakdown(): SpendReportBreakdown {
-  const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+  // `codingOutOfPocket` is a SEPARATE real-money term: a window's true
+  // out-of-pocket is `outOfPocket + codingOutOfPocket`, never just the former.
+  const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0, codingOutOfPocket: 0 }
   return {
     generatedAt: new Date(0).toISOString(),
     windows: { yesterday: { ...zeroWindow }, week: { ...zeroWindow }, month: { ...zeroWindow } },
@@ -97,8 +99,9 @@ export interface TestHarness {
   logs: CapturedLog[]
   /** Captured ctx.events.emit calls. */
   emittedEvents: Array<{ channel: string; data: unknown }>
-  /** Latest ctx.sidebar.setBadge value (null until set). */
-  sidebarBadge: number | null
+  /** Latest ctx.sidebar.setBadge value (null until set, and `null` also means
+   *  the plugin explicitly CLEARED it). A string is legal host-side too. */
+  sidebarBadge: number | string | null
   /** Latest ctx.sidebar.setItems value. */
   sidebarItems: SidebarItem[]
   /** Latest ctx.inbox.setItems value. */
@@ -339,11 +342,20 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       debug: (message, ...args) => { harness.logs.push({ level: 'debug', message, args }) }
     },
 
+    // `on` returns NOTHING, because the host's backend `on` returns nothing —
+    // there is no unsubscribe wire protocol for the event bus at all, and the
+    // worker's handler set is append-only.
+    //
+    // This mock used to hand back a working unsubscribe. That is the precise
+    // shape of the failure this repo keeps citing as its cautionary tale: the
+    // harness implemented `ctx.events` as a live EventEmitter, so tests were
+    // green while production was dead. Handing back an `off()` the host cannot
+    // provide is the same mistake in miniature — a plugin that cleans up in
+    // `onDisable` would crash with `off is not a function`.
     events: {
       emit: (channel, data) => { harness.emittedEvents.push({ channel, data }); eventBus.emit(channel, data) },
       on: (channel, handler) => {
         eventBus.on(channel, handler)
-        return () => eventBus.off(channel, handler)
       }
     },
 
@@ -413,10 +425,19 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       }
     },
 
+    // All three cross an RPC on the host, so all three are async. `isRegistered`
+    // in particular was typed as a bare boolean while returning a Promise, which
+    // made every `if (ctx.cron.isRegistered(id))` guard unconditionally true.
     cron: {
-      register: (id, _schedule, handler) => { cronHandlers.set(id, handler) },
-      unregister: (id) => { cronHandlers.delete(id) },
-      isRegistered: (id) => cronHandlers.has(id)
+      register: (id, _schedule, handler) => {
+        cronHandlers.set(id, handler)
+        return Promise.resolve()
+      },
+      unregister: (id) => {
+        cronHandlers.delete(id)
+        return Promise.resolve()
+      },
+      isRegistered: (id) => Promise.resolve(cronHandlers.has(id))
     },
 
     cli: {

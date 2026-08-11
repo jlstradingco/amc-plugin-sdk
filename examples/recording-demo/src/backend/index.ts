@@ -14,10 +14,6 @@ import type { PluginContext, PluginBackend, Recording } from '@agent-mc/plugin-s
  * from either side reaches subscribers on both.
  */
 export default function activate(ctx: PluginContext): PluginBackend {
-  let offStart: (() => void) | undefined
-  let offStop: (() => void) | undefined
-  let offList: (() => void) | undefined
-
   const publish = async (): Promise<void> => {
     const recordings: Recording[] = await ctx.recording.list()
     ctx.events.emit('recording:list', { recordings })
@@ -25,10 +21,11 @@ export default function activate(ctx: PluginContext): PluginBackend {
 
   return {
     onEnable() {
-      // NOTE: `ctx.events.on` returns undefined on the host today — there is no
-      // unsubscribe wire protocol for the event bus — so these handles may be
-      // undefined. Guarded below rather than assumed.
-      offStart = ctx.events.on('recording:start', async () => {
+      // NOTE: `ctx.events.on` returns NOTHING on this surface — the host has no
+      // unsubscribe wire protocol for the event bus, and its handler set is
+      // append-only. So these subscriptions live until the worker exits and
+      // there is deliberately nothing to tear down in onDisable.
+      ctx.events.on('recording:start', async () => {
         // `start()` takes NO arguments: the host owns source selection, and it
         // raises a native confirm the plugin cannot bypass.
         const started = await ctx.recording.start()
@@ -43,7 +40,7 @@ export default function activate(ctx: PluginContext): PluginBackend {
         await publish()
       })
 
-      offStop = ctx.events.on('recording:stop', async (data) => {
+      ctx.events.on('recording:stop', async (data) => {
         // `stop()` wants a BARE id string. Passing an object resolves
         // `{ ok: false }` silently, which is why this reads the id out first.
         const { recordingId } = (data ?? {}) as { recordingId?: string }
@@ -57,17 +54,11 @@ export default function activate(ctx: PluginContext): PluginBackend {
         await publish()
       })
 
-      offList = ctx.events.on('recording:refresh', () => {
+      ctx.events.on('recording:refresh', () => {
         void publish()
       })
 
       void publish()
-    },
-
-    onDisable() {
-      offStart?.()
-      offStop?.()
-      offList?.()
     }
   }
 }

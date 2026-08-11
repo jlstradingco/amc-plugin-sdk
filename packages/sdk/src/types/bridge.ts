@@ -100,7 +100,8 @@ export interface BridgeSession {
    *
    * Concurrent calls with an identical prompt are de-duplicated host-side and
    * resolve to the SAME `sessionId` — the in-flight key is the prompt hash
-   * (`plugin-bridge/session-handler.ts:284-287`).
+   * (`plugin-bridge/session-handler.ts`, the `coalesceSpawn(key, …)` call keyed on
+   * `hashPrompt`).
    */
   create(opts: {
     prompt?: string
@@ -142,7 +143,7 @@ export interface BridgeSession {
   stop(sessionId: string): Promise<void>
   /**
    * `autoSend` submits the draft immediately instead of leaving it in the
-   * composer — `plugin-bridge/session-handler.ts:366-377` reads all three keys.
+   * composer — `plugin-bridge/session-handler.ts`'s `launchWithDraft` case reads all three keys.
    */
   launchWithDraft(opts: {
     projectId: string
@@ -293,6 +294,12 @@ export interface BridgeSessionStatusEvent {
 
 export interface BridgeEvents extends PluginEvents {
   /**
+   * Unlike the backend's `ctx.events.on`, THIS surface really does hand back a
+   * working unsubscribe — the preload wraps the host's `events.subscribe` /
+   * `events.unsubscribe` pair. Call it to stop listening.
+   */
+  on(channel: string, handler: (data: unknown) => void): () => void
+  /**
    * Subscribe to session status changes. Call the returned function to stop.
    *
    * ::: Two things this does NOT do :::
@@ -331,7 +338,7 @@ export interface BridgeEvents extends PluginEvents {
 
 /**
  * One open Document, minted by {@link BridgeDocuments.open} — the host's own
- * `DocumentHandle` (`plugin-bridge/document-handles.ts:71-77`).
+ * `DocumentHandle` (`plugin-bridge/document-handles.ts`, the `DocumentHandle` interface).
  *
  * A Handle is a capability over exactly ONE file in exactly one mode, and it is
  * everything a plugin gets: the host deliberately does not send the file's path.
@@ -356,7 +363,8 @@ export interface DocumentHandle {
    *
    * Being stale is NOT reliably an error, which is why this matters. The host
    * refuses only when the region you would discard is LARGER than the payload
-   * you are writing (`document-append.ts:167-180`). A slightly stale length —
+   * you are writing (`document-append.ts`, the `shorter-than-expected` /
+   * `discards-more-than-it-writes` bounds). A slightly stale length —
    * say you appended 50 bytes since, and now write 100 — passes that bound and
    * silently overwrites your own 50 bytes, logging `repairing …` and nothing
    * else. There is no error to catch; only calling `stat` first avoids it.
@@ -370,16 +378,19 @@ export interface DocumentHandle {
    *
    * It is NOT usable as an `<img src>`, an `<iframe src>`, or any other direct
    * element source. The host serves every Document as `application/octet-stream`
-   * with `X-Content-Type-Options: nosniff`, `Content-Disposition: attachment`
-   * and a locked-down CSP (`plugin-server.ts`, `documentResponseHeaders`) — a
-   * deliberate choice, since a sniffed content type would be attacker-influenced
-   * input. So it only works through `fetch`/XHR.
+   * with `X-Content-Type-Options: nosniff`, `Content-Disposition: attachment`,
+   * `Cache-Control: no-store`, `Accept-Ranges: none` and a
+   * `default-src 'none'; sandbox` CSP (`plugin-server.ts`,
+   * `documentResponseHeaders`) — a deliberate choice, since a sniffed content
+   * type would be attacker-influenced input. So it only works through
+   * `fetch`/XHR.
    *
-   * Two reasons not to read it. Its path shape is not a contract: today it is
-   * `http://127.0.0.1:<port>/plugin/<pluginId>/@doc/<handleId>`, and host
-   * PR #2216 appends a capability TOKEN to that last segment — which also makes
-   * the string a SECRET granting read access to the file, so anything that logs
-   * it or ships it in a bug report leaks the Document.
+   * **This string is a SECRET.** The capability token is already shipped, not
+   * forthcoming: the URL is
+   * `http://127.0.0.1:<port>/plugin/<pluginId>/@doc/<handleId>.<capToken>`, and
+   * that trailing token grants read access to the file. Anything that logs it or
+   * puts it in a bug report leaks the Document. Its shape is not a contract
+   * either, so never parse it.
    */
   url: string
 }
@@ -387,17 +398,30 @@ export interface DocumentHandle {
 /**
  * Read and append to files the user explicitly picked, on `AgentMC.documents`.
  *
+ * ::: OFF BY DEFAULT — check before you build on this :::
+ *
+ * The entire namespace sits behind the host's `plugin-documents-io` unreleased
+ * -feature flag. `requireDocumentsAccess()` runs before every method (and before
+ * the `@doc` HTTP route), so on a stock AMC build EVERY call — including
+ * `list()` — rejects with `This capability is not available.` Nothing in the
+ * types can tell you that, and it is not a permission error you can fix from the
+ * manifest. Confirm the flag is on for your target build first.
+ *
  * ::: Webview-only, and unusually, permission-free :::
  *
  * There is no `ctx.documents` — the host assembles its backend context without
  * one, so this namespace lives on this surface alone. It also needs no manifest
- * permission: `documents` is listed in the host's `SELF_GATED_NAMESPACES`
- * (`plugin-bridge-handler.ts:427`) and appears nowhere in `plugin-permissions.ts`,
- * because the file picker IS the consent. What a plugin gains is NARROWER than
- * the ungated `fs` reach it already had, not wider — one file, in one fixed mode,
- * per user gesture.
+ * permission: `documents` is in the host's `SELF_GATED_NAMESPACES` and appears
+ * nowhere in `plugin-permissions.ts`, because the file picker IS the consent.
+ * What a plugin gains is NARROWER than the ungated `fs` reach it already had,
+ * not wider — one file, in one fixed mode, per user gesture.
  *
  * The whole namespace is a read path plus exactly ONE write, {@link append}.
+ *
+ * Refusals arrive as `documents.<method> [code]: prose`, and the code set is
+ * wider than the few named below — `unknown-handle`, `protected-path`,
+ * `not-a-file`, `file-too-large`, `too-many-handles`, `too-many-requests`,
+ * `could-not-read`, `could-not-open`, `could-not-write`, `nothing-to-append`.
  */
 export interface BridgeDocuments {
   /**
@@ -407,7 +431,8 @@ export interface BridgeDocuments {
    * open(…)` leaves `doc` as `undefined` on cancel; guard on `doc` before use.
    *
    * `options` is REQUIRED and so is `mode` — unlike `export.pickFolder`, calling
-   * `open()` bare fails host validation (`bridge-method-schemas.ts:585-593`).
+   * `open()` bare fails host validation (`bridge-method-schemas.ts`,
+   * `DOCUMENTS_SCHEMAS.open`).
    * Ask for `read` unless you will genuinely write: the mode is frozen into
    * every Handle this call returns and cannot be widened afterwards.
    */
@@ -440,7 +465,8 @@ export interface BridgeDocuments {
    * bounded compare-and-swap, NOT a strict one: the host refuses
    * `shorter-than-expected` when the file is shorter than you claim, and
    * `discards-more-than-it-writes` only when rewinding would drop MORE than your
-   * payload replaces (`plugin-bridge/document-append.ts:167-180`). Inside that
+   * payload replaces (`plugin-bridge/document-append.ts`, the two
+   * `APPEND_REFUSAL` bounds). Inside that
    * bound it writes at `expectedLength` and overwrites whatever was there, with
    * only a `repairing …` line in the host log — so a slightly stale length loses
    * data silently rather than raising. The bound is deliberate: it is what lets a
@@ -457,13 +483,15 @@ export interface BridgeDocuments {
    *
    * Two refusals worth designing around:
    * - A `read` Handle rejects `read-only-handle`; the mode is fixed at mint
-   *   (`document-append.ts:103`).
+   *   (`document-append.ts`, the `read-only-handle` refusal).
    * - If the file was REPLACED on disk — which an ordinary Save in Preview or
-   *   Word does, renaming a new inode over the path — the host rejects
-   *   `not-the-picked-document` (`document-append.ts:156-158`). On the shipped
-   *   host that Handle is finished: `stat` does NOT re-pin it, so recover by
-   *   calling {@link open} again for a fresh gesture. Host PR #2216 adds a
-   *   re-pin to `stat`; do not rely on it yet.
+   *   Word does, renaming a new inode over the path — `append` rejects
+   *   `not-the-picked-document`. You can usually recover WITHOUT a fresh user
+   *   gesture: {@link stat} re-pins the record's identity when it revalidates,
+   *   so calling `stat` and retrying the append is the first thing to try. (An
+   *   earlier version of this comment said `stat` does not re-pin and that the
+   *   re-pin was unshipped; both were wrong.) Fall back to {@link open} only if
+   *   `stat` also refuses.
    */
   append(
     handleId: string,
