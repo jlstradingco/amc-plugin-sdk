@@ -23,31 +23,54 @@ Replace the plugin's inbox items with the given list. Pass an empty array to cle
 
 **Returns:** `Promise<void>`
 
+### `postAlert(opts: { title: string; body: string; dedupKey?: string }): Promise<void>`
+
+Raise a one-off alert, independent of the `setItems` list.
+
+| Name | Type | Description |
+|---|---|---|
+| `title` | `string` | Required, 1-300 chars |
+| `body` | `string` | Required markdown, 1-50,000 chars |
+| `dedupKey` | `string` | Optional. Suppresses repeats; namespaced to your plugin host-side, so it cannot collide with another plugin's |
+
+```typescript
+await ctx.inbox.postAlert({
+  title: 'Scan failed',
+  body: 'The nightly scan could not reach the registry.',
+  dedupKey: 'scan-failure',
+})
+```
+
 ## The `InboxItem` type
 
 ```typescript
 interface InboxItem {
   id: string
   title: string
-  body?: string
-  icon?: string
-  priority?: 'low' | 'normal' | 'high'
-  actionLabel?: string
-  actionId?: string
-  timestamp?: string
+  timestamp: string   // REQUIRED -- the inbox orders on it
+  subtitle?: string
+  dotColor?: string
 }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `id` | `string` | Stable identifier for the item. Reuse the same `id` across updates so the row is replaced, not duplicated |
+| `id` | `string` | Stable identifier. Reuse the same `id` across updates so the row is replaced, not duplicated |
 | `title` | `string` | Headline shown in the inbox row |
-| `body` | `string` | Optional supporting text |
-| `icon` | `string` | Optional icon name |
-| `priority` | `'low' \| 'normal' \| 'high'` | Optional priority; higher-priority items sort toward the top |
-| `actionLabel` | `string` | Optional label for the item's action button |
-| `actionId` | `string` | Optional action identifier your plugin recognizes when the user clicks the action |
-| `timestamp` | `string` | Optional ISO timestamp shown on the row |
+| `timestamp` | `string` | **Required** ISO timestamp. This is the inbox's sort key -- your plugin owns recency |
+| `subtitle` | `string` | Optional supporting text |
+| `dotColor` | `string` | Optional override of the per-source dot colour |
+
+::: danger A wrong shape fails SILENTLY
+Until 2026-08-11 this page documented `body`, `icon`, `priority`, `actionLabel` and
+`actionId`. **None of them exist**, and `timestamp` was shown as optional when the host
+requires it.
+
+That combination is worse than a normal error, because the host validates the array
+against a push schema and, on any failure, **logs a warning and drops the entire batch**
+-- it never throws and never rejects. So `setItems()` resolved successfully and nothing
+ever reached the inbox. If your plugin's rows have silently failed to appear, this is why.
+:::
 
 ## Example
 
@@ -57,10 +80,8 @@ await ctx.inbox.setItems([
   {
     id: 'scan-report',
     title: 'Security scan finished',
-    body: 'Found 3 issues across 2 dependencies.',
-    priority: 'high',
-    actionLabel: 'View report',
-    actionId: 'open-report',
+    subtitle: 'Found 3 issues across 2 dependencies.',
+    dotColor: '#ef4444',
     timestamp: new Date().toISOString(),
   },
 ])
@@ -80,4 +101,5 @@ await AgentMC.inbox.setItems([
 
 - `setItems()` is a full replace. Keep the complete current set in memory and publish it whenever it changes.
 - Use stable `id` values so an item that stays relevant across updates keeps its place instead of flickering.
-- Reserve `priority: 'high'` for items the user genuinely needs to act on -- overusing it dulls the signal.
+- Use `dotColor` sparingly to flag genuine urgency -- colouring everything dulls the signal.
+- At most **500 items** per call; a longer array is rejected.

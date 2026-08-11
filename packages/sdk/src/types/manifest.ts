@@ -8,7 +8,9 @@ export type PluginCategory =
   | 'productivity'
   | 'other'
 
-export type PluginSource = 'builtin' | 'marketplace'
+/** `'dev'` is a Developer-Mode load-unpacked folder — a real host source the SDK
+ *  omitted, so a consumer switching on this union hit an unhandled variant. */
+export type PluginSource = 'builtin' | 'marketplace' | 'dev'
 
 export type PluginCollectionColumnType = 'text' | 'integer' | 'real' | 'json'
 
@@ -120,7 +122,22 @@ export interface PluginWorkspaceBinding {
   granularity: 'package'
 }
 
-/** Manifest declaration for the `ctx.workspace` capability. */
+/**
+ * Manifest declaration for the `ctx.workspace` capability.
+ *
+ * > **The host never reads this.** `ctx.workspace` shipped, but WITHOUT a
+ * > manifest surface: there is no `workspace` key in the host's manifest schema,
+ * > and `commandSlots` / `binding` appear nowhere in the host at all. Zod strips
+ * > unknown keys, so this block is silently discarded at parse time.
+ *
+ * The host chose a different mechanism than the one these types were
+ * transcribed from. `ctx.workspace.run({ scope, command, args })` takes the
+ * command and argv from the plugin DIRECTLY at call time — there are no
+ * manifest-static command slots to declare, and no binding table. Injection is
+ * closed by `shell: false`, a filtered PATH and a native confirm instead.
+ *
+ * Retained only so existing manifests keep validating.
+ */
 export interface PluginWorkspace {
   binding?: PluginWorkspaceBinding
   commandSlots?: PluginWorkspaceCommandSlot[]
@@ -171,23 +188,45 @@ export type PluginPermission =
   | 'navigation'
   | 'spend'
   // Workspace — read/write/exec against the user's real project checkouts and
-  // worktrees, gated per project by a runtime grant. `workspace.write` implies
-  // `workspace.read`. NOT YET IMPLEMENTED BY THE HOST: no `workspace` namespace
-  // exists on any host branch as of 2026-08-04 (host master@9c21044ee0), so a
-  // call currently rejects with `Unknown namespace: "workspace"`. Declared here
-  // ahead of the host so `amc-plugin package` accepts a manifest that requests
-  // them; see SDK_AHEAD_PERMISSIONS in the parity fixture.
+  // worktrees, gated per project by a runtime grant on top of the install-time
+  // permission. All three are live host-side (see `WorkspaceApi`).
+  //
+  // `workspace.write` does NOT imply `workspace.read`, despite what this comment
+  // claimed: the host rejects a manifest declaring write or exec without an
+  // explicit read alongside it, rather than inferring one, so that the consent
+  // card the user reads matches the array the plugin actually holds. The
+  // validator enforces the same pairing.
   | 'workspace.read'
   | 'workspace.write'
   | 'workspace.exec'
 
 export interface PluginCliEndpoint {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   path: string
-  description: string
-  auth: boolean
+  /** Optional host-side, though worth writing — it is what a caller sees. */
+  description?: string
+  auth?: boolean
+  /**
+   * Marks a destructive endpoint the host must gate behind a human inbox
+   * approval before dispatching it. The SDK had no type for this, so an author
+   * could not mark an endpoint destructive even though the host honours it.
+   */
+  requiresConfirmation?: boolean
 }
 
+/**
+ * One declared cron job.
+ *
+ * > **The host never reads this.** There is no `cron` key anywhere in the host's
+ * > manifest schema or its `PluginManifest`, and zod strips unknown keys, so a
+ * > declared `cron` block is silently discarded at parse time and reaches
+ * > nothing. It validates, it packages, and then it does not exist.
+ *
+ * Cron is a RUNTIME capability: register jobs from your backend with
+ * `ctx.cron.register(id, schedule, handler)` and declare the `cron` permission.
+ * That path works. This block is retained only so existing manifests keep
+ * validating.
+ */
 export interface PluginCronDefinition {
   id: string
   label: string
@@ -249,7 +288,12 @@ export interface PluginManifest {
       suggestedPrompts?: PluginSuggestedPrompt[]
     }
   }
-  sdkVersion: string
+  /**
+   * Optional, matching the host — an absent `sdkVersion` is read as "a v1
+   * in-process plugin", which is why four of the host's own builtins ship
+   * without one. This was required here and rejected them.
+   */
+  sdkVersion?: string
   backend?: {
     entryPoint: string
     resourceLimits?: {
@@ -273,14 +317,32 @@ export interface PluginManifest {
   workspace?: PluginWorkspace
 }
 
+/** Runtime state of a plugin's backend worker. */
+export type PluginRuntimeStatus =
+  | 'stopped'
+  | 'starting'
+  | 'running'
+  | 'errored'
+  | 'crashed'
+
 export interface PluginRegistryEntry {
   id: string
   manifest: PluginManifest
   source: PluginSource
   enabled: boolean
   compatible: boolean
+  /** Why `compatible` is false — e.g. an sdkVersion the host cannot satisfy. */
+  incompatibleReason?: string
   installedVersion: string
   basePath: string
   storageInitialized: boolean
-  backendPath?: string
+  /** True when an update added permissions the user has not granted yet. */
+  needsReconsent?: boolean
+  runtimeStatus?: PluginRuntimeStatus
+  /** Last backend error, when `runtimeStatus` is `'errored'` or `'crashed'`. */
+  lastError?: string
+  // NOTE: no `backendPath`. It was declared here and the host never populates
+  // it on a registry entry — the only real occurrences are a local variable in
+  // the worker host and an env var passed to the child, neither of which
+  // reaches this shape. It read as `undefined` every time.
 }

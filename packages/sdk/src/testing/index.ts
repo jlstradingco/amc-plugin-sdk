@@ -26,19 +26,15 @@ import type {
   PluginAiStructuredRequest,
   Recording,
   QueryOptions,
-  HistoryProject,
-  HistorySession,
-  HistoryMessage,
   SessionMessage,
-  FirebaseAccount,
-  FirebaseProject,
-  FirebaseSetupStatus,
   SpendReportBreakdown
 } from '../types/index.js'
 
 /** Zeroed spend breakdown — the shape a brand-new install reports. */
 function emptySpendBreakdown(): SpendReportBreakdown {
-  const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+  // `codingOutOfPocket` is a SEPARATE real-money term: a window's true
+  // out-of-pocket is `outOfPocket + codingOutOfPocket`, never just the former.
+  const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0, codingOutOfPocket: 0 }
   return {
     generatedAt: new Date(0).toISOString(),
     windows: { yesterday: { ...zeroWindow }, week: { ...zeroWindow }, month: { ...zeroWindow } },
@@ -81,53 +77,31 @@ export interface TestContextOptions {
     googleIdToken?: string | null
     session?: PluginAuthSession | null
   }
-  /** Override ctx.tts. Unset, TTS reports unavailable and synthesize() rejects — the host's
-   *  behaviour when the user has configured no voice. */
-  tts?: {
-    available?: boolean
-    synthesize?: (text: string) => Promise<{ audioBase64: string; mime: 'audio/mpeg' }>
-  }
-  /**
-   * Seed what the user has granted to ctx.sessionHistory. Defaults to nothing granted,
-   * matching the host's default-deny posture — getMessages() on an unseeded session
-   * throws exactly as the real bridge does.
-   */
-  sessionHistory?: {
-    projects?: HistoryProject[]
-    sessions?: HistorySession[]
-    /** Keyed by session id. Only ids present here are readable. */
-    messages?: Record<string, HistoryMessage[]>
-    /** What requestAccess() resolves to. Defaults to a cancelled grant. */
-    grantResult?: { cancelled?: boolean; sessionIds?: string[]; projectIds?: string[] }
-  }
-  /** Seed ctx.firebase. Every list defaults to empty, like a machine with no Firebase CLI. */
-  firebase?: {
-    accounts?: FirebaseAccount[]
-    projects?: FirebaseProject[]
-    projectsByAccount?: Record<string, FirebaseProject[]>
-    setupStatus?: Partial<FirebaseSetupStatus>
-    /**
-     * What startLogin() reports. Defaults to false, matching the rest of these
-     * defaults: no CLI is installed, so the spawn could not have succeeded.
-     */
-    loginStarts?: boolean
-  }
-  /** Seed ctx.spend.getBreakdown(). Defaults to an all-zero breakdown. */
+  // NOTE: no tts / sessionHistory / firebase seeding options. Those namespaces
+  // are webview-only and are no longer on PluginContext, so an option to seed
+  // them would be accepted and then do nothing.
   spend?: Partial<SpendReportBreakdown>
 }
 
 export interface TestHarness {
   ctx: PluginContext
   /** Captured ctx.toast.show calls. */
-  toasts: Array<{ type: 'success' | 'error' | 'info'; message: string }>
+  toasts: Array<{
+    message: string
+    type?: 'info' | 'success' | 'warning' | 'error'
+    durationMs?: number
+  }>
   /** Captured ctx.toast.notify calls. */
-  notifications: Array<{ title: string; body: string }>
+  notifications: Array<{ title: string; body?: string }>
+  /** Captured ctx.inbox.postAlert calls. */
+  inboxAlerts: Array<{ title: string; body: string; dedupKey?: string }>
   /** Captured ctx.log.* calls. */
   logs: CapturedLog[]
   /** Captured ctx.events.emit calls. */
   emittedEvents: Array<{ channel: string; data: unknown }>
-  /** Latest ctx.sidebar.setBadge value (null until set). */
-  sidebarBadge: number | null
+  /** Latest ctx.sidebar.setBadge value (null until set, and `null` also means
+   *  the plugin explicitly CLEARED it). A string is legal host-side too. */
+  sidebarBadge: number | string | null
   /** Latest ctx.sidebar.setItems value. */
   sidebarItems: SidebarItem[]
   /** Latest ctx.inbox.setItems value. */
@@ -141,33 +115,42 @@ export interface TestHarness {
 /**
  * Why `ctx.workspace` is a wall of rejections rather than a working fake.
  *
- * The host has no `workspace` namespace — not on master, not on any branch — so
- * every real call rejects with `Unknown namespace: "workspace"`. An in-memory
- * fake here would make plugin tests pass against a capability that cannot run,
- * which is exactly how `ctx.events` stayed broken for months: this harness
- * implemented it as a real EventEmitter, so unit tests were green the whole time
- * the production path was dead in both directions.
+ * The reason CHANGED on 2026-08-11 and the distinction matters. It used to be
+ * "the host has no workspace namespace"; the host shipped one on 2026-08-05 and
+ * this harness went on rejecting for six days while telling authors a falsehood.
+ * It still rejects, but now for a narrower and honest reason:
  *
- * So the mock refuses. A test that needs workspace must inject its own double
- * and thereby state, in its own source, that it is testing against a shape
- * nobody has implemented.
+ * `ctx.workspace` reaches the user's REAL checkouts, and every method is gated
+ * by machinery this harness cannot reproduce — a per-project runtime grant the
+ * user makes and can revoke, a native confirm dialog on `deleteFile` and on
+ * almost every `run`, single-flight refusals per (plugin, method, project), and
+ * a walker that silently truncates. An in-memory fake would model none of that,
+ * so a green test against it would predict nothing about production. That is
+ * exactly how `ctx.events` stayed broken for months: this harness implemented it
+ * as a real EventEmitter, so unit tests were green the whole time the production
+ * path was dead in both directions.
  *
- * Delete this and write a real fake ONLY when the host ships the namespace.
+ * So a test that needs workspace injects its own double and thereby states, in
+ * its own source, which host behaviours it is choosing to assume.
+ *
+ * The method list below is the host's real one (14 methods, derived from
+ * WORKSPACE_SCHEMAS at origin/master@8722cc3fca) — a fake that refuses still has
+ * to refuse the RIGHT surface, or a typo'd call fails for the wrong reason.
  */
-const WORKSPACE_NOT_IMPLEMENTED =
-  'ctx.workspace is not implemented by the AMC host yet, so this test harness ' +
-  'refuses to fake it — a passing test against a fake workspace would be ' +
-  'evidence of nothing. The SDK types the capability ahead of the host so ' +
-  'plugins can be authored and packaged against it; a real call currently ' +
-  'rejects with `Unknown namespace: "workspace"`.'
+const WORKSPACE_NOT_FAKEABLE =
+  'ctx.workspace is implemented by the AMC host, but this test harness does not ' +
+  'fake it: the capability is gated by a per-project runtime grant, native ' +
+  'confirm dialogs, and single-flight limits that an in-memory double cannot ' +
+  'reproduce, so a passing test against a fake would be evidence of nothing. ' +
+  'Inject your own double for the methods your test needs.'
 
 /** Every method rejects. Kept in sync with the dev-shell's identical stub. */
-function workspaceNotImplemented(): PluginContext['workspace'] {
-  // One nullary thunk reused for all 17 methods: it is assignable to every
+function workspaceNotFakeable(): PluginContext['workspace'] {
+  // One nullary thunk reused for all 14 methods: it is assignable to every
   // signature (fewer params is fine, and Promise<never> satisfies any Promise<T>)
   // and declares no parameter, so `noUnusedParameters` has nothing to complain
   // about.
-  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_IMPLEMENTED))
+  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_FAKEABLE))
   return {
     listProjects: reject,
     listWorktrees: reject,
@@ -178,14 +161,11 @@ function workspaceNotImplemented(): PluginContext['workspace'] {
     exists: reject,
     readFile: reject,
     readFiles: reject,
-    listBindings: reject,
     writeFile: reject,
+    writeFiles: reject,
+    mkdir: reject,
     deleteFile: reject,
-    requestBinding: reject,
-    exec: reject,
-    execStatus: reject,
-    execResults: reject,
-    execCancel: reject
+    run: reject
   }
 }
 
@@ -278,6 +258,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     sidebarBadge: null,
     sidebarItems: [],
     inboxItems: [],
+    inboxAlerts: [],
     async runCron(id: string) {
       const handler = cronHandlers.get(id)
       if (!handler) throw new Error(`No cron job registered with id "${id}"`)
@@ -361,11 +342,20 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       debug: (message, ...args) => { harness.logs.push({ level: 'debug', message, args }) }
     },
 
+    // `on` returns NOTHING, because the host's backend `on` returns nothing —
+    // there is no unsubscribe wire protocol for the event bus at all, and the
+    // worker's handler set is append-only.
+    //
+    // This mock used to hand back a working unsubscribe. That is the precise
+    // shape of the failure this repo keeps citing as its cautionary tale: the
+    // harness implemented `ctx.events` as a live EventEmitter, so tests were
+    // green while production was dead. Handing back an `off()` the host cannot
+    // provide is the same mistake in miniature — a plugin that cleans up in
+    // `onDisable` would crash with `off is not a function`.
     events: {
       emit: (channel, data) => { harness.emittedEvents.push({ channel, data }); eventBus.emit(channel, data) },
       on: (channel, handler) => {
         eventBus.on(channel, handler)
-        return () => eventBus.off(channel, handler)
       }
     },
 
@@ -435,10 +425,19 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       }
     },
 
+    // All three cross an RPC on the host, so all three are async. `isRegistered`
+    // in particular was typed as a bare boolean while returning a Promise, which
+    // made every `if (ctx.cron.isRegistered(id))` guard unconditionally true.
     cron: {
-      register: (id, _schedule, handler) => { cronHandlers.set(id, handler) },
-      unregister: (id) => { cronHandlers.delete(id) },
-      isRegistered: (id) => cronHandlers.has(id)
+      register: (id, _schedule, handler) => {
+        cronHandlers.set(id, handler)
+        return Promise.resolve()
+      },
+      unregister: (id) => {
+        cronHandlers.delete(id)
+        return Promise.resolve()
+      },
+      isRegistered: (id) => Promise.resolve(cronHandlers.has(id))
     },
 
     cli: {
@@ -457,7 +456,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     },
 
     inbox: {
-      setItems: (items) => { harness.inboxItems = items; return Promise.resolve() }
+      setItems: (items) => { harness.inboxItems = items; return Promise.resolve() },
+      postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve() }
     },
 
     auth: {
@@ -469,86 +469,32 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       getSession: () => Promise.resolve(opts.auth?.session ?? null)
     },
 
+    // Mirrors the host's real contract: `start` resolves a DISCRIMINATED result
+    // rather than a bare handle, `stop` takes a bare id string, and there is no
+    // getShareUrl/delete — the host redacts the share token and never lets a
+    // plugin delete a recording. The old mock faked both, so a plugin test could
+    // go green calling two methods that do not exist.
     recording: {
-      start: () => Promise.resolve({ recordingId: `test-recording-${crypto.randomUUID().slice(0, 8)}` }),
-      stop: (handle) => Promise.resolve({ recordingId: handle.recordingId }),
-      list: () => Promise.resolve([...recordings]),
-      getShareUrl: (recordingId) => Promise.resolve(`https://test.local/recordings/${recordingId}`),
-      delete: () => Promise.resolve()
-    },
-
-    tts: {
-      isAvailable: () => Promise.resolve(opts.tts?.available ?? false),
-      synthesize: (text) => {
-        if (opts.tts?.synthesize) return opts.tts.synthesize(text)
-        // Mirrors the host: synthesis without a configured voice throws rather
-        // than returning silent/empty audio.
-        if (!(opts.tts?.available ?? false)) {
-          return Promise.reject(
-            new Error('Text-to-speech is not configured. Add a voice in Settings.')
-          )
-        }
-        return Promise.resolve({
-          audioBase64: Buffer.from(`test-audio:${text}`).toString('base64'),
-          mime: 'audio/mpeg' as const
-        })
-      }
-    },
-
-    sessionHistory: {
-      listProjects: () => Promise.resolve([...(opts.sessionHistory?.projects ?? [])]),
-      listSessions: () => Promise.resolve([...(opts.sessionHistory?.sessions ?? [])]),
-      getMessages: ({ sessionId }) => {
-        const granted = opts.sessionHistory?.messages ?? {}
-        // Default-deny, exactly like the host bridge: an ungranted session is an
-        // error, never an empty array (which would read as "no messages").
-        if (!Object.prototype.hasOwnProperty.call(granted, sessionId)) {
-          return Promise.reject(new Error('session not granted to this plugin'))
-        }
-        return Promise.resolve([...(granted[sessionId] ?? [])])
-      },
-      requestAccess: () => {
-        const seeded = opts.sessionHistory?.grantResult
-        const requestId = `test-history-grant-${crypto.randomUUID().slice(0, 8)}`
-        if (!seeded || seeded.cancelled) {
-          return Promise.resolve({ requestId, cancelled: true, sessionIds: [], projectIds: [] })
-        }
-        return Promise.resolve({
-          requestId,
-          cancelled: false,
-          sessionIds: seeded.sessionIds ?? [],
-          projectIds: seeded.projectIds ?? []
-        })
-      }
-    },
-
-    firebase: {
-      listAccounts: () => Promise.resolve([...(opts.firebase?.accounts ?? [])]),
-      listProjects: () => Promise.resolve([...(opts.firebase?.projects ?? [])]),
-      // Unknown account resolves to [] rather than throwing — the host swallows
-      // every CLI failure into an empty list.
-      listProjectsForAccount: (email) =>
-        Promise.resolve([...(opts.firebase?.projectsByAccount?.[email] ?? [])]),
-      setupStatus: () =>
+      start: () =>
         Promise.resolve({
-          cliInstalled: false,
-          signedIn: false,
-          accounts: [],
-          firebaseAccess: 'unknown' as const,
-          billing: { checked: false, hasOpenAccount: false },
-          ...(opts.firebase?.setupStatus ?? {})
+          ok: true as const,
+          recordingId: `test-recording-${crypto.randomUUID().slice(0, 8)}`
         }),
-      // Defaults false to agree with the dev-shell mock and with the other
-      // defaults here: cliInstalled is false, so a spawn cannot have succeeded.
-      // Returning true made the two mocks disagree about the same host.
-      startLogin: () => Promise.resolve({ started: opts.firebase?.loginStarts ?? false })
+      stop: () => Promise.resolve({ ok: true }),
+      list: () => Promise.resolve([...recordings]),
+      get: (recordingId) =>
+        Promise.resolve(recordings.find((r) => r.id === recordingId) ?? null)
     },
 
+    // NOTE: no `tts`, `sessionHistory` or `firebase` here. All three are
+    // webview-only capabilities that the host does NOT put on a backend ctx, so
+    // mocking them made a plugin test go green against namespaces that are
+    // `undefined` in production. See the note on PluginContext in ../types/context.ts.
     spend: {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
     },
 
-    workspace: workspaceNotImplemented()
+    workspace: workspaceNotFakeable()
   }
 
   harness.ctx = ctx

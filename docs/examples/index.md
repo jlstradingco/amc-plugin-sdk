@@ -50,7 +50,7 @@ Add and remove items in the AMC inbox. Demonstrates the full-replace semantics o
 
 **APIs:** `recording.start/stop/list/getShareUrl/delete`
 
-Preview template for the forthcoming screen-recording API. The `recording` bridge is **not yet wired** — the calls are currently inert — so this example is a forward-looking scaffold, not a working recorder.
+A working recorder. Screen recording is a **backend** capability (`ctx.recording`) with no webview equivalent, so this demo's backend owns it and the webview drives it over the shared event bus — which also makes it the reference example for crossing the two surfaces.
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/recording-demo)
 

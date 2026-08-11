@@ -4,7 +4,7 @@ export type {
   PluginSettingOption, PluginSettingTestAction, PluginSettingDefinition,
   PluginSuggestedPrompt,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
-  PluginManifest, PluginRegistryEntry,
+  PluginManifest, PluginRegistryEntry, PluginRuntimeStatus,
   // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
   PluginWorkspaceCommandSlot, PluginWorkspaceBinding, PluginWorkspace,
 } from './manifest.js'
@@ -15,7 +15,7 @@ export type {
   PluginSessions, SessionStatus, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginFs, PluginHttp, PluginCron, PluginCli,
   PluginSidebar, PluginToast, PluginContext,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, PluginInbox,
-  RecordingHandle, Recording, PluginRecording,
+  RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
   SynthesizedSpeech, PluginTts,
   HistoryProject, HistorySession, HistoryMessage, HistoryGrantResult, PluginSessionHistory,
   FirebaseAccount, FirebaseProject, FirebaseSetupStatus, PluginFirebase,
@@ -23,7 +23,7 @@ export type {
   // Workspace (`workspace.read` / `.write` / `.exec`)
   WorktreeRef, WorktreeStatus, WorktreeInfo,
   WorkspaceScope, WorkspaceHandle, WorkspaceEntry, WorkspaceCheckout, WorkspaceGlobOpts,
-  WorkspaceExecStatus, WorkspaceExecResults, WorkspaceBinding, WorkspaceBindingResult,
+  WorkspaceProjectRef, WorkspaceWriteFilesResult, WorkspaceExecResult, WorkspaceRunRequest,
   WorkspaceApi,
 } from './context.js'
 

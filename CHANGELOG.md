@@ -11,7 +11,126 @@ together.
 
 ## [Unreleased]
 
-### Fixed
+### Fixed — host parity reconciliation (2026-08-11)
+
+Verified the whole SDK surface against host `origin/master@8722cc3fca`. The
+suite was green throughout: every parity assertion compares the SDK against a
+vendored mirror, so a stale mirror and a stale enum agreed with each other.
+
+**Breaking — `ctx.workspace` was six methods of fiction.** The SDK declared 17
+methods transcribed from a spec the host never implemented. The host ships 14.
+Removed `listBindings`, `requestBinding`, `exec`, `execStatus`, `execResults`
+and `execCancel` (and the `WorkspaceExecStatus`, `WorkspaceExecResults`,
+`WorkspaceBinding`, `WorkspaceBindingResult` types); added `writeFiles`,
+`mkdir` and `run`. `writeFile` takes 2 arguments and returns `void`;
+`deleteFile` takes 1 — the `expectedMtimeMs` compare-and-swap token never
+existed. There is no job model: `run` is blocking and single-shot.
+
+**Breaking — `ctx.recording` could not work as typed.** `start()` takes no
+arguments and resolves `{ ok, recordingId } | { ok, error }`, not a handle;
+`stop()` takes a bare id string, so passing the old `RecordingHandle` was a
+silent no-op. Removed `getShareUrl()` and `delete()` (deliberate
+non-capabilities, not missing wiring) and `RecordingHandle`; added `get()`.
+`Recording` loses the host-redacted `filename`/`createdAt`/`sizeBytes` and
+gains `status`, `sourceType`, `sourceLabel`, `startedAt`, `endedAt`.
+
+**`amc-plugin validate` rejected manifests the host accepts.** Six of the
+host's own twelve builtins failed validation. `settings`, `storage`,
+`migrations` and `sdkVersion` are no longer required (the host defaults or
+omits all four); `cli.endpoints` accepts `PATCH` and no longer requires
+`description` or `auth`; `backend.resourceLimits.memoryMb` loses its invented
+512 ceiling.
+
+**`amc-plugin validate` passed manifests the host rejects.** Added SQL
+identifier validation at all six sites the host enforces it (it is the
+injection boundary — the host wraps these names in double quotes without
+escaping); made reserved-column matching case-insensitive, so `ID` no longer
+reaches a `duplicate column name` crash; added the rule that
+`workspace.write`/`workspace.exec` require an explicit `workspace.read`, which
+both the host loader and the marketplace publish gate enforce.
+
+**Added.** `cli.endpoints[].requiresConfirmation` — the flag that forces a
+human inbox approval before a destructive AI-callable endpoint runs, which had
+no SDK type at all. `'dev'` on `PluginSource`.
+
+**Documented as inert.** The `cron` and `workspace` manifest blocks are read by
+nothing host-side and are stripped at parse time. Cron is a runtime capability
+via `ctx.cron.register`.
+
+**Breaking — three namespaces were on the wrong surface.** `ctx.tts`,
+`ctx.sessionHistory` and `ctx.firebase` are webview-only; the host builds no
+backend entry for them, so calling one was a `TypeError` at activation rather
+than a permission error. They now live on `AgentMC`. Conversely
+`AgentMC.recording` never existed at all and is removed — recording stays on
+`ctx`, where it is real.
+
+**Breaking — `AgentMC.auth` had six methods; the host has one.** The backend's
+`PluginAuth` had been assigned to the webview namespace. Replaced with
+`BridgeAuth.getWebAuth()`.
+
+**Breaking — `export.savePDF` is `savePdf`,** takes `html` rather than
+`markdown`, and has no `metadata`. The whole namespace also stopped erasing its
+return types: `saveFile`/`savePdf` report whether the user cancelled,
+`pickFolder` resolves an object rather than a bare path string, and
+`verifyFiles` exists for a result that was being thrown away as `void`. Added
+`getDefaultFolder`.
+
+**Breaking — `theme.get()` returns a Promise** (it was typed synchronous, so
+`theme.get().mode` type-checked and was `undefined`), and its `visualTheme`
+field never existed. The real payload is `{ mode, accent, surfaces }`, and it is
+a static placeholder host-side.
+
+**Breaking — `InboxItem.timestamp` and `SidebarItem.status` are required.** This
+is the quietest failure of the set: the host validates each push against a
+schema and, on any failure, logs a warning and drops the WHOLE batch without
+throwing. `InboxItem`'s invented `body`/`icon`/`priority`/`actionLabel`/
+`actionId` (replaced by the real `subtitle`/`dotColor`) therefore made
+`setItems` resolve successfully while nothing reached the inbox. `PluginToast`
+gains `'warning'` and `durationMs` and no longer requires `body`. Added
+`inbox.postAlert`.
+
+**Added `session.create({ clientRequestId })`** — the durable idempotency key
+that prevents a retry minting a second *paid* session. A parity test had been
+pinning its absence.
+
+**Fixed three examples** that could never have run: `recording-demo` (drove a
+non-existent `AgentMC.recording`, now backend-owned and driven over the event
+bus), `auth-demo` (six webview methods that do not exist), and `inbox-demo`
+(item fields that made every publish a silent no-op).
+
+**Breaking — four silent runtime bugs.** Each of these compiled and did the
+wrong thing:
+
+- `ctx.cron.isRegistered` was typed `boolean` while returning a Promise, so
+  `if (ctx.cron.isRegistered(id))` was **always true** — a Promise is never
+  falsy. `register`/`unregister` are async too, and `register` *rejects* on an
+  invalid cron expression, which nothing awaited.
+- `ctx.events.on` returns **nothing** on the backend; it was typed
+  `() => void`, so `off()` threw `TypeError: off is not a function`. There is
+  no unsubscribe path on that surface at all. Both mocks had been handing back
+  a working unsubscribe and two canary tests asserted it — the same
+  `ctx.events` failure this repo cites as its cautionary tale, recurring inside
+  the guard meant to prevent it. `BridgeEvents` narrows the member, since the
+  webview genuinely does return one.
+- `SpendWindow` was missing `codingOutOfPocket`. A window's real money is
+  `outOfPocket + codingOutOfPocket`, so reporting the first alone
+  **under-reported spend**. `SpendEngineLine` gains `outOfPocket`.
+- `sidebar.setBadge` accepts `number | string | null`; `null` clears the badge
+  and was previously unspellable.
+
+**Documented, not changed:** `ctx.dataDir` is AMC's userData root, not your
+plugin's directory, and not the root `ctx.fs` is scoped to — so
+`ctx.fs.readFile(path.join(ctx.dataDir, x))` throws.
+
+**`documents` corrections.** The namespace is behind the host's
+`plugin-documents-io` unreleased-feature flag, so on a stock build every call
+rejects with `This capability is not available.` — nothing said so. The
+capability token in the `@doc` URL is already shipped (that URL is a secret
+today, not eventually), and `stat()` already re-pins a replaced document.
+Host line-number citations throughout `bridge.ts` were replaced with symbol
+names; four were already pointing at unrelated code.
+
+### Fixed — scaffold SDK floor (2026-08-11)
 
 - `amc-plugin create` scaffolded new plugins with `sdkVersion: "^1.0.0"` and a
   `@agent-mc/plugin-sdk: "^1.0.0"` devDependency. That range was deliberately

@@ -1,26 +1,31 @@
 # Workspace
 
-Read, write, and run test or build commands against the user's **real project checkouts and
-worktrees** -- not your plugin's sandboxed data directory.
+Read, write, and run commands against the user's **real project checkouts and worktrees** --
+not your plugin's sandboxed data directory.
 
 **Availability:** Backend only (`ctx.workspace`)
 **Required Permission:** `workspace.read`, `workspace.write`, `workspace.exec`
 
-::: danger Not implemented by the host yet
-There is **no host-side `workspace` namespace**. Every method on this page currently rejects
-at runtime with `Unknown namespace: "workspace"`, on every AMC build.
+::: warning The mocks deliberately refuse this namespace
+`ctx.workspace` **is implemented by the host** and these 14 methods are real. (An earlier
+version of this page said the opposite for six days after the host shipped it -- if you built
+a workaround on that claim, you can delete it.)
 
-This page documents a capability the SDK types **ahead of** the host, so plugin authors can
-write and package against it. Two things follow, and both matter:
+What is still true is that **the SDK's mocks will not fake it.** `createTestContext()` and the
+dev shell both reject on every `ctx.workspace.*` call, on purpose. The capability is gated by
+machinery no in-memory double can reproduce -- a per-project runtime grant the user can revoke,
+a native confirm on `deleteFile` and on almost every `run`, and single-flight limits -- so a
+green test against a fake would predict nothing. This SDK has been burned by exactly that
+before, when `ctx.events` was mocked as a live event emitter while the production path was dead
+in both directions.
 
-- **`amc-plugin preflight` passing is not evidence the host supports this.** The CLI validates
-  your manifest's *shape*. It cannot tell you whether the runtime exists.
-- **The SDK's mocks refuse to fake it.** `createTestContext()` and the dev shell both reject on
-  every `ctx.workspace.*` call, deliberately. A green plugin test against a working fake would
-  be evidence of nothing -- this SDK has been burned by exactly that before, when `ctx.events`
-  was mocked as a live event emitter while the production path was dead in both directions.
+Inject your own double for the methods your test needs, and verify against a real AMC build.
+:::
 
-Track the host side before shipping anything that depends on it.
+::: danger There is no manifest surface
+Do **not** declare a `workspace` block with `commandSlots` or `binding` in your manifest. The
+host has no such field, and zod strips unknown keys, so the whole block is silently discarded
+at parse time. `run` takes its command and args from the plugin at call time instead.
 :::
 
 ## Why it is not `ctx.fs`
@@ -38,177 +43,133 @@ Three types carry every path in this API, and the shape is what makes escapes un
 
 ```typescript
 type WorktreeRef = string | null            // absolute worktree ROOT path; null = main checkout
-interface WorkspaceScope { projectId: string; worktree: WorktreeRef }
-interface WorkspaceHandle extends WorkspaceScope { path: string }   // RELATIVE
+
+interface WorkspaceScope  { projectId: string; worktree: WorktreeRef }
+interface WorkspaceHandle extends WorkspaceScope { path: string }   // path is RELATIVE
 ```
 
-**`path` is always relative.** The host joins it to the scope's root and re-checks the result,
-so `../../etc/passwd` cannot be expressed as a valid handle -- and a symlink pointing out of
-scope dies at the host's realpath check.
+`path` is deliberately relative: the host joins it onto the scope's root and re-checks the
+result, so a forged absolute or `..`-escaping path cannot reach outside the grant.
+`resolve()` is the only door an absolute path enters by.
 
-**A worktree is its absolute path**, with `null` meaning the main checkout. Worktrees have no
-ID and no table in AMC, so the path *is* the identity. A forged or stale value fails the scope
-check rather than resolving to something unexpected.
+## Three things that will bite you
 
-`resolve(absolutePath)` is the single door an absolute path enters by. It returns `null` when
-the path is outside everything you can reach.
+**Every refusal looks identical.** The host collapses almost all negative answers into one
+string, `That file is not available to this plugin.` A revoked grant, a path outside the
+scope, and a genuinely missing file are deliberately indistinguishable. Do not branch on the
+message.
 
-## Three things to know before you use it
+**Five methods are single-flight.** `glob`, `listWorktrees`, `readFiles`, `writeFiles` and
+`run` reject a second concurrent call for the same plugin, method and project with
+`workspace.<m> is already running for this plugin.` So `Promise.all([ws.glob(s, a), ws.glob(s, b)])`
+fails. Sequence them.
 
-None of these are visible in the type signatures.
-
-**A list-valued variable expands to N arguments.** In `exec(scope, slot, vars)`, `vars` is
-`Record<string, string | string[]>`. An array becomes N separate argv entries -- or **zero**
-entries when it is empty. Values are never concatenated into a shell string, because there is
-no shell.
-
-**`execResults` is a cursor read, not a file read.** It returns whole JSONL records only, never
-a partial line, and you call it repeatedly with the `cursor` it hands back. There is
-deliberately no `execArtifact`: no end-of-run blob survives an interrupted run, so a
-whole-artifact read is the wrong shape for output that must be legible mid-flight.
-
-**There is no way to write a command binding.** `requestBinding()` opens the host's own modal
-and carries **no command text** -- not at exec time, and not as a suggested default. The user
-binds a base command per (project, package); the host appends your slot's manifest-static
-arguments. This is what closes command injection by construction: there is no plugin-supplied
-string for anything to inject into. Do not look for a setter; its absence is the feature.
-
-## Command slots
-
-Your manifest declares **named slots**, each with a static argument template. The user supplies
-the base command. The host spawns `execFile` with `shell: false`.
-
-```jsonc
-{
-  "permissions": ["workspace.read", "workspace.write", "workspace.exec"],
-  "workspace": {
-    "binding": { "granularity": "package" },
-    "commandSlots": [
-      { "name": "vitest.run",  "args": ["--config", "{reporterConfig}", "{files}"] },
-      { "name": "jest.run",    "args": ["--reporters={reporter}", "--forceExit", "{files}"] },
-      { "name": "generic.run", "args": [] }
-    ]
-  }
-}
-```
-
-Because `args` is manifest-static, **every flag your plugin can ever pass is visible at
-marketplace review**. A runtime `{args}` placeholder was rejected outright -- it would let a
-plugin choose `--reporter=./evil.js` at runtime, invisible to an install-time audit.
-
-`{reporter}` and `{reporterConfig}` are host-reserved and host-minted. So is `{outFile}`, which
-**does not belong in `args` at all**: the results path travels to the child process as an
-environment variable, so it never appears in argv. A plugin cannot name a write target.
-
-An empty `args` array is legal -- `generic.run` above is exactly that.
-
-## Methods
-
-Grouped by the permission that gates them.
-
-### Discovery
-
-Available with any `workspace.*` permission -- without these you cannot construct your first
-handle.
-
-| Method | Returns |
-|---|---|
-| `listProjects()` | Projects you currently hold a grant for |
-| `listWorktrees(projectId)` | Live, blocking worktree list -- not a cached snapshot |
-| `requestAccess()` | Opens the host's grant picker; resolves with what you can now reach |
-| `resolve(absolutePath)` | `WorkspaceHandle` or `null` when out of scope |
-
-### `workspace.read`
-
-| Method | Notes |
-|---|---|
-| `glob(scope, patterns, opts?)` | Returns `{ path, size, mtimeMs, isDir }` -- enumeration and the invalidation key in one round trip |
-| `stat(handle)` | `WorkspaceEntry` or `null` |
-| `exists(handle)` | |
-| `readFile(handle)` | UTF-8 text |
-| `readFiles(handles)` | Chunked host-side at 500 files / ~4.8 MB per call |
-| `listBindings(scope)` | Read-only. **No setter exists.** |
-
-The host owns the default excludes -- `.git`, `node_modules`, the project's own worktree roots,
-and `.gitignore` applied as a walk. You can override them via `WorkspaceGlobOpts`.
-
-### `workspace.write` (implies read)
-
-```typescript
-writeFile(handle, content, { expectedMtimeMs: number | null }): Promise<{ mtimeMs: number }>
-deleteFile(handle, { expectedMtimeMs: number }): Promise<void>
-```
-
-**`expectedMtimeMs` is a required compare-and-swap token**, and `null` on `writeFile` means
-*the file must not already exist*. It closes torn writes and lost updates together, and it
-costs you nothing to obtain because `glob()` already returned it. Writes are atomic
-temp-plus-rename, and `writeFile` creates parent directories.
-
-### `workspace.exec`
-
-```typescript
-requestBinding(scope, packagePath): Promise<WorkspaceBindingResult>   // carries NO command text
-exec(scope, slot, vars?): Promise<{ jobId: string }>
-execStatus(jobId, { since? }): Promise<WorkspaceExecStatus>
-execResults(jobId, { since? }): Promise<WorkspaceExecResults>
-execCancel(jobId): Promise<void>
-```
-
-Runs are **jobs, not blocking calls** -- forced, not chosen. The plugin worker rejects any RPC
-past four minutes, and a full test suite can run for hours.
-
-There is **no wall-clock cap**; an idle timeout is used instead, because a wall-clock limit
-kills a legitimately slow suite at the same threshold as a deadlocked one. Output is
-disk-buffered with head and tail retained when the cap is hit (`truncated` tells you). At most
-**one job per (project, worktree)** may run at a time.
-
-## Reading a run while it is in flight
-
-The governing rule is **durable read for correctness, push for liveness**.
-
-Poll `execStatus` / `execResults` with the cursor you were last given -- the disk buffer is
-authoritative. Events are only a hint that there is more to read; the event bus has no replay
-and no delivery guarantee, so nothing may depend on it for correctness.
-
-::: warning The `host.*` event channels
-The only host-to-plugin broadcast channel that exists today is **`host.activeProjectChanged`**,
-and the host's allowlist is closed -- it refuses and logs anything else.
-
-Channels named in the capability's design notes for run output and session turns
-(`host.runChunk`, `host.sessionOutput`) are **planned, not implemented**. There is no
-`runChunk` anywhere in the host source. Poll the cursor; do not wait for a push that never
-arrives.
-:::
-
-## v1 is text only
-
-UTF-8 text, throughout. An `encoding` option is reserved on `readFile` and `writeFile` so
-binary support can be added without a breaking change, but it does nothing today.
-
-`WorktreeStatus` mirrors the host's union verbatim: `'active' | 'merging' | 'merged' |
-'cleanup' | 'conflict' | 'failed'`. Note **`'cleanup'` has zero assignment sites** in the host
--- it is carried for parity, and you should never expect to see it.
-
-## Types
-
-Every type on this page is importable by name from the package root:
-
-```typescript
-import type {
-  WorkspaceApi, WorkspaceScope, WorkspaceHandle, WorkspaceEntry,
-  WorkspaceGlobOpts, WorkspaceExecStatus, WorkspaceExecResults,
-  WorkspaceBinding, WorkspaceBindingResult, WorkspaceCheckout,
-  WorktreeRef, WorktreeInfo, WorktreeStatus,
-} from '@agent-mc/plugin-sdk'
-```
+**`writeFiles` is not atomic.** It reports success per entry; one failure neither rolls back
+nor stops the rest. Check every element.
 
 ## Permissions
 
-| Permission | Grants |
-|---|---|
-| `workspace.read` | Discovery, `glob`, `stat`, `exists`, `readFile`, `readFiles`, `listBindings` |
-| `workspace.write` | The read set, plus `writeFile` and `deleteFile` |
-| `workspace.exec` | `requestBinding`, `exec`, `execStatus`, `execResults`, `execCancel` |
+```json
+{
+  "permissions": ["workspace.read", "workspace.write", "workspace.exec"]
+}
+```
 
-`workspace.write` implies `workspace.read`. Each is also gated per project by the runtime grant
-described at the top of this page.
+The three are **not hierarchical and none implies another.** A manifest asking for
+`workspace.write` or `workspace.exec` without an explicit `workspace.read` alongside it is
+**rejected** -- by the host loader, by the marketplace publish gate, and by `amc-plugin
+validate`. The host refuses to infer it on purpose: around twenty consumers read the raw
+permissions array and the consent ledger, so an inferred permission would make the consent
+card the user reads disagree with what the plugin actually holds.
+
+## `workspace.read`
+
+```typescript
+listProjects(): Promise<WorkspaceProjectRef[]>          // GRANTED projects only
+listWorktrees(projectId): Promise<WorktreeInfo[]>       // live, not cached
+requestAccess(): Promise<WorkspaceProjectRef[]>         // see below
+resolve(absolutePath): Promise<WorkspaceHandle | null>
+
+glob(scope, patterns, opts?): Promise<WorkspaceEntry[]>
+stat(handle): Promise<WorkspaceEntry | null>            // size is 0 for a directory
+exists(handle): Promise<boolean>                        // never throws
+readFile(handle, { encoding? }?): Promise<string>
+readFiles(handles): Promise<Array<{ handle } & ({ content } | { error })>>
+```
+
+All four discovery methods need `workspace.read` specifically -- holding only `workspace.write`
+is not enough to construct your first handle.
+
+**`requestAccess()` returns only the project the user just granted** (a one-element array), or
+`[]` if they cancelled. It is not a read of everything you can reach; call `listProjects()`
+for that.
+
+**`glob` needs at least one pattern.** At most 32, each up to 256 characters; `exclude` is
+capped at 32 entries and *adds* to the host's defaults rather than replacing them. Results are
+silently truncated at the walker's cap, and nothing in the return tells you so.
+
+**`readFiles` does not chunk.** Hard limits: 256 handles per call (over that it is rejected
+outright), 32 MiB total, and 8 MiB per file -- an oversized file comes back as an `{ error }`
+entry rather than failing the batch. Split larger batches yourself. `readFile` has its own,
+larger 64 MiB single-file cap.
+
+## `workspace.write`
+
+```typescript
+writeFile(handle, content): Promise<void>               // 2 args; up to 8 MiB
+writeFiles(batch): Promise<WorkspaceWriteFilesResult[]> // up to 64 entries, 16 MiB total
+mkdir(handle): Promise<void>                            // ONE level; parent must exist
+deleteFile(handle): Promise<void>                       // gated on write, not a delete perm
+```
+
+**There is no compare-and-swap.** The host has no `expectedMtimeMs` concept, so `writeFile` is
+a last-writer-wins overwrite. If you need to avoid clobbering a concurrent edit, `stat()` first
+and accept the race -- the SDK cannot close it for you.
+
+**`deleteFile` may prompt.** For a file your plugin did not create, the host raises a native
+confirm you cannot bypass; files you created delete silently.
+
+## `workspace.exec`
+
+```typescript
+run(request: {
+  scope: WorkspaceScope
+  command: string          // bare NAME, e.g. 'git' -- not a shell line
+  args: string[]           // up to 64, each <= 1024 chars
+  timeoutMs?: number       // clamped to 5s..120s; default 30s
+}): Promise<{
+  exitCode: number | null  // null on timeout or spawn failure
+  stdout: string           // capped at 1 MiB
+  stderr: string           // capped at 1 MiB; '\n[timed out]' appended on timeout
+  silent: boolean          // true only if it ran without a confirm dialog
+  timedOut: boolean
+}>
+```
+
+**Blocking and single-shot.** One promise, resolved when the command finishes. There is no job
+id, no polling, no streamed output, and no cancel.
+
+**It does not reject on failure.** A non-zero exit, a spawn failure and a timeout all *resolve*
+with the object above. Branch on `exitCode` and `timedOut`, not `catch`.
+
+**Almost every call prompts the user.** The host runs silently only for an exact allow-list
+match -- today `git status --porcelain` and `git status --short` -- and otherwise shows the
+command, args and cwd in a native confirm. **If no confirm can be shown the call is refused**,
+so this can never run unattended.
+
+You supply `command` and `args` directly. Injection is closed by `shell: false`, a PATH
+filtered to exclude the project and any `node_modules/.bin`, and that confirm -- not by
+manifest-declared command slots.
+
+## Encoding
+
+UTF-8 text throughout. `readFile` takes an `encoding` option for forward compatibility; the
+host accepts `'utf-8'` and `'utf8'`, and `'utf-8'` is the spelling to prefer.
+
+## Permission map
+
+| Permission | Methods |
+|---|---|
+| `workspace.read` | `listProjects`, `listWorktrees`, `requestAccess`, `resolve`, `glob`, `stat`, `exists`, `readFile`, `readFiles` |
+| `workspace.write` | `writeFile`, `writeFiles`, `mkdir`, `deleteFile` |
+| `workspace.exec` | `run` |

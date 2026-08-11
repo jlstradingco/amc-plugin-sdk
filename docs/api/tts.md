@@ -2,8 +2,17 @@
 
 Turn text into spoken audio using whichever voice the user has configured in AMC.
 
-**Availability:** Backend only (`ctx.tts`)
+**Availability:** Webview only (`AgentMC.tts`)
 **Required Permission:** `tts`
+
+::: danger This is a WEBVIEW capability, not a backend one
+An earlier version of this page said "Backend only (`ctx.tts`)". That was backwards: the host
+builds its backend context **without** this namespace, so `ctx.tts` is `undefined` and calling it
+throws a `TypeError` at activation rather than producing a permission error.
+
+Use **`AgentMC.tts`** from your plugin's webview. If a backend needs the result, forward it over
+the shared event bus (`AgentMC.events` -> `ctx.events`).
+:::
 
 ::: warning Metered spend
 Synthesis is billed AI usage. The host enforces a per-plugin daily cap that is **shared with the `ai` capability**, and `synthesize()` rejects once that cap is reached. Treat a rejection as an expected runtime state, not a bug -- a plugin that calls this on a schedule will hit it eventually.
@@ -43,12 +52,12 @@ interface SynthesizedSpeech {
 // Backend
 export function activate(ctx: PluginContext) {
   ctx.cli.handle('/speak', async (req) => {
-    if (!(await ctx.tts.isAvailable())) {
+    if (!(await AgentMC.tts.isAvailable())) {
       return { status: 503, body: { error: 'No voice configured in AMC settings' } }
     }
 
     try {
-      const speech = await ctx.tts.synthesize(String(req.body))
+      const speech = await AgentMC.tts.synthesize(String(req.body))
       return { status: 200, body: { audio: speech.audioBase64, mime: speech.mime } }
     } catch (err) {
       // The daily cap is the common cause here, and it is not the user's mistake.
@@ -81,7 +90,7 @@ await audio.play()
 import { createTestContext } from '@agent-mc/plugin-sdk/testing'
 
 const h = createTestContext({ tts: { available: true } })
-const speech = await h.ctx.tts.synthesize('hello')
+const speech = await h.AgentMC.tts.synthesize('hello')
 // speech.mime === 'audio/mpeg'
 
 // Or inject your own synthesizer to assert on the text that was sent:
