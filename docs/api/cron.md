@@ -19,12 +19,17 @@ Register a handler for a scheduled job. The `id` must match a job declared in yo
 | `schedule` | `string` | Cron expression (e.g. `*/30 * * * *` for every 30 minutes) |
 | `handler` | `() => Promise<void>` | Async function to run on each tick |
 
-**Returns:** `void`
+**Returns:** `Promise<void>`
+
+::: warning `register` rejects on an invalid cron expression or empty id
+Await it. Typed as `void` this used to be an unhandled rejection in the host log, and the
+job simply never ran -- with nothing at the call site to tell you.
+:::
 
 **Example:**
 
 ```typescript
-ctx.cron.register('sync-data', '0 */6 * * *', async () => {
+await ctx.cron.register('sync-data', '0 */6 * * *', async () => {
   ctx.log.info('Running 6-hourly data sync')
   const response = await ctx.http.fetch('https://api.example.com/data')
   const data = await response.json()
@@ -34,7 +39,7 @@ ctx.cron.register('sync-data', '0 */6 * * *', async () => {
   })
 })
 
-ctx.cron.register('cleanup', '0 3 * * *', async () => {
+await ctx.cron.register('cleanup', '0 3 * * *', async () => {
   ctx.log.info('Running daily cleanup at 3 AM')
   const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000 // 30 days
   await ctx.db.deleteWhere('logs', { before: cutoff })
@@ -53,17 +58,17 @@ Remove a registered cron handler. The job stops running but remains declared in 
 |---|---|---|
 | `id` | `string` | Job ID to unregister |
 
-**Returns:** `void`
+**Returns:** `Promise<void>`
 
 **Example:**
 
 ```typescript
-ctx.cron.unregister('sync-data')
+await ctx.cron.unregister('sync-data')
 ```
 
 ---
 
-### `isRegistered(id: string): boolean`
+### `isRegistered(id: string): Promise<boolean>`
 
 Check whether a handler is currently registered for a given job ID.
 
@@ -73,13 +78,25 @@ Check whether a handler is currently registered for a given job ID.
 |---|---|---|
 | `id` | `string` | Job ID to check |
 
-**Returns:** `boolean` -- `true` if a handler is registered, `false` otherwise.
+**Returns:** `Promise<boolean>` -- resolves `true` if a handler is registered.
+
+::: danger AWAIT this
+Every `ctx.cron` method crosses an RPC, so all three return promises. This one was
+**typed as a bare `boolean`** until 2026-08-11, and the example on this page was the
+un-awaited guard below -- which is **always true**, because a Promise is never falsy.
+Any plugin that copied it re-registered every time, or skipped the branch entirely.
+
+```typescript
+// WRONG -- this condition can never be false
+if (!ctx.cron.isRegistered('sync-data')) { /* dead code */ }
+```
+:::
 
 **Example:**
 
 ```typescript
-if (!ctx.cron.isRegistered('sync-data')) {
-  ctx.cron.register('sync-data', '0 */6 * * *', syncHandler)
+if (!(await ctx.cron.isRegistered('sync-data'))) {
+  await ctx.cron.register('sync-data', '0 */6 * * *', syncHandler)
 }
 ```
 

@@ -5,14 +5,33 @@ export interface QueryOptions {
   offset?: number
 }
 
+/**
+ * One row in your plugin's sidebar list.
+ *
+ * **`status` is REQUIRED**, and getting that wrong was expensive: the host
+ * validates the whole array against its push schema and, on any failure, logs a
+ * warning and DROPS THE ENTIRE BATCH — it never throws and never returns an
+ * error. So an item missing `status` made `setItems` resolve successfully while
+ * nothing reached the sidebar. This type declared it optional.
+ *
+ * At most 200 items per call from a webview; over that the call is rejected.
+ */
 export interface SidebarItem {
   id: string
   title: string
-  status?: string
+  /** Required. Free-form, up to 200 chars — e.g. `'3 failing'`, `'idle'`. */
+  status: string
+  subtitle?: string
   needsYou?: boolean
+  /** 0-100. */
   progress?: number
   currentStep?: number
   totalSteps?: number
+  /** Up to 5 chars, e.g. `'A+'`. */
+  grade?: string
+  /** 0-100. */
+  score?: number
+  lastScanDate?: string
 }
 
 export interface CliRequest {
@@ -89,7 +108,20 @@ export interface PluginLogger {
 
 export interface PluginEvents {
   emit(channel: string, data: unknown): void
-  on(channel: string, handler: (data: unknown) => void): () => void
+  /**
+   * Subscribe to a channel.
+   *
+   * **On the BACKEND this returns nothing.** It was typed `() => void`, so
+   * `const off = ctx.events.on(...); off()` type-checked and threw
+   * `TypeError: off is not a function`. There is no unsubscribe path at all on
+   * this surface — no `events.off`, no unsubscribe message in the worker
+   * protocol, and the handler set is append-only — so a subscription lives
+   * until the worker exits. Guard inside your handler instead.
+   *
+   * The WEBVIEW surface genuinely does return an unsubscribe; `BridgeEvents`
+   * narrows this member to say so.
+   */
+  on(channel: string, handler: (data: unknown) => void): void
 }
 
 /**
@@ -244,10 +276,24 @@ export interface PluginHttp {
   fetch(url: string, options?: RequestInit): Promise<Response>
 }
 
+/**
+ * Schedule recurring work. Requires the `cron` permission.
+ *
+ * Every method here crosses an RPC, so all three return promises — they were
+ * typed `void`/`boolean`. That is not cosmetic:
+ *
+ * - `register` REJECTS on an empty id or an invalid cron expression. Typed as
+ *   `void`, nothing awaited it, so an invalid schedule became an unhandled
+ *   rejection in the host log and the job simply never ran.
+ * - `isRegistered` was typed as a bare `boolean` while returning a Promise, so
+ *   `if (ctx.cron.isRegistered(id))` was **always truthy** — a Promise object is
+ *   never falsy. Every guarded re-register path built on it was dead code.
+ */
 export interface PluginCron {
-  register(id: string, schedule: string, handler: () => Promise<void>): void
-  unregister(id: string): void
-  isRegistered(id: string): boolean
+  register(id: string, schedule: string, handler: () => Promise<void>): Promise<void>
+  unregister(id: string): Promise<void>
+  /** Await this. See the note above — the old `boolean` made every guard true. */
+  isRegistered(id: string): Promise<boolean>
 }
 
 export interface PluginCli {
@@ -256,13 +302,40 @@ export interface PluginCli {
 }
 
 export interface PluginSidebar {
-  setBadge(count: number): void
+  /**
+   * `null` CLEARS the badge, and a short string is allowed for a non-numeric
+   * marker — both were unspellable while this took `number` alone.
+   *
+   * Requires the `notifications` permission (`setItems` does not). Since the
+   * call returns a promise nothing awaits, a denial surfaces as an unhandled
+   * rejection in the host log rather than at your call site.
+   */
+  setBadge(count: number | string | null): void
+  /** At most 200 items; a longer array is rejected outright. */
   setItems(items: SidebarItem[]): void
 }
 
+/**
+ * Toasts and OS notifications. Requires the `notifications` permission — which
+ * this type never mentioned, and which matters more than usual here: the call
+ * returns a promise the SDK types as `void`, so a permission denial surfaces as
+ * an unhandled rejection in the log rather than at your call site.
+ *
+ * A malformed payload is dropped with a warning host-side, never thrown.
+ */
 export interface PluginToast {
-  show(opts: { type: 'success' | 'error' | 'info'; message: string }): void
-  notify(opts: { title: string; body: string }): void
+  /**
+   * `type` is OPTIONAL and includes `'warning'`, which this type omitted — a
+   * `'warning'` toast was unspellable and any 4th value was silently discarded.
+   */
+  show(opts: {
+    message: string
+    type?: 'info' | 'success' | 'warning' | 'error'
+    /** Up to 60000. */
+    durationMs?: number
+  }): void
+  /** `body` is optional host-side. */
+  notify(opts: { title: string; body?: string }): void
 }
 
 export interface PluginAuthUser {
@@ -295,39 +368,109 @@ export interface PluginAuth {
   ): Promise<PluginAuthSession | null>
 }
 
+/**
+ * One row your plugin contributes to AMC's unified inbox.
+ *
+ * **`timestamp` is REQUIRED** — it is what the inbox orders on, and the plugin
+ * owns recency. As with {@link SidebarItem}, a shape failure makes the host log
+ * a warning and drop the WHOLE batch silently rather than throwing, so an item
+ * without a timestamp meant `setItems` resolved and nothing appeared.
+ *
+ * `body`, `icon`, `priority`, `actionLabel` and `actionId` were declared here
+ * and have never existed host-side; the real optional fields are `subtitle` and
+ * `dotColor`. Sending the old shape is what triggered the silent drop.
+ */
 export interface InboxItem {
   id: string
   title: string
-  body?: string
-  icon?: string
-  priority?: 'low' | 'normal' | 'high'
-  actionLabel?: string
-  actionId?: string
-  timestamp?: string
+  /** Required ISO timestamp — the inbox's sort key. */
+  timestamp: string
+  subtitle?: string
+  /** Overrides the per-source dot colour. */
+  dotColor?: string
 }
 
 export interface PluginInbox {
+  /** At most 500 items. Replaces this plugin's whole set. */
   setItems(items: InboxItem[]): Promise<void>
+  /**
+   * Raise a one-off alert, independent of the `setItems` list.
+   *
+   * `body` is markdown. `dedupKey` suppresses repeats and is namespaced to your
+   * plugin host-side, so it cannot collide with another plugin's.
+   */
+  postAlert(opts: { title: string; body: string; dedupKey?: string }): Promise<void>
 }
 
-export interface RecordingHandle {
-  recordingId: string
+/**
+ * Outcome of {@link PluginRecording.start}.
+ *
+ * A REFUSAL IS NOT A REJECTION. The recorder being off, already busy,
+ * rate-limited, or the user dismissing the native confirm all RESOLVE with
+ * `{ ok: false, error }`. So `await start()` succeeding tells you nothing —
+ * branch on `ok` before touching `recordingId`.
+ */
+export type RecordingStartResult =
+  | { ok: true; recordingId: string }
+  | { ok: false; error: string }
+
+/** Outcome of {@link PluginRecording.stop}. Also resolves rather than rejecting. */
+export interface RecordingStopResult {
+  ok: boolean
+  error?: string
 }
 
+/**
+ * The redacted view a plugin gets of one recording.
+ *
+ * Deliberately carries NO file path, share token, or transcript — the host
+ * redacts them, so there is no field here to reach them through. `filename`,
+ * `sizeBytes` and `createdAt` were previously declared and never existed;
+ * `startedAt` is the field that was meant by `createdAt`.
+ */
 export interface Recording {
   id: string
-  filename: string
+  status: string
   durationMs: number
-  createdAt: string
-  sizeBytes: number
+  sourceType: string
+  sourceLabel: string
+  startedAt: string
+  /** `null` while still recording. */
+  endedAt: string | null
 }
 
+/**
+ * Start and stop screen recordings, mediated entirely host-side.
+ * Requires the `recording` permission (Tier-1 elevated).
+ *
+ * The plugin never chooses a capture source, never receives frames or file
+ * descriptors, and cannot delete or share a recording — `getShareUrl` and
+ * `delete` were declared by earlier versions of this SDK and have never existed
+ * host-side. They are deliberate non-capabilities, not missing wiring.
+ *
+ * Every `start` requires a fresh native confirm the plugin cannot bypass, and
+ * `list`/`get` only ever return recordings THIS plugin started.
+ */
 export interface PluginRecording {
-  start(options?: { source?: 'screen' | 'window' | 'tab' }): Promise<RecordingHandle>
-  stop(handle: RecordingHandle): Promise<{ recordingId: string }>
+  /**
+   * Begin recording. Takes no arguments: the host owns source selection and
+   * discards anything passed. Resolves a discriminated result — see
+   * {@link RecordingStartResult}.
+   */
+  start(): Promise<RecordingStartResult>
+  /**
+   * Stop a recording by its ID — a BARE STRING, not a handle object. Passing an
+   * object resolves `{ ok: false }` silently rather than throwing, so this is a
+   * mistake nothing surfaces at runtime.
+   *
+   * Only works for a recording this plugin started AND that is still the
+   * active one.
+   */
+  stop(recordingId: string): Promise<RecordingStopResult>
+  /** Recordings this plugin started. `[]` when there are none. */
   list(): Promise<Recording[]>
-  getShareUrl(recordingId: string): Promise<string>
-  delete(recordingId: string): Promise<void>
+  /** `null` — never a throw — for an unknown or non-owned id. */
+  get(recordingId: string): Promise<Recording | null>
 }
 
 /** Base64 MP3 returned by `ctx.tts.synthesize()`. Play it in the webview via a data: URL. */
@@ -449,8 +592,22 @@ export interface SpendWindow {
   codingValue: number
   /** Total metered background-feature spend, plan-covered and real combined. */
   backgroundTotal: number
-  /** The real out-of-pocket slice of `backgroundTotal` (billed to a real API key). */
+  /**
+   * The real out-of-pocket slice of `backgroundTotal` (billed to a real API
+   * key). This is the BACKGROUND slice ONLY.
+   *
+   * **A window's total real money is `outOfPocket + codingOutOfPocket`.** The
+   * SDK omitted the second term entirely, so anything reporting `outOfPocket`
+   * as "what this cost me" UNDER-REPORTED actual spend.
+   */
   outOfPocket: number
+  /**
+   * The real out-of-pocket slice of CODING sessions — billed to an own-key
+   * metered vendor or a real Anthropic API key. Disjoint from `outOfPocket`,
+   * and zero when all coding ran on a subscription. Never fold it into
+   * `outOfPocket`; add it.
+   */
+  codingOutOfPocket: number
 }
 
 /** One engine's coding line in the yesterday drill-down. */
@@ -458,6 +615,9 @@ export interface SpendEngineLine {
   engine: string
   value: number
   sessions: number
+  /** True when this engine's spend is real money (own API key) rather than
+   *  subscription-covered. Drives the report's per-engine key marker. */
+  outOfPocket: boolean
 }
 
 /** One background-feature line in the yesterday drill-down. */
@@ -584,184 +744,220 @@ export interface WorkspaceGlobOpts {
   includeWorktrees?: boolean
 }
 
+/** One project this plugin currently holds a runtime grant for. */
+export interface WorkspaceProjectRef {
+  projectId: string
+  name: string
+}
+
 /**
- * Polled state of one `exec()` job, as returned by `execStatus()`.
+ * Per-handle outcome of one `writeFiles()` entry.
  *
- * - `chunk` is console output produced since the `since` cursor passed in, not
- *   the whole run's output to date.
- * - `truncated` is true once the on-disk cap for this job's output is hit; the
- *   head and tail are retained and the middle is dropped.
- * - `'idle-timeout'` reflects that exec has no wall-clock cap — a run is only
- *   killed after a period of no output, so a legitimately slow suite is not
- *   killed at the same threshold as a deadlocked one.
+ * A batch is NOT atomic and one bad handle does not fail the others: each entry
+ * independently reports `{ ok: true }` or `{ error }`. So a resolved promise is
+ * not evidence every write landed — check each element.
  */
-export interface WorkspaceExecStatus {
-  state: 'running' | 'exited' | 'cancelled' | 'idle-timeout'
+export type WorkspaceWriteFilesResult = { handle: WorkspaceHandle } & (
+  | { ok: true }
+  | { error: string }
+)
+
+/**
+ * The finished result of one `run()`, as returned by the host.
+ *
+ * `run` is BLOCKING and resolves once, so there is no job id and nothing to
+ * poll. It also never rejects for an ordinary command failure: a non-zero exit,
+ * a spawn failure and a timeout all resolve with this object, so branch on
+ * `exitCode` / `timedOut` rather than reaching for `catch`.
+ *
+ * - `exitCode` is `null` when the command timed out or could not be spawned.
+ * - `stdout` / `stderr` are each capped at 1 MiB host-side. On a timeout the
+ *   host appends `\n[timed out]` to `stderr`.
+ * - `silent` is true only when the command ran WITHOUT raising the user's
+ *   confirm dialog — see {@link WorkspaceApi.run}.
+ */
+export interface WorkspaceExecResult {
   exitCode: number | null
-  chunk: string
-  cursor: number
-  truncated: boolean
+  stdout: string
+  stderr: string
+  silent: boolean
+  timedOut: boolean
+}
+
+/** The one argument to {@link WorkspaceApi.run}. */
+export interface WorkspaceRunRequest {
+  scope: WorkspaceScope
+  /**
+   * A bare command NAME, not a shell line — e.g. `'git'`. 1–128 characters.
+   * The host resolves it against a PATH deliberately filtered to exclude the
+   * project itself and any `node_modules/.bin`, so a repo cannot shadow a
+   * system binary with its own.
+   */
+  command: string
+  /** Up to 64 entries, each ≤1024 characters. Passed as argv with
+   *  `shell: false` — never concatenated into a shell string. */
+  args: string[]
+  /**
+   * Wall-clock budget. The host validates 1000–120000, then clamps the accepted
+   * value to 5000–120000; omitted or invalid means 30000. On expiry the whole
+   * process TREE is killed and the call resolves with `timedOut: true`.
+   */
+  timeoutMs?: number
 }
 
 /**
- * A CURSOR read of one `exec()` job's JSONL results stream, as returned by
- * `execResults()` — not a whole-artifact read. There is deliberately no
- * `execArtifact`: no end-of-run blob survives an interrupted run, so a cursor
- * read is the only durable read that exists.
+ * Read, write, and run commands against the user's real project checkouts and
+ * worktrees, scoped per project by a runtime grant the user makes (and can
+ * revoke) independently of the install-time permission; a worktree inherits its
+ * project's grant.
  *
- * - `lines` holds whole JSONL records only. A partial trailing line is held
- *   back host-side until it completes — you will never see one here.
- */
-export interface WorkspaceExecResults {
-  lines: string[]
-  cursor: number
-  truncated: boolean
-}
-
-/**
- * A user-approved binding of a base command to one (project, package) pair, as
- * returned by `listBindings()`. There is no setter for this type anywhere in
- * `WorkspaceApi` — see `WorkspaceApi.requestBinding()`.
- */
-export interface WorkspaceBinding {
-  /** Relative to the project root. `''` means the root package. */
-  packagePath: string
-  /** The user's own, verbatim base command text, e.g. `'npm test'`. */
-  baseCommand: string
-  /** User override of the auto-detected runner adapter; `null` when
-   *  auto-detection applies. */
-  adapterOverride: string | null
-  /** Recomputed whenever `baseCommand`, the resolved adapter, or the plugin
-   *  version changes; downstream caches key on it, so a rebind invalidates
-   *  them implicitly. */
-  bindingHash: string
-  acceptedAt: string
-}
-
-/** Outcome of `WorkspaceApi.requestBinding()`. */
-export type WorkspaceBindingResult =
-  | { accepted: true; binding: WorkspaceBinding }
-  | { accepted: false }
-
-/**
- * Read, write, and run test/build commands against the user's real project
- * checkouts and worktrees, scoped per project by a runtime grant the user makes
- * (and can revoke) independently of the install-time permission below; a
- * worktree inherits its project's grant.
+ * **Backend only.** There is no `AgentMC.workspace`: the host routes the whole
+ * namespace to plugin worker backends and its webview case throws
+ * `workspace is not available through the plugin webview bridge yet`.
  *
- * **NOT YET IMPLEMENTED BY THE HOST.** No host-side `workspace` namespace exists
- * on any branch as of 2026-08-04 (host `master@9c21044ee0`) — every method on
- * this interface currently rejects at runtime with `Unknown namespace:
- * "workspace"`. Declaring `workspace.*` permissions in a manifest and passing
- * `amc-plugin preflight` validates SHAPE only; neither is evidence the host
- * supports this capability yet.
+ * Gated by three permissions, split per method GROUP below. They are NOT
+ * hierarchical and none implies another — the host rejects a manifest that asks
+ * for `workspace.write` or `workspace.exec` without also listing
+ * `workspace.read` explicitly, rather than inferring it, so that the consent
+ * card the user reads matches the permission array a plugin actually holds.
  *
- * Gated by three hierarchical permissions, split per method group below:
- * `workspace.read`, `workspace.write` (implies read), `workspace.exec`.
- * Discovery methods need none of the three beyond holding any `workspace.*`
- * permission at all — without them the plugin cannot construct its first handle.
+ * Note the discovery methods need `workspace.read` specifically. An earlier
+ * version of this comment claimed they needed only "any `workspace.*`"; the
+ * host gates all four on `workspace.read` like every other read.
  *
- * Transcribed from "The interface" in the Test Tracker plugin spec
- * (test-tracker-plugin repo, `docs/spec/01-capabilities.md`), which
- * remains the source of truth if this file and that document ever disagree.
+ * Three contracts matter and none is visible in the signatures:
  *
- * Three contracts matter most and none of them are visible in the signatures:
+ * - **Every negative answer looks identical.** The host collapses almost all
+ *   refusals into one string, `That file is not available to this plugin.`, so
+ *   a revoked grant, a path outside the scope and a genuinely missing file are
+ *   deliberately indistinguishable. Do not branch on the message.
+ * - **Some methods are single-flight per (plugin, method, project).** `glob`,
+ *   `listWorktrees`, `readFiles`, `writeFiles` and `run` reject a second
+ *   concurrent call with `workspace.<m> is already running for this plugin.`,
+ *   so `Promise.all` over two globs of the same project fails. Sequence them.
+ * - **A batch is not atomic.** `writeFiles` reports success per entry and one
+ *   failure does not roll back or stop the rest.
  *
- * - In `exec()`, a list-valued entry in `vars` expands to N argv entries
- *   host-side — or ZERO entries when the list is empty. Values are never
- *   concatenated into a shell string; there is no shell.
- * - `execResults` is a CURSOR read of a JSONL stream, not a whole-artifact
- *   read. `lines` holds whole JSONL records only, never a partial line. There
- *   is deliberately no `execArtifact`: no end-of-run blob survives an
- *   interrupted run, so the cursor read is the only durable read that exists.
- * - There is deliberately NO method anywhere on this interface that writes,
- *   sets, or creates a command binding — `requestBinding` itself carries no
- *   command text, not at exec time and not even as a suggested default. The
- *   user binds a base command to a (project, package) pair by editing the
- *   host's own proposal, and the host appends the slot's manifest-static args
- *   at exec time. This is what closes command injection by construction:
- *   there is no plugin-supplied string for anything to inject into.
+ * Derived from the host's own `WORKSPACE_SCHEMAS` (bridge-method-schemas.ts),
+ * `plugin-permission-map.ts` and `workspace-methods.ts` at
+ * `origin/master@8722cc3fca`. That code is the source of truth; an earlier
+ * revision of this interface was transcribed from an unimplemented spec and
+ * invented six methods the host has never had.
  */
 export interface WorkspaceApi {
-  // ── discovery — no permission beyond holding any workspace.* ──
-  /** Projects this plugin currently holds a runtime grant for. */
-  listProjects(): Promise<Array<{ projectId: string; name: string }>>
+  // ── discovery — workspace.read ──
+  /** Projects this plugin currently holds a runtime grant for — NOT every
+   *  project the user has. */
+  listProjects(): Promise<WorkspaceProjectRef[]>
   /** Blocking and live — reflects the filesystem and running sessions at call
    *  time, not a cached snapshot. */
   listWorktrees(projectId: string): Promise<WorktreeInfo[]>
-  /** Opens the host's project-grant picker. Resolves with the resulting set of
-   *  projects this plugin can reach, unchanged if the user declines. */
-  requestAccess(): Promise<Array<{ projectId: string; name: string }>>
+  /**
+   * Opens the host's project-grant picker.
+   *
+   * Resolves with ONLY the project the user just granted (a one-element array),
+   * or `[]` if they cancelled — it is not a read of the full grant set, so do
+   * not treat the result as "everything I can now reach". Call
+   * {@link listProjects} for that.
+   */
+  requestAccess(): Promise<WorkspaceProjectRef[]>
   /** The only door an absolute path enters by. `null` when the path falls
-   *  outside every project and worktree this plugin can currently reach. */
+   *  outside every project and worktree this plugin can currently reach — and
+   *  also `null`, rather than a throw, when the plugin lacks `workspace.read`. */
   resolve(absolutePath: string): Promise<WorkspaceHandle | null>
 
   // ── workspace.read ──
+  /**
+   * `patterns` must hold at least ONE pattern (and at most 32, each ≤256
+   * chars); an empty array is rejected host-side. `exclude` is capped at 32
+   * entries and ADDS to the host's defaults rather than replacing them.
+   *
+   * Results are silently truncated at the host's walker cap — a short list is
+   * not reliably a complete one, and nothing in the return signals it.
+   */
   glob(
     s: WorkspaceScope,
     patterns: string[],
     o?: WorkspaceGlobOpts
   ): Promise<WorkspaceEntry[]>
+  /** `size` is `0` for a directory. */
   stat(h: WorkspaceHandle): Promise<WorkspaceEntry | null>
+  /** Never throws — a refused or missing path is simply `false`. */
   exists(h: WorkspaceHandle): Promise<boolean>
-  /** `encoding` is reserved for future binary support; unused in v1, which is
-   *  UTF-8 text only. If passed, `'utf-8'` is the only legal value. */
+  /** UTF-8 text only; the host also accepts `'utf8'` for this option but
+   *  `'utf-8'` is the spelling to prefer. Rejects above a 64 MiB single-file cap. */
   readFile(h: WorkspaceHandle, o?: { encoding?: 'utf-8' }): Promise<string>
-  /** Chunked host-side at 500 files / ~4.8 MB per call — a large batch takes
-   *  several round trips transparently, well inside the 240 s RPC timeout. */
+  /**
+   * Batch read. There is NO transparent chunking: at most 256 handles per call
+   * (rejected outright above that), 32 MiB total, and 8 MiB per file — a file
+   * over its cap yields an `{ error }` entry rather than failing the batch.
+   * Split larger batches yourself.
+   */
   readFiles(
     hs: WorkspaceHandle[]
   ): Promise<Array<{ handle: WorkspaceHandle } & ({ content: string } | { error: string })>>
-  /** No setter for this type exists anywhere in this API — see `requestBinding()`. */
-  listBindings(s: WorkspaceScope): Promise<WorkspaceBinding[]>
 
-  // ── workspace.write (implies read) ──
+  // ── workspace.write ──
   /**
-   * `expectedMtimeMs` is a required compare-and-swap token: `null` means the
-   * file must NOT already exist. It closes both torn writes and lost updates,
-   * and costs nothing to obtain because `glob()` already returned it.
-   * `encoding` is reserved for future binary support and unused in v1 (UTF-8
-   * text only).
+   * Overwrite (or create) one file, up to 8 MiB.
+   *
+   * There is deliberately no compare-and-swap: the host has no
+   * `expectedMtimeMs` concept, so this is a last-writer-wins overwrite. If you
+   * need to avoid clobbering a concurrent edit, `stat()` first and accept the
+   * race — the SDK cannot close it for you.
    */
-  writeFile(
-    h: WorkspaceHandle,
-    content: string,
-    o: { expectedMtimeMs: number | null; encoding?: 'utf-8' }
-  ): Promise<{ mtimeMs: number }>
-  /** `expectedMtimeMs` is the same required compare-and-swap token as
-   *  `writeFile` — it must match the file's current `mtimeMs` or this rejects. */
-  deleteFile(h: WorkspaceHandle, o: { expectedMtimeMs: number }): Promise<void>
+  writeFile(h: WorkspaceHandle, content: string): Promise<void>
+  /** Up to 64 entries, 16 MiB total. Per-entry outcomes; NOT atomic. */
+  writeFiles(
+    batch: Array<{ handle: WorkspaceHandle; content: string }>
+  ): Promise<WorkspaceWriteFilesResult[]>
+  /** Creates ONE directory. Not recursive — the parent must already exist. */
+  mkdir(h: WorkspaceHandle): Promise<void>
+  /**
+   * Delete one file. Gated on `workspace.write`; there is no separate delete
+   * permission.
+   *
+   * For a file the plugin did not itself create, the host raises a native
+   * confirm the plugin cannot bypass; files it created delete silently.
+   */
+  deleteFile(h: WorkspaceHandle): Promise<void>
 
   // ── workspace.exec ──
-  /** Carries NO command text — not even as a suggested default. The host reads
-   *  the package's own `test` script and shows that as the editable proposal
-   *  in its own modal; the plugin supplies nothing beyond which package to bind. */
-  requestBinding(s: WorkspaceScope, packagePath: string): Promise<WorkspaceBindingResult>
   /**
-   * Runs a manifest-declared command slot for this scope. The host allows at
-   * most one running job per (project, worktree); calling this again on the
-   * same scope before the prior job finishes or is cancelled rejects host-side.
+   * Run ONE bounded command in a granted project and wait for it to finish.
    *
-   * A list-valued entry in `vars` expands to N argv entries host-side, or ZERO
-   * when the list is empty — values are never concatenated into a shell
-   * string. Host-reserved placeholders in the slot's arg template (e.g.
-   * `{outFile}`) are substituted by the host itself and never sourced from
-   * `vars`.
+   * Blocking and single-shot: it resolves with the whole result, so there is no
+   * job id, no polling, no streamed output and no cancel. It also does not
+   * reject on a failed command — a non-zero exit, a spawn failure and a timeout
+   * all RESOLVE with a {@link WorkspaceExecResult}.
+   *
+   * **Almost every call raises a confirm dialog.** The host runs silently only
+   * for an exact allow-list match — today `git status --porcelain` and
+   * `git status --short` — and prompts the user with the command, args and cwd
+   * for anything else. If no confirm can be shown the call is REFUSED, so this
+   * can never run unattended.
+   *
+   * The plugin supplies `command` and `args` directly. There is no manifest
+   * command-slot indirection: injection is closed instead by `shell: false`, a
+   * filtered PATH, and that confirm.
    */
-  exec(
-    s: WorkspaceScope,
-    slot: string,
-    vars?: Record<string, string | string[]>
-  ): Promise<{ jobId: string }>
-  execStatus(jobId: string, o?: { since?: number }): Promise<WorkspaceExecStatus>
-  /** A cursor read, not a whole-artifact read — see `WorkspaceExecResults`. */
-  execResults(jobId: string, o?: { since?: number }): Promise<WorkspaceExecResults>
-  execCancel(jobId: string): Promise<void>
+  run(request: WorkspaceRunRequest): Promise<WorkspaceExecResult>
 }
 
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
+  /**
+   * AMC's userData ROOT — **not** your plugin's own directory, and NOT the root
+   * `ctx.fs` is scoped to.
+   *
+   * Every plugin gets the same string here, while `ctx.fs` resolves relative
+   * paths under `<userData>/plugins/<pluginId>/data`. So
+   * `ctx.fs.readFile(path.join(ctx.dataDir, 'x.json'))` throws
+   * `Path escapes the plugin data directory` — the absolute path lands outside
+   * the fs sandbox. Pass `ctx.fs` plain relative paths and ignore this field
+   * unless you genuinely want the app-level location.
+   */
   dataDir: string
   storage: PluginStorage
   secrets: PluginSecrets
@@ -780,10 +976,19 @@ export interface PluginContext {
   inbox: PluginInbox
   auth: PluginAuth
   recording: PluginRecording
-  tts: PluginTts
-  sessionHistory: PluginSessionHistory
-  firebase: PluginFirebase
   spend: PluginSpend
+  // NOTE: `tts`, `sessionHistory` and `firebase` are deliberately ABSENT.
+  //
+  // All three are real capabilities, but they live on the WEBVIEW bridge only —
+  // the host builds its backend context without them, so `ctx.tts` was
+  // `undefined` and `await ctx.tts.isAvailable()` threw
+  // `TypeError: Cannot read properties of undefined` at activation rather than
+  // producing a permission error. Their permission rows exist for worker-host
+  // bookkeeping; a row is not a namespace.
+  //
+  // Reach them from your webview through `AgentMC.tts` / `AgentMC.sessionHistory`
+  // / `AgentMC.firebase` (see ./bridge.ts), and bridge to your backend with
+  // `ctx.events` if the result has to cross surfaces.
   /**
    * NOT YET IMPLEMENTED BY THE HOST — see {@link WorkspaceApi}. Typed so a
    * plugin can be authored and packaged against it; every call currently

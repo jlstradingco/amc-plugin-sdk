@@ -303,11 +303,14 @@ describe('tool content markers', () => {
 })
 
 describe('the mock refuses to fake ctx.workspace', () => {
-  // The whole point. `ctx.events` was mocked as a live EventEmitter, so plugin
-  // tests passed for months while the production path was dead in BOTH
-  // directions — and the host's own contract doc asserted the opposite. A mock
-  // that fakes an unimplemented capability manufactures exactly that false
-  // confidence, so this one rejects instead.
+  // `ctx.events` was mocked as a live EventEmitter, so plugin tests passed for
+  // months while the production path was dead in BOTH directions. A mock that
+  // fakes a capability it cannot faithfully model manufactures exactly that
+  // false confidence, so this one rejects instead.
+  //
+  // The REASON changed on 2026-08-11: the host does implement workspace now, so
+  // the refusal is no longer "there is no such namespace" but "the grant model,
+  // native confirms and single-flight limits are not reproducible in-memory".
   const ws = () => createTestContext().ctx.workspace
 
   it('exposes workspace as an own enumerable key (the parity guard reads Object.keys)', () => {
@@ -324,21 +327,23 @@ describe('the mock refuses to fake ctx.workspace', () => {
     'exists',
     'readFile',
     'readFiles',
-    'listBindings',
     'writeFile',
+    'writeFiles',
+    'mkdir',
     'deleteFile',
-    'requestBinding',
-    'exec',
-    'execStatus',
-    'execResults',
-    'execCancel',
+    'run',
   ] as const)('rejects %s', async (method) => {
     const fn = ws()[method] as (...args: unknown[]) => Promise<unknown>
-    await expect(fn()).rejects.toThrow(/not implemented by the AMC host/i)
+    await expect(fn()).rejects.toThrow(/does not\s+fake it/i)
   })
 
-  it('names the real runtime failure so the message is actionable', async () => {
-    await expect(ws().listProjects()).rejects.toThrow(/Unknown namespace/)
+  it('does NOT claim the host is missing the namespace, because it is not', async () => {
+    // Regression guard for the six days this mock told authors `ctx.workspace`
+    // was unimplemented after the host had shipped it. A refusal message is
+    // documentation; a wrong one sends people to build a workaround they do not
+    // need.
+    await expect(ws().listProjects()).rejects.toThrow(/implemented by the AMC host/i)
+    await expect(ws().listProjects()).rejects.not.toThrow(/Unknown namespace/)
   })
 })
 
@@ -355,23 +360,26 @@ describe('an author can actually write against the typed surface', () => {
     const calls: Array<Promise<unknown>> = [
       ctx.workspace.glob(scope, ['**/*.test.ts'], { includeIgnored: false }),
       ctx.workspace.stat(handle),
+      ctx.workspace.exists(handle),
       ctx.workspace.readFile(handle),
       ctx.workspace.readFiles([handle]),
-      ctx.workspace.writeFile(handle, 'contents', { expectedMtimeMs: null }),
-      ctx.workspace.deleteFile(handle, { expectedMtimeMs: 1 }),
-      ctx.workspace.listBindings(scope),
-      ctx.workspace.requestBinding(scope, 'packages/core'),
-      // The list-valued var is the load-bearing shape: it expands to N argv
-      // entries host-side.
-      ctx.workspace.exec(scope, 'vitest.run', { files: ['a.test.ts', 'b.test.ts'], name: 'x' }),
-      ctx.workspace.execStatus('job-1', { since: 0 }),
-      ctx.workspace.execResults('job-1', { since: 0 }),
-      ctx.workspace.execCancel('job-1'),
+      // Two args, not three: the host has no expectedMtimeMs compare-and-swap.
+      ctx.workspace.writeFile(handle, 'contents'),
+      ctx.workspace.writeFiles([{ handle, content: 'contents' }]),
+      ctx.workspace.mkdir(handle),
+      // One arg: deleteFile carries no CAS token either.
+      ctx.workspace.deleteFile(handle),
+      // The plugin supplies command + argv DIRECTLY — there is no manifest
+      // command-slot indirection, so this is the shape that must compile.
+      ctx.workspace.run({ scope, command: 'git', args: ['status', '--porcelain'] }),
+      ctx.workspace.run({ scope, command: 'npm', args: ['test'], timeoutMs: 60_000 }),
       ctx.workspace.resolve('/abs/path'),
       ctx.workspace.listWorktrees('p1'),
+      ctx.workspace.listProjects(),
+      ctx.workspace.requestAccess(),
     ]
 
-    // Every one of them rejects, because the host has no workspace namespace.
+    // Every one rejects — the harness declines to fake the capability.
     const settled = await Promise.allSettled(calls)
     expect(settled.every((s) => s.status === 'rejected')).toBe(true)
   })
@@ -384,12 +392,19 @@ describe('an author can actually write against the typed surface', () => {
   })
 })
 
-describe('the binding surface has no setter', () => {
-  it('declares no method that writes a command binding', () => {
-    // The capability's core security property: the plugin never supplies a
-    // command string, at exec time or as a proposal. Today that rests on
-    // absence-of-code, which no other test would notice — a well-meaning
-    // "add setBinding for symmetry" PR would pass everything else.
+describe('the typed surface matches the host method set exactly', () => {
+  it('declares the host\'s 14 methods and none of the spec-only ones', () => {
+    // This block used to assert a security property that no longer exists: that
+    // the plugin never supplies a command string, enforced by a binding model
+    // (`listBindings` / `requestBinding`) with no setter. The host implemented
+    // `ctx.workspace` differently — `run` takes `command` and `args` from the
+    // plugin directly — so injection is closed by `shell: false`, a filtered
+    // PATH and a native confirm instead. Asserting the old property here would
+    // pin a design the host rejected.
+    //
+    // What is worth pinning is the METHOD SET, because that is what went wrong:
+    // the SDK carried six methods transcribed from an unimplemented spec while
+    // missing three the host shipped.
     const source = fs.readFileSync(path.join(here, '..', 'types', 'context.ts'), 'utf-8')
     const api = source.slice(source.indexOf('interface WorkspaceApi'))
     const body = api.slice(0, api.indexOf('\n}'))
@@ -403,19 +418,38 @@ describe('the binding surface has no setter', () => {
     // fired for real during the build, when the interface had not landed yet.
     expect(methods.length).toBeGreaterThan(0)
 
-    // THE SECURITY ASSERTION. An allowlist, not a denylist: naming a handful of
-    // forbidden spellings would let a setter called `bindCommand`,
-    // `acceptBinding` or `saveBinding` straight through. The plugin never
-    // supplies a command string, so there must be exactly two binding methods —
-    // one that ASKS the host to open its own modal, and one that READS.
-    //
-    // Matched on /bind/i, not /binding/i, deliberately: `bindCommand` contains
-    // no "binding" and would otherwise slip past the very check written to stop it.
-    const bindingMethods = methods.filter((n) => /bind/i.test(n)).sort()
-    expect(bindingMethods).toEqual(['listBindings', 'requestBinding'])
+    // Generated from the host's WORKSPACE_SCHEMAS at origin/master@8722cc3fca.
+    // Re-derive from the host when it moves; never edit this to match the SDK.
+    expect([...methods].sort()).toEqual(
+      [
+        'deleteFile',
+        'exists',
+        'glob',
+        'listProjects',
+        'listWorktrees',
+        'mkdir',
+        'readFile',
+        'readFiles',
+        'requestAccess',
+        'resolve',
+        'run',
+        'stat',
+        'writeFile',
+        'writeFiles',
+      ].sort()
+    )
 
-    // Tripwire: any change to this interface's size is a reviewed change. Bump
-    // it deliberately when the spec genuinely grows — never to make a red go away.
-    expect(methods).toHaveLength(17)
+    // Explicit tombstones. These six were SDK fiction for a week; naming them
+    // means a copy-paste revival fails loudly rather than passing the count.
+    for (const gone of [
+      'listBindings',
+      'requestBinding',
+      'exec',
+      'execStatus',
+      'execResults',
+      'execCancel',
+    ]) {
+      expect(methods).not.toContain(gone)
+    }
   })
 })
