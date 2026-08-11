@@ -157,7 +157,7 @@ Every plugin requires a `manifest.json` at the project root:
   "settings": [],
   "storage": { "collections": {} },
   "migrations": [],
-  "sdkVersion": "^1.0.0",
+  "sdkVersion": "^2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "My Plugin", "icon": "puzzle" }

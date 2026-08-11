@@ -11,6 +11,22 @@ together.
 
 ## [Unreleased]
 
+### Fixed
+
+- `amc-plugin create` scaffolded new plugins with `sdkVersion: "^1.0.0"` and a
+  `@agent-mc/plugin-sdk: "^1.0.0"` devDependency. That range was deliberately
+  wide while 1.x was current, but `^1.0.0` means `>=1.0.0 <2.0.0` — so from the
+  moment 2.0.0 was published it *excluded* the current major. Every plugin
+  scaffolded by the 2.0.0 CLI resolved to SDK 1.0.7 and immediately hit the
+  1.0.7-era gaps this release exists to fix: the permission enum rejects `tts`,
+  `sessions.readHistory`, `firebase` and `spend`, and a non-strict manifest
+  parse silently strips `ui.hideProjectPanel`. The scaffold floor is now
+  `^2.0.0`, and the docs that document it were moved in step.
+
+  Note this ships inside `@agent-mc/plugin-cli`, so it does not reach anyone
+  until a release is cut. `create` in the published 2.0.0 CLI still scaffolds
+  `^1.0.0`.
+
 ## [2.0.0] - 2026-08-10
 
 **Read this first if you are upgrading from npm: you are on 1.0.7.** Versions

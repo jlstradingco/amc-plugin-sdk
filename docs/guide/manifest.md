@@ -10,7 +10,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
   "settings": [ ... ],
   "storage": { "collections": { ... } },
   "migrations": [ ... ],
-  "sdkVersion": "^1.0.0",
+  "sdkVersion": "^2.0.0",
   "ui": { ... },
   "backend": { ... },
   "permissions": [ ... ],
@@ -25,7 +25,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `settings` | array | Yes | User-configurable settings (can be empty `[]`) |
 | `storage` | object | Yes | Database collection schemas (can be `{ "collections": {} }`) |
 | `migrations` | array | Yes | Schema migration operations (can be empty `[]`) |
-| `sdkVersion` | string | Yes | Required SDK version (e.g. `"^1.0.0"`) |
+| `sdkVersion` | string | Yes | Required SDK version (e.g. `"^2.0.0"`) |
 | `ui` | object | No | UI entry point and sidebar config |
 | `backend` | object | No | Backend entry point and resource limits |
 | `permissions` | array | No | Requested API permissions |
@@ -515,11 +515,11 @@ Declares the SDK version your plugin was built against. AMC uses this for compat
 
 ```json
 {
-  "sdkVersion": "^1.0.0"
+  "sdkVersion": "^2.0.0"
 }
 ```
 
-Use semver range syntax. The scaffolder sets this to `"^1.0.0"` by default.
+Use semver range syntax. The scaffolder sets this to `"^2.0.0"` by default.
 
 ## Complete Examples
 
@@ -540,7 +540,7 @@ Use semver range syntax. The scaffolder sets this to `"^1.0.0"` by default.
   "settings": [],
   "storage": { "collections": {} },
   "migrations": [],
-  "sdkVersion": "^1.0.0",
+  "sdkVersion": "^2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "My Widget", "icon": "layout-dashboard" }
@@ -585,7 +585,7 @@ Use semver range syntax. The scaffolder sets this to `"^1.0.0"` by default.
     }
   },
   "migrations": [],
-  "sdkVersion": "^1.0.0",
+  "sdkVersion": "^2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "Data Sync", "icon": "refresh-cw" }
@@ -650,7 +650,7 @@ Use semver range syntax. The scaffolder sets this to `"^1.0.0"` by default.
     }
   },
   "migrations": [],
-  "sdkVersion": "^1.0.0",
+  "sdkVersion": "^2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "Monitor Suite", "icon": "activity" }

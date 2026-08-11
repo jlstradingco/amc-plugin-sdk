@@ -138,7 +138,7 @@ Expected output:
 
 ```
 PASS: Manifest schema
-PASS: SDK version declared (^1.0.0)
+PASS: SDK version declared (^2.0.0)
 PASS: UI entry point exists
 PASS: TypeScript compilation
 
