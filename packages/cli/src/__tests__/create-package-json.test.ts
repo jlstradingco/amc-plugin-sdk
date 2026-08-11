@@ -28,7 +28,7 @@ describe('buildPackageJson', () => {
     expect(pkg.scripts.dev).toBe('amc-plugin dev')
     expect(pkg.scripts.package).toBe('amc-plugin package')
     expect(pkg.scripts.validate).toBe('amc-plugin validate')
-    expect(pkg.devDependencies['@agent-mc/plugin-sdk']).toBe('^1.0.0')
+    expect(pkg.devDependencies['@agent-mc/plugin-sdk']).toBe('^2.0.0')
     expect(pkg.devDependencies.typescript).toBe('^5.5.0')
   })
 
