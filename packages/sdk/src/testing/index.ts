@@ -26,13 +26,7 @@ import type {
   PluginAiStructuredRequest,
   Recording,
   QueryOptions,
-  HistoryProject,
-  HistorySession,
-  HistoryMessage,
   SessionMessage,
-  FirebaseAccount,
-  FirebaseProject,
-  FirebaseSetupStatus,
   SpendReportBreakdown
 } from '../types/index.js'
 
@@ -81,47 +75,24 @@ export interface TestContextOptions {
     googleIdToken?: string | null
     session?: PluginAuthSession | null
   }
-  /** Override ctx.tts. Unset, TTS reports unavailable and synthesize() rejects — the host's
-   *  behaviour when the user has configured no voice. */
-  tts?: {
-    available?: boolean
-    synthesize?: (text: string) => Promise<{ audioBase64: string; mime: 'audio/mpeg' }>
-  }
-  /**
-   * Seed what the user has granted to ctx.sessionHistory. Defaults to nothing granted,
-   * matching the host's default-deny posture — getMessages() on an unseeded session
-   * throws exactly as the real bridge does.
-   */
-  sessionHistory?: {
-    projects?: HistoryProject[]
-    sessions?: HistorySession[]
-    /** Keyed by session id. Only ids present here are readable. */
-    messages?: Record<string, HistoryMessage[]>
-    /** What requestAccess() resolves to. Defaults to a cancelled grant. */
-    grantResult?: { cancelled?: boolean; sessionIds?: string[]; projectIds?: string[] }
-  }
-  /** Seed ctx.firebase. Every list defaults to empty, like a machine with no Firebase CLI. */
-  firebase?: {
-    accounts?: FirebaseAccount[]
-    projects?: FirebaseProject[]
-    projectsByAccount?: Record<string, FirebaseProject[]>
-    setupStatus?: Partial<FirebaseSetupStatus>
-    /**
-     * What startLogin() reports. Defaults to false, matching the rest of these
-     * defaults: no CLI is installed, so the spawn could not have succeeded.
-     */
-    loginStarts?: boolean
-  }
-  /** Seed ctx.spend.getBreakdown(). Defaults to an all-zero breakdown. */
+  // NOTE: no tts / sessionHistory / firebase seeding options. Those namespaces
+  // are webview-only and are no longer on PluginContext, so an option to seed
+  // them would be accepted and then do nothing.
   spend?: Partial<SpendReportBreakdown>
 }
 
 export interface TestHarness {
   ctx: PluginContext
   /** Captured ctx.toast.show calls. */
-  toasts: Array<{ type: 'success' | 'error' | 'info'; message: string }>
+  toasts: Array<{
+    message: string
+    type?: 'info' | 'success' | 'warning' | 'error'
+    durationMs?: number
+  }>
   /** Captured ctx.toast.notify calls. */
-  notifications: Array<{ title: string; body: string }>
+  notifications: Array<{ title: string; body?: string }>
+  /** Captured ctx.inbox.postAlert calls. */
+  inboxAlerts: Array<{ title: string; body: string; dedupKey?: string }>
   /** Captured ctx.log.* calls. */
   logs: CapturedLog[]
   /** Captured ctx.events.emit calls. */
@@ -284,6 +255,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     sidebarBadge: null,
     sidebarItems: [],
     inboxItems: [],
+    inboxAlerts: [],
     async runCron(id: string) {
       const handler = cronHandlers.get(id)
       if (!handler) throw new Error(`No cron job registered with id "${id}"`)
@@ -463,7 +435,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     },
 
     inbox: {
-      setItems: (items) => { harness.inboxItems = items; return Promise.resolve() }
+      setItems: (items) => { harness.inboxItems = items; return Promise.resolve() },
+      postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve() }
     },
 
     auth: {
@@ -492,73 +465,10 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         Promise.resolve(recordings.find((r) => r.id === recordingId) ?? null)
     },
 
-    tts: {
-      isAvailable: () => Promise.resolve(opts.tts?.available ?? false),
-      synthesize: (text) => {
-        if (opts.tts?.synthesize) return opts.tts.synthesize(text)
-        // Mirrors the host: synthesis without a configured voice throws rather
-        // than returning silent/empty audio.
-        if (!(opts.tts?.available ?? false)) {
-          return Promise.reject(
-            new Error('Text-to-speech is not configured. Add a voice in Settings.')
-          )
-        }
-        return Promise.resolve({
-          audioBase64: Buffer.from(`test-audio:${text}`).toString('base64'),
-          mime: 'audio/mpeg' as const
-        })
-      }
-    },
-
-    sessionHistory: {
-      listProjects: () => Promise.resolve([...(opts.sessionHistory?.projects ?? [])]),
-      listSessions: () => Promise.resolve([...(opts.sessionHistory?.sessions ?? [])]),
-      getMessages: ({ sessionId }) => {
-        const granted = opts.sessionHistory?.messages ?? {}
-        // Default-deny, exactly like the host bridge: an ungranted session is an
-        // error, never an empty array (which would read as "no messages").
-        if (!Object.prototype.hasOwnProperty.call(granted, sessionId)) {
-          return Promise.reject(new Error('session not granted to this plugin'))
-        }
-        return Promise.resolve([...(granted[sessionId] ?? [])])
-      },
-      requestAccess: () => {
-        const seeded = opts.sessionHistory?.grantResult
-        const requestId = `test-history-grant-${crypto.randomUUID().slice(0, 8)}`
-        if (!seeded || seeded.cancelled) {
-          return Promise.resolve({ requestId, cancelled: true, sessionIds: [], projectIds: [] })
-        }
-        return Promise.resolve({
-          requestId,
-          cancelled: false,
-          sessionIds: seeded.sessionIds ?? [],
-          projectIds: seeded.projectIds ?? []
-        })
-      }
-    },
-
-    firebase: {
-      listAccounts: () => Promise.resolve([...(opts.firebase?.accounts ?? [])]),
-      listProjects: () => Promise.resolve([...(opts.firebase?.projects ?? [])]),
-      // Unknown account resolves to [] rather than throwing — the host swallows
-      // every CLI failure into an empty list.
-      listProjectsForAccount: (email) =>
-        Promise.resolve([...(opts.firebase?.projectsByAccount?.[email] ?? [])]),
-      setupStatus: () =>
-        Promise.resolve({
-          cliInstalled: false,
-          signedIn: false,
-          accounts: [],
-          firebaseAccess: 'unknown' as const,
-          billing: { checked: false, hasOpenAccount: false },
-          ...(opts.firebase?.setupStatus ?? {})
-        }),
-      // Defaults false to agree with the dev-shell mock and with the other
-      // defaults here: cliInstalled is false, so a spawn cannot have succeeded.
-      // Returning true made the two mocks disagree about the same host.
-      startLogin: () => Promise.resolve({ started: opts.firebase?.loginStarts ?? false })
-    },
-
+    // NOTE: no `tts`, `sessionHistory` or `firebase` here. All three are
+    // webview-only capabilities that the host does NOT put on a backend ctx, so
+    // mocking them made a plugin test go green against namespaces that are
+    // `undefined` in production. See the note on PluginContext in ../types/context.ts.
     spend: {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
     },

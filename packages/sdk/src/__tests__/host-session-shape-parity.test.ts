@@ -47,11 +47,20 @@ describe(`sessions.create parity (${HOST_SOURCES.sessionBridge}:95-110)`, () => 
     }>()
   })
 
-  it('keeps userInitiated OFF the webview surface, which strips it', () => {
-    // bridge-method-schemas.ts:197-199 is a non-strict zod tuple, so an extra
-    // key never reaches the handler. Declaring it here would swap one silent
-    // wrong answer for another.
-    expectTypeOf<Parameters<BridgeSession['create']>[0]>().toEqualTypeOf<{ prompt?: string }>()
+  it('keeps userInitiated OFF the webview surface, but carries clientRequestId', () => {
+    // The zod tuple is non-strict, so an extra key never reaches the handler —
+    // which is why `userInitiated` stays off this surface. Declaring it here
+    // would swap one silent wrong answer for another.
+    //
+    // `clientRequestId` is the opposite case and this assertion used to PIN its
+    // absence. The host accepts it and treats it as the durable idempotency key:
+    // re-sending the same id short-circuits to the original sessionId instead of
+    // minting a second PAID session. Omitting it from the type made the
+    // documented replay protection unreachable from typed SDK code.
+    expectTypeOf<Parameters<BridgeSession['create']>[0]>().toEqualTypeOf<{
+      prompt?: string
+      clientRequestId?: string
+    }>()
   })
 })
 

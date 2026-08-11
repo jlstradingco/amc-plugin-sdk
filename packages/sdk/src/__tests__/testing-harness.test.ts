@@ -91,8 +91,12 @@ describe('capture surfaces', () => {
     h.ctx.log.info('hello', 1)
     h.ctx.log.error('boom')
     h.ctx.sidebar.setBadge(7)
-    h.ctx.sidebar.setItems([{ id: 's1', title: 'S' }])
-    await h.ctx.inbox.setItems([{ id: 'i1', title: 'I' }])
+    // `status` and `timestamp` are REQUIRED — the host drops the whole batch
+    // silently if either is missing, so the types now insist on them.
+    h.ctx.sidebar.setItems([{ id: 's1', title: 'S', status: 'idle' }])
+    await h.ctx.inbox.setItems([
+      { id: 'i1', title: 'I', timestamp: '2026-08-11T00:00:00.000Z' }
+    ])
     h.ctx.events.emit('ch', { n: 1 })
 
     expect(h.toasts).toEqual([{ type: 'success', message: 'yay' }])
@@ -153,107 +157,15 @@ describe('overridable http / ai / auth', () => {
   })
 })
 
-// The four 1.2.0 namespaces mirror the HOST's real posture rather than being
-// friendly stubs, so a plugin developed against them hits the same branches it
-// will hit in AMC. These pin that posture — a permissive default here would let
-// an author ship code that has never once handled "the user said no".
-describe('createTestContext — the 1.2.0 namespaces', () => {
-  describe('tts', () => {
-    it('is unavailable and rejects synthesis by default', async () => {
-      const h = createTestContext()
-      expect(await h.ctx.tts.isAvailable()).toBe(false)
-      await expect(h.ctx.tts.synthesize('hello')).rejects.toThrow(/not configured/i)
-    })
-
-    it('synthesizes once a voice is configured', async () => {
-      const h = createTestContext({ tts: { available: true } })
-      expect(await h.ctx.tts.isAvailable()).toBe(true)
-      const out = await h.ctx.tts.synthesize('hello')
-      expect(out.mime).toBe('audio/mpeg')
-      expect(out.audioBase64.length).toBeGreaterThan(0)
-    })
-
-    it('uses an injected synthesize', async () => {
-      const h = createTestContext({
-        tts: { synthesize: async () => ({ audioBase64: 'AAA', mime: 'audio/mpeg' as const }) }
-      })
-      expect((await h.ctx.tts.synthesize('x')).audioBase64).toBe('AAA')
-    })
-  })
-
-  describe('sessionHistory', () => {
-    it('is default-deny: nothing granted, and getMessages throws', async () => {
-      const h = createTestContext()
-      expect(await h.ctx.sessionHistory.listProjects()).toEqual([])
-      expect(await h.ctx.sessionHistory.listSessions()).toEqual([])
-      await expect(h.ctx.sessionHistory.getMessages({ sessionId: 's1' })).rejects.toThrow(
-        /not granted/i
-      )
-    })
-
-    it('distinguishes a granted-but-empty session from an ungranted one', async () => {
-      const h = createTestContext({ sessionHistory: { messages: { s1: [] } } })
-      // Granted and genuinely empty — an array, not a throw.
-      expect(await h.ctx.sessionHistory.getMessages({ sessionId: 's1' })).toEqual([])
-      await expect(h.ctx.sessionHistory.getMessages({ sessionId: 's2' })).rejects.toThrow()
-    })
-
-    it('reports a cancelled grant unless one is seeded', async () => {
-      const h = createTestContext()
-      const r = await h.ctx.sessionHistory.requestAccess()
-      expect(r.cancelled).toBe(true)
-      expect(r.sessionIds).toEqual([])
-      expect(r.requestId).toBeTruthy()
-    })
-
-    it('resolves a seeded grant', async () => {
-      const h = createTestContext({ sessionHistory: { grantResult: { sessionIds: ['s1'] } } })
-      const r = await h.ctx.sessionHistory.requestAccess()
-      expect(r.cancelled).toBe(false)
-      expect(r.sessionIds).toEqual(['s1'])
-    })
-  })
-
-  describe('firebase', () => {
-    it('resolves empty everywhere rather than rejecting, like a machine with no CLI', async () => {
-      const h = createTestContext()
-      expect(await h.ctx.firebase.listAccounts()).toEqual([])
-      expect(await h.ctx.firebase.listProjects()).toEqual([])
-      expect(await h.ctx.firebase.listProjectsForAccount('nobody@example.test')).toEqual([])
-    })
-
-    it('reports a not-installed setup status by default', async () => {
-      const status = await createTestContext().ctx.firebase.setupStatus()
-      expect(status.cliInstalled).toBe(false)
-      expect(status.signedIn).toBe(false)
-      expect(status.firebaseAccess).toBe('unknown')
-    })
-
-    it('does not claim a login started when no CLI is installed', async () => {
-      // Agreeing with the dev-shell mock: cliInstalled is false by default, so a
-      // spawn cannot have succeeded.
-      expect(await createTestContext().ctx.firebase.startLogin()).toEqual({ started: false })
-    })
-
-    it('reports a started login when seeded', async () => {
-      const h = createTestContext({ firebase: { loginStarts: true } })
-      expect(await h.ctx.firebase.startLogin()).toEqual({ started: true })
-    })
-
-    it('seeds accounts and per-account projects', async () => {
-      const h = createTestContext({
-        firebase: {
-          accounts: [{ email: 'a@b.co', active: true }],
-          projectsByAccount: { 'a@b.co': [{ projectId: 'p1', displayName: 'One' }] }
-        }
-      })
-      expect(await h.ctx.firebase.listAccounts()).toHaveLength(1)
-      expect(await h.ctx.firebase.listProjectsForAccount('a@b.co')).toHaveLength(1)
-      // An unknown account is still empty, never a throw.
-      expect(await h.ctx.firebase.listProjectsForAccount('other@b.co')).toEqual([])
-    })
-  })
-
+// `spend` mirrors the HOST's real posture rather than being a friendly stub, so
+// a plugin developed against it hits the same branches it will hit in AMC.
+//
+// The tts / sessionHistory / firebase blocks that used to sit here were deleted
+// on 2026-08-11: all three are WEBVIEW-only capabilities with no backend ctx
+// entry, so every one of those 12 tests was asserting the behaviour of a mock
+// for a namespace that is `undefined` in production. They were the clearest
+// example in the repo of a green test proving nothing.
+describe('createTestContext — spend', () => {
   describe('spend', () => {
     it('reports an all-zero breakdown by default', async () => {
       const b = await createTestContext().ctx.spend.getBreakdown()

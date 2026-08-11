@@ -69,7 +69,8 @@ describe('createMockContext', () => {
 
   it('sidebar setBadge and setItems are callable', () => {
     expect(() => ctx.sidebar.setBadge(5)).not.toThrow()
-    expect(() => ctx.sidebar.setItems([{ id: '1', title: 'Test' }])).not.toThrow()
+    // `status` is required — the host silently drops a whole batch without it.
+    expect(() => ctx.sidebar.setItems([{ id: '1', title: 'Test', status: 'idle' }])).not.toThrow()
   })
 })
 

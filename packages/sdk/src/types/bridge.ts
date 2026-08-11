@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginAuth, PluginRecording, SessionStatus, SessionPendingAction } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, SessionStatus, SessionPendingAction } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -8,9 +8,59 @@ import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSideb
  */
 export type { SessionStatus, SessionPendingAction } from './context.js'
 
+/**
+ * What `AgentMC.theme.get()` resolves to.
+ *
+ * `visualTheme` was declared here and has never existed. The real payload is
+ * `{ mode, accent, surfaces }` — and note it is a STATIC PLACEHOLDER host-side:
+ * `mode` is always `'dark'`, `accent` a fixed RGB triple, `surfaces` always
+ * `{}`. Do not build on it expecting the user's real theme.
+ */
+export interface BridgeThemeValue {
+  mode: string
+  /** An `r,g,b` triple, e.g. `'139,92,246'`. */
+  accent: string
+  surfaces: Record<string, unknown>
+}
+
 export interface BridgeTheme {
-  get(): { mode: string; visualTheme: string }
-  onChange(callback: (theme: { mode: string; visualTheme: string }) => void): () => void
+  /**
+   * Returns a PROMISE. This was typed synchronous, so `theme.get().mode` type
+   * -checked and was `undefined` at runtime.
+   */
+  get(): Promise<BridgeThemeValue>
+  /**
+   * Subscribes to `plugin-theme-change` — a channel with NO emitter anywhere in
+   * the host, so this callback never fires. Kept because the subscription is
+   * real and harmless; do not wait on it.
+   */
+  onChange(callback: (theme: BridgeThemeValue) => void): () => void
+}
+
+/**
+ * `AgentMC.auth` — the webview's auth surface, which is ONE method.
+ *
+ * This is not `PluginAuth`. Earlier versions assigned the backend's six-method
+ * `PluginAuth` here; none of those six exists on the bridge, so every one was a
+ * `TypeError`. What the host actually exposes is a Firebase web-auth handoff so
+ * a plugin webview can sign into the same identity AMC holds.
+ *
+ * Requires the `auth` permission. Throws a humanized error when AMC has no
+ * cached identity.
+ */
+export interface BridgeAuth {
+  getWebAuth(): Promise<{
+    config: {
+      apiKey: string
+      authDomain: string
+      projectId: string
+      storageBucket: string
+      messagingSenderId: string
+      appId: string
+    }
+    customToken: string
+    organizationId: string | null
+  }>
 }
 
 /**
@@ -52,8 +102,25 @@ export interface BridgeSession {
    * resolve to the SAME `sessionId` — the in-flight key is the prompt hash
    * (`plugin-bridge/session-handler.ts:284-287`).
    */
-  create(opts: { prompt?: string }): Promise<{ sessionId: string }>
-  sendMessage(sessionId: string, opts: { text: string }): Promise<void>
+  create(opts: {
+    prompt?: string
+    /**
+     * The durable idempotency key. Re-sending the SAME id short-circuits to the
+     * original `sessionId` instead of minting a SECOND PAID session, which is
+     * what a retry-on-timeout or a bridge re-dispatch would otherwise do.
+     *
+     * The host has accepted this since F026 and the SDK omitted it, so the
+     * documented replay protection was literally unreachable through typed SDK
+     * code. Omitting it falls back to in-flight-only coalescing by prompt hash,
+     * which does not survive a retry after the first call resolves.
+     */
+    clientRequestId?: string
+  }): Promise<{ sessionId: string }>
+  /** Resolves the new message id, or `{ resumed: true }` if it woke an idle session. */
+  sendMessage(
+    sessionId: string,
+    opts: { text: string }
+  ): Promise<{ messageId: string } | { resumed: true }>
   /**
    * The transcript, with still-streaming rows dropped.
    *
@@ -82,22 +149,93 @@ export interface BridgeSession {
     draftText: string
     autoSend?: boolean
   }): Promise<void>
+  /**
+   * Launch a session on a REAL project (not your plugin's virtual one), from a
+   * prompt. Carries the same `clientRequestId` replay protection as
+   * {@link create}.
+   */
+  launchBuild(opts: {
+    projectId: string
+    prompt: string
+    clientRequestId?: string
+  }): Promise<{ sessionId: string }>
+  /** Re-attach a session your plugin launched but lost track of across a reload. */
+  reregisterLaunched(sessionId: string): Promise<void>
+  /** Accrued cost of one session, in USD. */
+  getCost(sessionId: string): Promise<{ costUsd: number }>
 }
 
+/**
+ * Save files and pick folders through the OS dialogs, on `AgentMC.export`.
+ *
+ * Permission-free: the native dialog IS the consent. But note that `pickFolder`
+ * also SEEDS a per-plugin folder grant — `writeFiles`, `verifyFiles` and
+ * `openFolder` are restricted to directories the user has picked, so call
+ * `pickFolder` first rather than assembling a path yourself.
+ *
+ * Every method here previously returned `Promise<void>`, which threw away the
+ * answer: `saveFile` and `savePdf` tell you whether the user CANCELLED,
+ * `pickFolder` returns an object rather than a bare string, and `verifyFiles`
+ * exists purely for its result.
+ */
 export interface BridgeExport {
-  saveFile(opts: { filename: string; content: string; type: string }): Promise<void>
-  savePDF(opts: { filename: string; markdown: string; metadata?: Record<string, unknown> }): Promise<void>
-  pickFolder(opts?: { defaultPath?: string; title?: string }): Promise<string>
-  writeFiles(opts: { directory: string; files: { name: string; content: string }[] }): Promise<void>
-  verifyFiles(opts: { directory: string; files: string[] }): Promise<void>
-  openFolder(opts: { path: string }): Promise<void>
+  /** `type` is optional host-side. Resolves `{ saved: false }` if the user cancels. */
+  saveFile(opts: {
+    filename: string
+    content: string
+    type?: string
+  }): Promise<{ saved: true; path: string } | { saved: false }>
+  /**
+   * NOTE THE CASING — `savePdf`, not `savePDF`. The mis-cased spelling this SDK
+   * shipped resolved to nothing on `window.AgentMC`, so it was a `TypeError`.
+   *
+   * It also takes **`html`**, not `markdown`, and there is no `metadata` — the
+   * host renders the HTML you give it. `preferCSSPageSize` and `landscape`
+   * control the page setup.
+   */
+  savePdf(opts: {
+    filename: string
+    html: string
+    preferCSSPageSize?: boolean
+    landscape?: boolean
+  }): Promise<{ saved: true; path: string } | { saved: false }>
+  /** Resolves an OBJECT, not a bare path string. */
+  pickFolder(opts?: {
+    defaultPath?: string
+    title?: string
+  }): Promise<{ selected: true; path: string } | { selected: false }>
+  /** 1-256 files. Resolves how many were written. */
+  writeFiles(opts: {
+    directory: string
+    files: { name: string; content: string }[]
+  }): Promise<{ written: number; directory: string }>
+  /** The whole point is the result — `verified`, plus which files were `missing`. */
+  verifyFiles(opts: {
+    directory: string
+    files: string[]
+  }): Promise<{ verified: boolean; kickoffContent?: string; missing: string[] }>
+  openFolder(opts: { path: string }): Promise<{ opened: true }>
+  /** The host's default export folder. */
+  getDefaultFolder(): Promise<{ path: string }>
 }
 
 export interface BridgeProject {
+  /**
+   * Rows are `{ id, projectId, name, color }`, plus `folderPath` ONLY when your
+   * plugin holds the `sessions` permission — the host withholds the path
+   * otherwise, which is why this stays `unknown[]`.
+   */
   listAll(): Promise<unknown[]>
+  /** The project the user is currently looking at, or `null`. */
+  getActive(): Promise<unknown | null>
   findByFolder(folderPath: string): Promise<unknown | null>
+  /**
+   * `folderPath` must be your plugin's own virtual project
+   * (`__plugin_<pluginId>__`) or a child of it — the host refuses anything else.
+   */
   create(opts: { name: string; folderPath: string }): Promise<unknown>
-  openAddDialog(opts: { preselectedFolder: string }): Promise<unknown>
+  /** Both the options object and `preselectedFolder` are optional host-side. */
+  openAddDialog(opts?: { preselectedFolder?: string }): Promise<unknown>
 }
 
 export interface BridgeAssets {
@@ -336,6 +474,20 @@ export interface BridgeDocuments {
   close(handleId: string): Promise<void>
 }
 
+/**
+ * `window.AgentMC` — the surface a plugin WEBVIEW gets.
+ *
+ * This is a subset of what the host exposes, not the whole of it. The host's
+ * preload carries roughly forty namespaces; the ones typed below are those with
+ * a stable, documented contract. Notable untyped ones you can still reach at
+ * runtime include `secrets`, `http`, `fs`, `shell`, `clipboard`, `process`,
+ * `notifications`, `navigation`, `runtime`, `keybindings`, `tray`, `cron`,
+ * `overlay`, `share`, `boards`, `host` and `backend.invoke`.
+ *
+ * `recording` is deliberately ABSENT: it exists on the backend (`ctx.recording`)
+ * and has no webview counterpart at all, so the `AgentMC.recording` this
+ * interface used to declare was `undefined` — a `TypeError`, not a bridge error.
+ */
 export interface AgentMC {
   storage: PluginStorage
   db: PluginDb
@@ -350,9 +502,16 @@ export interface AgentMC {
   sidebar: PluginSidebar
   assets: BridgeAssets
   inbox: PluginInbox
-  auth: PluginAuth
-  recording: PluginRecording
+  /** One method — see {@link BridgeAuth}. NOT the backend's `PluginAuth`. */
+  auth: BridgeAuth
   documents: BridgeDocuments
+  // These three are webview-ONLY — the host builds its backend context without
+  // them, so they are reachable here and NOT via `ctx`. See the note on
+  // `PluginContext` in ./context.ts.
+  tts: PluginTts
+  sessionHistory: PluginSessionHistory
+  firebase: PluginFirebase
+  spend: PluginSpend
 }
 
 declare global {

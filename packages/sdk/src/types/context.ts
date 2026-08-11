@@ -5,14 +5,33 @@ export interface QueryOptions {
   offset?: number
 }
 
+/**
+ * One row in your plugin's sidebar list.
+ *
+ * **`status` is REQUIRED**, and getting that wrong was expensive: the host
+ * validates the whole array against its push schema and, on any failure, logs a
+ * warning and DROPS THE ENTIRE BATCH — it never throws and never returns an
+ * error. So an item missing `status` made `setItems` resolve successfully while
+ * nothing reached the sidebar. This type declared it optional.
+ *
+ * At most 200 items per call from a webview; over that the call is rejected.
+ */
 export interface SidebarItem {
   id: string
   title: string
-  status?: string
+  /** Required. Free-form, up to 200 chars — e.g. `'3 failing'`, `'idle'`. */
+  status: string
+  subtitle?: string
   needsYou?: boolean
+  /** 0-100. */
   progress?: number
   currentStep?: number
   totalSteps?: number
+  /** Up to 5 chars, e.g. `'A+'`. */
+  grade?: string
+  /** 0-100. */
+  score?: number
+  lastScanDate?: string
 }
 
 export interface CliRequest {
@@ -260,9 +279,27 @@ export interface PluginSidebar {
   setItems(items: SidebarItem[]): void
 }
 
+/**
+ * Toasts and OS notifications. Requires the `notifications` permission — which
+ * this type never mentioned, and which matters more than usual here: the call
+ * returns a promise the SDK types as `void`, so a permission denial surfaces as
+ * an unhandled rejection in the log rather than at your call site.
+ *
+ * A malformed payload is dropped with a warning host-side, never thrown.
+ */
 export interface PluginToast {
-  show(opts: { type: 'success' | 'error' | 'info'; message: string }): void
-  notify(opts: { title: string; body: string }): void
+  /**
+   * `type` is OPTIONAL and includes `'warning'`, which this type omitted — a
+   * `'warning'` toast was unspellable and any 4th value was silently discarded.
+   */
+  show(opts: {
+    message: string
+    type?: 'info' | 'success' | 'warning' | 'error'
+    /** Up to 60000. */
+    durationMs?: number
+  }): void
+  /** `body` is optional host-side. */
+  notify(opts: { title: string; body?: string }): void
 }
 
 export interface PluginAuthUser {
@@ -295,19 +332,38 @@ export interface PluginAuth {
   ): Promise<PluginAuthSession | null>
 }
 
+/**
+ * One row your plugin contributes to AMC's unified inbox.
+ *
+ * **`timestamp` is REQUIRED** — it is what the inbox orders on, and the plugin
+ * owns recency. As with {@link SidebarItem}, a shape failure makes the host log
+ * a warning and drop the WHOLE batch silently rather than throwing, so an item
+ * without a timestamp meant `setItems` resolved and nothing appeared.
+ *
+ * `body`, `icon`, `priority`, `actionLabel` and `actionId` were declared here
+ * and have never existed host-side; the real optional fields are `subtitle` and
+ * `dotColor`. Sending the old shape is what triggered the silent drop.
+ */
 export interface InboxItem {
   id: string
   title: string
-  body?: string
-  icon?: string
-  priority?: 'low' | 'normal' | 'high'
-  actionLabel?: string
-  actionId?: string
-  timestamp?: string
+  /** Required ISO timestamp — the inbox's sort key. */
+  timestamp: string
+  subtitle?: string
+  /** Overrides the per-source dot colour. */
+  dotColor?: string
 }
 
 export interface PluginInbox {
+  /** At most 500 items. Replaces this plugin's whole set. */
   setItems(items: InboxItem[]): Promise<void>
+  /**
+   * Raise a one-off alert, independent of the `setItems` list.
+   *
+   * `body` is markdown. `dedupKey` suppresses repeats and is namespaced to your
+   * plugin host-side, so it cannot collide with another plugin's.
+   */
+  postAlert(opts: { title: string; body: string; dedupKey?: string }): Promise<void>
 }
 
 /**
@@ -856,10 +912,19 @@ export interface PluginContext {
   inbox: PluginInbox
   auth: PluginAuth
   recording: PluginRecording
-  tts: PluginTts
-  sessionHistory: PluginSessionHistory
-  firebase: PluginFirebase
   spend: PluginSpend
+  // NOTE: `tts`, `sessionHistory` and `firebase` are deliberately ABSENT.
+  //
+  // All three are real capabilities, but they live on the WEBVIEW bridge only —
+  // the host builds its backend context without them, so `ctx.tts` was
+  // `undefined` and `await ctx.tts.isAvailable()` threw
+  // `TypeError: Cannot read properties of undefined` at activation rather than
+  // producing a permission error. Their permission rows exist for worker-host
+  // bookkeeping; a row is not a namespace.
+  //
+  // Reach them from your webview through `AgentMC.tts` / `AgentMC.sessionHistory`
+  // / `AgentMC.firebase` (see ./bridge.ts), and bridge to your backend with
+  // `ctx.events` if the result has to cross surfaces.
   /**
    * NOT YET IMPLEMENTED BY THE HOST — see {@link WorkspaceApi}. Typed so a
    * plugin can be authored and packaged against it; every call currently
