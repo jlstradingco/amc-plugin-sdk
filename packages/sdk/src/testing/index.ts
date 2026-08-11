@@ -141,33 +141,42 @@ export interface TestHarness {
 /**
  * Why `ctx.workspace` is a wall of rejections rather than a working fake.
  *
- * The host has no `workspace` namespace — not on master, not on any branch — so
- * every real call rejects with `Unknown namespace: "workspace"`. An in-memory
- * fake here would make plugin tests pass against a capability that cannot run,
- * which is exactly how `ctx.events` stayed broken for months: this harness
- * implemented it as a real EventEmitter, so unit tests were green the whole time
- * the production path was dead in both directions.
+ * The reason CHANGED on 2026-08-11 and the distinction matters. It used to be
+ * "the host has no workspace namespace"; the host shipped one on 2026-08-05 and
+ * this harness went on rejecting for six days while telling authors a falsehood.
+ * It still rejects, but now for a narrower and honest reason:
  *
- * So the mock refuses. A test that needs workspace must inject its own double
- * and thereby state, in its own source, that it is testing against a shape
- * nobody has implemented.
+ * `ctx.workspace` reaches the user's REAL checkouts, and every method is gated
+ * by machinery this harness cannot reproduce — a per-project runtime grant the
+ * user makes and can revoke, a native confirm dialog on `deleteFile` and on
+ * almost every `run`, single-flight refusals per (plugin, method, project), and
+ * a walker that silently truncates. An in-memory fake would model none of that,
+ * so a green test against it would predict nothing about production. That is
+ * exactly how `ctx.events` stayed broken for months: this harness implemented it
+ * as a real EventEmitter, so unit tests were green the whole time the production
+ * path was dead in both directions.
  *
- * Delete this and write a real fake ONLY when the host ships the namespace.
+ * So a test that needs workspace injects its own double and thereby states, in
+ * its own source, which host behaviours it is choosing to assume.
+ *
+ * The method list below is the host's real one (14 methods, derived from
+ * WORKSPACE_SCHEMAS at origin/master@8722cc3fca) — a fake that refuses still has
+ * to refuse the RIGHT surface, or a typo'd call fails for the wrong reason.
  */
-const WORKSPACE_NOT_IMPLEMENTED =
-  'ctx.workspace is not implemented by the AMC host yet, so this test harness ' +
-  'refuses to fake it — a passing test against a fake workspace would be ' +
-  'evidence of nothing. The SDK types the capability ahead of the host so ' +
-  'plugins can be authored and packaged against it; a real call currently ' +
-  'rejects with `Unknown namespace: "workspace"`.'
+const WORKSPACE_NOT_FAKEABLE =
+  'ctx.workspace is implemented by the AMC host, but this test harness does not ' +
+  'fake it: the capability is gated by a per-project runtime grant, native ' +
+  'confirm dialogs, and single-flight limits that an in-memory double cannot ' +
+  'reproduce, so a passing test against a fake would be evidence of nothing. ' +
+  'Inject your own double for the methods your test needs.'
 
 /** Every method rejects. Kept in sync with the dev-shell's identical stub. */
-function workspaceNotImplemented(): PluginContext['workspace'] {
-  // One nullary thunk reused for all 17 methods: it is assignable to every
+function workspaceNotFakeable(): PluginContext['workspace'] {
+  // One nullary thunk reused for all 14 methods: it is assignable to every
   // signature (fewer params is fine, and Promise<never> satisfies any Promise<T>)
   // and declares no parameter, so `noUnusedParameters` has nothing to complain
   // about.
-  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_IMPLEMENTED))
+  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_FAKEABLE))
   return {
     listProjects: reject,
     listWorktrees: reject,
@@ -178,14 +187,11 @@ function workspaceNotImplemented(): PluginContext['workspace'] {
     exists: reject,
     readFile: reject,
     readFiles: reject,
-    listBindings: reject,
     writeFile: reject,
+    writeFiles: reject,
+    mkdir: reject,
     deleteFile: reject,
-    requestBinding: reject,
-    exec: reject,
-    execStatus: reject,
-    execResults: reject,
-    execCancel: reject
+    run: reject
   }
 }
 
@@ -469,12 +475,21 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       getSession: () => Promise.resolve(opts.auth?.session ?? null)
     },
 
+    // Mirrors the host's real contract: `start` resolves a DISCRIMINATED result
+    // rather than a bare handle, `stop` takes a bare id string, and there is no
+    // getShareUrl/delete — the host redacts the share token and never lets a
+    // plugin delete a recording. The old mock faked both, so a plugin test could
+    // go green calling two methods that do not exist.
     recording: {
-      start: () => Promise.resolve({ recordingId: `test-recording-${crypto.randomUUID().slice(0, 8)}` }),
-      stop: (handle) => Promise.resolve({ recordingId: handle.recordingId }),
+      start: () =>
+        Promise.resolve({
+          ok: true as const,
+          recordingId: `test-recording-${crypto.randomUUID().slice(0, 8)}`
+        }),
+      stop: () => Promise.resolve({ ok: true }),
       list: () => Promise.resolve([...recordings]),
-      getShareUrl: (recordingId) => Promise.resolve(`https://test.local/recordings/${recordingId}`),
-      delete: () => Promise.resolve()
+      get: (recordingId) =>
+        Promise.resolve(recordings.find((r) => r.id === recordingId) ?? null)
     },
 
     tts: {
@@ -548,7 +563,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
     },
 
-    workspace: workspaceNotImplemented()
+    workspace: workspaceNotFakeable()
   }
 
   harness.ctx = ctx

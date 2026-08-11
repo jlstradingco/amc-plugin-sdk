@@ -371,11 +371,13 @@ describe('sessions mock issues distinct ids', () => {
   })
 })
 
-describe('ctx.workspace refuses to fake an unimplemented host capability', () => {
-  // Deliberately NOT a working in-memory fake. The host has no `workspace`
-  // namespace on any branch, so a plugin that worked in the dev shell and
-  // nowhere else would be worse than one that failed immediately. This mirrors
-  // the identical stub in packages/sdk/src/testing/index.ts — the two mocks must
+describe('ctx.workspace refuses to fake a capability it cannot model', () => {
+  // Deliberately NOT a working in-memory fake — but note the reason is no longer
+  // "the host has no workspace namespace". The host shipped one on 2026-08-05;
+  // the shell still declines because the per-project grant, the native confirms
+  // on delete/run, and the single-flight limits are not reproducible here, so a
+  // plugin that worked in the shell could still fail on install. Mirrors the
+  // identical stub in packages/sdk/src/testing/index.ts — the two mocks must
   // agree about what the host can do.
   const ws = () =>
     createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false }).workspace
@@ -395,16 +397,18 @@ describe('ctx.workspace refuses to fake an unimplemented host capability', () =>
     'exists',
     'readFile',
     'readFiles',
-    'listBindings',
     'writeFile',
+    'writeFiles',
+    'mkdir',
     'deleteFile',
-    'requestBinding',
-    'exec',
-    'execStatus',
-    'execResults',
-    'execCancel',
+    'run',
   ] as const)('rejects %s', async (method) => {
     const fn = ws()[method] as (...args: unknown[]) => Promise<unknown>
-    await expect(fn()).rejects.toThrow(/not implemented by the AMC host/i)
+    await expect(fn()).rejects.toThrow(/does not\s+fake it/i)
+  })
+
+  it('does not tell the author the host is missing the namespace', async () => {
+    // The shell said exactly that for six days after the host shipped it.
+    await expect(ws().listProjects()).rejects.toThrow(/implemented by the AMC host/i)
   })
 })
