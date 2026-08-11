@@ -98,6 +98,38 @@ non-existent `AgentMC.recording`, now backend-owned and driven over the event
 bus), `auth-demo` (six webview methods that do not exist), and `inbox-demo`
 (item fields that made every publish a silent no-op).
 
+**Breaking — four silent runtime bugs.** Each of these compiled and did the
+wrong thing:
+
+- `ctx.cron.isRegistered` was typed `boolean` while returning a Promise, so
+  `if (ctx.cron.isRegistered(id))` was **always true** — a Promise is never
+  falsy. `register`/`unregister` are async too, and `register` *rejects* on an
+  invalid cron expression, which nothing awaited.
+- `ctx.events.on` returns **nothing** on the backend; it was typed
+  `() => void`, so `off()` threw `TypeError: off is not a function`. There is
+  no unsubscribe path on that surface at all. Both mocks had been handing back
+  a working unsubscribe and two canary tests asserted it — the same
+  `ctx.events` failure this repo cites as its cautionary tale, recurring inside
+  the guard meant to prevent it. `BridgeEvents` narrows the member, since the
+  webview genuinely does return one.
+- `SpendWindow` was missing `codingOutOfPocket`. A window's real money is
+  `outOfPocket + codingOutOfPocket`, so reporting the first alone
+  **under-reported spend**. `SpendEngineLine` gains `outOfPocket`.
+- `sidebar.setBadge` accepts `number | string | null`; `null` clears the badge
+  and was previously unspellable.
+
+**Documented, not changed:** `ctx.dataDir` is AMC's userData root, not your
+plugin's directory, and not the root `ctx.fs` is scoped to — so
+`ctx.fs.readFile(path.join(ctx.dataDir, x))` throws.
+
+**`documents` corrections.** The namespace is behind the host's
+`plugin-documents-io` unreleased-feature flag, so on a stock build every call
+rejects with `This capability is not available.` — nothing said so. The
+capability token in the `@doc` URL is already shipped (that URL is a secret
+today, not eventually), and `stat()` already re-pins a replaced document.
+Host line-number citations throughout `bridge.ts` were replaced with symbol
+names; four were already pointing at unrelated code.
+
 ## [2.0.0] - 2026-08-10
 
 **Read this first if you are upgrading from npm: you are on 1.0.7.** Versions
