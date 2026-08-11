@@ -11,10 +11,8 @@
       "type": "free"
     }
   },
-  "sdkVersion": "^1.0.7",
-  "permissions": [
-    "recording"
-  ],
+  "sdkVersion": "^2.0.0",
+  "permissions": ["recording"],
   "settings": [],
   "storage": {
     "collections": {}
