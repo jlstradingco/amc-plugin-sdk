@@ -38,16 +38,37 @@ export function extractRoutePaths(text: string): string[] {
 }
 
 /**
- * Which surfaces does this text reference? Longest-prefix wins, so
+ * Route prefixes that are INFRASTRUCTURE, not an app dependency.
+ *
+ * `/capabilities/probe` is the preflight mechanism itself — every well-behaved
+ * cross-app listing calls it in step 1. Counting it as a dependency would force every
+ * such listing to declare the surface that happens to own the route, which is noise
+ * that teaches authors and installers to ignore the requirements list. `/ping` and
+ * `/status` are the same kind of thing: liveness, not capability.
+ *
+ * Mirrors AMC's INFRASTRUCTURE_ROUTE_PREFIXES — keep the two in step.
+ */
+export const INFRASTRUCTURE_ROUTE_PREFIXES: readonly string[] = [
+  '/capabilities',
+  '/ping',
+  '/status'
+]
+
+function isInfrastructureRoute(path: string): boolean {
+  return INFRASTRUCTURE_ROUTE_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))
+}
+
+/**
+ * Which apps does this text DEPEND ON? Longest-prefix wins, so
  * `/supermail/threads/:id/archive` resolves to `supermail` and not to a surface that
- * merely shares a shorter root.
+ * merely shares a shorter root. Infrastructure routes are excluded.
  */
 export function surfacesReferencedBy(
   text: string,
   matrix: SdkCrossAppSurface[] = CROSS_APP_MATRIX
 ): string[] {
   const hits = new Set<string>()
-  for (const path of extractRoutePaths(text)) {
+  for (const path of extractRoutePaths(text).filter((p) => !isInfrastructureRoute(p))) {
     let best: { surface: string; length: number } | null = null
     for (const surface of matrix) {
       for (const prefix of surface.pathPrefixes) {
