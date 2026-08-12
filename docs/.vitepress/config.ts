@@ -65,7 +65,8 @@ export default defineConfig({
             { text: 'Text to Speech', link: '/api/tts' },
             { text: 'Session History', link: '/api/session-history' },
             { text: 'Firebase', link: '/api/firebase' },
-            { text: 'Spend', link: '/api/spend' }
+            { text: 'Spend', link: '/api/spend' },
+            { text: 'Workspace', link: '/api/workspace' }
           ]
         }
       ]

@@ -1,7 +1,11 @@
 import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { PluginContext, QueryOptions } from '@agent-mc/plugin-sdk'
+import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plugin-sdk'
+// The dev shell is itself a development tool, so depending on the SDK's testing
+// entry is in-band: it keeps ONE definition of the backend message row rather
+// than a second copy that can drift from the host.
+import { createMockSessionMessage } from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -19,6 +23,50 @@ interface MockContextOptions {
 /** A copy so callers can't mutate rows/values still held by the in-memory store. */
 function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
+}
+
+/**
+ * `ctx.workspace` rejects here rather than pretending to work.
+ *
+ * The host DOES implement this namespace (it landed 2026-08-05) — the older
+ * version of this comment said otherwise for six days and was wrong. It still
+ * rejects, for a narrower reason: workspace touches the user's real checkouts
+ * behind a per-project runtime grant, native confirm dialogs on delete and run,
+ * and single-flight limits. The dev shell can reproduce none of that, and a
+ * plugin that looks finished in the shell and fails on install is worse than one
+ * that fails immediately — the same trap `ctx.events` set when the SDK mocked it
+ * as a live EventEmitter while the production path was dead.
+ *
+ * Kept identical to the test harness's stub in
+ * packages/sdk/src/testing/index.ts — the two mocks must agree about the host.
+ */
+const WORKSPACE_NOT_FAKEABLE =
+  'ctx.workspace is implemented by the AMC host, but the dev shell does not ' +
+  'fake it: the capability is gated by a per-project runtime grant, native ' +
+  'confirm dialogs, and single-flight limits the shell cannot reproduce, so a ' +
+  'plugin that works here could still fail on install. Test it in a real AMC ' +
+  'build.'
+
+function workspaceNotFakeable(): PluginContext['workspace'] {
+  // One nullary thunk for all 14 methods — assignable to every signature, and
+  // declares no parameter so `noUnusedParameters` stays satisfied.
+  const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_FAKEABLE))
+  return {
+    listProjects: reject,
+    listWorktrees: reject,
+    requestAccess: reject,
+    resolve: reject,
+    glob: reject,
+    stat: reject,
+    exists: reject,
+    readFile: reject,
+    readFiles: reject,
+    writeFile: reject,
+    writeFiles: reject,
+    mkdir: reject,
+    deleteFile: reject,
+    run: reject,
+  }
 }
 
 /**
@@ -56,6 +104,9 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
   const prefix = `[plugin:${opts.pluginId}]`
   const shouldLog = opts.logToConsole ?? true
   const seededSettings = { ...(opts.settings ?? {}) }
+  const sessionMessages = new Map<string, SessionMessage[]>()
+  const sessionStatus = new Map<string, string>()
+  let sessionCounter = 0
 
   // --- Persisted KV storage -------------------------------------------------
   // With a real `dataDir` the KV store is flushed to `<dataDir>/amc-dev-storage.json`
@@ -242,28 +293,42 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       debug: (msg, ...args) => { if (shouldLog) console.debug(`${prefix} [debug]`, msg, ...args) },
     },
 
+    // `on` returns NOTHING, matching the host: its backend `ctx.events.on` has
+    // no return statement and the worker protocol has no unsubscribe message,
+    // so a subscription lives until the worker exits. Handing back an `off()`
+    // here would let a plugin clean up in the shell and crash in AMC.
     events: {
       emit: (channel, data) => eventBus.emit(channel, data),
       on: (channel, handler) => {
         eventBus.on(channel, handler)
-        return () => eventBus.off(channel, handler)
       },
     },
 
     sessions: {
       create: (_opts) => {
-        const sessionId = `mock-session-${Date.now()}`
+        // A counter, not Date.now(): two creates inside the same millisecond
+        // produced the SAME id, so a plugin spawning sessions in a loop saw
+        // them silently merge into one — shared status and shared messages.
+        const sessionId = `mock-session-${++sessionCounter}`
         if (shouldLog) console.log(`${prefix} [sessions] create -> ${sessionId}`)
+        sessionMessages.set(sessionId, [])
+        sessionStatus.set(sessionId, 'running')
         return Promise.resolve({ sessionId })
       },
       sendMessage: (sid, text) => {
         if (shouldLog) console.log(`${prefix} [sessions] sendMessage(${sid}): ${text.slice(0, 80)}...`)
+        const messages = sessionMessages.get(sid) ?? []
+        messages.push(createMockSessionMessage('mock-message', messages.length + 1, text))
         return Promise.resolve()
       },
-      getStatus: () => Promise.resolve('running'),
-      getMessages: () => Promise.resolve([]),
+      getStatus: (sid) => Promise.resolve(sessionStatus.get(sid) ?? 'running'),
+      getMessages: (sid) => Promise.resolve([...(sessionMessages.get(sid) ?? [])]),
       stop: (sid) => {
         if (shouldLog) console.log(`${prefix} [sessions] stop(${sid})`)
+        // A stopped session must stop reporting 'running'. This mock used to
+        // hardcode the status, so a plugin polling until the session ended
+        // looped forever against the dev shell while working against the host.
+        sessionStatus.set(sid, 'ended')
         return Promise.resolve()
       },
       onStatusChange: () => () => {},
@@ -288,14 +353,19 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       fetch: (url, options) => globalThis.fetch(url, options),
     },
 
+    // Async on the host — every cron method crosses an RPC. `isRegistered`
+    // especially: typed as a bare boolean it returned a Promise, so every
+    // `if (ctx.cron.isRegistered(id))` guard was unconditionally true.
     cron: {
       register: (id, schedule, _handler) => {
         if (shouldLog) console.log(`${prefix} [cron] register(${id}, ${schedule})`)
+        return Promise.resolve()
       },
       unregister: (id) => {
         if (shouldLog) console.log(`${prefix} [cron] unregister(${id})`)
+        return Promise.resolve()
       },
-      isRegistered: () => false,
+      isRegistered: () => Promise.resolve(false),
     },
 
     cli: {
@@ -326,6 +396,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     },
 
     inbox: {
+      postAlert: (alertOpts) => {
+        if (shouldLog) console.log(`${prefix} [inbox] postAlert: ${alertOpts.title}`)
+        return Promise.resolve()
+      },
       setItems: (items) => {
         if (shouldLog) console.log(`${prefix} [inbox] setItems(${items.length} items)`)
         return Promise.resolve()
@@ -341,62 +415,31 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       getSession: () => Promise.resolve(null),
     },
 
+    // Mirrors the host's real contract: a discriminated `start` result, a bare
+    // id for `stop`, and `get` instead of the getShareUrl/delete pair the host
+    // has never had (the share token and the files are redacted by design).
     recording: {
-      start: () => Promise.resolve({ recordingId: `mock-recording-${Date.now()}` }),
-      stop: (handle) => Promise.resolve({ recordingId: handle.recordingId }),
+      start: () =>
+        Promise.resolve({ ok: true as const, recordingId: `mock-recording-${Date.now()}` }),
+      stop: () => Promise.resolve({ ok: true }),
       list: () => Promise.resolve([]),
-      getShareUrl: (recordingId) =>
-        Promise.resolve(`https://mock.local/recordings/${recordingId}`),
-      delete: () => Promise.resolve(),
+      get: () => Promise.resolve(null),
     },
 
-    // The four namespaces below mirror the HOST's real posture rather than
-    // returning friendly stubs, so a plugin developed against the dev shell hits
-    // the same branches it will hit in AMC. A permissive mock here would let an
-    // author ship code that has never once handled "the user said no".
-    tts: {
-      // No voice is configured in the dev shell, exactly like a fresh install.
-      isAvailable: () => Promise.resolve(false),
-      synthesize: () =>
-        Promise.reject(new Error('Text-to-speech is not configured. Add a voice in Settings.')),
-    },
-
-    sessionHistory: {
-      listProjects: () => Promise.resolve([]),
-      listSessions: () => Promise.resolve([]),
-      // Default-deny: nothing is granted in the dev shell, so every read throws
-      // just as it would for an ungranted session in AMC.
-      getMessages: () => Promise.reject(new Error('session not granted to this plugin')),
-      // There is no user to show a picker to — report a cancelled grant, the
-      // outcome a plugin must handle anyway.
-      requestAccess: () =>
-        Promise.resolve({
-          requestId: `mock-history-grant-${Date.now()}`,
-          cancelled: true,
-          sessionIds: [],
-          projectIds: [],
-        }),
-    },
-
-    firebase: {
-      // Empty, never rejecting — the host swallows every CLI failure into [].
-      listAccounts: () => Promise.resolve([]),
-      listProjects: () => Promise.resolve([]),
-      listProjectsForAccount: () => Promise.resolve([]),
-      setupStatus: () =>
-        Promise.resolve({
-          cliInstalled: false,
-          signedIn: false,
-          accounts: [],
-          firebaseAccess: 'unknown' as const,
-          billing: { checked: false, hasOpenAccount: false },
-        }),
-      startLogin: () => Promise.resolve({ started: false }),
-    },
-
+    // NOTE: no `tts`, `sessionHistory` or `firebase` here. All three are
+    // webview-only — the host builds no backend ctx entry for them, so a plugin
+    // that worked against these mocks hit `undefined` in production. `spend`
+    // below still mirrors the host's real posture rather than a friendly stub.
     spend: {
       getBreakdown: () => {
-        const zeroWindow = { codingValue: 0, backgroundTotal: 0, outOfPocket: 0 }
+        // A window's real out-of-pocket is `outOfPocket + codingOutOfPocket`;
+        // the second term is a separate field, never folded into the first.
+        const zeroWindow = {
+          codingValue: 0,
+          backgroundTotal: 0,
+          outOfPocket: 0,
+          codingOutOfPocket: 0,
+        }
         return Promise.resolve({
           // Epoch, matching createTestContext's emptySpendBreakdown. A wall-clock
           // timestamp made the dev shell and the test harness disagree about the same
@@ -413,5 +456,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         })
       },
     },
+
+    workspace: workspaceNotFakeable(),
   }
 }

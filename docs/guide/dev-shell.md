@@ -54,7 +54,7 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | **settings** | Seeded from an `amc-dev-settings.json` dev config file next to your plugin; `getAll()`/`get(key)` read from it (empty when the file is absent) |
 | **log** | Prints to the terminal with a `[plugin:your-id]` prefix |
 | **events** | In-memory `EventEmitter`, backend-only. Backend-to-backend delivery matches AMC, but an emit does NOT reach the dev shell's webview -- in AMC it reaches both surfaces. Exercise UI-facing events in AMC itself |
-| **sessions** | `create` returns a mock session ID; `getStatus` always returns `"running"`; `getMessages` returns `[]` |
+| **sessions** | `create` returns a mock session ID; `getStatus` always returns `"running"`; `getMessages` replays what you sent via `sendMessage`, in the real backend row shape (`{ id, role, text, timestamp }`) |
 | **ai** | Returns `"[AI mock] Response to: ..."` and `"[AI mock] Title: ..."` |
 | **fs** | Rejects read/write/delete with an error; `exists` returns `false`; `listDir` returns `[]` |
 | **http** | Passes through to real `globalThis.fetch` -- network requests work normally |

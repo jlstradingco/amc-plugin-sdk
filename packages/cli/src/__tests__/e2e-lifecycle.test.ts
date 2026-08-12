@@ -43,6 +43,23 @@ function setupPluginNodeModules(pluginDir: string) {
   )
 }
 
+/**
+ * Every test below shells out to the built CLI, and two of them run a real
+ * `tsc`. Vitest's defaults (5s per test, 10s per hook) are sized for unit tests
+ * and are not enough for a subprocess compile: `builds successfully` measures
+ * ~1.6s on an idle machine but exceeded 5s — and failed the suite — on a loaded
+ * one, roughly 40% of runs. A timeout there is indistinguishable at a glance
+ * from a real regression, so the release gate in RELEASING.md was reporting a
+ * colour that depended on machine load.
+ *
+ * These budgets are deliberately generous: they exist to stop a slow box
+ * failing the build, not to assert performance. Anything approaching them is a
+ * genuine hang.
+ */
+const SHELL_OUT_TIMEOUT_MS = 30_000
+/** `beforeAll` builds two workspace packages via pnpm, which dwarfs any single test. */
+const BUILD_HOOK_TIMEOUT_MS = 120_000
+
 describe('Plugin lifecycle E2E', () => {
   let tmpDir: string
   let pluginDir: string
@@ -62,7 +79,7 @@ describe('Plugin lifecycle E2E', () => {
 
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-e2e-'))
     pluginDir = path.join(tmpDir, 'e2e-test-plugin')
-  })
+  }, BUILD_HOOK_TIMEOUT_MS)
 
   afterAll(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true })
@@ -91,7 +108,7 @@ describe('Plugin lifecycle E2E', () => {
     expect(fs.existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'package.json'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'README.md'))).toBe(true)
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 
   it('scaffolds a README describing the plugin', () => {
     const readme = fs.readFileSync(path.join(pluginDir, 'README.md'), 'utf-8')
@@ -103,7 +120,7 @@ describe('Plugin lifecycle E2E', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'),
     )
-    expect(manifest.sdkVersion).toBe('^1.0.0')
+    expect(manifest.sdkVersion).toBe('^2.0.0')
     expect(manifest.backend).toBeDefined()
     expect(manifest.backend.entryPoint).toBe('dist/backend/index.js')
     expect(manifest.plugin.id).toBe('e2e-test-plugin')
@@ -144,7 +161,7 @@ describe('Plugin lifecycle E2E', () => {
     expect(fs.existsSync(path.join(pluginDir, 'dist'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'dist', 'ui', 'index.html'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'dist', 'backend', 'index.js'))).toBe(true)
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 
   it('validates successfully', () => {
     const output = execSync(`node "${cliDist}" validate`, {
@@ -157,7 +174,7 @@ describe('Plugin lifecycle E2E', () => {
     // rather than a literal 'PASS'/'FAIL' the command never emits.
     expect(output).toContain('All checks passed')
     expect(output).not.toContain('✗')
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 
   it('info lists the declared discoverability tags', () => {
     const output = execSync(`node "${cliDist}" info`, {
@@ -167,7 +184,7 @@ describe('Plugin lifecycle E2E', () => {
     // The scaffold seeds `tags: [<category>]`, so `--category other` yields `other`.
     expect(output).toContain('Tags:')
     expect(output).toContain('other')
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 
   it('packages into .amcplugin', () => {
     execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
@@ -175,7 +192,7 @@ describe('Plugin lifecycle E2E', () => {
     const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.amcplugin'))
     expect(files).toHaveLength(1)
     expect(files[0]).toBe('e2e-test-plugin-1.0.0.amcplugin')
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 })
 
 describe('Webview (flat-JS) plugin lifecycle E2E', () => {
@@ -215,7 +232,7 @@ describe('Webview (flat-JS) plugin lifecycle E2E', () => {
 
     const manifest = JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'))
     expect(manifest.ui.entryPoint).toBe('ui/index.html')
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 
   it('packages root-layout without running tsc (no dist/ produced)', () => {
     execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
@@ -224,5 +241,5 @@ describe('Webview (flat-JS) plugin lifecycle E2E', () => {
     expect(files).toEqual(['webview-e2e-plugin-1.0.0.amcplugin'])
     // Flat plugins must never trigger a TypeScript compile.
     expect(fs.existsSync(path.join(pluginDir, 'dist'))).toBe(false)
-  })
+  }, SHELL_OUT_TIMEOUT_MS)
 })

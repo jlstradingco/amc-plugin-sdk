@@ -1,5 +1,5 @@
 import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
-import type { Recording, RecordingHandle } from '@agent-mc/plugin-sdk'
+import type { Recording } from '@agent-mc/plugin-sdk'
 
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
@@ -9,77 +9,86 @@ const refreshBtn = document.getElementById('refresh-btn') as HTMLButtonElement
 const statusEl = document.getElementById('status') as HTMLDivElement
 const recList = document.getElementById('rec-list') as HTMLUListElement
 
-let handle: RecordingHandle | null = null
+let activeRecordingId: string | null = null
 
-// The recording bridge is not yet wired, so every call is wrapped: a rejection
-// or absent bridge is reported as "not yet available" rather than crashing.
-function reportUnavailable(action: string, err: unknown) {
-  statusEl.textContent = `${action} — recording is not yet available in this build (${String(err)}).`
+/**
+ * There is no `AgentMC.recording`.
+ *
+ * Screen recording is a BACKEND capability (`ctx.recording`). This UI therefore
+ * asks its own backend to do the work over the shared event bus — an `emit`
+ * from either surface reaches subscribers on both — and renders whatever the
+ * backend publishes back. See ../backend/index.ts.
+ */
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
+  )
 }
 
-startBtn.addEventListener('click', async () => {
-  statusEl.textContent = 'Starting…'
-  try {
-    handle = await amc.recording.start({ source: 'screen' })
-    startBtn.disabled = true
-    stopBtn.disabled = false
-    statusEl.textContent = `Recording (id: ${handle.recordingId}).`
-  } catch (err) {
-    reportUnavailable('Could not start', err)
-  }
-})
-
-stopBtn.addEventListener('click', async () => {
-  if (!handle) return
-  statusEl.textContent = 'Stopping…'
-  try {
-    const { recordingId } = await amc.recording.stop(handle)
-    statusEl.textContent = `Stopped (id: ${recordingId}).`
-    handle = null
-    startBtn.disabled = false
-    stopBtn.disabled = true
-    await refresh()
-  } catch (err) {
-    reportUnavailable('Could not stop', err)
-  }
-})
-
-refreshBtn.addEventListener('click', refresh)
-
-async function refresh() {
-  try {
-    const recordings = await amc.recording.list()
-    renderList(recordings)
-  } catch (err) {
-    recList.innerHTML = '<li class="empty">Recording list is not yet available in this build.</li>'
-    reportUnavailable('Could not list', err)
-  }
-}
-
-async function renderList(recordings: Recording[]) {
-  if (!recordings || recordings.length === 0) {
-    recList.innerHTML = '<li class="empty">No recordings.</li>'
+function renderList(recordings: Recording[]): void {
+  if (recordings.length === 0) {
+    recList.innerHTML = '<li class="empty">No recordings yet.</li>'
     return
   }
-
   recList.innerHTML = recordings
-    .map(
-      (r) => `
-    <li class="rec">
-      <strong>${escapeHtml(r.filename)}</strong><br />
-      ${(r.durationMs / 1000).toFixed(1)}s · ${(r.sizeBytes / 1024).toFixed(0)} KB ·
-      ${escapeHtml(r.createdAt)}
-    </li>`
-    )
+    .map((rec) => {
+      const seconds = Math.round(rec.durationMs / 1000)
+      const ended = rec.endedAt ? new Date(rec.endedAt).toLocaleString() : 'in progress'
+      return `<li class="item">
+        <div class="title">${escapeHtml(rec.sourceLabel)} · ${escapeHtml(rec.status)}</div>
+        <div class="body">${seconds}s · started ${escapeHtml(
+          new Date(rec.startedAt).toLocaleString()
+        )} · ${escapeHtml(ended)}</div>
+      </li>`
+    })
     .join('')
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
+amc.events.on('recording:list', (data) => {
+  const { recordings } = (data ?? {}) as { recordings?: Recording[] }
+  renderList(recordings ?? [])
+})
 
-refresh()
+amc.events.on('recording:started', (data) => {
+  const { recordingId } = (data ?? {}) as { recordingId?: string }
+  activeRecordingId = recordingId ?? null
+  startBtn.disabled = true
+  stopBtn.disabled = false
+  statusEl.textContent = `Recording (id: ${activeRecordingId ?? 'unknown'}).`
+})
+
+amc.events.on('recording:stopped', () => {
+  activeRecordingId = null
+  startBtn.disabled = false
+  stopBtn.disabled = true
+  statusEl.textContent = 'Stopped.'
+})
+
+amc.events.on('recording:error', (data) => {
+  const { message } = (data ?? {}) as { message?: string }
+  // The host REFUSES rather than throwing: the recorder may be disabled or
+  // busy, or the user may have dismissed the native confirm that every start
+  // requires. Treat this as an expected state, not a bug.
+  activeRecordingId = null
+  startBtn.disabled = false
+  stopBtn.disabled = true
+  statusEl.textContent = `Refused: ${message ?? 'unknown reason'}`
+})
+
+startBtn.addEventListener('click', () => {
+  statusEl.textContent = 'Starting… (AMC will ask you to confirm)'
+  amc.events.emit('recording:start', {})
+})
+
+stopBtn.addEventListener('click', () => {
+  if (!activeRecordingId) return
+  statusEl.textContent = 'Stopping…'
+  amc.events.emit('recording:stop', { recordingId: activeRecordingId })
+})
+
+refreshBtn.addEventListener('click', () => amc.events.emit('recording:refresh', {}))
+
+stopBtn.disabled = true
+amc.events.emit('recording:refresh', {})

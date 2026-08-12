@@ -2,8 +2,17 @@
 
 Read the user's **past** AMC sessions and projects.
 
-**Availability:** Backend only (`ctx.sessionHistory`)
+**Availability:** Webview only (`AgentMC.sessionHistory`)
 **Required Permission:** `sessions.readHistory`
+
+::: danger This is a WEBVIEW capability, not a backend one
+An earlier version of this page said "Backend only (`ctx.sessionHistory`)". That was backwards: the host
+builds its backend context **without** this namespace, so `ctx.sessionHistory` is `undefined` and calling it
+throws a `TypeError` at activation rather than producing a permission error.
+
+Use **`AgentMC.sessionHistory`** from your plugin's webview. If a backend needs the result, forward it over
+the shared event bus (`AgentMC.events` -> `ctx.events`).
+:::
 
 ::: warning Default-deny, and it stays that way
 Declaring the permission grants nothing. Your plugin sees an empty list until the user picks specific projects or sessions in the grant picker raised by `requestAccess()`. `getMessages()` **throws** for a session that was never granted, and every read is written to an audit log the plugin cannot touch.
@@ -82,21 +91,21 @@ interface HistoryGrantResult {
 ```typescript
 export function activate(ctx: PluginContext) {
   ctx.cli.handle('/summarize-history', async () => {
-    let sessions = await ctx.sessionHistory.listSessions()
+    let sessions = await AgentMC.sessionHistory.listSessions()
 
     if (sessions.length === 0) {
-      const grant = await ctx.sessionHistory.requestAccess({ kinds: ['session'] })
+      const grant = await AgentMC.sessionHistory.requestAccess({ kinds: ['session'] })
       if (grant.cancelled) {
         // The user declining is a normal outcome, not a failure.
         return { status: 200, body: { summary: null, reason: 'No sessions shared' } }
       }
-      sessions = await ctx.sessionHistory.listSessions()
+      sessions = await AgentMC.sessionHistory.listSessions()
     }
 
     const first = sessions[0]
     if (!first) return { status: 200, body: { summary: null, reason: 'Nothing granted' } }
 
-    const messages = await ctx.sessionHistory.getMessages({ sessionId: first.id })
+    const messages = await AgentMC.sessionHistory.getMessages({ sessionId: first.id })
     const transcript = messages.map((m) => `${m.role}: ${m.content}`).join('\n')
 
     return { status: 200, body: { summary: await ctx.ai.generateTitle(transcript) } }
@@ -127,8 +136,8 @@ const h = createTestContext({
   }
 })
 
-await h.ctx.sessionHistory.getMessages({ sessionId: 's1' }) // resolves
-await h.ctx.sessionHistory.getMessages({ sessionId: 's2' }) // rejects -- never granted
+await h.AgentMC.sessionHistory.getMessages({ sessionId: 's1' }) // resolves
+await h.AgentMC.sessionHistory.getMessages({ sessionId: 's2' }) // rejects -- never granted
 ```
 
 Only ids present in `messages` are readable, so the harness reproduces the default-deny behaviour rather than merely returning empty arrays.

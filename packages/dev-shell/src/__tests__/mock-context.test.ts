@@ -51,13 +51,16 @@ describe('createMockContext', () => {
     expect(received).toEqual([{ msg: 'hello' }])
   })
 
-  it('events on returns unsubscribe function', () => {
+  it('events on returns NOTHING — the host has no unsubscribe', () => {
+    // The host's backend `on` has no return statement, and there is no
+    // unsubscribe message in the worker protocol. The shell used to hand back a
+    // working `off()`, which would let a plugin clean up here and crash in AMC.
     const received: unknown[] = []
     const unsub = ctx.events.on('test', (data) => received.push(data))
+    expect(unsub).toBeUndefined()
     ctx.events.emit('test', 1)
-    unsub()
     ctx.events.emit('test', 2)
-    expect(received).toEqual([1])
+    expect(received).toEqual([1, 2])
   })
 
   it('log methods are callable', () => {
@@ -69,7 +72,8 @@ describe('createMockContext', () => {
 
   it('sidebar setBadge and setItems are callable', () => {
     expect(() => ctx.sidebar.setBadge(5)).not.toThrow()
-    expect(() => ctx.sidebar.setItems([{ id: '1', title: 'Test' }])).not.toThrow()
+    // `status` is required — the host silently drops a whole batch without it.
+    expect(() => ctx.sidebar.setItems([{ id: '1', title: 'Test', status: 'idle' }])).not.toThrow()
   })
 })
 
@@ -333,5 +337,82 @@ describe('createMockContext — settings from dev config', () => {
     const all = await ctx.settings.getAll()
     ;(all as Record<string, unknown>).a = 999
     expect(await ctx.settings.get('a')).toBe(1)
+  })
+})
+
+describe('sessions mock does not freeze the status', () => {
+  it('reports ended after stop(), not running forever', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const { sessionId } = await ctx.sessions.create({ prompt: 'hi' })
+    expect(await ctx.sessions.getStatus(sessionId)).toBe('running')
+
+    await ctx.sessions.stop(sessionId)
+    // Hardcoding 'running' here made a plugin that polls until the session ends
+    // loop forever against the dev shell while working fine against the host.
+    expect(await ctx.sessions.getStatus(sessionId)).toBe('ended')
+  })
+
+  it('tracks each session independently', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const a = await ctx.sessions.create({ prompt: 'a' })
+    const b = await ctx.sessions.create({ prompt: 'b' })
+    await ctx.sessions.stop(a.sessionId)
+
+    expect(await ctx.sessions.getStatus(a.sessionId)).toBe('ended')
+    expect(await ctx.sessions.getStatus(b.sessionId)).toBe('running')
+  })
+})
+
+describe('sessions mock issues distinct ids', () => {
+  it('does not collide for sessions created in the same millisecond', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const ids = await Promise.all(
+      Array.from({ length: 5 }, () => ctx.sessions.create({ prompt: 'x' }).then((r) => r.sessionId))
+    )
+    // Date.now() as an id made all five identical, silently merging their
+    // status and message history into one session.
+    expect(new Set(ids).size).toBe(5)
+  })
+})
+
+describe('ctx.workspace refuses to fake a capability it cannot model', () => {
+  // Deliberately NOT a working in-memory fake — but note the reason is no longer
+  // "the host has no workspace namespace". The host shipped one on 2026-08-05;
+  // the shell still declines because the per-project grant, the native confirms
+  // on delete/run, and the single-flight limits are not reproducible here, so a
+  // plugin that worked in the shell could still fail on install. Mirrors the
+  // identical stub in packages/sdk/src/testing/index.ts — the two mocks must
+  // agree about what the host can do.
+  const ws = () =>
+    createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false }).workspace
+
+  it('is present as an own enumerable key', () => {
+    const ctx = createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false })
+    expect(Object.keys(ctx)).toContain('workspace')
+  })
+
+  it.each([
+    'listProjects',
+    'listWorktrees',
+    'requestAccess',
+    'resolve',
+    'glob',
+    'stat',
+    'exists',
+    'readFile',
+    'readFiles',
+    'writeFile',
+    'writeFiles',
+    'mkdir',
+    'deleteFile',
+    'run',
+  ] as const)('rejects %s', async (method) => {
+    const fn = ws()[method] as (...args: unknown[]) => Promise<unknown>
+    await expect(fn()).rejects.toThrow(/does not\s+fake it/i)
+  })
+
+  it('does not tell the author the host is missing the namespace', async () => {
+    // The shell said exactly that for six days after the host shipped it.
+    await expect(ws().listProjects()).rejects.toThrow(/implemented by the AMC host/i)
   })
 })

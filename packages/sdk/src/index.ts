@@ -10,11 +10,17 @@ export type {
   PluginSettingOption,
   PluginSettingTestAction,
   PluginSettingDefinition,
+  PluginSuggestedPrompt,
   PluginPermission,
   PluginCliEndpoint,
   PluginCronDefinition,
   PluginManifest,
   PluginRegistryEntry,
+  PluginRuntimeStatus,
+  // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
+  PluginWorkspaceCommandSlot,
+  PluginWorkspaceBinding,
+  PluginWorkspace,
   // Context types
   QueryOptions,
   SidebarItem,
@@ -28,6 +34,9 @@ export type {
   PluginLogger,
   PluginEvents,
   PluginSessions,
+  SessionStatus,
+  SessionPendingAction,
+  SessionMessage,
   PluginAi,
   PluginAiStructuredRequest,
   PluginFs,
@@ -42,7 +51,8 @@ export type {
   PluginAuth,
   InboxItem,
   PluginInbox,
-  RecordingHandle,
+  RecordingStartResult,
+  RecordingStopResult,
   Recording,
   PluginRecording,
   // Text to speech (`tts`)
@@ -66,6 +76,20 @@ export type {
   SpendCharge,
   SpendReportBreakdown,
   PluginSpend,
+  // Workspace (`workspace.read` / `.write` / `.exec`)
+  WorktreeRef,
+  WorktreeStatus,
+  WorktreeInfo,
+  WorkspaceScope,
+  WorkspaceHandle,
+  WorkspaceEntry,
+  WorkspaceCheckout,
+  WorkspaceGlobOpts,
+  WorkspaceProjectRef,
+  WorkspaceWriteFilesResult,
+  WorkspaceExecResult,
+  WorkspaceRunRequest,
+  WorkspaceApi,
   // Backend types
   PluginBackend,
   PluginActivate,
@@ -74,3 +98,13 @@ export type {
 // Validators (runtime value exports)
 export { manifestSchema, validateManifest, PLUGIN_PERMISSIONS } from './validators/manifest.js'
 export type { ManifestValidationResult } from './validators/manifest.js'
+
+// Tool-activity transcript markers (runtime value exports). Import these rather
+// than hardcoding the glyphs - see the module for provenance and codepoints.
+export {
+  TOOL_CALL_MARKER,
+  TOOL_RESULT_MARKER,
+  TOOL_CALL_RE,
+  TOOL_RESULT_RE,
+  stripToolLines,
+} from './types/markers.js'
