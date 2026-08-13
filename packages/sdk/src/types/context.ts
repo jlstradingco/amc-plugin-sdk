@@ -948,15 +948,28 @@ export interface PluginContext {
   pluginId: string
   pluginVersion: string
   /**
-   * AMC's userData ROOT — **not** your plugin's own directory, and NOT the root
-   * `ctx.fs` is scoped to.
+   * YOUR plugin's own data directory — `<userData>/plugins/<pluginId>/data`,
+   * the same root `ctx.fs` is scoped to. Every plugin gets a different string.
    *
-   * Every plugin gets the same string here, while `ctx.fs` resolves relative
-   * paths under `<userData>/plugins/<pluginId>/data`. So
-   * `ctx.fs.readFile(path.join(ctx.dataDir, 'x.json'))` throws
-   * `Path escapes the plugin data directory` — the absolute path lands outside
-   * the fs sandbox. Pass `ctx.fs` plain relative paths and ignore this field
-   * unless you genuinely want the app-level location.
+   * It is also the ONLY directory your backend may write to: the worker runs
+   * under Node's `--permission` with its filesystem allow-set rooted here (plus
+   * the system temp dir), so a direct `node:fs` write anywhere else fails with
+   * `ERR_ACCESS_DENIED`. AMC creates this directory before your `activate()`
+   * runs, so it always exists.
+   *
+   * Prefer plain RELATIVE paths with `ctx.fs` — `ctx.fs.readFile('x.json')`.
+   * Reach for this field when you need the absolute location, e.g. to hand a
+   * path to a library that does its own I/O.
+   *
+   * @remarks
+   * Changed — see the `ctx.dataDir` entry in CHANGELOG.md. Previously this was
+   * AMC's app-wide userData ROOT: the same string for every plugin, and NOT the
+   * root `ctx.fs` used, so
+   * `ctx.fs.readFile(path.join(ctx.dataDir, 'x.json'))` threw
+   * `Path escapes the plugin data directory`. That call now resolves. If your
+   * backend wrote to `join(ctx.dataDir, …)` with raw `node:fs`, it was writing
+   * to the app-wide root and will now write inside your sandbox instead; the
+   * old file is NOT migrated.
    */
   dataDir: string
   storage: PluginStorage
