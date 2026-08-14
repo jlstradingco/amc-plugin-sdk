@@ -85,6 +85,20 @@ export interface PluginSecrets {
   list(): Promise<string[]>
 }
 
+/** This plugin's storage footprint, returned by `ctx.db.stats()`. */
+export interface PluginStorageStats {
+  /** `dbstat` is page-accurate; `payload-estimate` is the degraded fallback (reads ~33% low). */
+  method: 'dbstat' | 'payload-estimate'
+  totalRows: number
+  /** Allocated bytes across every collection: table b-tree + autoindex + declared indexes. */
+  totalBytes: number
+  collections: { name: string; rows: number; bytes: number }[]
+  /** Payload bytes of this plugin's rows in the shared `plugin_kv` table. */
+  kvBytes: number
+  /** Payload bytes of this plugin's rows in the shared `plugin_secrets` table. */
+  secretsBytes: number
+}
+
 export interface PluginDb {
   insert(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>
   query(collection: string, options?: QueryOptions): Promise<Record<string, unknown>[]>
@@ -92,6 +106,16 @@ export interface PluginDb {
   update(collection: string, id: string, fields: Record<string, unknown>): Promise<void>
   delete(collection: string, id: string): Promise<void>
   deleteWhere(collection: string, where: Record<string, unknown>): Promise<void>
+  /** Atomic insert-or-update on a declared UNIQUE column tuple; returns the persisted row. */
+  upsert(
+    collection: string,
+    conflictColumns: string[],
+    data: Record<string, unknown>
+  ): Promise<Record<string, unknown>>
+  /** Row count for one collection. Cheap — an index-only scan, not a table scan. */
+  count(collection: string): Promise<number>
+  /** This plugin's storage footprint: per-collection row counts and allocated bytes. */
+  stats(): Promise<PluginStorageStats>
 }
 
 export interface PluginSettings {

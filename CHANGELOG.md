@@ -11,6 +11,33 @@ together.
 
 ## [Unreleased]
 
+### Added — `ctx.db.upsert`, `ctx.db.count`, `ctx.db.stats` (2026-08-13)
+
+Three methods that existed in the host but were unreachable from a plugin.
+
+- **`db.upsert(collection, conflictColumns, data)`** — an atomic
+  `INSERT … ON CONFLICT DO UPDATE` on a UNIQUE column tuple your collection declares
+  via `storage.collections[].uniqueIndexes`. This replaces query-then-insert-or-update,
+  which is a real race when two AMC instances share one plugin database. The SDK docs
+  have referred to this behaviour for a while (it is why `uniqueIndexes` exists); until
+  now no SDK-consuming plugin could actually call it.
+- **`db.count(collection)`** — a row count. Cheap: an index-only scan, not a table scan,
+  and not the `query(collection, {}).length` workaround, which hydrates and
+  JSON-deserialises every row just to produce a number.
+- **`db.stats()`** — your plugin's storage footprint: per-collection row counts and
+  allocated bytes, plus your rows in the shared key-value and secrets tables.
+
+On `db.stats()` accuracy, because a retention policy depends on it: `method: 'dbstat'`
+means the byte figures are page-accurate — they count indexes and partially-filled
+pages, so they are within roughly +10%/−0% of true allocated storage. `method:
+'payload-estimate'` is a degraded fallback that sums row payloads only; it misses every
+index and reads roughly 33% low, with an error that scales with your collection's
+*schema* rather than its data. **Branch on `method`** rather than trusting `totalBytes`
+blindly. Two further caveats: `kvBytes`/`secretsBytes` are always payload-only (those
+tables are shared across plugins, so page-level attribution is impossible), and after a
+large delete your figure drops before the database file shrinks, because freed pages
+return to SQLite's freelist until a VACUUM.
+
 ### Fixed — host parity reconciliation (2026-08-11)
 
 Verified the whole SDK surface against host `origin/master@8722cc3fca`. The
