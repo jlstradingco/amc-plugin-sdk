@@ -30,6 +30,7 @@ export type {
   PluginStorage,
   PluginSecrets,
   PluginDb,
+  PluginStorageStats,
   PluginSettings,
   PluginLogger,
   PluginEvents,
