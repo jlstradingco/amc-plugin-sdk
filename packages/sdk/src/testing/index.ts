@@ -81,6 +81,15 @@ export interface TestContextOptions {
   // are webview-only and are no longer on PluginContext, so an option to seed
   // them would be accepted and then do nothing.
   spend?: Partial<SpendReportBreakdown>
+  db?: {
+    /**
+     * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
+     * which is what an in-memory store can honestly measure — seed 'dbstat' to exercise
+     * the page-accurate branch the host takes on a healthy install. Only the flag
+     * changes; the byte figures are an estimate either way.
+     */
+    statsMethod?: 'dbstat' | 'payload-estimate'
+  }
 }
 
 export interface TestHarness {
@@ -178,8 +187,11 @@ function nowIso(): string {
  * measures. Deliberately NOT a page/allocation figure: indexes and page slack have no
  * meaning in a Map, and reporting one would make `stats()` look page-accurate here and
  * disagree with a real host.
+ *
+ * Exported so the dev shell measures bytes the same way — one definition of a
+ * host-parity measurement, the same rule that keeps `createMockSessionMessage` here.
  */
-function payloadBytes(value: unknown): number {
+export function estimatePayloadBytes(value: unknown): number {
   return new TextEncoder().encode(JSON.stringify(value) ?? '').length
 }
 
@@ -249,6 +261,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const storageMap = new Map<string, unknown>()
   const secretsMap = new Map<string, string>()
   const collections = new Map<string, Record<string, unknown>[]>()
+  const statsMethod = opts.db?.statsMethod ?? 'payload-estimate'
   const fsFiles = new Map<string, string>()
   const eventBus = new EventEmitter()
   const cronHandlers = new Map<string, () => Promise<void>>()
@@ -344,6 +357,13 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       // the host rejects matters more than the happy path — a harness that accepts a
       // write the host throws on lets a plugin's suite go green on a write that fails
       // in production.
+      //
+      // NOT modelled, because this store has no manifest and no SQL (a green test here
+      // is NOT proof the write succeeds on a real host):
+      //   - the host requires the conflict tuple to be backed by a `uniqueIndexes`
+      //     declaration and raises a SQLite error when it is not; this row-scans, so a
+      //     forgotten declaration passes here and throws in production;
+      //   - the host's SQL-identifier rejection of unsafe collection/column names.
       upsert: (collection, conflictColumns, data) => {
         if (conflictColumns.length === 0) {
           return Promise.reject(new Error('upsert requires at least one conflict column'))
@@ -376,22 +396,30 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         collections.set(collection, rows)
         return Promise.resolve({ ...row })
       },
+      // NOTE the host throws ("no such table") for a collection the manifest never
+      // declared, where this returns 0 — collections here are created by first write,
+      // not by a manifest. Same caveat as `query` on an unknown collection, which has
+      // always returned [] rather than throwing.
       count: (collection) => Promise.resolve((collections.get(collection) ?? []).length),
-      // There are no SQLite pages in a Map, so this reports the host's DEGRADED
-      // `payload-estimate` method rather than faking `dbstat`. Callers that branch on
-      // `method` (as the host docs require, since the estimate reads low and its error
-      // scales with schema) then behave the same here as against a real host.
+      // There are no SQLite pages in a Map, so bytes are always the host's DEGRADED
+      // `payload-estimate` quantity — never a faked `dbstat` figure.
+      //
+      // `method`, though, is seedable via `db.statsMethod`, because the host reports
+      // 'dbstat' on a healthy install and its docs tell authors to branch on it. Pinning
+      // this to 'payload-estimate' would leave the branch they were told to write
+      // permanently unexercised. The reported BYTES stay an estimate either way, so a
+      // test seeding 'dbstat' is asserting on its own branching, not on real page counts.
       stats: () => {
         const byCollection = [...collections.entries()]
-          .map(([name, rows]) => ({ name, rows: rows.length, bytes: payloadBytes(rows) }))
+          .map(([name, rows]) => ({ name, rows: rows.length, bytes: estimatePayloadBytes(rows) }))
           .sort((a, b) => a.name.localeCompare(b.name))
         return Promise.resolve({
-          method: 'payload-estimate' as const,
+          method: statsMethod,
           totalRows: byCollection.reduce((n, c) => n + c.rows, 0),
           totalBytes: byCollection.reduce((n, c) => n + c.bytes, 0),
           collections: byCollection,
-          kvBytes: payloadBytes([...storageMap.entries()]),
-          secretsBytes: payloadBytes([...secretsMap.entries()])
+          kvBytes: estimatePayloadBytes([...storageMap.entries()]),
+          secretsBytes: estimatePayloadBytes([...secretsMap.entries()])
         })
       }
     },

@@ -5,7 +5,7 @@ import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plug
 // The dev shell is itself a development tool, so depending on the SDK's testing
 // entry is in-band: it keeps ONE definition of the backend message row rather
 // than a second copy that can drift from the host.
-import { createMockSessionMessage } from '@agent-mc/plugin-sdk/testing'
+import { createMockSessionMessage, estimatePayloadBytes } from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -25,14 +25,6 @@ function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
 }
 
-/**
- * Serialized payload size — the quantity the host's `payload-estimate` fallback
- * measures. Deliberately NOT a page/allocation figure: indexes and page slack have no
- * meaning in a Map, and reporting one would make `stats()` look page-accurate here.
- */
-function payloadBytes(value: unknown): number {
-  return new TextEncoder().encode(JSON.stringify(value) ?? '').length
-}
 
 /**
  * `ctx.workspace` rejects here rather than pretending to work.
@@ -292,6 +284,11 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       // its id + created_at and every supplied column except the tuple is refreshed. The
       // three rejections match the host's, so a write that throws in production also
       // throws here rather than passing in the dev shell and failing once installed.
+      //
+      // NOT modelled — this store has no manifest and no SQL: the host additionally
+      // requires the conflict tuple to be backed by a `uniqueIndexes` declaration and
+      // errors when it is not, and rejects unsafe SQL identifiers. A write that works
+      // in the dev shell can still fail on a real host for either reason.
       upsert: (col, conflictColumns, data) => {
         if (conflictColumns.length === 0) {
           return Promise.reject(new Error('db.upsert: requires at least one conflict column'))
@@ -331,16 +328,22 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [db] upsert(${col}) -> inserted ${id}`)
         return Promise.resolve(clone(row))
       },
+      // The host throws ("no such table") for a collection the manifest never declared,
+      // where this returns 0 — collections here are created by first write. Same caveat
+      // as `query` on an unknown collection, which has always returned [] not thrown.
       count: (col) => Promise.resolve(collectionOf(col).size),
-      // A Map has no SQLite pages, so this reports the host's DEGRADED
-      // `payload-estimate` method rather than faking `dbstat`. Callers the host docs
-      // tell to branch on `method` therefore behave the same here as against a real host.
+      // A Map has no SQLite pages, so this always reports the host's DEGRADED
+      // `payload-estimate` method rather than faking `dbstat`, and only enumerates
+      // collections that have been written to (the host lists every DECLARED one,
+      // `rows: 0` included). Unlike the SDK test harness this is not seedable: the dev
+      // shell is a live runner reporting what it can actually measure, where the harness
+      // exists to let a test drive both branches.
       stats: () => {
         const perCollection = [...collections.entries()]
           .map(([name, rows]) => ({
             name,
             rows: rows.size,
-            bytes: payloadBytes([...rows.values()]),
+            bytes: estimatePayloadBytes([...rows.values()]),
           }))
           .sort((a, b) => a.name.localeCompare(b.name))
         return Promise.resolve({
@@ -348,8 +351,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           totalRows: perCollection.reduce((total, c) => total + c.rows, 0),
           totalBytes: perCollection.reduce((total, c) => total + c.bytes, 0),
           collections: perCollection,
-          kvBytes: payloadBytes([...store.entries()]),
-          secretsBytes: payloadBytes([...secretStore.entries()]),
+          kvBytes: estimatePayloadBytes([...store.entries()]),
+          secretsBytes: estimatePayloadBytes([...secretStore.entries()]),
         })
       },
     },

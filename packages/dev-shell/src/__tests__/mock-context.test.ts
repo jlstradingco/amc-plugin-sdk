@@ -224,7 +224,9 @@ describe('createMockContext — faithful db', () => {
     await ctx.db.insert('other', { title: 'c' })
     expect(await ctx.db.count('todos')).toBe(2)
     expect(await ctx.db.count('other')).toBe(1)
-    expect(await ctx.db.count('never-written')).toBe(0)
+    // Deliberately NOT asserting count() on a never-written collection: the host throws
+    // there ("no such table") and this store returns 0, so pinning either number would
+    // lock a contract one of the two does not honour.
   })
 
   it('stats reports the degraded payload-estimate method, never a faked dbstat', async () => {

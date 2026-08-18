@@ -133,10 +133,12 @@ describe('db.count + db.stats', () => {
     await ctx.db.insert('b', { v: 3 })
     expect(await ctx.db.count('a')).toBe(2)
     expect(await ctx.db.count('b')).toBe(1)
-    expect(await ctx.db.count('never-written')).toBe(0)
+    // Deliberately NOT asserting count() on a never-written collection: the host throws
+    // there ("no such table") and this store returns 0, so pinning either number would
+    // lock a contract one of the two does not honour.
   })
 
-  it('stats reports the payload-estimate method and per-collection rows', async () => {
+  it('stats defaults to the payload-estimate method and reports per-collection rows', async () => {
     const { ctx } = createTestContext()
     await ctx.db.insert('a', { v: 1 })
     await ctx.db.insert('b', { v: 2 })
@@ -144,7 +146,7 @@ describe('db.count + db.stats', () => {
     await ctx.secrets.set('s', 'token')
 
     const stats = await ctx.db.stats()
-    // In memory there are no SQLite pages to measure, so the honest answer is the
+    // In memory there are no SQLite pages to measure, so the honest default is the
     // degraded method the host also reports when `dbstat` is unavailable.
     expect(stats.method).toBe('payload-estimate')
     expect(stats.totalRows).toBe(2)
@@ -153,6 +155,16 @@ describe('db.count + db.stats', () => {
     expect(stats.totalBytes).toBeGreaterThan(0)
     expect(stats.kvBytes).toBeGreaterThan(0)
     expect(stats.secretsBytes).toBeGreaterThan(0)
+  })
+
+  // The host reports 'dbstat' on a healthy install and its docs tell authors to branch
+  // on `method`. Without a seed that branch could never be reached from a test.
+  it('stats method is seedable so the dbstat branch is reachable', async () => {
+    const { ctx } = createTestContext({ db: { statsMethod: 'dbstat' } })
+    await ctx.db.insert('a', { v: 1 })
+    const stats = await ctx.db.stats()
+    expect(stats.method).toBe('dbstat')
+    expect(stats.totalRows).toBe(1)
   })
 })
 
