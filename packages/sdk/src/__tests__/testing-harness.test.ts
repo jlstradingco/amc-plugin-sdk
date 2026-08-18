@@ -75,6 +75,87 @@ describe('db — real in-memory collection', () => {
   })
 })
 
+// The harness has to honour `upsert`/`count`/`stats` or `PluginDb` is a lie to the
+// author: the types promise the methods, and a plugin that calls one in its own test
+// suite would hit `undefined is not a function` on a surface the host implements.
+describe('db.upsert — atomic insert-or-update on a key tuple', () => {
+  it('inserts when the key tuple is absent', async () => {
+    const { ctx } = createTestContext()
+    const row = await ctx.db.upsert('results', ['worktree', 'file'], {
+      worktree: 'w1',
+      file: 'a.ts',
+      status: 'pass'
+    })
+    expect(row.id).toBeTruthy()
+    expect(row.created_at).toBeTruthy()
+    expect(row.status).toBe('pass')
+    expect(await ctx.db.query('results')).toHaveLength(1)
+  })
+
+  it('updates in place on a colliding tuple — one row, id + created_at preserved', async () => {
+    const { ctx } = createTestContext()
+    const first = await ctx.db.upsert('results', ['worktree', 'file'], {
+      worktree: 'w1',
+      file: 'a.ts',
+      status: 'pass'
+    })
+    const second = await ctx.db.upsert('results', ['worktree', 'file'], {
+      worktree: 'w1',
+      file: 'a.ts',
+      status: 'fail'
+    })
+
+    const rows = await ctx.db.query('results')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].status).toBe('fail')
+    expect(second.id).toBe(first.id)
+    expect(second.created_at).toBe(first.created_at)
+  })
+
+  it('treats the tuple as composite — a partial match is a different row', async () => {
+    const { ctx } = createTestContext()
+    await ctx.db.upsert('results', ['worktree', 'file'], { worktree: 'w1', file: 'a.ts' })
+    await ctx.db.upsert('results', ['worktree', 'file'], { worktree: 'w1', file: 'b.ts' })
+    expect(await ctx.db.query('results')).toHaveLength(2)
+  })
+
+  it('rejects an empty key tuple — that would silently overwrite an arbitrary row', async () => {
+    const { ctx } = createTestContext()
+    await expect(ctx.db.upsert('results', [], { worktree: 'w1' })).rejects.toThrow()
+  })
+})
+
+describe('db.count + db.stats', () => {
+  it('count returns the row total for one collection only', async () => {
+    const { ctx } = createTestContext()
+    await ctx.db.insert('a', { v: 1 })
+    await ctx.db.insert('a', { v: 2 })
+    await ctx.db.insert('b', { v: 3 })
+    expect(await ctx.db.count('a')).toBe(2)
+    expect(await ctx.db.count('b')).toBe(1)
+    expect(await ctx.db.count('never-written')).toBe(0)
+  })
+
+  it('stats reports the payload-estimate method and per-collection rows', async () => {
+    const { ctx } = createTestContext()
+    await ctx.db.insert('a', { v: 1 })
+    await ctx.db.insert('b', { v: 2 })
+    await ctx.storage.set('k', 'v')
+    await ctx.secrets.set('s', 'token')
+
+    const stats = await ctx.db.stats()
+    // In memory there are no SQLite pages to measure, so the honest answer is the
+    // degraded method the host also reports when `dbstat` is unavailable.
+    expect(stats.method).toBe('payload-estimate')
+    expect(stats.totalRows).toBe(2)
+    expect(stats.collections.map((c) => c.name).sort()).toEqual(['a', 'b'])
+    expect(stats.collections.every((c) => c.rows === 1)).toBe(true)
+    expect(stats.totalBytes).toBeGreaterThan(0)
+    expect(stats.kvBytes).toBeGreaterThan(0)
+    expect(stats.secretsBytes).toBeGreaterThan(0)
+  })
+})
+
 describe('settings — seeded from options', () => {
   it('returns seeded values', async () => {
     const { ctx } = createTestContext({ settings: { apiKey: 'sk-1', limit: 5 } })

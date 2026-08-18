@@ -173,6 +173,16 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
+/**
+ * Serialized payload size, the same quantity the host's `payload-estimate` fallback
+ * measures. Deliberately NOT a page/allocation figure: indexes and page slack have no
+ * meaning in a Map, and reporting one would make `stats()` look page-accurate here and
+ * disagree with a real host.
+ */
+function payloadBytes(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value) ?? '').length
+}
+
 function matchesWhere(row: Record<string, unknown>, where?: Record<string, unknown>): boolean {
   if (!where) return true
   return Object.entries(where).every(([k, v]) => row[k] === v)
@@ -327,6 +337,62 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         const rows = collections.get(collection) ?? []
         collections.set(collection, rows.filter((r) => !matchesWhere(r, where)))
         return Promise.resolve()
+      },
+      // Mirrors the host's `INSERT … ON CONFLICT (tuple) DO UPDATE` (never REPLACE):
+      // on a collision the existing row keeps its id + created_at and every supplied
+      // column EXCEPT the conflict tuple is refreshed. Rejecting the same three inputs
+      // the host rejects matters more than the happy path — a harness that accepts a
+      // write the host throws on lets a plugin's suite go green on a write that fails
+      // in production.
+      upsert: (collection, conflictColumns, data) => {
+        if (conflictColumns.length === 0) {
+          return Promise.reject(new Error('upsert requires at least one conflict column'))
+        }
+        if (Object.keys(data).length === 0) {
+          return Promise.reject(new Error('upsert requires at least one column of data'))
+        }
+        for (const col of conflictColumns) {
+          if (!(col in data)) {
+            return Promise.reject(
+              new Error(`upsert conflict column "${col}" must be present in the inserted data`)
+            )
+          }
+        }
+
+        const rows = collections.get(collection) ?? []
+        const existing = rows.find((r) => conflictColumns.every((c) => r[c] === data[c]))
+        if (existing) {
+          for (const [k, v] of Object.entries(data)) {
+            if (conflictColumns.includes(k) || k === 'id' || k === 'created_at') continue
+            existing[k] = v
+          }
+          existing.updated_at = nowIso()
+          collections.set(collection, rows)
+          return Promise.resolve({ ...existing })
+        }
+
+        const row = { ...data, id: crypto.randomUUID(), created_at: nowIso(), updated_at: nowIso() }
+        rows.push(row)
+        collections.set(collection, rows)
+        return Promise.resolve({ ...row })
+      },
+      count: (collection) => Promise.resolve((collections.get(collection) ?? []).length),
+      // There are no SQLite pages in a Map, so this reports the host's DEGRADED
+      // `payload-estimate` method rather than faking `dbstat`. Callers that branch on
+      // `method` (as the host docs require, since the estimate reads low and its error
+      // scales with schema) then behave the same here as against a real host.
+      stats: () => {
+        const byCollection = [...collections.entries()]
+          .map(([name, rows]) => ({ name, rows: rows.length, bytes: payloadBytes(rows) }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        return Promise.resolve({
+          method: 'payload-estimate' as const,
+          totalRows: byCollection.reduce((n, c) => n + c.rows, 0),
+          totalBytes: byCollection.reduce((n, c) => n + c.bytes, 0),
+          collections: byCollection,
+          kvBytes: payloadBytes([...storageMap.entries()]),
+          secretsBytes: payloadBytes([...secretsMap.entries()])
+        })
       }
     },
 
