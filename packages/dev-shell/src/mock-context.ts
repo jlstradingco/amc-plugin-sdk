@@ -26,6 +26,15 @@ function clone<T>(value: T): T {
 }
 
 /**
+ * Serialized payload size — the quantity the host's `payload-estimate` fallback
+ * measures. Deliberately NOT a page/allocation figure: indexes and page slack have no
+ * meaning in a Map, and reporting one would make `stats()` look page-accurate here.
+ */
+function payloadBytes(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value) ?? '').length
+}
+
+/**
  * `ctx.workspace` rejects here rather than pretending to work.
  *
  * The host DOES implement this namespace (it landed 2026-08-05) — the older
@@ -278,6 +287,70 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         }
         if (shouldLog) console.log(`${prefix} [db] deleteWhere(${col})`, where)
         return Promise.resolve()
+      },
+      // Mirrors the host's `ON CONFLICT (tuple) DO UPDATE`: on a collision the row keeps
+      // its id + created_at and every supplied column except the tuple is refreshed. The
+      // three rejections match the host's, so a write that throws in production also
+      // throws here rather than passing in the dev shell and failing once installed.
+      upsert: (col, conflictColumns, data) => {
+        if (conflictColumns.length === 0) {
+          return Promise.reject(new Error('db.upsert: requires at least one conflict column'))
+        }
+        if (Object.keys(data).length === 0) {
+          return Promise.reject(new Error('db.upsert: requires at least one column of data'))
+        }
+        for (const key of conflictColumns) {
+          if (!(key in data)) {
+            return Promise.reject(
+              new Error(`db.upsert: conflict column "${key}" must be present in the inserted data`),
+            )
+          }
+        }
+
+        const target = collectionOf(col)
+        const hit = [...target.entries()].find(([, row]) =>
+          conflictColumns.every((key) => row[key] === data[key]),
+        )
+        if (hit) {
+          const [id, existing] = hit
+          const updated = { ...existing }
+          for (const [key, value] of Object.entries(clone(data))) {
+            if (conflictColumns.includes(key) || key === 'id' || key === 'created_at') continue
+            updated[key] = value
+          }
+          updated.updated_at = new Date().toISOString()
+          target.set(id, updated)
+          if (shouldLog) console.log(`${prefix} [db] upsert(${col}) -> updated ${id}`)
+          return Promise.resolve(clone(updated))
+        }
+
+        const id = crypto.randomUUID()
+        const now = new Date().toISOString()
+        const row = { ...clone(data), id, created_at: now, updated_at: now }
+        target.set(id, row)
+        if (shouldLog) console.log(`${prefix} [db] upsert(${col}) -> inserted ${id}`)
+        return Promise.resolve(clone(row))
+      },
+      count: (col) => Promise.resolve(collectionOf(col).size),
+      // A Map has no SQLite pages, so this reports the host's DEGRADED
+      // `payload-estimate` method rather than faking `dbstat`. Callers the host docs
+      // tell to branch on `method` therefore behave the same here as against a real host.
+      stats: () => {
+        const perCollection = [...collections.entries()]
+          .map(([name, rows]) => ({
+            name,
+            rows: rows.size,
+            bytes: payloadBytes([...rows.values()]),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        return Promise.resolve({
+          method: 'payload-estimate' as const,
+          totalRows: perCollection.reduce((total, c) => total + c.rows, 0),
+          totalBytes: perCollection.reduce((total, c) => total + c.bytes, 0),
+          collections: perCollection,
+          kvBytes: payloadBytes([...store.entries()]),
+          secretsBytes: payloadBytes([...secretStore.entries()]),
+        })
       },
     },
 
