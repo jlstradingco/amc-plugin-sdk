@@ -437,7 +437,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on AMC's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
-| `system` | Shell / clipboard / process (UI bridge) | Open paths, read clipboard, run child processes |
+| `system` | Shell / clipboard / process (**webview** UI bridge) | Open paths, read clipboard, launch host processes *from your plugin's UI* — never a licence for the backend to import `child_process` |
 | `rss` | `PluginRss` | Read RSS feeds and articles from AMC's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |

@@ -138,7 +138,7 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | Settings | Seeded from `amc-dev-settings.json` | Configured in AMC settings UI |
 | Sessions | Mock IDs, no real Claude process | Real Claude Code sessions |
 | AI generation | Returns placeholder strings | Calls Anthropic API |
-| Filesystem | Sandboxed to `dataDir` (real files; in-memory when no `dataDir`) | Sandboxed to plugin data dir |
+| Filesystem | Sandboxed to `ctx.dataDir` (real files; in-memory when no `dataDir`) | Sandboxed to `ctx.dataDir` — the same per-plugin root, also enforced by the worker's OS-level permission allow-set |
 | Cron scheduling | Logs only, no execution | Real cron scheduler |
 | CLI endpoints | Logs only, not reachable | Reachable via control server |
 | Notifications | Logs to console | Real OS notifications |

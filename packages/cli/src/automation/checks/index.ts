@@ -5,6 +5,7 @@ import { checkPortability } from './portability.js'
 import { checkSecrets } from './secrets.js'
 import { checkLimits } from './limits.js'
 import { checkStrippedFields } from './stripped-fields.js'
+import { checkHostCapabilities } from './host-capabilities.js'
 
 export {
   checkStructure,
@@ -12,7 +13,8 @@ export {
   checkPortability,
   checkSecrets,
   checkLimits,
-  checkStrippedFields
+  checkStrippedFields,
+  checkHostCapabilities
 }
 export { SCHEMA_VERSION, EXECUTION_MODES } from './structure.js'
 
@@ -34,7 +36,8 @@ export function runAllChecks(recipe: Record<string, unknown>): Finding[] {
     ...checkPortability(recipe),
     ...checkSecrets(recipe),
     ...checkLimits(recipe),
-    ...checkStrippedFields(recipe)
+    ...checkStrippedFields(recipe),
+    ...checkHostCapabilities(recipe)
   ]
   return findings.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
 }
