@@ -260,7 +260,7 @@ of columns that together must be unique:
 ```
 
 AMC emits a real `CREATE UNIQUE INDEX` per tuple, de-duplicating existing rows (keep-latest) the
-first time it creates one. This is not decoration: `collectionUpsert` performs an
+first time it creates one. This is not decoration: [`ctx.db.upsert()`](../api/db) performs an
 `INSERT ... ON CONFLICT (<tuple>) DO UPDATE`, so a tuple declared here is what makes that call
 atomic. An upsert against an undeclared tuple raises a SQLite error rather than silently inserting
 a duplicate.

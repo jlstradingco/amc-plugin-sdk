@@ -81,6 +81,15 @@ export interface TestContextOptions {
   // are webview-only and are no longer on PluginContext, so an option to seed
   // them would be accepted and then do nothing.
   spend?: Partial<SpendReportBreakdown>
+  db?: {
+    /**
+     * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
+     * which is what an in-memory store can honestly measure — seed 'dbstat' to exercise
+     * the page-accurate branch the host takes on a healthy install. Only the flag
+     * changes; the byte figures are an estimate either way.
+     */
+    statsMethod?: 'dbstat' | 'payload-estimate'
+  }
 }
 
 export interface TestHarness {
@@ -173,6 +182,19 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
+/**
+ * Serialized payload size, the same quantity the host's `payload-estimate` fallback
+ * measures. Deliberately NOT a page/allocation figure: indexes and page slack have no
+ * meaning in a Map, and reporting one would make `stats()` look page-accurate here and
+ * disagree with a real host.
+ *
+ * Exported so the dev shell measures bytes the same way — one definition of a
+ * host-parity measurement, the same rule that keeps `createMockSessionMessage` here.
+ */
+export function estimatePayloadBytes(value: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(value) ?? '').length
+}
+
 function matchesWhere(row: Record<string, unknown>, where?: Record<string, unknown>): boolean {
   if (!where) return true
   return Object.entries(where).every(([k, v]) => row[k] === v)
@@ -239,6 +261,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const storageMap = new Map<string, unknown>()
   const secretsMap = new Map<string, string>()
   const collections = new Map<string, Record<string, unknown>[]>()
+  const statsMethod = opts.db?.statsMethod ?? 'payload-estimate'
   const fsFiles = new Map<string, string>()
   const eventBus = new EventEmitter()
   const cronHandlers = new Map<string, () => Promise<void>>()
@@ -327,6 +350,77 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         const rows = collections.get(collection) ?? []
         collections.set(collection, rows.filter((r) => !matchesWhere(r, where)))
         return Promise.resolve()
+      },
+      // Mirrors the host's `INSERT … ON CONFLICT (tuple) DO UPDATE` (never REPLACE):
+      // on a collision the existing row keeps its id + created_at and every supplied
+      // column EXCEPT the conflict tuple is refreshed. Rejecting the same three inputs
+      // the host rejects matters more than the happy path — a harness that accepts a
+      // write the host throws on lets a plugin's suite go green on a write that fails
+      // in production.
+      //
+      // NOT modelled, because this store has no manifest and no SQL (a green test here
+      // is NOT proof the write succeeds on a real host):
+      //   - the host requires the conflict tuple to be backed by a `uniqueIndexes`
+      //     declaration and raises a SQLite error when it is not; this row-scans, so a
+      //     forgotten declaration passes here and throws in production;
+      //   - the host's SQL-identifier rejection of unsafe collection/column names.
+      upsert: (collection, conflictColumns, data) => {
+        if (conflictColumns.length === 0) {
+          return Promise.reject(new Error('upsert requires at least one conflict column'))
+        }
+        if (Object.keys(data).length === 0) {
+          return Promise.reject(new Error('upsert requires at least one column of data'))
+        }
+        for (const col of conflictColumns) {
+          if (!(col in data)) {
+            return Promise.reject(
+              new Error(`upsert conflict column "${col}" must be present in the inserted data`)
+            )
+          }
+        }
+
+        const rows = collections.get(collection) ?? []
+        const existing = rows.find((r) => conflictColumns.every((c) => r[c] === data[c]))
+        if (existing) {
+          for (const [k, v] of Object.entries(data)) {
+            if (conflictColumns.includes(k) || k === 'id' || k === 'created_at') continue
+            existing[k] = v
+          }
+          existing.updated_at = nowIso()
+          collections.set(collection, rows)
+          return Promise.resolve({ ...existing })
+        }
+
+        const row = { ...data, id: crypto.randomUUID(), created_at: nowIso(), updated_at: nowIso() }
+        rows.push(row)
+        collections.set(collection, rows)
+        return Promise.resolve({ ...row })
+      },
+      // NOTE the host throws ("no such table") for a collection the manifest never
+      // declared, where this returns 0 — collections here are created by first write,
+      // not by a manifest. Same caveat as `query` on an unknown collection, which has
+      // always returned [] rather than throwing.
+      count: (collection) => Promise.resolve((collections.get(collection) ?? []).length),
+      // There are no SQLite pages in a Map, so bytes are always the host's DEGRADED
+      // `payload-estimate` quantity — never a faked `dbstat` figure.
+      //
+      // `method`, though, is seedable via `db.statsMethod`, because the host reports
+      // 'dbstat' on a healthy install and its docs tell authors to branch on it. Pinning
+      // this to 'payload-estimate' would leave the branch they were told to write
+      // permanently unexercised. The reported BYTES stay an estimate either way, so a
+      // test seeding 'dbstat' is asserting on its own branching, not on real page counts.
+      stats: () => {
+        const byCollection = [...collections.entries()]
+          .map(([name, rows]) => ({ name, rows: rows.length, bytes: estimatePayloadBytes(rows) }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        return Promise.resolve({
+          method: statsMethod,
+          totalRows: byCollection.reduce((n, c) => n + c.rows, 0),
+          totalBytes: byCollection.reduce((n, c) => n + c.bytes, 0),
+          collections: byCollection,
+          kvBytes: estimatePayloadBytes([...storageMap.entries()]),
+          secretsBytes: estimatePayloadBytes([...secretsMap.entries()])
+        })
       }
     },
 

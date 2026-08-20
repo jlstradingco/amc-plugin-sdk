@@ -5,7 +5,7 @@ import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plug
 // The dev shell is itself a development tool, so depending on the SDK's testing
 // entry is in-band: it keeps ONE definition of the backend message row rather
 // than a second copy that can drift from the host.
-import { createMockSessionMessage } from '@agent-mc/plugin-sdk/testing'
+import { createMockSessionMessage, estimatePayloadBytes } from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -24,6 +24,7 @@ interface MockContextOptions {
 function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
 }
+
 
 /**
  * `ctx.workspace` rejects here rather than pretending to work.
@@ -278,6 +279,81 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         }
         if (shouldLog) console.log(`${prefix} [db] deleteWhere(${col})`, where)
         return Promise.resolve()
+      },
+      // Mirrors the host's `ON CONFLICT (tuple) DO UPDATE`: on a collision the row keeps
+      // its id + created_at and every supplied column except the tuple is refreshed. The
+      // three rejections match the host's, so a write that throws in production also
+      // throws here rather than passing in the dev shell and failing once installed.
+      //
+      // NOT modelled — this store has no manifest and no SQL: the host additionally
+      // requires the conflict tuple to be backed by a `uniqueIndexes` declaration and
+      // errors when it is not, and rejects unsafe SQL identifiers. A write that works
+      // in the dev shell can still fail on a real host for either reason.
+      upsert: (col, conflictColumns, data) => {
+        if (conflictColumns.length === 0) {
+          return Promise.reject(new Error('db.upsert: requires at least one conflict column'))
+        }
+        if (Object.keys(data).length === 0) {
+          return Promise.reject(new Error('db.upsert: requires at least one column of data'))
+        }
+        for (const key of conflictColumns) {
+          if (!(key in data)) {
+            return Promise.reject(
+              new Error(`db.upsert: conflict column "${key}" must be present in the inserted data`),
+            )
+          }
+        }
+
+        const target = collectionOf(col)
+        const hit = [...target.entries()].find(([, row]) =>
+          conflictColumns.every((key) => row[key] === data[key]),
+        )
+        if (hit) {
+          const [id, existing] = hit
+          const updated = { ...existing }
+          for (const [key, value] of Object.entries(clone(data))) {
+            if (conflictColumns.includes(key) || key === 'id' || key === 'created_at') continue
+            updated[key] = value
+          }
+          updated.updated_at = new Date().toISOString()
+          target.set(id, updated)
+          if (shouldLog) console.log(`${prefix} [db] upsert(${col}) -> updated ${id}`)
+          return Promise.resolve(clone(updated))
+        }
+
+        const id = crypto.randomUUID()
+        const now = new Date().toISOString()
+        const row = { ...clone(data), id, created_at: now, updated_at: now }
+        target.set(id, row)
+        if (shouldLog) console.log(`${prefix} [db] upsert(${col}) -> inserted ${id}`)
+        return Promise.resolve(clone(row))
+      },
+      // The host throws ("no such table") for a collection the manifest never declared,
+      // where this returns 0 — collections here are created by first write. Same caveat
+      // as `query` on an unknown collection, which has always returned [] not thrown.
+      count: (col) => Promise.resolve(collectionOf(col).size),
+      // A Map has no SQLite pages, so this always reports the host's DEGRADED
+      // `payload-estimate` method rather than faking `dbstat`, and only enumerates
+      // collections that have been written to (the host lists every DECLARED one,
+      // `rows: 0` included). Unlike the SDK test harness this is not seedable: the dev
+      // shell is a live runner reporting what it can actually measure, where the harness
+      // exists to let a test drive both branches.
+      stats: () => {
+        const perCollection = [...collections.entries()]
+          .map(([name, rows]) => ({
+            name,
+            rows: rows.size,
+            bytes: estimatePayloadBytes([...rows.values()]),
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        return Promise.resolve({
+          method: 'payload-estimate' as const,
+          totalRows: perCollection.reduce((total, c) => total + c.rows, 0),
+          totalBytes: perCollection.reduce((total, c) => total + c.bytes, 0),
+          collections: perCollection,
+          kvBytes: estimatePayloadBytes([...store.entries()]),
+          secretsBytes: estimatePayloadBytes([...secretStore.entries()]),
+        })
       },
     },
 

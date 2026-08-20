@@ -174,6 +174,69 @@ describe('createMockContext — faithful db', () => {
     const reread = await ctx.db.getById('todos', row.id as string)
     expect(reread?.title).toBe('a')
   })
+
+  it('upsert inserts when the key tuple is absent', async () => {
+    const row = await ctx.db.upsert('results', ['worktree', 'file'], {
+      worktree: 'w1',
+      file: 'a.ts',
+      status: 'pass',
+    })
+    expect(row.id).toBeTruthy()
+    expect(row.status).toBe('pass')
+    expect(await ctx.db.query('results')).toHaveLength(1)
+  })
+
+  it('upsert updates in place on a collision, preserving id and created_at', async () => {
+    const first = await ctx.db.upsert('results', ['worktree', 'file'], {
+      worktree: 'w1',
+      file: 'a.ts',
+      status: 'pass',
+    })
+    const second = await ctx.db.upsert('results', ['worktree', 'file'], {
+      worktree: 'w1',
+      file: 'a.ts',
+      status: 'fail',
+    })
+
+    const rows = await ctx.db.query('results')
+    expect(rows).toHaveLength(1)
+    expect(rows[0].status).toBe('fail')
+    expect(second.id).toBe(first.id)
+    expect(second.created_at).toBe(first.created_at)
+  })
+
+  it('upsert treats the tuple as composite — a partial match is a new row', async () => {
+    await ctx.db.upsert('results', ['worktree', 'file'], { worktree: 'w1', file: 'a.ts' })
+    await ctx.db.upsert('results', ['worktree', 'file'], { worktree: 'w1', file: 'b.ts' })
+    expect(await ctx.db.query('results')).toHaveLength(2)
+  })
+
+  it('upsert rejects the inputs the host rejects', async () => {
+    await expect(ctx.db.upsert('results', [], { worktree: 'w1' })).rejects.toThrow()
+    await expect(ctx.db.upsert('results', ['worktree'], {})).rejects.toThrow()
+    // Conflict column absent from the data — the host cannot resolve the row.
+    await expect(ctx.db.upsert('results', ['worktree'], { file: 'a.ts' })).rejects.toThrow()
+  })
+
+  it('count returns the per-collection total', async () => {
+    await ctx.db.insert('todos', { title: 'a' })
+    await ctx.db.insert('todos', { title: 'b' })
+    await ctx.db.insert('other', { title: 'c' })
+    expect(await ctx.db.count('todos')).toBe(2)
+    expect(await ctx.db.count('other')).toBe(1)
+    // Deliberately NOT asserting count() on a never-written collection: the host throws
+    // there ("no such table") and this store returns 0, so pinning either number would
+    // lock a contract one of the two does not honour.
+  })
+
+  it('stats reports the degraded payload-estimate method, never a faked dbstat', async () => {
+    await ctx.db.insert('todos', { title: 'a' })
+    const stats = await ctx.db.stats()
+    expect(stats.method).toBe('payload-estimate')
+    expect(stats.totalRows).toBe(1)
+    expect(stats.collections.find((c) => c.name === 'todos')?.rows).toBe(1)
+    expect(stats.totalBytes).toBeGreaterThan(0)
+  })
 })
 
 describe('createMockContext — persisted storage', () => {
