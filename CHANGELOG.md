@@ -11,6 +11,37 @@ together.
 
 ## [Unreleased]
 
+### Changed — `ctx.dataDir` is now YOUR plugin's directory (2026-08-13)
+
+`ctx.dataDir` was AMC's app-wide userData ROOT — the same string for every plugin,
+and NOT the root `ctx.fs` is scoped to. It is now `<userData>/plugins/<pluginId>/data`,
+your plugin's own sandbox root, which is what the field always claimed to be.
+
+This was a host security fix, not a rename: that value is also the root of the
+plugin worker's Node `--permission` filesystem allow-set, so the old wide value
+let a backend using raw `node:fs` read and write AMC's shared database — every
+other plugin's collections and the encrypted plugin-secrets rows — walking around
+the `ctx.fs` sandbox entirely.
+
+What this means for a plugin:
+
+- **`ctx.fs` with relative paths — unaffected.** This is, and remains, the
+  recommended way to do file I/O.
+- **`ctx.fs.readFile(path.join(ctx.dataDir, 'x.json'))` now WORKS.** It previously
+  threw `Path escapes the plugin data directory`, because the joined absolute path
+  landed outside the sandbox. It now resolves inside it.
+- **A raw `node:fs` write to `join(ctx.dataDir, …)` now lands somewhere else.**
+  It used to write to the app-wide root and succeed; it now writes inside your
+  sandbox. **The old file is not migrated** — read it from the previous location
+  once if you need to carry data over.
+- **A raw `node:fs` write anywhere OUTSIDE `ctx.dataDir` now fails** with
+  `ERR_ACCESS_DENIED`. Previously anything under the app data root was writable.
+- AMC creates `ctx.dataDir` before your `activate()` runs, so it always exists.
+
+Requires the host build carrying this fix; on an older host `ctx.dataDir` keeps
+the old app-wide value.
+
+
 ### Fixed — host parity reconciliation (2026-08-11)
 
 Verified the whole SDK surface against host `origin/master@8722cc3fca`. The
@@ -121,6 +152,8 @@ wrong thing:
 **Documented, not changed:** `ctx.dataDir` is AMC's userData root, not your
 plugin's directory, and not the root `ctx.fs` is scoped to — so
 `ctx.fs.readFile(path.join(ctx.dataDir, x))` throws.
+**Superseded** by the `ctx.dataDir` entry below (2026-08-13) — the host now scopes
+this field to your plugin's own directory, and that call resolves.
 
 **`documents` corrections.** The namespace is behind the host's
 `plugin-documents-io` unreleased-feature flag, so on a stock build every call
