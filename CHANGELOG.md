@@ -11,6 +11,74 @@ together.
 
 ## [Unreleased]
 
+### Changed — `ctx.workspace` reconciled with the host again (2026-08-21)
+
+Verified against Agent-Orchestrator `origin/master@e4f85b5edc`. Two host slices landed
+*after* the 2026-08-11 parity audit that recorded their absence, so the SDK has been
+describing a host that no longer exists. Nothing here went red: every workspace
+assertion in this repo compares the SDK against a vendored mirror, so a stale mirror and
+a stale type agree with each other.
+
+- **Breaking — the write methods now take a compare-and-swap token.**
+  `writeFile(handle, content, expectedMtimeMs)` and `deleteFile(handle, expectedMtimeMs)`
+  each gained a required positional argument, and every `writeFiles` batch entry gained a
+  required `expectedMtimeMs`. Pass the `mtimeMs` you last read from `stat()` or `glob()`.
+  `null` asserts the file **must not exist** — it is not a bypass — and `deleteFile`'s
+  token is not nullable, because "must not exist" is meaningless for a delete. A mismatch
+  refuses with `That file changed since you last read it. Read it again, then retry.` The
+  SDK previously documented, in prose and in a test, that no such concept existed.
+- **Added — the exec job path**: `exec`, `execStatus`, `execResults` and `execCancel`,
+  taking `ctx.workspace` from 14 methods to 18. `run` is unchanged and still one-shot.
+  The two are **not** interchangeable: `run` is bounded (120s ceiling) and may skip the
+  confirm dialog for two exact `git status` forms; `exec` starts a job that lives for
+  hours, always confirms, and is reaped by an idle watchdog — it dies from silence, never
+  from age. Their PATHs point in opposite directions, and `exec`'s start request has no
+  `timeoutMs` (the host strips one rather than rejecting it, so the SDK omits the field to
+  make it a compile error). `execResults` is a **cursor read** of a JSONL stream; there is
+  no whole-artifact fetch.
+- **New types**, all exported from the package root: `WorkspaceExecJobState`,
+  `WorkspaceExecStartRequest`, `WorkspaceExecStartResult`, `WorkspaceExecJobStatus`,
+  `WorkspaceExecPollRequest`, `WorkspaceExecPollResponse`.
+- **`WorkspaceExecJobState` has seven members, and `'failed'` is the one to handle.** It means
+  the job never ran — most often because the user declined the confirm dialog. You can reach it
+  without having raised that dialog: the job methods are not single-flight, so a second `exec`
+  for the same command resolves `{ started: false }` carrying the *first* call's `jobId`. An
+  exhaustive `switch` that omits it falls through at runtime. (The first cut of this type had
+  six members; it is now pinned by a test.)
+- **The reserved `encoding` option** is now typed on `writeFile`, `writeFiles` and `deleteFile`,
+  matching `readFile` and the host. It is reserved, not functional — v1 is UTF-8 text only and
+  the option exists so binary support is additive rather than breaking. `deleteFile` accepts and
+  ignores it, since a delete has no bytes.
+- **Not added, deliberately: `listBindings` and `requestBinding`.** The dependency spec
+  still describes a stored command-binding model with manifest command slots and argument
+  templates. The host **deleted** it in favour of the per-call native confirm — there is
+  no bindings table, no binding id, no template and no vars on `origin/master`. Mirroring
+  it would put a second, competing approval model into the SDK's public types and the
+  packaging preflight. The two names are tombstoned in the test suite so a copy-paste
+  revival from the spec fails loudly.
+
+### Fixed — `ui.hideSessionsPane` survives the manifest parse (2026-08-21)
+
+Host-real and host-validated, and absent from the SDK's type and schema — so a
+full-width manifest round-tripped through the non-strict zod kept `hideProjectPanel` and
+**silently lost its sibling**. "Full width" is both booleans together; setting one alone
+just hands the pane to the other surface, so a packaged plugin un-full-widthed itself
+while a dev-loaded build looked correct.
+
+### Fixed — `ctx.workspace` no longer claims to be unimplemented (2026-08-21)
+
+`PluginContext.workspace` carried "NOT YET IMPLEMENTED BY THE HOST" in its doc comment,
+contradicting the `WorkspaceApi` interface directly above it, the permission mirror and
+the published docs. The mocks still refuse to fake the namespace — that part was never
+about the host.
+
+### Documented — the `host.activeProjectChanged` event channel (2026-08-21)
+
+The host broadcasts on a reserved `host.*` namespace that no SDK page mentioned. There is
+exactly **one** channel, not the two an internal spec listed; the second was never built.
+It is a notification, not a grant — it fires for projects your plugin has never been
+granted access to.
+
 ### Added — `ctx.db.upsert`, `ctx.db.count`, `ctx.db.stats` (2026-08-13)
 
 Three methods that existed in the host but were unreachable from a plugin.

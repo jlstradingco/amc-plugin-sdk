@@ -142,8 +142,8 @@ export interface TestHarness {
  * So a test that needs workspace injects its own double and thereby states, in
  * its own source, which host behaviours it is choosing to assume.
  *
- * The method list below is the host's real one (14 methods, derived from
- * WORKSPACE_SCHEMAS at origin/master@8722cc3fca) — a fake that refuses still has
+ * The method list below is the host's real one (18 methods, derived from
+ * WORKSPACE_SCHEMAS at origin/master@e4f85b5edc) — a fake that refuses still has
  * to refuse the RIGHT surface, or a typo'd call fails for the wrong reason.
  */
 const WORKSPACE_NOT_FAKEABLE =
@@ -155,7 +155,7 @@ const WORKSPACE_NOT_FAKEABLE =
 
 /** Every method rejects. Kept in sync with the dev-shell's identical stub. */
 function workspaceNotFakeable(): PluginContext['workspace'] {
-  // One nullary thunk reused for all 14 methods: it is assignable to every
+  // One nullary thunk reused for all 18 methods: it is assignable to every
   // signature (fewer params is fine, and Promise<never> satisfies any Promise<T>)
   // and declares no parameter, so `noUnusedParameters` has nothing to complain
   // about.
@@ -174,7 +174,14 @@ function workspaceNotFakeable(): PluginContext['workspace'] {
     writeFiles: reject,
     mkdir: reject,
     deleteFile: reject,
-    run: reject
+    run: reject,
+    // The exec JOB path. Refused for the same reason as the rest, plus one of
+    // its own: a fake job would have to invent a lifecycle (idle watchdog,
+    // cursors, truncation) that is the entire thing worth testing.
+    exec: reject,
+    execStatus: reject,
+    execResults: reject,
+    execCancel: reject
   }
 }
 

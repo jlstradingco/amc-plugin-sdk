@@ -340,6 +340,7 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
       "icon": "puzzle"
     },
     "hideProjectPanel": false,
+    "hideSessionsPane": false,
     "sessions": {
       "label": "My Plugin sessions",
       "contextTemplate": "You are working inside {{projectName}} on {{date}}.",
@@ -358,7 +359,8 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
 | `sidebar.title` | string | No | 50 | Label shown in AMC's sidebar |
 | `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
 | `overlay.entryPoint` | string | No | 500 | A separate always-on-top window AMC opens on enable |
-| `hideProjectPanel` | boolean | No | — | Suppress AMC's project panel while your view is open, for a plugin that owns the full width |
+| `hideProjectPanel` | boolean | No | — | Suppress AMC's project panel while your view is open. **Half of "full width" — see below** |
+| `hideSessionsPane` | boolean | No | — | Suppress the plugin sessions pane. **The other half — set it alongside `hideProjectPanel`** |
 | `sessions.label` | string | No | 100 | Heading above your plugin's session list. Defaults to the plugin name |
 | `sessions.contextTemplate` | string | No | 5000 | Extra context appended to AMC's built-in primer for every session on your plugin's project |
 | `sessions.showDivider` | boolean | No | — | Defaults to `true` |
@@ -367,6 +369,21 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
 `entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
 alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest AMC
 installed happily could fail `amc-plugin validate`.)
+
+::: warning "Full width" is two flags, not one
+The column AMC clears for you has **two** owners, and each has its own opt-out. Hiding one
+alone just hands the column to the other, so a plugin that wants the full width must set both:
+
+```json
+{ "ui": { "hideProjectPanel": true, "hideSessionsPane": true } }
+```
+
+`hideSessionsPane` was missing from this SDK's schema until 2026-08-21. Because the schema is
+non-strict, a manifest declaring both **kept `hideProjectPanel` and silently dropped its
+sibling** on the way through `amc-plugin validate` and `package` — so the plugin looked
+correct dev-loaded and un-full-widthed itself once packaged. If you worked around that by
+giving up on full width, you can stop.
+:::
 
 `contextTemplate` supports single-pass `{{placeholder}}` substitution. Available variables are
 `date`, `projectName`, `sessionName`, `workDir` and `pluginName`. A whitespace-only template is

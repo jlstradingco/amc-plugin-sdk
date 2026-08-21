@@ -15,9 +15,10 @@
 // updates the SDK enum, then reconcile the allow-lists below.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// LAST RECONCILED: 2026-08-11, against host commit `origin/master@8722cc3fca`
-// (committed 2026-08-11T08:30:40-04:00), by GENERATING the 29 strings from
-// src/shared/plugin-permissions.ts rather than hand-copying them:
+// LAST RECONCILED: 2026-08-21, against host commit `origin/master@e4f85b5edc`.
+// The 29 strings below are UNCHANGED from the 2026-08-11 reconciliation against
+// `origin/master@8722cc3fca` — same members, same count — but see recurrence #5
+// below for what changed underneath them. Generate rather than hand-copy:
 //
 //   sed -n '/^export type PluginPermission/,/^$/p' src/shared/plugin-permissions.ts \
 //     | grep -oE "'[^']+'" | tr -d "'"
@@ -26,7 +27,7 @@
 // file between SHAs instead of re-reading 200 lines and eyeballing the delta.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// HISTORY — why this file is worth distrusting. It has now gone stale FOUR
+// HISTORY — why this file is worth distrusting. It has now gone stale FIVE
 // times, and each recurrence was found only because somebody happened to look:
 //
 //  1. 2026-07-15..27 — claimed 14 while the host union was 19, and claimed
@@ -46,6 +47,19 @@
 //     2026-08-05, six days earlier. `BRIDGE_PENDING_PERMISSIONS` likewise still
 //     called `recording` an unwired "gating stub" long after ctx.recording went
 //     live. Both were caught only by a full re-audit.
+//  5. 2026-08-21 (this change) — the PERMISSION strings were right (29 then, 29
+//     now, same members), and everything this file says ABOUT them went stale
+//     anyway. It described `workspace.*` as gating 14 methods with no
+//     compare-and-swap; the host had since shipped the exec job runner and the
+//     mtime CAS, making it 18 methods with a required token on every write.
+//     A permission mirror that is correct about names and wrong about what they
+//     gate still sends the next reader to the wrong conclusion — recurrence #4
+//     was found by someone reading exactly these sentences.
+//
+//     The new lesson: the count pin (`HOST_PERMISSIONS.length === 29`) could
+//     not have caught this, and neither could any assertion in this repo. The
+//     drift was entirely in the host's METHOD surface, which no SDK test reads.
+//
 //
 // RECURRENCE #4 HAS A SECOND LESSON, and it is the more expensive one. The
 // audit that found it first ran against a LOCAL host checkout that was 6679
@@ -110,9 +124,10 @@ export const HOST_PERMISSIONS = [
  * here from 2026-08-04 until 2026-08-11 on the strength of a claim that no host
  * implementation existed "across all 80 local and remote branch tips". The host
  * had shipped `ctx.workspace` on 2026-08-05 — `plugin-permission-map.ts` now
- * carries fourteen `workspace.*` rows, `workspace.write` and `workspace.exec`
- * each gate real mutating methods, and both are `tier: 'elevated'` in the
- * consent dialog.
+ * carries eighteen `workspace.*` rows (fourteen when this note was written;
+ * the exec job runner added four on 2026-08-20), `workspace.write` and
+ * `workspace.exec` each gate real mutating methods, and both are
+ * `tier: 'elevated'` in the consent dialog.
  *
  * Typing a capability ahead of the host is a deliberate exception to the "never
  * invent a host runtime shape" rule, and recurrence #4 shows what it costs: the
@@ -189,6 +204,13 @@ export const BRIDGE_PENDING_PERMISSIONS = [] as const
  *   carrying `expectedMtimeMs` compare-and-swap arguments the host has no
  *   concept of. Resolved by re-deriving `WorkspaceApi` from the host's
  *   WORKSPACE_SCHEMAS.
+ *
+ *   READ THAT AS HISTORY, NOT AS CURRENT FACT — and note how it reads if you
+ *   do not. Four of the six "fictions" (`exec`, `execStatus`, `execResults`,
+ *   `execCancel`) and the CAS token are all REAL as of 2026-08-21; the host
+ *   built them afterwards. Only the binding pair (`listBindings`,
+ *   `requestBinding`) is still fiction, and that one is permanent — the host
+ *   deleted the stored-binding model rather than deferring it.
  * - `ctx.recording`: the SDK declared `getShareUrl` and `delete` (neither
  *   exists), typed `stop()` to take a `{ recordingId }` object where the host
  *   wants a bare string, and gave `start()` a `source` option the host

@@ -24,6 +24,9 @@ export type {
   WorktreeRef, WorktreeStatus, WorktreeInfo,
   WorkspaceScope, WorkspaceHandle, WorkspaceEntry, WorkspaceCheckout, WorkspaceGlobOpts,
   WorkspaceProjectRef, WorkspaceWriteFilesResult, WorkspaceExecResult, WorkspaceRunRequest,
+  // The exec JOB path (`exec` / `execStatus` / `execResults` / `execCancel`)
+  WorkspaceExecJobState, WorkspaceExecStartRequest, WorkspaceExecStartResult,
+  WorkspaceExecJobStatus, WorkspaceExecPollRequest, WorkspaceExecPollResponse,
   WorkspaceApi,
 } from './context.js'
 

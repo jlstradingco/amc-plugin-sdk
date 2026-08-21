@@ -90,6 +90,13 @@ export type {
   WorkspaceWriteFilesResult,
   WorkspaceExecResult,
   WorkspaceRunRequest,
+  // The exec JOB path (`exec` / `execStatus` / `execResults` / `execCancel`)
+  WorkspaceExecJobState,
+  WorkspaceExecStartRequest,
+  WorkspaceExecStartResult,
+  WorkspaceExecJobStatus,
+  WorkspaceExecPollRequest,
+  WorkspaceExecPollResponse,
   WorkspaceApi,
   // Backend types
   PluginBackend,
