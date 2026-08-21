@@ -39,6 +39,16 @@ a stale type agree with each other.
 - **New types**, all exported from the package root: `WorkspaceExecJobState`,
   `WorkspaceExecStartRequest`, `WorkspaceExecStartResult`, `WorkspaceExecJobStatus`,
   `WorkspaceExecPollRequest`, `WorkspaceExecPollResponse`.
+- **`WorkspaceExecJobState` has seven members, and `'failed'` is the one to handle.** It means
+  the job never ran — most often because the user declined the confirm dialog. You can reach it
+  without having raised that dialog: the job methods are not single-flight, so a second `exec`
+  for the same command resolves `{ started: false }` carrying the *first* call's `jobId`. An
+  exhaustive `switch` that omits it falls through at runtime. (The first cut of this type had
+  six members; it is now pinned by a test.)
+- **The reserved `encoding` option** is now typed on `writeFile`, `writeFiles` and `deleteFile`,
+  matching `readFile` and the host. It is reserved, not functional — v1 is UTF-8 text only and
+  the option exists so binary support is additive rather than breaking. `deleteFile` accepts and
+  ignores it, since a delete has no bytes.
 - **Not added, deliberately: `listBindings` and `requestBinding`.** The dependency spec
   still describes a stored command-binding model with manifest command slots and argument
   templates. The host **deleted** it in favour of the per-call native confirm — there is

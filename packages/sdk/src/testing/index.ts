@@ -142,8 +142,8 @@ export interface TestHarness {
  * So a test that needs workspace injects its own double and thereby states, in
  * its own source, which host behaviours it is choosing to assume.
  *
- * The method list below is the host's real one (14 methods, derived from
- * WORKSPACE_SCHEMAS at origin/master@8722cc3fca) — a fake that refuses still has
+ * The method list below is the host's real one (18 methods, derived from
+ * WORKSPACE_SCHEMAS at origin/master@e4f85b5edc) — a fake that refuses still has
  * to refuse the RIGHT surface, or a typo'd call fails for the wrong reason.
  */
 const WORKSPACE_NOT_FAKEABLE =

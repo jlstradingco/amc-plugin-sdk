@@ -121,10 +121,10 @@ larger 64 MiB single-file cap.
 ## `workspace.write`
 
 ```typescript
-writeFile(handle, content, expectedMtimeMs): Promise<void>   // 3 args; up to 8 MiB
-writeFiles(batch): Promise<WorkspaceWriteFilesResult[]>      // up to 64 entries, 16 MiB total
+writeFile(handle, content, expectedMtimeMs, { encoding? }?): Promise<void>   // up to 8 MiB
+writeFiles(batch, { encoding? }?): Promise<WorkspaceWriteFilesResult[]>      // 64 entries, 16 MiB
 mkdir(handle): Promise<void>                                 // ONE level; parent must exist
-deleteFile(handle, expectedMtimeMs): Promise<void>           // gated on write, not a delete perm
+deleteFile(handle, expectedMtimeMs, { encoding? }?): Promise<void>  // gated on write, not delete
 ```
 
 ### The compare-and-swap token is required
@@ -251,8 +251,22 @@ for (;;) {
 a courtesy ceiling -- the host re-clamps per stream regardless (512 KiB results, 256 KiB
 console), so asking for more does not get you more.
 
-**State is one of** `'starting' | 'running' | 'stopping' | 'exited' | 'cancelled' |
-'idle-timeout'`. Treat anything other than the first two as terminal.
+**State is one of seven:**
+
+| State | Meaning |
+|---|---|
+| `starting` / `running` | in flight -- keep polling |
+| `stopping` | a cancel is in progress; the child has not exited yet |
+| `exited` | the command finished on its own. Read `exitCode` |
+| `cancelled` | you called `execCancel` and the child is gone |
+| `idle-timeout` | the watchdog reaped it. Covers going quiet part-way **and** never producing a first byte -- every watchdog reason lands here |
+| `failed` | it never ran. Most often the user **declined the confirm dialog** |
+
+The last four are terminal. `failed` is easy to miss and you can hit it without having raised
+the dialog yourself: because the job methods are not single-flight, a second `exec` for the
+same command resolves `{ started: false }` with the *first* call's `jobId`, so a decline on
+that dialog surfaces on the id you are holding. Handle it, or an exhaustive `switch` will fall
+through at runtime.
 
 **Cancelling is a request, not an instant.** `execCancel` resolves with `cancelling: true`
 while the child may still be alive; keep polling `execStatus` to see it actually end.
@@ -270,8 +284,14 @@ host shipped the job runner afterwards.
 
 ## Encoding
 
-UTF-8 text throughout. `readFile` takes an `encoding` option for forward compatibility; the
-host accepts `'utf-8'` and `'utf8'`, and `'utf-8'` is the spelling to prefer.
+UTF-8 text throughout. `readFile`, `writeFile`, `writeFiles` and `deleteFile` each take an
+`encoding` option for forward compatibility; the host accepts `'utf-8'` and `'utf8'`, and
+`'utf-8'` is the spelling to prefer.
+
+The option is **reserved, not functional** -- v1 is text only, and it exists so binary support
+can be added without breaking these signatures. `deleteFile` accepts it and ignores it (a
+delete has no bytes); it is there so the option is reserved on both write signatures rather
+than one. Passing anything else, `'base64'` included, is refused rather than silently mangled.
 
 ## Permission map
 
