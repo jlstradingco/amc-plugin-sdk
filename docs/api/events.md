@@ -136,6 +136,40 @@ const unsubscribe = AgentMC.events.onSessionStatus((event) => {
 unsubscribe()
 ```
 
+## Host channels
+
+Everything above is *your* bus: you emit, your plugin hears it. The host also broadcasts on a
+small reserved namespace, prefixed `host.`. You subscribe with the ordinary `on` -- there is
+no separate API -- but you cannot emit on it, and a channel outside the host's allow-list is
+never delivered no matter what emits it.
+
+**There is exactly one channel today.**
+
+### `host.activeProjectChanged`
+
+Fires when the user switches the active project in AMC. Delivered to **every** plugin, on both
+surfaces.
+
+```typescript
+ctx.events.on('host.activeProjectChanged', (data) => {
+  const { projectId, name } = data as { projectId: string; name: string }
+  ctx.log.info(`user switched to ${name}`)
+})
+```
+
+::: warning It is a notification, not a grant
+Hearing this channel tells you the user moved. It does **not** mean you can read that project:
+`ctx.workspace` is gated by a separate per-project runtime grant, and this event fires for
+projects you have never been granted. Treat `projectId` as a hint to re-check
+[`listProjects()`](./workspace#workspace-read), never as an authorisation.
+:::
+
+::: tip If you were told there are two
+An internal spec listed two `host.*` channels. The host's broadcast allow-list has only ever
+contained this one, verified against `origin/master`; the second was never built. If you are
+subscribed to another `host.*` name, it is silently never firing.
+:::
+
 ## Patterns
 
 ### Coordinating cron jobs and CLI endpoints
