@@ -496,4 +496,25 @@ describe('the typed surface matches the host method set exactly', () => {
       expect(methods).not.toContain(gone)
     }
   })
+
+  it('declares every ExecJobState the host can report', () => {
+    // Pinned by source-parse for the same reason as the method set above: a
+    // union is invisible at runtime, so nothing else in this suite can notice
+    // a missing member. This one was ALREADY wrong once — the first mirror of
+    // this type dropped `'failed'`, which a plugin can genuinely observe (the
+    // job methods are not single-flight, so a second `exec` hands you the first
+    // call's jobId, and declining that call's confirm lands the job there).
+    // An exhaustive switch over a six-member union would have been unsound.
+    const source = fs.readFileSync(path.join(here, '..', 'types', 'context.ts'), 'utf-8')
+    const decl = source.slice(source.indexOf('export type WorkspaceExecJobState'))
+    const body = decl.slice(0, decl.indexOf('\n\n'))
+    const states = [...body.matchAll(/'([a-z-]+)'/g)].map((m) => m[1])
+
+    expect(states.length).toBeGreaterThan(0) // vacuity guard
+    // From the host's ExecJobState at origin/master@e4f85b5edc
+    // (exec/exec-job-registry.ts). Re-derive from the host when it moves.
+    expect([...states].sort()).toEqual(
+      ['cancelled', 'exited', 'failed', 'idle-timeout', 'running', 'starting', 'stopping'].sort()
+    )
+  })
 })

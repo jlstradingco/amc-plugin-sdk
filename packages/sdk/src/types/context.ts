@@ -789,6 +789,12 @@ export type WorkspaceWriteFilesResult = { handle: WorkspaceHandle } & (
 /**
  * The finished result of one `run()`, as returned by the host.
  *
+ * NAMED FOR `run`, DESPITE THE `Exec` IN IT — this is not what
+ * {@link WorkspaceApi.exec} returns (that is
+ * {@link WorkspaceExecStartResult}). The name mirrors the host's own
+ * `WorkspaceExecResult`, whose `workspaceExec()` function implements `run`, and
+ * is kept rather than corrected so the two sides still `git diff` cleanly.
+ *
  * `run` is BLOCKING and resolves once, so there is no job id and nothing to
  * poll. It also never rejects for an ordinary command failure: a non-zero exit,
  * a spawn failure and a timeout all resolve with this object, so branch on
@@ -832,9 +838,21 @@ export interface WorkspaceRunRequest {
 /**
  * Lifecycle of one background job started by {@link WorkspaceApi.exec}.
  *
+ * Four are terminal: `'exited'`, `'cancelled'`, `'idle-timeout'` and
+ * `'failed'`. Treat everything else as still in flight.
+ *
  * `'idle-timeout'` is the one worth designing for: a job dies from SILENCE,
  * never from age. The host runs an idle watchdog, not a wall clock, so a job
  * that keeps writing output can run for hours while a quiet one is reaped.
+ * EVERY watchdog reason collapses onto this one state, so it also covers a job
+ * that never produced a first byte — not only one that went quiet part-way.
+ *
+ * `'failed'` means the job never got to run: the host reaped the claim before
+ * a child existed, most commonly because the user DECLINED the confirm dialog.
+ * You can observe it without having made the call that raised the dialog —
+ * because the job methods are not single-flight, a second `exec` for the same
+ * command resolves `{ started: false }` with the first call's `jobId`, so a
+ * decline on that dialog surfaces here.
  */
 export type WorkspaceExecJobState =
   | 'starting'
@@ -843,6 +861,7 @@ export type WorkspaceExecJobState =
   | 'exited'
   | 'cancelled'
   | 'idle-timeout'
+  | 'failed'
 
 /**
  * The one argument to {@link WorkspaceApi.exec}.
@@ -1057,13 +1076,23 @@ export interface WorkspaceApi {
    *
    * The token is a float, not an integer: `mtimeMs` carries sub-millisecond
    * precision on some filesystems and rounding it will spuriously fail the CAS.
+   *
+   * `encoding` is RESERVED, exactly as on {@link readFile}: v1 is UTF-8 text
+   * only, and the option exists so binary support can be additive later rather
+   * than a breaking signature change.
    */
-  writeFile(h: WorkspaceHandle, content: string, expectedMtimeMs: number | null): Promise<void>
+  writeFile(
+    h: WorkspaceHandle,
+    content: string,
+    expectedMtimeMs: number | null,
+    o?: { encoding?: 'utf-8' }
+  ): Promise<void>
   /** Up to 64 entries, 16 MiB total. Per-entry outcomes; NOT atomic across the
    *  batch. Every entry carries its own CAS token on the same terms as
    *  {@link writeFile} — there is no batch-wide opt-out. */
   writeFiles(
-    batch: Array<{ handle: WorkspaceHandle; content: string; expectedMtimeMs: number | null }>
+    batch: Array<{ handle: WorkspaceHandle; content: string; expectedMtimeMs: number | null }>,
+    o?: { encoding?: 'utf-8' }
   ): Promise<WorkspaceWriteFilesResult[]>
   /** Creates ONE directory. Not recursive — the parent must already exist. */
   mkdir(h: WorkspaceHandle): Promise<void>
@@ -1077,8 +1106,16 @@ export interface WorkspaceApi {
    *
    * For a file the plugin did not itself create, the host raises a native
    * confirm the plugin cannot bypass; files it created delete silently.
+   *
+   * `encoding` is accepted and ignored — a delete has no bytes. It is here
+   * because the capability reserves the option on BOTH write signatures, and
+   * trimming it as dead weight would quietly break that.
    */
-  deleteFile(h: WorkspaceHandle, expectedMtimeMs: number): Promise<void>
+  deleteFile(
+    h: WorkspaceHandle,
+    expectedMtimeMs: number,
+    o?: { encoding?: 'utf-8' }
+  ): Promise<void>
 
   // ── workspace.exec ──
   /**
