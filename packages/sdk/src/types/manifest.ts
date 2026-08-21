@@ -270,6 +270,13 @@ export interface PluginManifest {
     overlay?: { entryPoint: string }
     /** Hide AMC's project panel while this plugin's view is open, for a plugin that owns the full width. */
     hideProjectPanel?: boolean
+    /**
+     * The SIBLING opt-out, for the other owner of the same column. Set it
+     * ALONGSIDE `hideProjectPanel` when your plugin owns its full width:
+     * declining either one alone just hands the pane to the other surface, so
+     * "full width" is these two booleans together, not one flag.
+     */
+    hideSessionsPane?: boolean
     /** Customises the session list AMC renders for this plugin's own virtual project. */
     sessions?: {
       /**

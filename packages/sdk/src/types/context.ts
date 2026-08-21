@@ -830,6 +830,114 @@ export interface WorkspaceRunRequest {
 }
 
 /**
+ * Lifecycle of one background job started by {@link WorkspaceApi.exec}.
+ *
+ * `'idle-timeout'` is the one worth designing for: a job dies from SILENCE,
+ * never from age. The host runs an idle watchdog, not a wall clock, so a job
+ * that keeps writing output can run for hours while a quiet one is reaped.
+ */
+export type WorkspaceExecJobState =
+  | 'starting'
+  | 'running'
+  | 'stopping'
+  | 'exited'
+  | 'cancelled'
+  | 'idle-timeout'
+
+/**
+ * The one argument to {@link WorkspaceApi.exec}.
+ *
+ * Deliberately {@link WorkspaceRunRequest} MINUS `timeoutMs`. A job's lifetime
+ * is governed by the idle watchdog and the host's start request has no field to
+ * put a wall clock in, so a `timeoutMs` sent here is silently STRIPPED by the
+ * host's zod rather than rejected. Omitting it from this type is the only place
+ * an author finds that out before shipping.
+ */
+export interface WorkspaceExecStartRequest {
+  scope: WorkspaceScope
+  /** A bare command NAME — same provenance and PATH rules as
+   *  {@link WorkspaceRunRequest.command}. */
+  command: string
+  /** Up to 64 entries, each ≤1024 characters. Exactly what the user reads in
+   *  the confirm dialog and exactly what is spawned. */
+  args: string[]
+}
+
+/**
+ * The result of {@link WorkspaceApi.exec}.
+ *
+ * `started: false` is NOT an error — it means this plugin already has a live
+ * job for the same command and `jobId` identifies that existing one. The host
+ * raises no second dialog and does no disk work. Poll the returned id.
+ */
+export interface WorkspaceExecStartResult {
+  started: boolean
+  jobId: string
+}
+
+/**
+ * A job's current state, as returned by {@link WorkspaceApi.execStatus} and
+ * {@link WorkspaceApi.execCancel}.
+ *
+ * - `exitCode` is `null` until the child is observed to exit.
+ * - `cancelling` is true once a cancel is requested but before the child has
+ *   actually exited — a cancel is a request, not an instant transition.
+ * - `consoleTruncated` means the host's disk cap dropped console bytes from the
+ *   MIDDLE (head+tail retention), so the stream you read is not contiguous.
+ */
+export interface WorkspaceExecJobStatus {
+  jobId: string
+  state: WorkspaceExecJobState
+  exitCode: number | null
+  startedAt: number
+  endedAt: number | null
+  cancelling: boolean
+  consoleBytes: number
+  consoleTruncated: boolean
+  resultsBytes: number
+}
+
+/** Cursors for one {@link WorkspaceApi.execResults} poll. Omit both to read
+ *  from the start of each stream. */
+export interface WorkspaceExecPollRequest {
+  /** Byte offset into the JSONL results stream, from the previous response's
+   *  `resultsCursor`. */
+  resultsCursor?: number
+  /** Byte offset into the console stream, from the previous response's
+   *  `consoleCursor`. */
+  consoleCursor?: number
+  /** A courtesy ceiling, not the enforcement: the host re-clamps per stream
+   *  regardless (512 KiB results, 256 KiB console), so a larger value here does
+   *  not buy a larger read. */
+  maxBytes?: number
+}
+
+/**
+ * One cursor read of a running job's two streams.
+ *
+ * This is a CURSOR READ, not a whole-artifact fetch — there is no
+ * `execArtifact`. Carry `resultsCursor` and `consoleCursor` forward into the
+ * next poll; a job is finished when `state` leaves `'starting'`/`'running'`.
+ *
+ * - `records` holds WHOLE JSONL lines only, never a partial one, so it is
+ *   always safe to `JSON.parse` each entry.
+ * - `consoleSkippedBytes` is the bytes THIS read skipped because your cursor
+ *   pointed into a discarded middle — distinct from `consoleTruncated`, which
+ *   says truncation happened at all.
+ */
+export interface WorkspaceExecPollResponse {
+  jobId: string
+  state: WorkspaceExecJobState
+  exitCode: number | null
+  records: string[]
+  resultsCursor: number
+  console: string
+  consoleCursor: number
+  consoleTruncated: boolean
+  consoleSkippedBytes: number
+}
+
+/**
  * Read, write, and run commands against the user's real project checkouts and
  * worktrees, scoped per project by a runtime grant the user makes (and can
  * revoke) independently of the install-time permission; a worktree inherits its
@@ -859,14 +967,24 @@ export interface WorkspaceRunRequest {
  *   `listWorktrees`, `readFiles`, `writeFiles` and `run` reject a second
  *   concurrent call with `workspace.<m> is already running for this plugin.`,
  *   so `Promise.all` over two globs of the same project fails. Sequence them.
+ *   The four exec-JOB methods are exempt — a job you cannot poll while it runs
+ *   would be useless.
  * - **A batch is not atomic.** `writeFiles` reports success per entry and one
  *   failure does not roll back or stop the rest.
  *
  * Derived from the host's own `WORKSPACE_SCHEMAS` (bridge-method-schemas.ts),
- * `plugin-permission-map.ts` and `workspace-methods.ts` at
- * `origin/master@8722cc3fca`. That code is the source of truth; an earlier
- * revision of this interface was transcribed from an unimplemented spec and
- * invented six methods the host has never had.
+ * `plugin-permission-map.ts`, `workspace-methods.ts` and
+ * `exec/exec-job-registry.ts` at `origin/master@e4f85b5edc`. That code is the
+ * source of truth; an earlier revision of this interface was transcribed from
+ * an unimplemented spec and invented six methods the host has never had.
+ *
+ * Two of those six — the binding pair — remain fiction and must stay out:
+ * the host DELETED the stored-binding model in favour of the per-call native
+ * confirm, so there is no `listBindings`, no `requestBinding`, no binding id,
+ * template or vars. The other four (`exec`, `execStatus`, `execResults`,
+ * `execCancel`) were fiction when transcribed from the spec and are real now
+ * for an unrelated reason — the host shipped a job runner afterwards. Same
+ * names, different provenance; these are read off the host's schemas.
  */
 export interface WorkspaceApi {
   // ── discovery — workspace.read ──
@@ -923,17 +1041,29 @@ export interface WorkspaceApi {
 
   // ── workspace.write ──
   /**
-   * Overwrite (or create) one file, up to 8 MiB.
+   * Overwrite (or create) one file, up to 8 MiB. Atomic: the host writes a temp
+   * file in the same directory and renames.
    *
-   * There is deliberately no compare-and-swap: the host has no
-   * `expectedMtimeMs` concept, so this is a last-writer-wins overwrite. If you
-   * need to avoid clobbering a concurrent edit, `stat()` first and accept the
-   * race — the SDK cannot close it for you.
+   * `expectedMtimeMs` is a REQUIRED compare-and-swap token, not an option —
+   * pass the `mtimeMs` you last read from {@link stat} or {@link glob}, or
+   * `null` to assert the file MUST NOT already exist. It is deliberately not
+   * optional and `null` is not a bypass: the two together close torn-write and
+   * lost-update, and the token is free because the enumeration call already
+   * returned it.
+   *
+   * On a mismatch the host refuses with `That file changed since you last read
+   * it. Read it again, then retry.` — one of the few refusals that is NOT
+   * collapsed into the generic string, because retrying is actionable.
+   *
+   * The token is a float, not an integer: `mtimeMs` carries sub-millisecond
+   * precision on some filesystems and rounding it will spuriously fail the CAS.
    */
-  writeFile(h: WorkspaceHandle, content: string): Promise<void>
-  /** Up to 64 entries, 16 MiB total. Per-entry outcomes; NOT atomic. */
+  writeFile(h: WorkspaceHandle, content: string, expectedMtimeMs: number | null): Promise<void>
+  /** Up to 64 entries, 16 MiB total. Per-entry outcomes; NOT atomic across the
+   *  batch. Every entry carries its own CAS token on the same terms as
+   *  {@link writeFile} — there is no batch-wide opt-out. */
   writeFiles(
-    batch: Array<{ handle: WorkspaceHandle; content: string }>
+    batch: Array<{ handle: WorkspaceHandle; content: string; expectedMtimeMs: number | null }>
   ): Promise<WorkspaceWriteFilesResult[]>
   /** Creates ONE directory. Not recursive — the parent must already exist. */
   mkdir(h: WorkspaceHandle): Promise<void>
@@ -941,10 +1071,14 @@ export interface WorkspaceApi {
    * Delete one file. Gated on `workspace.write`; there is no separate delete
    * permission.
    *
+   * `expectedMtimeMs` is required here too, but NOT nullable — unlike
+   * {@link writeFile}, "must not exist" is meaningless for a delete, so the
+   * host's schema omits `.nullable()` on this method alone.
+   *
    * For a file the plugin did not itself create, the host raises a native
    * confirm the plugin cannot bypass; files it created delete silently.
    */
-  deleteFile(h: WorkspaceHandle): Promise<void>
+  deleteFile(h: WorkspaceHandle, expectedMtimeMs: number): Promise<void>
 
   // ── workspace.exec ──
   /**
@@ -966,6 +1100,38 @@ export interface WorkspaceApi {
    * filtered PATH, and that confirm.
    */
   run(request: WorkspaceRunRequest): Promise<WorkspaceExecResult>
+  /**
+   * Start a LONG-RUNNING job and return immediately with an id to poll.
+   *
+   * `run` and `exec` are not interchangeable and their names do not say so:
+   * `run` is one-shot and bounded (30s default, 120s ceiling); `exec` starts a
+   * job that can run for hours, reaped by an idle watchdog rather than a clock.
+   *
+   * Three differences from `run` that will catch you out:
+   *
+   * - **It ALWAYS confirms.** The silent `git status` allow-list never applies
+   *   to a job, by design — the unattended path is the bounded one only.
+   * - **The PATH points the opposite way.** `run` strips project-local bins;
+   *   `exec` PREPENDS the `node_modules/.bin` chain, because running a repo's
+   *   own test runner is the point.
+   * - **It is exempt from single-flight**, so unlike `run` you may hold a job
+   *   open and keep polling while other workspace calls proceed.
+   */
+  exec(request: WorkspaceExecStartRequest): Promise<WorkspaceExecStartResult>
+  /** Current state of one job. Rejects with `That run is not available.` for an
+   *  unknown id — including another plugin's, which is indistinguishable on
+   *  purpose. */
+  execStatus(jobId: string): Promise<WorkspaceExecJobStatus>
+  /** Read the next slice of a job's results and console streams. Poll this;
+   *  there is no push channel and no whole-artifact read. */
+  execResults(
+    jobId: string,
+    request?: WorkspaceExecPollRequest
+  ): Promise<WorkspaceExecPollResponse>
+  /** Request cancellation. Returns the status as of the request — expect
+   *  `cancelling: true` with the child not yet exited, and keep polling
+   *  {@link execStatus} to observe the terminal state. */
+  execCancel(jobId: string): Promise<WorkspaceExecJobStatus>
 }
 
 export interface PluginContext {
@@ -1027,9 +1193,17 @@ export interface PluginContext {
   // / `AgentMC.firebase` (see ./bridge.ts), and bridge to your backend with
   // `ctx.events` if the result has to cross surfaces.
   /**
-   * NOT YET IMPLEMENTED BY THE HOST — see {@link WorkspaceApi}. Typed so a
-   * plugin can be authored and packaged against it; every call currently
-   * rejects at runtime, and both SDK mocks refuse to fake it.
+   * IMPLEMENTED BY THE HOST — see {@link WorkspaceApi}. Backend only.
+   *
+   * What still refuses is the SDK's own MOCKS, on purpose: the capability is
+   * gated by a per-project runtime grant, native confirms and single-flight
+   * limits that no in-memory double reproduces, so a green test against a fake
+   * would predict nothing. Inject your own double and verify against a real
+   * AMC build.
+   *
+   * (An earlier version of this comment said the host had not implemented it,
+   * six days after the host shipped it. A wrong refusal is documentation that
+   * sends people to build a workaround they do not need.)
    */
   workspace: WorkspaceApi
 }

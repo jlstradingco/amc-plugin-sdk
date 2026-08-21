@@ -49,7 +49,7 @@ const WORKSPACE_NOT_FAKEABLE =
   'build.'
 
 function workspaceNotFakeable(): PluginContext['workspace'] {
-  // One nullary thunk for all 14 methods — assignable to every signature, and
+  // One nullary thunk for all 18 methods — assignable to every signature, and
   // declares no parameter so `noUnusedParameters` stays satisfied.
   const reject = (): Promise<never> => Promise.reject(new Error(WORKSPACE_NOT_FAKEABLE))
   return {
@@ -67,6 +67,13 @@ function workspaceNotFakeable(): PluginContext['workspace'] {
     mkdir: reject,
     deleteFile: reject,
     run: reject,
+    // The exec JOB path. Refused for the same reason as the rest, plus one of
+    // its own: a fake job would have to invent a lifecycle (idle watchdog,
+    // cursors, truncation) that is the entire thing worth testing.
+    exec: reject,
+    execStatus: reject,
+    execResults: reject,
+    execCancel: reject,
   }
 }
 

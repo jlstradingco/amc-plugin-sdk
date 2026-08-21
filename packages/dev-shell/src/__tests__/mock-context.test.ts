@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { createMockContext } from '../mock-context'
+import { createTestContext } from '@agent-mc/plugin-sdk/testing'
 
 describe('createMockContext', () => {
   let ctx: ReturnType<typeof createMockContext>
@@ -469,6 +470,10 @@ describe('ctx.workspace refuses to fake a capability it cannot model', () => {
     'mkdir',
     'deleteFile',
     'run',
+    'exec',
+    'execStatus',
+    'execResults',
+    'execCancel',
   ] as const)('rejects %s', async (method) => {
     const fn = ws()[method] as (...args: unknown[]) => Promise<unknown>
     await expect(fn()).rejects.toThrow(/does not\s+fake it/i)
@@ -477,5 +482,23 @@ describe('ctx.workspace refuses to fake a capability it cannot model', () => {
   it('does not tell the author the host is missing the namespace', async () => {
     // The shell said exactly that for six days after the host shipped it.
     await expect(ws().listProjects()).rejects.toThrow(/implemented by the AMC host/i)
+  })
+
+  it('exposes the SAME workspace method set as the SDK test harness', () => {
+    // The two stubs are kept in lockstep by CONVENTION — a comment in each
+    // pointing at the other. That convention has already failed once: `ac947b6`
+    // had to land db.upsert/count/stats in both mocks after they drifted.
+    //
+    // This asserts the property the comments only ask for. It compares against
+    // the SDK's real harness rather than a hardcoded list, so adding a method
+    // to one mock and forgetting the other fails HERE instead of surfacing as a
+    // plugin that passes its unit tests and throws on install.
+    const shell = createMockContext({
+      pluginId: 'test',
+      pluginVersion: '1.0.0',
+      logToConsole: false,
+    }).workspace
+    const harness = createTestContext().ctx.workspace
+    expect(Object.keys(shell).sort()).toEqual(Object.keys(harness).sort())
   })
 })
