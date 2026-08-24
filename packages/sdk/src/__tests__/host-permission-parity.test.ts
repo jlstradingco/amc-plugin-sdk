@@ -29,6 +29,7 @@ import {
   HOST_AHEAD_PERMISSIONS,
   BRIDGE_PENDING_PERMISSIONS,
   KNOWN_TYPE_DELTAS,
+  HOST_MIRROR_PROVENANCE,
 } from './fixtures/host-permission-mirror.js'
 
 describe('SDK <-> host permission parity', () => {
@@ -128,7 +129,17 @@ describe('SDK <-> host permission parity', () => {
     // had 23, so every set-algebra assertion above stayed green — the drift was
     // entirely inside the ALLOW-LISTS. When you bump this number, re-read
     // SDK_AHEAD/HOST_AHEAD/BRIDGE_PENDING too; the count alone is not the guard.
-    expect(HOST_PERMISSIONS.length).toBe(29)
+    //
+    // 29 -> 31 on 2026-08-24: added `stt` and `microphone`. Unlike every prior
+    // bump, neither needed a HOST_AHEAD or SDK_AHEAD entry: `stt` ships with a
+    // typed `AgentMC.stt` bridge namespace in the SAME change (see the 'gives
+    // every recognized permission a typed namespace' test below), and
+    // `microphone` gates raw webview getUserMedia rather than an RPC method, so
+    // it is deliberately classified `null` there rather than left undocumented.
+    // Re-derived from the host's
+    // session/98c53684-6b6e-4c82-b57b-27c39c68c368-stt-transcribe-bridge branch
+    // (see HOST_MIRROR_PROVENANCE in the fixture; not yet on origin/master).
+    expect(HOST_PERMISSIONS.length).toBe(31)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
@@ -157,6 +168,12 @@ describe('SDK <-> host permission parity', () => {
       ai: { surface: CTX, key: 'ai' },
       // Webview-only — no ctx.tts exists.
       tts: { surface: BRIDGE, key: 'tts' },
+      // Webview-only, no ctx.stt exists, same as tts above.
+      stt: { surface: BRIDGE, key: 'stt' },
+      // Raw webview getUserMedia, gated by the host's per-webview permission
+      // handler rather than any RPC method, so there is no ctx or bridge
+      // namespace to point at.
+      microphone: null,
       network: { surface: CTX, key: 'http' },
       cron: { surface: CTX, key: 'cron' },
       cli: { surface: CTX, key: 'cli' },
@@ -217,4 +234,85 @@ describe('SDK <-> host permission parity', () => {
     // reviewed — do it only when a new deferred delta is genuinely introduced.
     expect(KNOWN_TYPE_DELTAS.length).toBe(0)
   })
+})
+
+/**
+ * The block above only ever compares the SDK against HOST_PERMISSIONS, a
+ * hand-maintained copy of the host's real union (see the fixture file's
+ * HISTORY block: it went stale five separate times, each caught only because
+ * someone happened to re-read it). A wrong mirror and a wrong SDK enum agree
+ * with each other, so nothing above can ever detect the mirror itself
+ * drifting from the actual host source. There is no dependency from this
+ * package on the host app to check against for real: the host consumes the
+ * PUBLISHED @agent-mc/plugin-sdk, so a runtime cross-import back into it would
+ * be circular, and the host repo is not present in this package's CI at all.
+ *
+ * The two tests below are the best available substitute for that missing
+ * cross-repo check.
+ */
+describe('host-permission-mirror freshness (guards the vendored copy itself, not just its contents)', () => {
+  it('fails once HOST_MIRROR_PROVENANCE.reconciledAt is older than the staleness budget', () => {
+    // 30 days: long enough not to fire on a normal update cadence, short
+    // enough that the mirror can only go unreconciled for a month before this
+    // forces a human to go re-check it against the host source rather than
+    // trusting it indefinitely.
+    const budgetDays = 30
+    const reconciledAt = new Date(`${HOST_MIRROR_PROVENANCE.reconciledAt}T00:00:00Z`)
+    expect(
+      Number.isNaN(reconciledAt.getTime()),
+      `HOST_MIRROR_PROVENANCE.reconciledAt ("${HOST_MIRROR_PROVENANCE.reconciledAt}") is not a valid date`
+    ).toBe(false)
+    const ageDays = (Date.now() - reconciledAt.getTime()) / (1000 * 60 * 60 * 24)
+    expect(
+      ageDays,
+      `host-permission-mirror.ts was last reconciled ${HOST_MIRROR_PROVENANCE.reconciledAt} ` +
+        `(${Math.round(ageDays)} days ago), past the ${budgetDays}-day staleness budget. Re-derive ` +
+        "HOST_PERMISSIONS from the host's src/shared/plugin-permissions.ts (generation command is " +
+        'at the top of the fixture file), update HOST_MIRROR_PROVENANCE, and bump the pinned count ' +
+        'test in the describe above.'
+    ).toBeLessThanOrEqual(budgetDays)
+  })
+
+  const hostPermissionsPath = process.env.AMC_HOST_PERMISSIONS_PATH
+  if (!hostPermissionsPath) {
+    // Logged unconditionally at collection time, not only inside the skipped
+    // test body below, so the coverage gap is visible even to a runner that
+    // only surfaces failures.
+    console.warn(
+      '[host-permission-parity] AMC_HOST_PERMISSIONS_PATH is not set. Skipping the real cross-repo ' +
+        'permission check below, so this run relies only on the hand-maintained mirror plus its ' +
+        "staleness budget above, not a live comparison. Point the var at the host checkout's " +
+        'src/shared/plugin-permissions.ts to run the real check.'
+    )
+  }
+
+  it.skipIf(!hostPermissionsPath)(
+    'the HOST_PERMISSIONS mirror matches the REAL host union when AMC_HOST_PERMISSIONS_PATH is set',
+    () => {
+      const filePath = hostPermissionsPath as string
+      const source = fs.readFileSync(filePath, 'utf-8')
+      const match = source.match(/export type PluginPermission =\s*([\s\S]*?)\n\s*\n\s*export/)
+      const body = match?.[1]
+      if (body === undefined) {
+        throw new Error(
+          `Could not find "export type PluginPermission = ..." in ${filePath}. The host file's ` +
+            'shape changed; update this parser rather than trusting a stale result.'
+        )
+      }
+      // Anchored to the union's own `| 'permission'` syntax rather than a bare
+      // quote-to-quote scan, so a comment inside the union body (which CAN
+      // contain an apostrophe) can never be mistaken for a member. A bare scan
+      // hit exactly this failure mode elsewhere in this same change, in the
+      // marketplace's own hand-maintained copy of this same problem
+      // (firebase/marketplace/functions/src/types.ts, KNOWN_PERMISSIONS).
+      const livePermissions = [...body.matchAll(/^\s*\|\s*'([^']+)'/gm)].map((m) => m[1])
+      expect(livePermissions.length).toBeGreaterThan(0)
+      // Compared against the MIRROR, not PLUGIN_PERMISSIONS: the SDK set is
+      // deliberately narrower than the host (see HOST_AHEAD_PERMISSIONS above),
+      // so it is never a flat match. HOST_PERMISSIONS is the vendored copy this
+      // whole file exists to protect, and a flat match against it is exactly
+      // the "has the mirror drifted from the real host" question.
+      expect(new Set(livePermissions)).toEqual(new Set(HOST_PERMISSIONS))
+    }
+  )
 })

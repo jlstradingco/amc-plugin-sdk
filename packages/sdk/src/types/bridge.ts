@@ -520,6 +520,31 @@ export interface BridgeDocuments {
 }
 
 /**
+ * Speech to text, on `AgentMC.stt`. Sends a recording to whichever cloud
+ * speech service the user configured in AMC, to be transcribed host-side.
+ * Requires the `stt` permission.
+ *
+ * An empty `text` in a successful resolve means the recording was silent.
+ * That is a SUCCESS, not an error. A real failure REJECTS with an `Error`
+ * carrying a machine-readable `code`: `SERVICE_UNAVAILABLE` when the user has
+ * no speech provider set up, `VALIDATION_FAILED` when the audio is empty or
+ * over the 10 MB decoded limit, and `RATE_LIMITED` when the daily voice
+ * spending cap is hit.
+ */
+export interface BridgeStt {
+  /**
+   * `mimeType` is advisory only. The host sniffs the real container from the
+   * bytes, so a wrong or missing value does not break transcription.
+   */
+  transcribe(
+    audioBase64: string,
+    opts?: { mimeType?: string; language?: string }
+  ): Promise<{ text: string }>
+  /** False when the user has no speech provider configured. */
+  isConfigured(): Promise<boolean>
+}
+
+/**
  * `window.AgentMC` — the surface a plugin WEBVIEW gets.
  *
  * This is a subset of what the host exposes, not the whole of it. The host's
@@ -550,10 +575,11 @@ export interface AgentMC {
   /** One method — see {@link BridgeAuth}. NOT the backend's `PluginAuth`. */
   auth: BridgeAuth
   documents: BridgeDocuments
-  // These three are webview-ONLY — the host builds its backend context without
+  // These four are webview-ONLY. The host builds its backend context without
   // them, so they are reachable here and NOT via `ctx`. See the note on
   // `PluginContext` in ./context.ts.
   tts: PluginTts
+  stt: BridgeStt
   sessionHistory: PluginSessionHistory
   firebase: PluginFirebase
   spend: PluginSpend
