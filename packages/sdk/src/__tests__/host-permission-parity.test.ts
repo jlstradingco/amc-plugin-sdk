@@ -312,7 +312,49 @@ describe('host-permission-mirror freshness (guards the vendored copy itself, not
       // so it is never a flat match. HOST_PERMISSIONS is the vendored copy this
       // whole file exists to protect, and a flat match against it is exactly
       // the "has the mirror drifted from the real host" question.
-      expect(new Set(livePermissions)).toEqual(new Set(HOST_PERMISSIONS))
+      //
+      // WHY THIS IS NOT `expect(setA).toEqual(setB)`, which is what it used to be:
+      // that form reports the answer in a notation that cannot be read reliably.
+      // Vitest renders a truncated collection as `Set{ 'a', 'b', ...(N) }`, where
+      // N is the REMAINDER after the shown members. But the shown count depends on
+      // rendered STRING LENGTH, and once the members are long enough that none fit,
+      // N becomes the TOTAL. Measured, identical set sizes, only names changed:
+      //
+      //   12 vs 13, short names:  Set{ 's0', 's1', 's2', 's3', ...(8) }  N = remainder
+      //   12 vs 13, long names:   Set{ ...(12) }                         N = total
+      //
+      // Permission strings sit right at that boundary, so the same notation means
+      // opposite things from one run to the next. On 2026-08-25 two people read one
+      // real failure of THIS test and each derived a confident, different, wrong
+      // pair of totals from it; one then spent twenty minutes chasing a stale
+      // checkout that was never stale. Nothing in the output could have settled it.
+      //
+      // So the failure now reports evidence instead of sizes to be inferred: both
+      // NAMED deltas, the two sizes as explicit integers, and the file actually
+      // read. The provenance line is printed because it is what distinguishes the
+      // causes below, not as a verdict. Read it, then check:
+      //   - mirrorOnly non-empty, onOriginMaster false -> check whether sourceBranch
+      //     has landed on the host yet. Expected until it does; not a defect.
+      //   - hostOnly non-empty -> the host gained permissions the mirror lacks.
+      //     Regenerate the mirror (command at the top of the fixture).
+      //   - both non-empty -> the two files are from divergent branches; confirm
+      //     which host revision AMC_HOST_PERMISSIONS_PATH actually points at.
+      // Both widened to Set<string> deliberately (the idiom this file already uses
+      // for `host` above): HOST_PERMISSIONS is a `readonly [...] as const`, so an
+      // un-widened Set would be keyed on the literal union and reject `.has()` of
+      // a string parsed out of the host file, which is the whole input here.
+      const mirror = new Set<string>(HOST_PERMISSIONS)
+      const live = new Set<string>(livePermissions)
+      const mirrorOnly = [...mirror].filter((p) => !live.has(p)).sort()
+      const hostOnly = [...live].filter((p) => !mirror.has(p)).sort()
+      const detail =
+        `live host union has ${live.size} members, HOST_PERMISSIONS mirror has ${mirror.size}. ` +
+        `Only in mirror: ${JSON.stringify(mirrorOnly)}. Only in host: ${JSON.stringify(hostOnly)}. ` +
+        `Read from: ${filePath}. Mirror reconciled ${HOST_MIRROR_PROVENANCE.reconciledAt} against ` +
+        `${HOST_MIRROR_PROVENANCE.sourceBranch} @ ` +
+        `${HOST_MIRROR_PROVENANCE.sourceCommit.slice(0, 11)} ` +
+        `(onOriginMaster: ${HOST_MIRROR_PROVENANCE.onOriginMaster}).`
+      expect({ mirrorOnly, hostOnly }, detail).toEqual({ mirrorOnly: [], hostOnly: [] })
     }
   )
 })
