@@ -1,4 +1,4 @@
-import type { Finding } from '../lib/findings.js'
+import { POSSIBLE_SECRET_CODE, type Finding } from '../lib/findings.js'
 import { collectAllSteps } from '../lib/recipe-steps.js'
 import { SHAREABLE_FIELDS } from '../lib/envelope.js'
 import { pickPortableStep } from '../lib/portable-step.js'
@@ -52,7 +52,7 @@ function inspect(findings: Finding[], path: string, value: unknown, stepName?: s
   if (!hint) return
   findings.push({
     severity: 'warning',
-    code: 'possible-secret',
+    code: POSSIBLE_SECRET_CODE,
     message: `${path} ${hint}.`,
     ...(stepName ? { stepName } : {}),
     fix: 'Remove it before publishing — a published automation is public.'

@@ -59,13 +59,62 @@ describe('runPublish', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('uploads despite warnings — advisory findings never block', async () => {
-    write({ ...good, description: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' })
+  it('uploads despite non-secret warnings — advisory findings never block', async () => {
+    // `requiresApps: ['jira']` with no step that calls a jira route is an
+    // unused-required-app WARNING — advisory, not a secret, so it never blocks.
+    write({ ...good, requiresApps: ['jira'] })
     const fetchMock = okUpload()
     vi.stubGlobal('fetch', fetchMock)
 
     expect((await runPublish({ cwd: dir, token, yes: true })).exitCode).toBe(0)
     expect(fetchMock).toHaveBeenCalled()
+  })
+
+  // The secret gate (F024). A possible secret is emitted as a WARNING so a false
+  // positive never trips the ordinary error gate — but a published automation is
+  // world-readable, so publishing a suspected credential must be a deliberate act.
+  describe('secret gate', () => {
+    it('aborts by default when a field looks like a secret', async () => {
+      write({ ...good, description: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' })
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('publishes a secret-flagged automation with --allow-secret', async () => {
+      write({ ...good, description: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' })
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true, allowSecret: true })
+      expect(res.exitCode).toBe(0)
+      expect(fetchMock).toHaveBeenCalled()
+    })
+
+    it('still gates a secret when --skip-validation waived the other checks', async () => {
+      // --skip-validation waives advice about the recipe file, never the decision to
+      // publish a credential to the world.
+      write({ ...good, description: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' })
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true, skipValidation: true })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('gates the secret before spending the upload, even on a dry run', async () => {
+      write({ ...good, description: 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA' })
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true, dryRun: true })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
   })
 
   it('uploads anyway with --skip-validation', async () => {

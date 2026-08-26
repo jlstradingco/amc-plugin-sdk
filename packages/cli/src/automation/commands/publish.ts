@@ -1,7 +1,14 @@
 import { Command } from 'commander'
 import { resolveRecipePath, loadRecipe, RecipeFileError } from '../lib/recipe-file.js'
 import { runAllChecks } from '../checks/index.js'
-import { hasErrors, reportFindings } from '../lib/findings.js'
+import { checkSecrets } from '../checks/secrets.js'
+import {
+  hasErrors,
+  hasPossibleSecrets,
+  possibleSecretFindings,
+  reportFindings,
+  type Finding
+} from '../lib/findings.js'
 import {
   buildEnvelope,
   deriveAutomationId,
@@ -51,6 +58,12 @@ export interface PublishOptions {
   switchAccount?: boolean
   dryRun?: boolean
   skipValidation?: boolean
+  /**
+   * Proceed even though the local secret scan flagged a possible credential.
+   * The dangerous path, so it is opt-in and off by default (see the secret gate
+   * in `runPublish`). Set by `--allow-secret` (alias `--force`).
+   */
+  allowSecret?: boolean
   /** Overrides the interactive confirmation. Tests inject; the CLI never passes it. */
   confirmIdentity?: ConfirmIdentity
 }
@@ -79,8 +92,9 @@ export async function runPublish(
     throw err
   }
 
+  let findings: Finding[] = []
   if (!opts.skipValidation) {
-    const findings = runAllChecks(recipe)
+    findings = runAllChecks(recipe)
     if (findings.length > 0) {
       heading('Local checks')
       reportFindings(findings)
@@ -89,6 +103,34 @@ export async function runPublish(
       actionableError(
         'This automation has problems that would block it from running.',
         'Fix them, or pass --skip-validation to publish anyway.'
+      )
+      return { exitCode: 1 }
+    }
+  }
+
+  // The secret gate. `checkSecrets` emits every match as a WARNING so a false
+  // positive never hard-blocks the ordinary error gate above — but a *published*
+  // automation is world-readable, so shipping a real API key, token, or credential
+  // must be a deliberate act, not a yellow line the author scrolled past on the way
+  // to "Submitted for review". So a suspected secret ABORTS by default, and the only
+  // way past is the explicit `--allow-secret` (alias `--force`).
+  //
+  // Run independently of `--skip-validation`: that flag waives advice about the recipe
+  // file, not the decision to publish a credential to the world. It is computed here
+  // even when the checks above already ran, because under `--skip-validation` they did
+  // not — a fresh, pure scan is the one path that covers both.
+  if (!opts.allowSecret) {
+    const secretFindings = opts.skipValidation ? checkSecrets(recipe) : findings
+    if (hasPossibleSecrets(secretFindings)) {
+      if (opts.skipValidation) {
+        // The findings were never printed above, so name them now — an abort the
+        // author cannot see the reason for is worse than the leak it prevents.
+        heading('Possible secrets')
+        reportFindings(possibleSecretFindings(secretFindings))
+      }
+      actionableError(
+        'This automation looks like it contains a secret (an API key, token, or credential).',
+        'Remove it — a published automation is public. To publish anyway, re-run with --allow-secret.'
       )
       return { exitCode: 1 }
     }
@@ -184,6 +226,11 @@ export function createPublishCommand(): Command {
     .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
     .option('--dry-run', 'Do everything except the upload')
     .option('--skip-validation', 'Publish even if local checks report errors')
+    .option(
+      '--allow-secret',
+      'Publish even though the local scan flagged a possible secret (dangerous)'
+    )
+    .option('--force', 'Alias for --allow-secret')
     .action(async (file: string | undefined, options: Record<string, unknown>) => {
       const res = await runPublish({
         cwd: process.cwd(),
@@ -195,7 +242,8 @@ export function createPublishCommand(): Command {
         switchAccount: options.switchAccount as boolean,
         yes: options.yes as boolean,
         dryRun: options.dryRun as boolean,
-        skipValidation: options.skipValidation as boolean
+        skipValidation: options.skipValidation as boolean,
+        allowSecret: Boolean(options.allowSecret) || Boolean(options.force)
       })
       process.exit(res.exitCode)
     })
