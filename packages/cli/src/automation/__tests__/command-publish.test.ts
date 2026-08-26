@@ -132,6 +132,39 @@ describe('runPublish', () => {
       expect(res.exitCode).toBe(1)
       expect(fetchMock).not.toHaveBeenCalled()
     })
+
+    // F065: --changelog is a CLI flag, never merged into the recipe, so it must be
+    // scanned separately — it still publishes alongside the automation.
+    it('gates a secret pasted into the --changelog text', async () => {
+      write(good) // the recipe itself is clean
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        yes: true,
+        changelog: 'Rotated ghp_AAAAAAAAAAAAAAAAAAAAAAAA into the config'
+      })
+      expect(res.exitCode).toBe(1)
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('publishes a secret-bearing changelog with --allow-secret', async () => {
+      write(good)
+      const fetchMock = okUpload()
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({
+        cwd: dir,
+        token,
+        yes: true,
+        allowSecret: true,
+        changelog: 'Rotated ghp_AAAAAAAAAAAAAAAAAAAAAAAA into the config'
+      })
+      expect(res.exitCode).toBe(0)
+      expect(uploadCall(fetchMock)).toBeDefined()
+    })
   })
 
   it('uploads anyway with --skip-validation', async () => {

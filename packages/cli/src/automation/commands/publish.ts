@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { resolveRecipePath, loadRecipe, RecipeFileError } from '../lib/recipe-file.js'
 import { runAllChecks } from '../checks/index.js'
-import { checkSecrets } from '../checks/secrets.js'
+import { checkSecrets, checkTextSecrets } from '../checks/secrets.js'
 import {
   hasErrors,
   hasPossibleSecrets,
@@ -126,13 +126,25 @@ export async function runPublish(
   // even when the checks above already ran, because under `--skip-validation` they did
   // not — a fresh, pure scan is the one path that covers both.
   if (!opts.allowSecret) {
-    const secretFindings = opts.skipValidation ? checkSecrets(recipe) : findings
-    if (hasPossibleSecrets(secretFindings)) {
-      if (opts.skipValidation) {
-        // The findings were never printed above, so name them now — an abort the
-        // author cannot see the reason for is worse than the leak it prevents.
+    // The recipe scan: reuse the findings from above when they were computed, else run
+    // it fresh (--skip-validation waived that pass, not this gate).
+    const recipeSecrets = opts.skipValidation ? checkSecrets(recipe) : findings
+    // The changelog scan (F065): --changelog is a CLI flag, never merged into the
+    // recipe, so `checkSecrets` never sees it — yet it publishes alongside the
+    // automation and is shown to reviewers, so it is scanned with the same patterns.
+    const changelogSecrets = checkTextSecrets('changelog', opts.changelog)
+    if (hasPossibleSecrets(recipeSecrets) || hasPossibleSecrets(changelogSecrets)) {
+      // Print exactly the matches the Local-checks pass above did NOT already show:
+      // everything under --skip-validation (that pass never ran) and the changelog
+      // matches always (they are not part of runAllChecks). An abort whose reason the
+      // author cannot see is worse than the leak it prevents.
+      const unreported = [
+        ...(opts.skipValidation ? possibleSecretFindings(recipeSecrets) : []),
+        ...possibleSecretFindings(changelogSecrets)
+      ]
+      if (unreported.length > 0) {
         heading('Possible secrets')
-        reportFindings(possibleSecretFindings(secretFindings))
+        reportFindings(unreported)
       }
       actionableError(
         'This automation looks like it contains a secret (an API key, token, or credential).',

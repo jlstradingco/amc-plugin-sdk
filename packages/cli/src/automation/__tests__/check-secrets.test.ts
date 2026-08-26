@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { checkSecrets } from '../checks/secrets.js'
+import { checkSecrets, checkTextSecrets } from '../checks/secrets.js'
 
 const withPrompt = (prompt: string): Record<string, unknown> => ({
   name: 'r',
@@ -263,5 +263,27 @@ describe('checkSecrets', () => {
     expect(() => checkSecrets({})).not.toThrow()
     expect(() => checkSecrets({ steps: [null, 3], description: 42 })).not.toThrow()
     expect(() => checkSecrets({ steps: 'nope' })).not.toThrow()
+  })
+})
+
+// F065: a standalone text field (the --changelog flag) publishes alongside the recipe
+// but is never merged into it, so it is scanned on its own with the same patterns.
+describe('checkTextSecrets', () => {
+  it('flags a secret in a standalone text field, labelled by the given path', () => {
+    const found = checkTextSecrets('changelog', 'rotated ghp_AAAAAAAAAAAAAAAAAAAAAAAA today')
+    expect(found).toHaveLength(1)
+    expect(found[0]?.code).toBe('possible-secret')
+    expect(found[0]?.severity).toBe('warning')
+    expect(found[0]?.message).toContain('changelog')
+  })
+
+  it('accepts clean changelog prose', () => {
+    expect(checkTextSecrets('changelog', 'Fixed the retry loop and tidied the output.')).toEqual([])
+  })
+
+  it('returns nothing for an absent or empty field', () => {
+    expect(checkTextSecrets('changelog', undefined)).toEqual([])
+    expect(checkTextSecrets('changelog', null)).toEqual([])
+    expect(checkTextSecrets('changelog', '')).toEqual([])
   })
 })

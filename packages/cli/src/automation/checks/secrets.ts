@@ -89,6 +89,21 @@ function inspectDeep(
   }
 }
 
+/**
+ * Scan a STANDALONE text field that ships alongside the recipe but is not part of it.
+ *
+ * The `--changelog` flag is the case this exists for (F065): it is supplied on the
+ * command line, never merged into the recipe, and so never passes through
+ * `checkSecrets` — yet it travels to the marketplace inside the publish envelope and
+ * is shown to reviewers and installers, so a key pasted into it leaks exactly as one
+ * pasted into a prompt would. Runs the same `SECRET_PATTERNS` the recipe scan uses.
+ */
+export function checkTextSecrets(path: string, text: string | null | undefined): Finding[] {
+  const findings: Finding[] = []
+  if (typeof text === 'string') inspect(findings, path, text)
+  return findings
+}
+
 export function checkSecrets(recipe: Record<string, unknown>): Finding[] {
   const findings: Finding[] = []
 
