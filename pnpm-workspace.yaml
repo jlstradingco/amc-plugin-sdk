@@ -19,6 +19,11 @@ allowBuilds:
 overrides:
   vite@>=7.0.0 <7.3.5: '>=7.3.5'
   esbuild@>=0.27.0 <0.28.1: '>=0.28.1'
+  # brace-expansion ships in the RUNTIME dep of the published CLI:
+  # @agent-mc/plugin-cli > archiver@8 > readdir-glob > minimatch > brace-expansion.
+  # 5.0.6 carries three high-severity ReDoS advisories; >=5.0.9 patches all three,
+  # and it is a same-major patch bump so the archiver tree resolves unchanged (F028).
+  brace-expansion@>=5.0.0 <5.0.9: '>=5.0.9'
 
 # pnpm 10 blocks dependency build scripts by default. Electron's postinstall is
 # what downloads the platform binary, so without this allow-list a fresh clone
