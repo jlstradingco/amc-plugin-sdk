@@ -37,6 +37,23 @@ const okUpload = (): ReturnType<typeof vi.fn> =>
     json: async () => ({ submissionId: 's1', status: 'pending' })
   })
 
+/**
+ * The upload fetch, located by URL rather than by call index. Publish now issues a
+ * best-effort `getMyAutomations` preflight (version planning, F025) BEFORE the
+ * upload, so the upload is no longer `calls[0]`.
+ */
+const uploadCall = (m: ReturnType<typeof vi.fn>): unknown[] =>
+  m.mock.calls.find((c) => String(c[0]).includes('/uploadAutomation'))!
+
+/** A fetch mock that answers the version-planning preflight with `submissions`. */
+const withSubmissions = (submissions: unknown[]): ReturnType<typeof vi.fn> =>
+  vi.fn().mockImplementation((url: string) => {
+    if (String(url).includes('/getMyAutomations')) {
+      return Promise.resolve({ ok: true, json: async () => ({ submissions }) })
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ submissionId: 's1', status: 'pending' }) })
+  })
+
 describe('runPublish', () => {
   it('uploads a clean automation and returns the submission id', async () => {
     write(good)
@@ -46,7 +63,7 @@ describe('runPublish', () => {
     const res = await runPublish({ cwd: dir, token, yes: true, changelog: 'first' })
     expect(res.exitCode).toBe(0)
     expect(res.submissionId).toBe('s1')
-    expect(String(fetchMock.mock.calls[0]![0])).toContain('/uploadAutomation')
+    expect(String(uploadCall(fetchMock)[0])).toContain('/uploadAutomation')
   })
 
   it('refuses to upload when a local check errors', async () => {
@@ -182,7 +199,7 @@ describe('runPublish', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     await runPublish({ cwd: dir, token, yes: true })
-    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string)
+    const body = JSON.parse((uploadCall(fetchMock)[1] as { body: string }).body)
     expect(body.automationId).toBe('my-cool-thing')
   })
 
@@ -290,10 +307,87 @@ describe('runPublish', () => {
       category: 'devops',
       changelog: 'what changed'
     })
-    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string)
+    const body = JSON.parse((uploadCall(fetchMock)[1] as { body: string }).body)
     expect(body.version).toBe('2.1.0')
     expect(body.category).toBe('devops')
     expect(body.changelog).toBe('what changed')
+  })
+
+  // Version planning (F025). Publishing a second time without --version used to
+  // re-send the constant 1.0.0 and 409 on a version the marketplace had already
+  // taken. The command now consults the author's own submissions first.
+  describe('version planning', () => {
+    it('defaults to the next patch above the latest submitted version', async () => {
+      write({ ...good, name: 'My Thing' })
+      const fetchMock = withSubmissions([{ id: 'x', automationId: 'my-thing', version: '1.4.2' }])
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true })
+      expect(res.exitCode).toBe(0)
+      const body = JSON.parse((uploadCall(fetchMock)[1] as { body: string }).body)
+      expect(body.version).toBe('1.4.3')
+    })
+
+    it('keeps the constant default on a first release', async () => {
+      write({ ...good, name: 'Brand New' })
+      const fetchMock = withSubmissions([])
+      vi.stubGlobal('fetch', fetchMock)
+
+      await runPublish({ cwd: dir, token, yes: true })
+      const body = JSON.parse((uploadCall(fetchMock)[1] as { body: string }).body)
+      expect(body.version).toBe('1.0.0')
+    })
+
+    it('refuses a provided version that is already published, before the upload', async () => {
+      write({ ...good, name: 'My Thing' })
+      const fetchMock = withSubmissions([{ id: 'x', automationId: 'my-thing', version: '1.0.0' }])
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true, version: '1.0.0' })
+      expect(res.exitCode).toBe(1)
+      expect(uploadCall(fetchMock)).toBeUndefined()
+    })
+
+    it('publishes anyway when the registry is unreachable — server stays authority', async () => {
+      write({ ...good, name: 'My Thing' })
+      const fetchMock = vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes('/getMyAutomations')) {
+          return Promise.reject(new Error('ENOTFOUND'))
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ submissionId: 's1', status: 'pending' })
+        })
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true })
+      expect(res.exitCode).toBe(0)
+      const body = JSON.parse((uploadCall(fetchMock)[1] as { body: string }).body)
+      expect(body.version).toBe('1.0.0')
+    })
+
+    it('adds an actionable hint when the server 409s on a version collision', async () => {
+      write({ ...good, name: 'My Thing' })
+      const info = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const fetchMock = vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes('/getMyAutomations')) {
+          // Registry looked empty at plan time; a concurrent publish took the slot.
+          return Promise.resolve({ ok: true, json: async () => ({ submissions: [] }) })
+        }
+        return Promise.resolve({
+          ok: false,
+          status: 409,
+          json: async () => ({ error: true, code: 'VERSION_EXISTS', message: 'version already exists' })
+        })
+      })
+      vi.stubGlobal('fetch', fetchMock)
+
+      const res = await runPublish({ cwd: dir, token, yes: true })
+      expect(res.exitCode).toBe(1)
+      const printed = info.mock.calls.map((c) => String(c[0])).join('\n')
+      expect(printed).toContain('--version 1.0.1')
+    })
   })
 
   // The marketplace refuses a non-semver version and an unknown category with a bare
@@ -382,7 +476,7 @@ describe('runPublish', () => {
         category: 'testing'
       })
       expect(res.exitCode).toBe(0)
-      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(uploadCall(fetchMock)).toBeDefined()
     })
   })
 })
