@@ -35,9 +35,16 @@ const STEP_BEARING_FIELDS = new Set<string>(['steps', 'pipelines'])
 /**
  * How deep the generic sweep descends. `parameters` and `supervisors` are
  * author-shaped with no fixed schema, so there is no natural stopping point — this
- * guards a pathologically nested file, it is not a real structural limit.
+ * guards against a pathologically nested file (a runaway recursion / DoS), it is not
+ * a structural limit on the author.
+ *
+ * It was 8, which is shallower than realistic author data reaches: a secret pasted
+ * into a config object a dozen levels down inside `parameters` travelled unscanned
+ * (F075). Raised to a bound generous enough to cover any hand-authored nesting while
+ * still capping recursion far below the engine's own stack limit. JSON from a file is
+ * acyclic, so this only ever fires on genuinely, deliberately deep input.
  */
-const MAX_SCAN_DEPTH = 8
+const MAX_SCAN_DEPTH = 64
 
 function scan(text: string): string | null {
   for (const { re, hint } of SECRET_PATTERNS) {
