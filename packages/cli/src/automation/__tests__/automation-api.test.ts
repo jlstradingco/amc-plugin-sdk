@@ -69,6 +69,35 @@ describe('uploadAutomation', () => {
     )
     await expect(uploadAutomation(token, req)).rejects.toThrow('HTTP 502')
   })
+
+  // F064: the CLI renders err.message straight to the terminal, so an unbounded
+  // server string must not become the whole output — parity with the plugin surface.
+  it('replaces an over-long server message with a bounded fallback', async () => {
+    const huge = 'x'.repeat(5000)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: true, code: 'BOOM', message: huge })
+      })
+    )
+    await expect(uploadAutomation(token, req)).rejects.toThrow('HTTP 400')
+    // The 5000-char body is not echoed verbatim.
+    await expect(uploadAutomation(token, req)).rejects.not.toThrow(huge)
+  })
+
+  it('keeps a short, actionable server message verbatim', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: true, code: 'VERSION_EXISTS', message: 'version already exists' })
+      })
+    )
+    await expect(uploadAutomation(token, req)).rejects.toThrow('version already exists')
+  })
 })
 
 describe('validateAutomationRemote', () => {
