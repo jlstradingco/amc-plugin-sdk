@@ -173,6 +173,8 @@ export type PluginPermission =
   | 'sessions.readHistory'
   | 'ai'
   | 'tts'
+  | 'stt'
+  | 'microphone'
   | 'network'
   | 'cron'
   | 'cli'

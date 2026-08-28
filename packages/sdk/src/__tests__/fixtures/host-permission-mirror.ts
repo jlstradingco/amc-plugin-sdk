@@ -15,10 +15,16 @@
 // updates the SDK enum, then reconcile the allow-lists below.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// LAST RECONCILED: 2026-08-21, against host commit `origin/master@e4f85b5edc`.
-// The 29 strings below are UNCHANGED from the 2026-08-11 reconciliation against
-// `origin/master@8722cc3fca` — same members, same count — but see recurrence #5
-// below for what changed underneath them. Generate rather than hand-copy:
+// LAST RECONCILED: 2026-08-24, against host commit `3c1302a26a` on the host's
+// `session/98c53684-6b6e-4c82-b57b-27c39c68c368-stt-transcribe-bridge` branch.
+// NOT origin/master this time: fetched origin/master's copy of the file directly
+// and confirmed it has neither `stt` nor `microphone` yet, so the branch is the
+// only source of truth for them right now. The next reconciler should check
+// whether that branch has since landed and update this note. Full detail lives
+// in HOST_MIRROR_PROVENANCE below, which the staleness guard test reads.
+//
+// 29 -> 31: added `stt` and `microphone`, inserted immediately after `tts` to
+// match the host's own declared order. Generate rather than hand-copy:
 //
 //   sed -n '/^export type PluginPermission/,/^$/p' src/shared/plugin-permissions.ts \
 //     | grep -oE "'[^']+'" | tr -d "'"
@@ -81,6 +87,27 @@
 // THE RULE: re-derive from the host source when you touch this file, never from
 // this file's own prior reasoning, and never by retyping. Generate it.
 
+/**
+ * Machine-checkable provenance for HOST_PERMISSIONS below, read by
+ * host-permission-parity.test.ts's staleness guard so a silent, un-reconciled
+ * mirror fails the suite instead of waiting on a human to notice (the failure
+ * mode behind all five HISTORY incidents above).
+ */
+export const HOST_MIRROR_PROVENANCE = {
+  /** ISO date this mirror was last reconciled against the host source file. */
+  reconciledAt: '2026-08-24',
+  /** Full SHA of the host commit the strings below were read from. */
+  sourceCommit: '3c1302a26abef367f3bf7c14c0fb82825f92b2e1',
+  sourceBranch: 'session/98c53684-6b6e-4c82-b57b-27c39c68c368-stt-transcribe-bridge',
+  /**
+   * False means sourceBranch had not merged to origin/master as of
+   * reconciledAt, so the strings below are ahead of what a plain
+   * origin/master checkout would show. Re-verify before assuming this is
+   * still the case.
+   */
+  onOriginMaster: false,
+} as const
+
 /** The exact permission strings the host recognizes and gates. */
 export const HOST_PERMISSIONS = [
   'storage',
@@ -88,6 +115,8 @@ export const HOST_PERMISSIONS = [
   'sessions',
   'ai',
   'tts',
+  'stt',
+  'microphone',
   'network',
   'cron',
   'cli',

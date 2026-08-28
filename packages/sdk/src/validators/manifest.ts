@@ -251,6 +251,8 @@ export const PLUGIN_PERMISSIONS = [
   'sessions.readHistory',
   'ai',
   'tts',
+  'stt',
+  'microphone',
   'network',
   'cron',
   'cli',
