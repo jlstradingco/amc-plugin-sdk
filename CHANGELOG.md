@@ -11,6 +11,74 @@ together.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-31
+
+**Read this first if you are upgrading from npm: you are on 2.0.0.** Everything
+below landed after the 2026-08-11 release and none of it has been on the
+registry until now.
+
+**This is a major because `ctx.workspace` write calls changed signature.** If
+you call `writeFile`, `writeFiles` or `deleteFile`, you must pass a
+compare-and-swap token — see the first section below. Nothing else here is
+breaking.
+
+### Added — the `stt` and `microphone` permissions and a typed `stt` namespace (2026-08-28)
+
+The host ships both, and the SDK's permission enum rejected them, so a manifest
+declaring either failed validation against a host that supports it.
+
+- **They are two permissions, not one, because they leak differently.** `stt`
+  sends a recording to the configured cloud speech service to be transcribed
+  host-side; `microphone` gates raw `getUserMedia` inside a plugin webview. A
+  plugin can legitimately want either alone.
+- **`AgentMC.stt` is now typed.** Two things are easy to get wrong: an empty
+  `text` is a **success** meaning silence, not a failure; and refusals carry a
+  machine-readable code rather than only a message.
+- **The parity guard could not have caught this drift**, and now says so. It
+  compares the SDK against a hand-maintained mirror of the host union, so a
+  stale mirror and a stale enum agree with each other. A real cross-import is
+  impossible — the host consumes the published SDK, so importing back would be
+  circular. Two substitutes ship instead: a provenance marker with a staleness
+  budget that fails once the mirror goes unreconciled, and an opt-in live
+  comparison against a real host checkout that skips with a logged reason rather
+  than silently passing.
+- **A diverging mirror now reports named deltas and explicit sizes.** The live
+  check previously asserted two `Set`s were equal, and Vitest's truncated-set
+  notation (`Set{ 'a', 'b', ...(N) }`) means *remainder* or *total* depending on
+  rendered string length. Permission strings sit exactly at that boundary, so
+  the same output meant opposite things run to run. On the first real failure two
+  readers each derived a different, confident, wrong answer from one line.
+
+  Provenance is recorded honestly: the mirror was reconciled against the host
+  **feature branch**, not `origin/master`, because neither permission has landed
+  there yet.
+
+### Fixed — `amc-automation publish` hardening (2026-08-26)
+
+All in `@agent-mc/plugin-cli`, from an audit of the automation publish path.
+
+- **A detected possible-secret now blocks the publish** rather than warning past
+  it; override with `--allow-secret` when the match is a false positive [F024].
+- **`--changelog` text is scanned for secrets too** — it was the one field that
+  reached the registry unscanned [F065].
+- **The secret scan's depth cap was raised** to cover realistic nesting; deeply
+  nested config was silently skipped [F075].
+- **`--version` now defaults from the registry** instead of a hardcoded `1.0.0`,
+  and a 409 explains itself. The marketplace treats a published version as
+  immutable and a *refused* upload still burns one of the five attempts an
+  account gets per hour, so a second publish that forgot `--version` re-sent
+  `1.0.0` and spent a slot on a guaranteed collision [F025].
+- **`AMC_MARKETPLACE_API_URL` must be `https://`** before the CLI sends a bearer
+  token to it. Fails closed — an insecure or malformed override throws rather
+  than falling back to the default, so a misconfigured environment cannot
+  quietly ship the token elsewhere. Carve-out: plain `http://` to
+  localhost/loopback, for pointing the CLI at a local emulator [F076].
+- **Server error strings are bounded** on the automation API, so a hostile or
+  broken response cannot flood the terminal [F064].
+- **Dependency advisories:** `brace-expansion` overridden to `>=5.0.9` (ReDoS)
+  [RT-F028]; `nanoid` and `postcss` pinned past their advisories, with the
+  remaining dev-only residual documented [RT-F029].
+
 ### Changed — `ctx.workspace` reconciled with the host again (2026-08-21)
 
 Verified against Agent-Orchestrator `origin/master@e4f85b5edc`. Two host slices landed
@@ -135,6 +203,32 @@ What this means for a plugin:
 
 Requires the host build carrying this fix; on an older host `ctx.dataDir` keeps
 the old app-wide value.
+
+### Added — the `host-capabilities` check for automations (2026-08-12)
+
+`@agent-mc/plugin-cli` now checks that an automation declares the AMC apps it
+actually uses, and runs it as part of the standard check pass.
+
+A published automation runs on the **installer's** machine, where Jira may never
+have been connected and Supermail may not be set up. AMC's portability model
+knew only about dependencies on the *authoring* machine — a local script, a file
+on disk — all of which are fatal, and had no vocabulary for a dependency on the
+host that the installer could simply go satisfy. So a cross-app listing declared
+nothing, published, installed cleanly, and then died partway through its first
+run with a raw 400 the installer could not act on.
+
+The check reads what the step prompts actually tell the agent to call and holds
+`requiresApps` to it in both directions:
+
+- **under-declared** — an error. Invisible until it breaks on someone else's machine.
+- **over-declared** — a warning. Not dangerous alone, but it trains installers to
+  ignore the requirements list, which devalues the honest ones.
+
+A cross-app matrix snapshot ships with the CLI so this runs **offline**, before
+an upload slot is spent — a third-party author has no access to AMC's internal
+route table and previously had no way to know which apps their own prompts
+touched. Infrastructure routes are excluded from the inference, since they are
+not app requirements.
 
 ### Fixed — host parity reconciliation (2026-08-11)
 
