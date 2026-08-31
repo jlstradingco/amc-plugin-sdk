@@ -42,17 +42,28 @@ describe('automation lifecycle E2E', () => {
 
   it('a scaffolded automation actually uploads, with a well-formed envelope', async () => {
     runInit({ name: 'Daily Digest', cwd: dir })
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ submissionId: 'sub-1', status: 'pending' })
-    })
+    // A real publish lists the author's own submissions BEFORE uploading, to default
+    // the version off the registry, so the upload is not the first fetch. Answer each
+    // endpoint in its own shape — a blanket mock makes `getMyAutomations` parse an
+    // upload receipt as a submissions list, which no server would ever return.
+    const fetchMock = vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        String(url).endsWith('/getMyAutomations')
+          ? { ok: true, json: async () => ({ submissions: [] }) }
+          : { ok: true, json: async () => ({ submissionId: 'sub-1', status: 'pending' }) }
+      )
+    )
     vi.stubGlobal('fetch', fetchMock)
 
     const res = await runPublish({ cwd: dir, token, yes: true, changelog: 'first release' })
     expect(res.exitCode).toBe(0)
     expect(res.submissionId).toBe('sub-1')
 
-    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string)
+    // Find the upload by endpoint rather than by call index, so another preceding
+    // request does not silently retarget these assertions at the wrong body.
+    const upload = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/uploadAutomation'))
+    expect(upload).toBeDefined()
+    const body = JSON.parse(upload![1].body as string)
     expect(body.automationId).toBe('daily-digest')
     expect(body.definition.schemaVersion).toBe(1)
     expect(body.definition.kind).toBe('recipe')
