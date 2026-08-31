@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { checkSecrets } from '../checks/secrets.js'
+import { checkSecrets, checkTextSecrets } from '../checks/secrets.js'
 
 const withPrompt = (prompt: string): Record<string, unknown> => ({
   name: 'r',
@@ -156,13 +156,13 @@ describe('checkSecrets', () => {
       expect(found[0]?.message).toContain('parameters.outer.inner[0].deep')
     })
 
-    it('stops descending at the depth guard rather than recursing forever', () => {
-      // 12 levels deep — past MAX_SCAN_DEPTH, so the value is not reached and, more to
-      // the point, the walk terminates.
+    it('reaches a secret 12 levels deep (F075) yet still terminates', () => {
+      // 12 levels used to sit past the old depth-8 cutoff and travelled unscanned.
+      // The cap now covers realistic author nesting; the walk still terminates.
       let nested: Record<string, unknown> = { leaf: KEY }
       for (let i = 0; i < 12; i++) nested = { down: nested }
       expect(() => checkSecrets({ parameters: nested })).not.toThrow()
-      expect(checkSecrets({ parameters: nested })).toEqual([])
+      expect(checkSecrets({ parameters: nested }).map((f) => f.code)).toContain('possible-secret')
     })
 
     it('ignores non-string leaves', () => {
@@ -263,5 +263,57 @@ describe('checkSecrets', () => {
     expect(() => checkSecrets({})).not.toThrow()
     expect(() => checkSecrets({ steps: [null, 3], description: 42 })).not.toThrow()
     expect(() => checkSecrets({ steps: 'nope' })).not.toThrow()
+  })
+
+  // F075: `parameters` and `supervisors` are author-shaped with no fixed schema, so a
+  // secret can sit well below the old depth-8 cutoff. Nest one deep and confirm the
+  // sweep still reaches it, while a pathologically deep file does not blow the stack.
+  describe('deeply-nested secrets', () => {
+    const nest = (depth: number, leaf: unknown): Record<string, unknown> => {
+      let node: unknown = leaf
+      for (let i = 0; i < depth; i++) node = { level: node }
+      return node as Record<string, unknown>
+    }
+
+    it('flags a secret nested a dozen levels deep in parameters', () => {
+      const recipe = { name: 'r', parameters: nest(12, 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA'), steps: [] }
+      expect(codes(recipe)).toContain('possible-secret')
+    })
+
+    it('flags a secret nested deep inside supervisors', () => {
+      const recipe = {
+        name: 'r',
+        supervisors: [nest(20, { note: 'AKIAIOSFODNN7EXAMPLE' })],
+        steps: []
+      }
+      expect(codes(recipe)).toContain('possible-secret')
+    })
+
+    it('does not throw or hang on a pathologically deep structure', () => {
+      const recipe = { name: 'r', parameters: nest(5000, 'deep'), steps: [] }
+      expect(() => checkSecrets(recipe)).not.toThrow()
+    })
+  })
+})
+
+// F065: a standalone text field (the --changelog flag) publishes alongside the recipe
+// but is never merged into it, so it is scanned on its own with the same patterns.
+describe('checkTextSecrets', () => {
+  it('flags a secret in a standalone text field, labelled by the given path', () => {
+    const found = checkTextSecrets('changelog', 'rotated ghp_AAAAAAAAAAAAAAAAAAAAAAAA today')
+    expect(found).toHaveLength(1)
+    expect(found[0]?.code).toBe('possible-secret')
+    expect(found[0]?.severity).toBe('warning')
+    expect(found[0]?.message).toContain('changelog')
+  })
+
+  it('accepts clean changelog prose', () => {
+    expect(checkTextSecrets('changelog', 'Fixed the retry loop and tidied the output.')).toEqual([])
+  })
+
+  it('returns nothing for an absent or empty field', () => {
+    expect(checkTextSecrets('changelog', undefined)).toEqual([])
+    expect(checkTextSecrets('changelog', null)).toEqual([])
+    expect(checkTextSecrets('changelog', '')).toEqual([])
   })
 })

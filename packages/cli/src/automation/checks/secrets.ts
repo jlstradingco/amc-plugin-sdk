@@ -1,4 +1,4 @@
-import type { Finding } from '../lib/findings.js'
+import { POSSIBLE_SECRET_CODE, type Finding } from '../lib/findings.js'
 import { collectAllSteps } from '../lib/recipe-steps.js'
 import { SHAREABLE_FIELDS } from '../lib/envelope.js'
 import { pickPortableStep } from '../lib/portable-step.js'
@@ -35,9 +35,16 @@ const STEP_BEARING_FIELDS = new Set<string>(['steps', 'pipelines'])
 /**
  * How deep the generic sweep descends. `parameters` and `supervisors` are
  * author-shaped with no fixed schema, so there is no natural stopping point — this
- * guards a pathologically nested file, it is not a real structural limit.
+ * guards against a pathologically nested file (a runaway recursion / DoS), it is not
+ * a structural limit on the author.
+ *
+ * It was 8, which is shallower than realistic author data reaches: a secret pasted
+ * into a config object a dozen levels down inside `parameters` travelled unscanned
+ * (F075). Raised to a bound generous enough to cover any hand-authored nesting while
+ * still capping recursion far below the engine's own stack limit. JSON from a file is
+ * acyclic, so this only ever fires on genuinely, deliberately deep input.
  */
-const MAX_SCAN_DEPTH = 8
+const MAX_SCAN_DEPTH = 64
 
 function scan(text: string): string | null {
   for (const { re, hint } of SECRET_PATTERNS) {
@@ -52,7 +59,7 @@ function inspect(findings: Finding[], path: string, value: unknown, stepName?: s
   if (!hint) return
   findings.push({
     severity: 'warning',
-    code: 'possible-secret',
+    code: POSSIBLE_SECRET_CODE,
     message: `${path} ${hint}.`,
     ...(stepName ? { stepName } : {}),
     fix: 'Remove it before publishing — a published automation is public.'
@@ -87,6 +94,21 @@ function inspectDeep(
   for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
     inspectDeep(findings, `${path}.${key}`, entry, depth + 1, stepName)
   }
+}
+
+/**
+ * Scan a STANDALONE text field that ships alongside the recipe but is not part of it.
+ *
+ * The `--changelog` flag is the case this exists for (F065): it is supplied on the
+ * command line, never merged into the recipe, and so never passes through
+ * `checkSecrets` — yet it travels to the marketplace inside the publish envelope and
+ * is shown to reviewers and installers, so a key pasted into it leaks exactly as one
+ * pasted into a prompt would. Runs the same `SECRET_PATTERNS` the recipe scan uses.
+ */
+export function checkTextSecrets(path: string, text: string | null | undefined): Finding[] {
+  const findings: Finding[] = []
+  if (typeof text === 'string') inspect(findings, path, text)
+  return findings
 }
 
 export function checkSecrets(recipe: Record<string, unknown>): Finding[] {

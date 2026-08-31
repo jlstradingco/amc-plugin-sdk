@@ -19,6 +19,28 @@ allowBuilds:
 overrides:
   vite@>=7.0.0 <7.3.5: '>=7.3.5'
   esbuild@>=0.27.0 <0.28.1: '>=0.28.1'
+  # brace-expansion ships in the RUNTIME dep of the published CLI:
+  # @agent-mc/plugin-cli > archiver@8 > readdir-glob > minimatch > brace-expansion.
+  # 5.0.6 carries three high-severity ReDoS advisories; >=5.0.9 patches all three,
+  # and it is a same-major patch bump so the archiver tree resolves unchanged (F028).
+  brace-expansion@>=5.0.0 <5.0.9: '>=5.0.9'
+  # DEV/build-time only (docs vitepress + vue compiler toolchain), never shipped in the
+  # published @agent-mc packages — but cheap, same-major patch bumps that every consumer
+  # range (postcss `^3.3.11`, `^8`) already accepts, so pinned rather than tolerated (RT-F029):
+  #   nanoid  — two high ReDoS/predictability advisories, fixed in 3.3.18
+  #   postcss — moderate source-map path-traversal, fixed in 8.5.23
+  nanoid@>=3.0.0 <3.3.18: '>=3.3.18'
+  postcss@>=8.0.0 <8.5.23: '>=8.5.23'
+  #
+  # ACCEPTED dev-only risk — deliberately NOT overridden, because the only fix is a
+  # breaking bump that would fail the build, and none of these run in or ship with the
+  # published packages (all are docs/dev toolchain or the Electron dev-shell):
+  #   esbuild@0.21.5     — moderate dev-server request advisory. vite@5 (vitepress) pins
+  #                        esbuild `^0.21.3`; the fix is 0.25.x, which that range rejects.
+  #   vite@5.4.21        — moderate advisories fixed only in the 6.x line; vitepress pins
+  #                        vite `^5.4.14`, so a 6.x pin is a breaking major bump.
+  #   extract-zip@2.0.1  — high symlink path-traversal via electron; no 2.0.2 is published,
+  #                        so there is no patched version to pin to yet.
 
 # pnpm 10 blocks dependency build scripts by default. Electron's postinstall is
 # what downloads the platform binary, so without this allow-list a fresh clone

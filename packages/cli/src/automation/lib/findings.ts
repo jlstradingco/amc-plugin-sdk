@@ -22,6 +22,30 @@ export function hasErrors(findings: Finding[]): boolean {
   return findings.some((f) => f.severity === 'error')
 }
 
+/**
+ * The stable code every secret-scan match carries (see `checks/secrets.ts`).
+ * Named once here so the publish command's secret gate and the scanner cannot
+ * drift apart on the string.
+ */
+export const POSSIBLE_SECRET_CODE = 'possible-secret'
+
+/**
+ * True when any finding is a possible-secret match.
+ *
+ * Kept separate from {@link hasErrors} on purpose: a possible secret is emitted as
+ * a WARNING so a false positive never hard-blocks the ordinary error gate, but a
+ * *published* automation is world-readable, so `publish` treats a suspected secret
+ * as its own deliberate decision point rather than a line to scroll past.
+ */
+export function hasPossibleSecrets(findings: Finding[]): boolean {
+  return findings.some((f) => f.code === POSSIBLE_SECRET_CODE)
+}
+
+/** Just the possible-secret findings, for a targeted report before the gate aborts. */
+export function possibleSecretFindings(findings: Finding[]): Finding[] {
+  return findings.filter((f) => f.code === POSSIBLE_SECRET_CODE)
+}
+
 export function findingsToJson(findings: Finding[]): {
   ok: boolean
   errors: Finding[]

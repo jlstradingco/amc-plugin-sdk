@@ -1,7 +1,14 @@
 import { Command } from 'commander'
 import { resolveRecipePath, loadRecipe, RecipeFileError } from '../lib/recipe-file.js'
 import { runAllChecks } from '../checks/index.js'
-import { hasErrors, reportFindings } from '../lib/findings.js'
+import { checkSecrets, checkTextSecrets } from '../checks/secrets.js'
+import {
+  hasErrors,
+  hasPossibleSecrets,
+  possibleSecretFindings,
+  reportFindings,
+  type Finding
+} from '../lib/findings.js'
 import {
   buildEnvelope,
   deriveAutomationId,
@@ -11,7 +18,13 @@ import {
   type AutomationCategory
 } from '../lib/envelope.js'
 import { checkPublishInputs } from '../lib/publish-inputs.js'
-import { uploadAutomation } from '../api/automation-api.js'
+import { uploadAutomation, getMyAutomations, type AutomationSubmission } from '../api/automation-api.js'
+import {
+  planDefaultVersion,
+  versionAlreadyUsed,
+  latestSubmittedVersion,
+  bumpPatch
+} from '../lib/version-planning.js'
 import { authenticate, getStoredToken, clearToken, type StoredToken } from '../../lib/auth.js'
 import { MarketplaceApiError } from '../../lib/marketplace-api.js'
 import { evaluatePublishAccount, SWITCH_ACCOUNT_GUIDANCE } from '../../lib/publish-account.js'
@@ -51,6 +64,12 @@ export interface PublishOptions {
   switchAccount?: boolean
   dryRun?: boolean
   skipValidation?: boolean
+  /**
+   * Proceed even though the local secret scan flagged a possible credential.
+   * The dangerous path, so it is opt-in and off by default (see the secret gate
+   * in `runPublish`). Set by `--allow-secret` (alias `--force`).
+   */
+  allowSecret?: boolean
   /** Overrides the interactive confirmation. Tests inject; the CLI never passes it. */
   confirmIdentity?: ConfirmIdentity
 }
@@ -79,8 +98,9 @@ export async function runPublish(
     throw err
   }
 
+  let findings: Finding[] = []
   if (!opts.skipValidation) {
-    const findings = runAllChecks(recipe)
+    findings = runAllChecks(recipe)
     if (findings.length > 0) {
       heading('Local checks')
       reportFindings(findings)
@@ -89,6 +109,46 @@ export async function runPublish(
       actionableError(
         'This automation has problems that would block it from running.',
         'Fix them, or pass --skip-validation to publish anyway.'
+      )
+      return { exitCode: 1 }
+    }
+  }
+
+  // The secret gate. `checkSecrets` emits every match as a WARNING so a false
+  // positive never hard-blocks the ordinary error gate above — but a *published*
+  // automation is world-readable, so shipping a real API key, token, or credential
+  // must be a deliberate act, not a yellow line the author scrolled past on the way
+  // to "Submitted for review". So a suspected secret ABORTS by default, and the only
+  // way past is the explicit `--allow-secret` (alias `--force`).
+  //
+  // Run independently of `--skip-validation`: that flag waives advice about the recipe
+  // file, not the decision to publish a credential to the world. It is computed here
+  // even when the checks above already ran, because under `--skip-validation` they did
+  // not — a fresh, pure scan is the one path that covers both.
+  if (!opts.allowSecret) {
+    // The recipe scan: reuse the findings from above when they were computed, else run
+    // it fresh (--skip-validation waived that pass, not this gate).
+    const recipeSecrets = opts.skipValidation ? checkSecrets(recipe) : findings
+    // The changelog scan (F065): --changelog is a CLI flag, never merged into the
+    // recipe, so `checkSecrets` never sees it — yet it publishes alongside the
+    // automation and is shown to reviewers, so it is scanned with the same patterns.
+    const changelogSecrets = checkTextSecrets('changelog', opts.changelog)
+    if (hasPossibleSecrets(recipeSecrets) || hasPossibleSecrets(changelogSecrets)) {
+      // Print exactly the matches the Local-checks pass above did NOT already show:
+      // everything under --skip-validation (that pass never ran) and the changelog
+      // matches always (they are not part of runAllChecks). An abort whose reason the
+      // author cannot see is worse than the leak it prevents.
+      const unreported = [
+        ...(opts.skipValidation ? possibleSecretFindings(recipeSecrets) : []),
+        ...possibleSecretFindings(changelogSecrets)
+      ]
+      if (unreported.length > 0) {
+        heading('Possible secrets')
+        reportFindings(unreported)
+      }
+      actionableError(
+        'This automation looks like it contains a secret (an API key, token, or credential).',
+        'Remove it — a published automation is public. To publish anyway, re-run with --allow-secret.'
       )
       return { exitCode: 1 }
     }
@@ -130,9 +190,53 @@ export async function runPublish(
     }
   }
 
+  const automationId = deriveAutomationId(String(recipe.name ?? ''))
+
+  // Version planning (F025). The marketplace treats a published version as IMMUTABLE,
+  // and a refused upload still spends one of the five attempts an account gets per
+  // hour — so a forgotten `--version` must never silently re-send the constant default
+  // onto a version that is already taken. Fetch the author's own submissions
+  // (best-effort: a registry we cannot reach is not the author's problem, and the
+  // server stays the final authority), then either default to the next patch above the
+  // latest, or refuse a provided version that already exists BEFORE the slot is spent.
+  //
+  // Skipped on --dry-run: a rehearsal spends no upload slot, so there is no collision
+  // to prevent, and dry-run is documented as reaching the network for nothing.
+  let submissions: AutomationSubmission[] | null = null
+  if (!opts.dryRun) {
+    try {
+      submissions = await getMyAutomations(token)
+    } catch {
+      submissions = null
+    }
+  }
+
+  let version: string
+  if (opts.version) {
+    version = opts.version
+    if (submissions && versionAlreadyUsed(submissions, automationId, version)) {
+      const next = bumpPatch(latestSubmittedVersion(submissions, automationId) ?? version)
+      actionableError(
+        `Version ${version} of "${automationId}" is already on the marketplace — published versions are immutable.`,
+        `Publish under a new version, e.g. --version ${next}.`
+      )
+      return { exitCode: 1 }
+    }
+  } else if (submissions) {
+    const planned = planDefaultVersion(submissions, automationId, DEFAULT_PUBLISH_VERSION)
+    version = planned.version
+    if (planned.basedOn) {
+      info(
+        `No --version given — defaulting to ${version} (the latest on the marketplace is ${planned.basedOn}).`
+      )
+    }
+  } else {
+    version = DEFAULT_PUBLISH_VERSION
+  }
+
   const envelope = buildEnvelope(recipe, {
-    automationId: deriveAutomationId(String(recipe.name ?? '')),
-    version: opts.version ?? DEFAULT_PUBLISH_VERSION,
+    automationId,
+    version,
     category: opts.category ?? DEFAULT_PUBLISH_CATEGORY,
     changelog: opts.changelog ?? ''
   })
@@ -153,11 +257,33 @@ export async function runPublish(
     if (err instanceof MarketplaceApiError) {
       // The server's own reasons are the authoritative ones — show them verbatim.
       fail(err.message)
+      // A version collision reaches here when the best-effort preflight above could
+      // not see it — the registry was unreachable at plan time, or a concurrent
+      // publish claimed the version in between. The raw server line ("409" /
+      // "already exists") does not tell the author what to do next, so name the fix.
+      if (isVersionConflict(err)) {
+        info(`That version is already taken. Publish under a new one, e.g. --version ${bumpPatch(version)}.`)
+      }
       return { exitCode: 1 }
     }
     fail('Could not reach the marketplace. Check your connection and try again.')
     return { exitCode: 1 }
   }
+}
+
+/**
+ * Does this server rejection look like a duplicate-version collision?
+ *
+ * The automation API surfaces the server's own `code` when it sends one and falls
+ * back to `HTTP_<status>` otherwise, so a 409 can arrive either as a semantic code
+ * or as `HTTP_409`. Match on both, plus the words a version-conflict message tends to
+ * use, so the actionable hint fires whichever shape the server chose.
+ */
+function isVersionConflict(err: MarketplaceApiError): boolean {
+  const haystack = `${err.code} ${err.message}`.toLowerCase()
+  return /\b409\b|immutable|already (?:exists|published|submitted)|duplicate version|version .*exists/.test(
+    haystack
+  )
 }
 
 /**
@@ -184,6 +310,11 @@ export function createPublishCommand(): Command {
     .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
     .option('--dry-run', 'Do everything except the upload')
     .option('--skip-validation', 'Publish even if local checks report errors')
+    .option(
+      '--allow-secret',
+      'Publish even though the local scan flagged a possible secret (dangerous)'
+    )
+    .option('--force', 'Alias for --allow-secret')
     .action(async (file: string | undefined, options: Record<string, unknown>) => {
       const res = await runPublish({
         cwd: process.cwd(),
@@ -195,7 +326,8 @@ export function createPublishCommand(): Command {
         switchAccount: options.switchAccount as boolean,
         yes: options.yes as boolean,
         dryRun: options.dryRun as boolean,
-        skipValidation: options.skipValidation as boolean
+        skipValidation: options.skipValidation as boolean,
+        allowSecret: Boolean(options.allowSecret) || Boolean(options.force)
       })
       process.exit(res.exitCode)
     })

@@ -15,7 +15,58 @@ const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
 //
 // The Cloud Functions are still deployed against the same Firestore, so an older published CLI
 // pointing at the previous URL keeps working until they are switched off.
-const BASE_URL = process.env.AMC_MARKETPLACE_API_URL ?? 'https://amcback.jls.dev/marketplace'
+const DEFAULT_BASE_URL = 'https://amcback.jls.dev/marketplace'
+
+/**
+ * The marketplace base URL, with the `AMC_MARKETPLACE_API_URL` override validated.
+ *
+ * Every authed call sends `Authorization: Bearer <id-token>` to this host, and the
+ * auth poll receives a freshly-minted token back from it — so an `http://` override
+ * would put a reusable marketplace credential on the wire in cleartext (F076). The
+ * override is refused unless it is `https://`, with one carve-out: plain `http://` to
+ * localhost / a loopback address, because that is how a developer points the CLI at a
+ * local emulator and the token never leaves the machine.
+ *
+ * Fails CLOSED: an insecure or malformed override throws here rather than silently
+ * falling back to the default, so a misconfigured environment can never quietly ship
+ * the token to the wrong place. The default path (no override) never parses and never
+ * throws.
+ *
+ * @throws if the override is set but is not a valid https URL (or http to localhost).
+ */
+export function resolveBaseUrl(raw: string | undefined = process.env.AMC_MARKETPLACE_API_URL): string {
+  if (raw === undefined || raw.trim() === '') return DEFAULT_BASE_URL
+
+  const value = raw.trim()
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error(
+      `AMC_MARKETPLACE_API_URL is not a valid URL: ${value}. Unset it to use the default.`
+    )
+  }
+
+  const isLoopback =
+    url.hostname === 'localhost' ||
+    url.hostname === '127.0.0.1' ||
+    url.hostname === '[::1]' ||
+    url.hostname === '::1'
+
+  const secure = url.protocol === 'https:' || (url.protocol === 'http:' && isLoopback)
+  if (!secure) {
+    throw new Error(
+      `AMC_MARKETPLACE_API_URL must be https:// (got "${url.protocol}//${url.hostname}"). ` +
+        'The CLI refuses to send your marketplace token over cleartext http. ' +
+        'Use https, or plain http only to localhost for local development.'
+    )
+  }
+
+  // Strip a single trailing slash so call sites' `${getBaseUrl()}/route` never doubles it.
+  return value.replace(/\/+$/, '')
+}
+
+const BASE_URL = resolveBaseUrl()
 const AUTH_PAGE_URL = process.env.AMC_MARKETPLACE_AUTH_URL ?? 'https://amc-marketplace-jls.web.app'
 
 export interface StoredToken {

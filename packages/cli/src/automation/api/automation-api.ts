@@ -23,6 +23,24 @@ interface ApiErrorResponse {
   message: string
 }
 
+/**
+ * Longest server-chosen error string this surface will echo verbatim.
+ *
+ * Mirrors the plugin surface's guard (lib/marketplace-api.ts): the CLI renders
+ * `err.message` straight to the terminal via `fail(err.message)`, so an unbounded,
+ * server-chosen string — a stack trace, an HTML error page, a wall of validation
+ * detail — must not become the CLI's whole output. A short message is the server's
+ * own actionable reason and is kept; anything longer is replaced by a fixed line that
+ * still carries the status code.
+ */
+const MAX_SERVER_MESSAGE_LENGTH = 300
+
+function boundedServerMessage(body: ApiErrorResponse | null, status: number): string {
+  const raw = typeof body?.message === 'string' ? body.message.trim() : ''
+  if (raw !== '' && raw.length <= MAX_SERVER_MESSAGE_LENGTH) return raw
+  return `The marketplace rejected the request (HTTP ${status}).`
+}
+
 function authHeaders(token: StoredToken): Record<string, string> {
   return { Authorization: `Bearer ${token.token}`, 'Content-Type': 'application/json' }
 }
@@ -37,7 +55,7 @@ async function handle<T>(res: Response): Promise<T> {
     }
     throw new MarketplaceApiError(
       body?.code ?? `HTTP_${res.status}`,
-      body?.message ?? `HTTP ${res.status}`,
+      boundedServerMessage(body, res.status),
       []
     )
   }
