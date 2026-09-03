@@ -156,8 +156,8 @@ export function buildPackageJson(opts: {
         validate: 'amc-plugin validate',
       }
   const devDependencies: Record<string, string> = isWebview
-    ? { '@agent-mc/plugin-sdk': '^2.0.0' }
-    : { '@agent-mc/plugin-sdk': '^2.0.0', typescript: '^5.5.0' }
+    ? { '@agent-mc/plugin-sdk': '^3.0.0' }
+    : { '@agent-mc/plugin-sdk': '^3.0.0', typescript: '^5.5.0' }
   if (hasBackend) {
     scripts.test = 'amc-plugin test'
     devDependencies['vitest'] = '^3.0.0'
@@ -210,7 +210,7 @@ export function buildManifest(opts: {
     settings: [],
     storage: { collections: {} },
     migrations: [],
-    sdkVersion: '^2.0.0',
+    sdkVersion: '^3.0.0',
   }
 
   manifest.ui = {

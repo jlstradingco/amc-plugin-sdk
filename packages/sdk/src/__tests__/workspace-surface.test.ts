@@ -441,7 +441,7 @@ describe('the typed surface matches the host method set exactly', () => {
     // What is worth pinning is the METHOD SET, because that is what went wrong:
     // the SDK carried six methods transcribed from an unimplemented spec while
     // missing three the host shipped.
-    const source = fs.readFileSync(path.join(here, '..', 'types', 'context.ts'), 'utf-8')
+    const source = fs.readFileSync(path.join(here, '..', 'types', 'context.ts'), 'utf-8').replace(/\r\n/g, '\n')
     const api = source.slice(source.indexOf('interface WorkspaceApi'))
     const body = api.slice(0, api.indexOf('\n}'))
 
@@ -505,7 +505,7 @@ describe('the typed surface matches the host method set exactly', () => {
     // job methods are not single-flight, so a second `exec` hands you the first
     // call's jobId, and declining that call's confirm lands the job there).
     // An exhaustive switch over a six-member union would have been unsound.
-    const source = fs.readFileSync(path.join(here, '..', 'types', 'context.ts'), 'utf-8')
+    const source = fs.readFileSync(path.join(here, '..', 'types', 'context.ts'), 'utf-8').replace(/\r\n/g, '\n')
     const decl = source.slice(source.indexOf('export type WorkspaceExecJobState'))
     const body = decl.slice(0, decl.indexOf('\n\n'))
     const states = [...body.matchAll(/'([a-z-]+)'/g)].map((m) => m[1])
