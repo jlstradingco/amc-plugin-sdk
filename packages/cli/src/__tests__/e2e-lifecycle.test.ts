@@ -120,7 +120,7 @@ describe('Plugin lifecycle E2E', () => {
     const manifest = JSON.parse(
       fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'),
     )
-    expect(manifest.sdkVersion).toBe('^2.0.0')
+    expect(manifest.sdkVersion).toBe('^3.0.0')
     expect(manifest.backend).toBeDefined()
     expect(manifest.backend.entryPoint).toBe('dist/backend/index.js')
     expect(manifest.plugin.id).toBe('e2e-test-plugin')
