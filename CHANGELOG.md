@@ -22,6 +22,20 @@ you call `writeFile`, `writeFiles` or `deleteFile`, you must pass a
 compare-and-swap token — see the first section below. Nothing else here is
 breaking.
 
+### Fixed — the scaffold SDK floor, before it inverted again (2026-09-03)
+
+`amc-plugin create` scaffolded new plugins against `^2.0.0`. That range was
+deliberately wide while 2.x was current, but `^2.0.0` means `>=2.0.0 <3.0.0` —
+so the moment this release publishes it *excludes* the current major, and every
+plugin scaffolded by the 3.0.0 CLI would resolve to SDK 2.x: no compare-and-swap
+write API, and a permission enum that rejects `stt` and `microphone`.
+
+This is the same inversion the 2.0.0 entry below records for `^1.0.0`, caught
+one release later. It has to ship *with* the bump rather than after it — the pin
+travels inside the published CLI, so a follow-up merge cannot reach the artifact
+that already went out. The scaffold floor is now `^3.0.0`; the docs that document
+it move with the post-release version sweep.
+
 ### Added — the `stt` and `microphone` permissions and a typed `stt` namespace (2026-08-28)
 
 The host ships both, and the SDK's permission enum rejected them, so a manifest
