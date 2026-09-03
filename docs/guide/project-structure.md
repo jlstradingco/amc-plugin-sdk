@@ -49,7 +49,7 @@ The central configuration file. Declares your plugin's identity, settings, permi
   "settings": [],
   "storage": { "collections": {} },
   "migrations": [],
-  "sdkVersion": "^2.0.0",
+  "sdkVersion": "^3.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "My Plugin", "icon": "puzzle" }
@@ -78,7 +78,7 @@ Standard npm project file. The scaffolder generates it with the build, dev, pack
     "validate": "amc-plugin validate"
   },
   "devDependencies": {
-    "@agent-mc/plugin-sdk": "^2.0.0",
+    "@agent-mc/plugin-sdk": "^3.0.0",
     "typescript": "^5.5.0"
   }
 }
