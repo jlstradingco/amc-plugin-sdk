@@ -9,7 +9,7 @@
     "category": "other",
     "license": { "type": "free" }
   },
-  "sdkVersion": "^2.0.0",
+  "sdkVersion": "^3.0.0",
   "permissions": ["storage"],
   "settings": [],
   "storage": {

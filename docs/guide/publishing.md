@@ -35,7 +35,7 @@ Compiling TypeScript...
 Build complete
 
 PASS: Manifest schema
-PASS: SDK version declared (^2.0.0)
+PASS: SDK version declared (^3.0.0)
 PASS: UI entry point exists
 PASS: TypeScript compilation
 PASS: No banned imports
