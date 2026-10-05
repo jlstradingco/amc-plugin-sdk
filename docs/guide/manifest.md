@@ -46,7 +46,9 @@ The `manifest.json` file is the central configuration for your plugin. It declar
     "category": "development",
     "license": { "type": "free" },
     "minAppVersion": "0.1.30",
-    "tags": ["linter", "security"]
+    "tags": ["linter", "security"],
+    "screenshots": ["https://example.com/shots/overview.png"],
+    "links": { "homepage": "https://example.com", "support": "https://example.com/help" }
   }
 }
 ```
@@ -63,9 +65,15 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `license` | object | Yes | `{ "type": "free" }`, `{ "type": "paid" }`, or `{ "type": "trial" }` |
 | `minAppVersion` | string | No | Minimum AMC version required to run this plugin |
 | `tags` | string[] | No | Discoverability keywords surfaced in marketplace search and shown as chips on the plugin card (up to 10 tags, 30 characters each) |
+| `screenshots` | string[] | No | Gallery images for the marketplace detail page: up to 8 `http(s)` URLs you host, 2048 characters each. Any other value (a `data:` or `javascript:` URL, a 9th entry) fails validation |
+| `links` | object | No | Support links for the detail page's Support tab: any of `homepage`, `support`, `privacy`, `contact`, `repository`, each an `http(s)` URL of at most 2048 characters |
 
 ::: warning
 The `id` field is permanent. It is used as the storage namespace, database prefix, and marketplace identifier. Changing it after publishing creates a new, separate plugin.
+:::
+
+::: tip Your listing is more than the manifest
+The marketplace also renders the `README.md` next to `manifest.json` as the plugin's long description (`amc-plugin package` ships it from CLI 3.1), while `plugin.screenshots` and `plugin.links` fill the gallery and the Support tab. See [Publishing → What your listing shows](./publishing.md#what-your-listing-shows).
 :::
 
 ### Plugin Icon

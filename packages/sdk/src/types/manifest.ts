@@ -237,6 +237,19 @@ export interface PluginCronDefinition {
   approvalRequired: boolean
 }
 
+/**
+ * Optional support/homepage links shown on the marketplace detail page's
+ * Support tab. Every value must be an http:// or https:// URL — the host
+ * opens them with `shell.openExternal`.
+ */
+export interface PluginSupportLinks {
+  homepage?: string
+  support?: string
+  privacy?: string
+  contact?: string
+  repository?: string
+}
+
 export interface PluginManifest {
   plugin: {
     id: string
@@ -252,6 +265,18 @@ export interface PluginManifest {
     // search and rendered as chips on the plugin card. Bounded by the validator
     // (up to 10 tags, 30 chars each) so a manifest can't flood search or the UI.
     tags?: string[]
+    /**
+     * Gallery images for the marketplace detail page: up to 8 developer-hosted
+     * `http:`/`https:` URLs of at most 2048 characters each. Anything else fails
+     * validation. Mirrors the host validator bounds (plugin-manifest-validator.ts
+     * PLUGIN_SCREENSHOTS_MAX / PLUGIN_SCREENSHOT_URL_MAX).
+     */
+    screenshots?: string[]
+    /**
+     * Support/homepage links rendered on the marketplace detail page's Support
+     * tab. Every value must be an `http:`/`https:` URL — see {@link PluginSupportLinks}.
+     */
+    links?: PluginSupportLinks
   }
   settings: PluginSettingDefinition[]
   storage: {

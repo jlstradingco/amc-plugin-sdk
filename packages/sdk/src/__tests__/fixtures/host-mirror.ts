@@ -49,6 +49,29 @@ export const HOST_UI_BOUNDS = {
 } as const
 
 /**
+ * Marketplace listing bounds on the `plugin` block, read from host master
+ * **4d69ffac84 (2026-09-23)**: `plugin-manifest-validator.ts:18-19` (screenshots)
+ * and `:206` (links). The marketplace server enforces the same two numbers in
+ * `firebase/marketplace/functions/src/endpoints/upload-plugin.ts:100-101`
+ * (`MAX_SCREENSHOTS` / `MAX_SCREENSHOT_URL_LEN`) — but it silently DROPS what
+ * the host validator, and this SDK, reject.
+ */
+export const HOST_LISTING_BOUNDS = {
+  /** `PLUGIN_SCREENSHOTS_MAX = 8` — validator:18, applied at validator:240-253 */
+  screenshotsMax: 8,
+  /**
+   * ONE cap for every listing URL. The host spells it as two constants with one
+   * value — `PLUGIN_SCREENSHOT_URL_MAX = 2048` (validator:19) and
+   * `PLUGIN_LINK_URL_MAX = 2048` (validator:206) — and both refine on the host's
+   * shared `isHttpUrl` (`src/shared/http-url.ts`), so a raise of either is a raise
+   * of this number.
+   */
+  listingUrlMax: 2048,
+  /** `links: z.object({ homepage, support, privacy, contact, repository })` — validator:267-273 */
+  linkKeys: ['homepage', 'support', 'privacy', 'contact', 'repository'],
+} as const
+
+/**
  * The host's migration operation enum — `plugin-manifest-validator.ts:199`.
  *
  * `remove_column` / `remove_index` are NOT here and never were: they trace to a

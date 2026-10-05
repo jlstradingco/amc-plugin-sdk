@@ -18,6 +18,20 @@ interface FlatManifestLike {
 
 const CONVENTIONAL_DIRS = ['assets', 'prompts']
 
+const README_RE = /^readme\.md$/i
+
+/**
+ * The marketplace renders the package's README on the plugin's detail page and
+ * finds it with the same case-insensitive match, so the file ships under its
+ * real on-disk name.
+ */
+export function findRootReadme(cwd: string): string | null {
+  for (const entry of fs.readdirSync(cwd, { withFileTypes: true })) {
+    if (entry.isFile() && README_RE.test(entry.name)) return entry.name
+  }
+  return null
+}
+
 /**
  * Top-level entries a flat plugin's `.amcplugin` should contain (besides
  * manifest.json, which the packager adds at the root itself). Derived from the
@@ -37,7 +51,10 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   addTopSegment(manifest.backend?.entryPoint)
   for (const dir of CONVENTIONAL_DIRS) names.add(dir)
 
-  return [...names].filter((name) => fs.existsSync(path.join(cwd, name)))
+  const entries = [...names].filter((name) => fs.existsSync(path.join(cwd, name)))
+  const readme = findRootReadme(cwd)
+  if (readme) entries.push(readme)
+  return entries
 }
 
 /**
@@ -45,12 +62,15 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
  * shippable payload — the single source of truth shared by `package` and
  * `install` so both agree on exactly what a plugin consists of. A TypeScript
  * plugin ships its compiled `dist/` tree (plus an optional top-level `assets/`);
- * a flat-JS plugin ships its as-authored folders.
+ * a flat-JS plugin ships its as-authored folders. A root README.md ships in
+ * both cases (when present) so the marketplace listing can render it.
  */
 export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): string[] {
   if (!isTypeScriptProject(cwd)) return collectFlatPackageEntries(cwd, manifest)
   const entries = ['dist']
   if (fs.existsSync(path.join(cwd, 'assets'))) entries.push('assets')
+  const readme = findRootReadme(cwd)
+  if (readme) entries.push(readme)
   return entries
 }
 

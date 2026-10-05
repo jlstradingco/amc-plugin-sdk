@@ -187,6 +187,117 @@ describe('validateManifest', () => {
   })
 })
 
+describe('plugin.screenshots and plugin.links (marketplace listing)', () => {
+  it('accepts and preserves 8 screenshot URLs, https and http', () => {
+    const screenshots = [
+      ...Array.from({ length: 7 }, (_, i) => `https://cdn.example.com/shot${i}.png`),
+      'http://cdn.example.com/shot7.png',
+    ]
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, screenshots },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.plugin.screenshots).toEqual(screenshots)
+  })
+
+  it('accepts an empty screenshots array', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, screenshots: [] },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.plugin.screenshots).toEqual([])
+  })
+
+  it('rejects more than 8 screenshots', () => {
+    const screenshots = Array.from({ length: 9 }, (_, i) => `https://cdn.example.com/shot${i}.png`)
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, screenshots },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
+
+  it.each([
+    'javascript:alert(1)',
+    'data:text/plain;base64,aGVsbG8=',
+    'file:///etc/passwd',
+  ])('rejects a %s screenshot URL', (url) => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, screenshots: [url] },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects a screenshot URL over 2048 chars', () => {
+    const longUrl = `https://cdn.example.com/${'x'.repeat(2048)}.png`
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, screenshots: [longUrl] },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
+
+  it('accepts a full links block and preserves it', () => {
+    const links = {
+      homepage: 'https://example.com',
+      support: 'https://example.com/support',
+      privacy: 'https://example.com/privacy',
+      contact: 'https://example.com/contact',
+      repository: 'https://github.com/example/plugin',
+    }
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, links },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.plugin.links).toEqual(links)
+  })
+
+  it('accepts a partial links block with only support set', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, links: { support: 'https://example.com/support' } },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.plugin.links).toEqual({ support: 'https://example.com/support' })
+  })
+
+  it('rejects a non-http links.support URL', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, links: { support: 'javascript:alert(1)' } },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects a non-http scheme in links.repository', () => {
+    const manifest = {
+      ...validManifest,
+      plugin: { ...validManifest.plugin, links: { repository: 'ftp://example.com/repo' } },
+    }
+    const result = validateManifest(manifest)
+    expect(result.valid).toBe(false)
+  })
+
+  it('parses a manifest with neither screenshots nor links, both undefined', () => {
+    const result = validateManifest(validManifest)
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.plugin.screenshots).toBeUndefined()
+    expect(result.manifest?.plugin.links).toBeUndefined()
+  })
+})
+
 // Rules added 2026-08-11 when the validator was reconciled against host
 // origin/master@8722cc3fca. Each one closes a case where `amc-plugin validate`
 // disagreed with the host — in one direction or the other.

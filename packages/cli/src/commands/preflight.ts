@@ -10,9 +10,11 @@ import {
   checkChangelog,
   checkPackageSize,
   checkDeclaredPermissions,
+  checkListingCompleteness,
   summarizePreflight,
   type PreflightResult
 } from '../lib/publish-preflight.js'
+import { findRootReadme } from '../lib/project.js'
 import { ok, fail, warn, info, heading, manifestNotFound } from '../lib/output.js'
 
 export interface PreflightRunResult {
@@ -20,9 +22,9 @@ export interface PreflightRunResult {
   hasFailure: boolean
 }
 
-// Gathers all raw inputs (manifest, published version, package size) and runs
-// the pure preflight checks. Shared by the standalone `preflight` command and
-// the `publish` preflight gate.
+// Gathers all raw inputs (manifest, published version, package size, README
+// presence) and runs the pure preflight checks. Shared by the standalone
+// `preflight` command and the `publish` preflight gate.
 export async function runPreflight(
   cwd: string,
   opts: { changelog?: string; packagePath?: string } = {}
@@ -62,6 +64,11 @@ export async function runPreflight(
   results.push(checkVersionAgainstRegistry(manifestVersion, publishedVersion))
   results.push(checkChangelog(opts.changelog ?? null))
   results.push(checkDeclaredPermissions(manifest.permissions))
+  results.push(checkListingCompleteness({
+    hasReadme: findRootReadme(cwd) !== null,
+    screenshots: manifest.plugin.screenshots,
+    links: manifest.plugin.links
+  }))
 
   const packagePath = opts.packagePath ?? findPackage(cwd)
   if (packagePath && fs.existsSync(packagePath)) {

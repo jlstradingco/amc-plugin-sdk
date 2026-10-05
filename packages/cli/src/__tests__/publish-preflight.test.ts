@@ -5,6 +5,7 @@ import {
   checkChangelog,
   checkPackageSize,
   checkDeclaredPermissions,
+  checkListingCompleteness,
   summarizePreflight,
   type PreflightResult
 } from '../lib/publish-preflight.js'
@@ -129,6 +130,72 @@ describe('checkDeclaredPermissions', () => {
     expect(r.status).toBe('fail')
     expect(r.message).toMatch(/not-a-permission/)
     expect(r.suggestion).toMatch(/storage/)
+  })
+})
+
+describe('checkListingCompleteness', () => {
+  const full = {
+    hasReadme: true,
+    screenshots: ['https://cdn.example.com/shot1.png'],
+    links: { support: 'https://example.com/support' },
+  }
+
+  it('passes when README, screenshots and links are all present', () => {
+    const r = checkListingCompleteness(full)
+    expect(r.status).toBe('pass')
+    expect(r.message).toMatch(/README, screenshots and support links/i)
+  })
+
+  it('warns and names README when it is missing', () => {
+    const r = checkListingCompleteness({ ...full, hasReadme: false })
+    expect(r.status).toBe('warn')
+    expect(r.message).toMatch(/README/)
+  })
+
+  it('warns and names screenshots when the array is empty', () => {
+    const r = checkListingCompleteness({ ...full, screenshots: [] })
+    expect(r.status).toBe('warn')
+    expect(r.message).toMatch(/screenshots/)
+  })
+
+  it('warns and names links when the object is empty', () => {
+    const r = checkListingCompleteness({ ...full, links: {} })
+    expect(r.status).toBe('warn')
+    expect(r.message).toMatch(/links/)
+  })
+
+  it('warns and lists all three when everything is missing', () => {
+    const r = checkListingCompleteness({ hasReadme: false, screenshots: [], links: {} })
+    expect(r.status).toBe('warn')
+    expect(r.message).toMatch(/README/)
+    expect(r.message).toMatch(/screenshots/)
+    expect(r.message).toMatch(/links/)
+  })
+
+  it('never returns fail, no matter what is missing', () => {
+    const cases = [
+      { hasReadme: false, screenshots: [], links: {} },
+      { ...full, hasReadme: false },
+      { ...full, screenshots: undefined },
+      { ...full, links: null },
+    ]
+    for (const c of cases) {
+      expect(checkListingCompleteness(c).status).not.toBe('fail')
+    }
+  })
+
+  it('includes a suggestion on every warn', () => {
+    const cases = [
+      { ...full, hasReadme: false },
+      { ...full, screenshots: [] },
+      { ...full, links: {} },
+      { hasReadme: false, screenshots: [], links: {} },
+    ]
+    for (const c of cases) {
+      const r = checkListingCompleteness(c)
+      expect(r.status).toBe('warn')
+      expect(r.suggestion).toBeTruthy()
+    }
   })
 })
 

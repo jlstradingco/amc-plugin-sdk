@@ -6,6 +6,7 @@ import {
   isTypeScriptProject,
   collectFlatPackageEntries,
   collectPackageEntries,
+  findRootReadme,
 } from '../lib/project.js'
 
 let tmp: string
@@ -71,6 +72,17 @@ describe('collectFlatPackageEntries', () => {
     const manifest = { ui: { entryPoint: 'index.html' } }
     expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['index.html'])
   })
+
+  it('appends README.md last, after the entry-point dirs', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    fs.mkdirSync(path.join(tmp, 'backend'))
+    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
+    const manifest = {
+      ui: { entryPoint: 'ui/index.html' },
+      backend: { entryPoint: 'backend/index.js' },
+    }
+    expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['ui', 'backend', 'README.md'])
+  })
 })
 
 describe('collectPackageEntries', () => {
@@ -93,5 +105,50 @@ describe('collectPackageEntries', () => {
     fs.mkdirSync(path.join(tmp, 'ui'))
     const manifest = { ui: { entryPoint: 'ui/index.html' } }
     expect(collectPackageEntries(tmp, manifest)).toEqual(['ui'])
+  })
+
+  it('appends README.md last for a TypeScript plugin', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
+    const manifest = { ui: { entryPoint: 'dist/ui/index.html' } }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['dist', 'README.md'])
+  })
+
+  it('appends README.md after assets/ for a TypeScript plugin', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    fs.mkdirSync(path.join(tmp, 'assets'))
+    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
+    const manifest = { ui: { entryPoint: 'dist/ui/index.html' } }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['dist', 'assets', 'README.md'])
+  })
+
+  it('leaves entries unchanged when there is no README', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    const manifest = { ui: { entryPoint: 'dist/ui/index.html' } }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['dist'])
+  })
+})
+
+describe('findRootReadme', () => {
+  it('finds README.md and returns its name', () => {
+    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
+    expect(findRootReadme(tmp)).toBe('README.md')
+  })
+
+  it('finds a lower-case readme.md and returns it under its real on-disk name', () => {
+    fs.writeFileSync(path.join(tmp, 'readme.md'), '# Hi')
+    expect(findRootReadme(tmp)).toBe('readme.md')
+  })
+
+  it('ignores a directory named README.md', () => {
+    fs.mkdirSync(path.join(tmp, 'README.md'))
+    expect(findRootReadme(tmp)).toBeNull()
+  })
+
+  it('returns null on an empty directory', () => {
+    expect(findRootReadme(tmp)).toBeNull()
   })
 })

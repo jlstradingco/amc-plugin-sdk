@@ -143,7 +143,7 @@ amc-plugin package
 1. Validates `manifest.json`.
 2. Builds if `dist/` does not exist.
 3. Creates `<plugin-id>-<version>.amcplugin` in the project root.
-4. Includes `manifest.json`, `dist/`, and `assets/` (if present).
+4. Includes `manifest.json`, `dist/`, `assets/` (if present) and the root `README.md` (if present — the marketplace renders it as the listing's long description; CLI 3.1 and later).
 5. Warns if the archive exceeds the 50 MB marketplace limit.
 
 **Example:**
@@ -181,6 +181,7 @@ amc-plugin preflight [options]
 | Changelog | &mdash; | No changelog provided |
 | Permissions | An unknown permission is declared | Duplicate permissions |
 | Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
+| Listing | &mdash; | No `README.md` at the plugin root, an absent or empty `plugin.screenshots`, or an absent or empty `plugin.links` — the marketplace detail page would be bare (see [Publishing → What your listing shows](../guide/publishing.md#what-your-listing-shows)) |
 
 If the marketplace registry is unreachable, the version check is skipped rather than blocking.
 
@@ -191,6 +192,8 @@ amc-plugin preflight --changelog "Added dark mode support"
 # ✓ Version: 1.1.0 is newer than the published 1.0.0
 # ⚠ Permissions: Duplicate permission(s): storage
 #   → Remove the duplicate entries from manifest.json permissions.
+# ⚠ Listing: Listing will be bare — missing: screenshots (plugin.screenshots), support links (plugin.links)
+#   → Add a README.md next to manifest.json, hosted http(s) image URLs under plugin.screenshots, and support/homepage URLs under plugin.links — the marketplace detail page renders all three.
 # ✓ Package size: 0.12 MB
 ```
 

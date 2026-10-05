@@ -21,6 +21,26 @@ const sqlIdentMessage =
 const sqlIdent = (): z.ZodString =>
   z.string().min(1).regex(sqlIdentRegex, sqlIdentMessage)
 
+// Marketplace listing bounds — ONE URL cap shared by screenshots and links. Kept in
+// sync with the AMC host validator (plugin-manifest-validator.ts: PLUGIN_SCREENSHOTS_MAX,
+// plus PLUGIN_SCREENSHOT_URL_MAX and PLUGIN_LINK_URL_MAX, which are both 2048) and the
+// marketplace's sanitizeScreenshotUrls (upload-plugin.ts). The host-parity test reads the
+// same numbers from __tests__/fixtures/host-mirror.ts (HOST_LISTING_BOUNDS), so a host
+// cap change fails there instead of drifting silently.
+const LISTING_URL_MAX = 2048
+const SCREENSHOTS_MAX = 8
+
+const isHttpUrl = (value: string): boolean => {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+const listingUrl = z.string().max(LISTING_URL_MAX).refine(isHttpUrl, 'must be an http:// or https:// URL')
+
 const pluginInfoSchema = z.object({
   id: z.string().min(1).regex(pluginIdRegex, 'Plugin ID must be kebab-case (lowercase alphanumeric + hyphens)'),
   name: z.string().min(1).max(100),
@@ -35,6 +55,18 @@ const pluginInfoSchema = z.object({
   // Bounded (≤10 tags, ≤30 chars each) so a manifest can't flood search/UI.
   // Kept in sync with PluginManifest.plugin.tags and the AMC host validator.
   tags: z.array(z.string().min(1).max(30)).max(10).optional(),
+  // Marketplace listing fields — bounds and host citations live at
+  // LISTING_URL_MAX / SCREENSHOTS_MAX above.
+  screenshots: z.array(listingUrl).max(SCREENSHOTS_MAX).optional(),
+  links: z
+    .object({
+      homepage: listingUrl.optional(),
+      support: listingUrl.optional(),
+      privacy: listingUrl.optional(),
+      contact: listingUrl.optional(),
+      repository: listingUrl.optional(),
+    })
+    .optional(),
 })
 
 const settingOptionSchema = z.object({

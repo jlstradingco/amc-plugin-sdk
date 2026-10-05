@@ -15,6 +15,7 @@ export type {
   PluginCliEndpoint,
   PluginCronDefinition,
   PluginManifest,
+  PluginSupportLinks,
   PluginRegistryEntry,
   PluginRuntimeStatus,
   // Workspace manifest block (`workspace.read` / `.write` / `.exec`)

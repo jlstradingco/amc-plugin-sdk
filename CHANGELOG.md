@@ -11,6 +11,40 @@ together.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-22
+
+### Added — `plugin.screenshots` and `plugin.links` on the manifest (2026-09-22)
+
+The marketplace detail page renders a screenshot gallery and a Support tab, and the
+AMC host validates both fields, but the SDK's `PluginManifest` type and
+`validateManifest` ended at `tags`, so no plugin author could discover either.
+Measured on the live marketplace on 2026-09-22: 0 of 17 published plugins declared
+screenshots or links. Both fields are now on the type and the validator with the
+host's exact bounds: `screenshots` is up to 8 `http(s)` URLs of 2048 characters,
+`links` is an object of optional `homepage` / `support` / `privacy` / `contact` /
+`repository` `http(s)` URLs. A `javascript:`, `data:` or `file:` value fails
+validation instead of being silently dropped by the marketplace. The new
+`PluginSupportLinks` type is exported for authors who type their manifest.
+
+### Fixed — `amc-plugin package` now ships the plugin's `README.md` (2026-09-22)
+
+The marketplace renders the package's README as the plugin's long description, but
+the packager only ever included `dist/` (plus `assets/`) for a TypeScript plugin and
+the entry-point folders for a flat one, so a README in the repository never reached
+the marketplace. Measured on the live marketplace: 15 of 17 published plugins showed
+no README, including three first-party plugins published this month that each carry
+one in their repository. The packager (and `amc-plugin install`, which shares the
+entry list) now includes the root README under its on-disk name, matched
+case-insensitively exactly as the marketplace matches it. Publish a new version to
+pick it up.
+
+### Added — a `Listing` preflight check (2026-09-22)
+
+`amc-plugin preflight` and the preflight inside `publish` print one `Listing` line:
+`pass` when the README, screenshots and support links are all present, otherwise a
+**warning** naming what is missing. It never fails the publish — a plugin with
+nothing to show can still ship.
+
 ## [3.0.0] - 2026-08-31
 
 **Read this first if you are upgrading from npm: you are on 2.0.0.** Everything

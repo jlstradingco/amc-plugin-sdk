@@ -49,6 +49,24 @@ Packaged: my-plugin-1.0.0.amcplugin (0.01 MB)
 If you skip the package step, the `publish` command runs it automatically.
 :::
 
+## What Your Listing Shows
+
+There is no listing form. Everything the marketplace page shows comes from the package you upload:
+
+| On the listing | Source | Limits |
+|---|---|---|
+| Name, description, author, category, license, icon, tags | `manifest.json` → `plugin.*` | see the [manifest reference](./manifest.md#plugin-block) |
+| Long description (Overview tab) | the `README.md` next to `manifest.json`, packaged automatically by `amc-plugin package` (CLI 3.1 and later) | markdown only, 64 KB; use absolute `https://` image URLs, a repo-relative path cannot load |
+| Screenshot gallery | `plugin.screenshots`, a list of image URLs you host | up to 8 `http(s)` URLs, 2048 characters each |
+| Support tab | `plugin.links` with any of `homepage`, `support`, `privacy`, `contact`, `repository` | each an `http(s)` URL, all optional |
+| Ratings and downloads | users and the marketplace | nothing to supply |
+
+`amc-plugin preflight` (and the preflight that runs inside `publish`) prints one `Listing` line: `pass` when the README, screenshots and support links are all present, otherwise a **warning** that names what is missing. It never blocks a publish, so a plugin with nothing to show can still ship.
+
+::: warning Older CLIs drop the README
+Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a flat plugin's entry-point folders), so a README in your repository never reached the marketplace. Upgrade with `npm install -D @agent-mc/plugin-cli@^3.1.0`, or publish with `npx @agent-mc/plugin-cli@latest publish`, then publish a new version — the listing updates when that version is approved.
+:::
+
 ## Step 2: Publish
 
 Run the publish command from your plugin directory:

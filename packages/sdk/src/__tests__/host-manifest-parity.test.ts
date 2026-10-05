@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { validateManifest } from '../validators/manifest.js'
 import {
+  HOST_LISTING_BOUNDS,
   HOST_MIGRATION_OPS,
   HOST_REJECTED_MIGRATION_OPS,
   HOST_RESERVED_COLUMNS,
@@ -212,5 +213,64 @@ describe(`migrations parity (${HOST_SOURCES.manifestValidator}:193-219)`, () => 
       result.valid,
       `host refuses its own columns (types/plugins.ts:34-42, validator:206-212)`
     ).toBe(false)
+  })
+})
+
+describe(`plugin listing parity (${HOST_SOURCES.manifestValidator}:18-19, 206, 240-273)`, () => {
+  // The listing bounds live in the fixture, not in this file: if the host raises
+  // a cap, the fixture moves and these assertions fail until the validator
+  // follows, instead of the SDK's own constants quietly agreeing with themselves.
+  const { screenshotsMax, listingUrlMax, linkKeys } = HOST_LISTING_BOUNDS
+  const urlOfLength = (n: number) => {
+    const prefix = 'https://cdn.example.com/'
+    return prefix + 'a'.repeat(n - prefix.length)
+  }
+  const withPlugin = (extra: Record<string, unknown>) => ({
+    ...baseManifest,
+    plugin: { ...baseManifest.plugin, ...extra },
+  })
+
+  it(`accepts exactly ${screenshotsMax} screenshots and rejects one more, like the host`, () => {
+    const atCap = Array.from({ length: screenshotsMax }, (_, i) => `https://cdn.example.com/${i}.png`)
+    expect(
+      validateManifest(withPlugin({ screenshots: atCap })).valid,
+      'validator:253 .max(PLUGIN_SCREENSHOTS_MAX)'
+    ).toBe(true)
+    expect(
+      validateManifest(withPlugin({ screenshots: [...atCap, 'https://cdn.example.com/extra.png'] })).valid
+    ).toBe(false)
+  })
+
+  it('caps a screenshot URL at the host length, accepting the cap and rejecting one more char', () => {
+    expect(
+      validateManifest(withPlugin({ screenshots: [urlOfLength(listingUrlMax)] })).valid,
+      'validator:244 .max(PLUGIN_SCREENSHOT_URL_MAX)'
+    ).toBe(true)
+    expect(validateManifest(withPlugin({ screenshots: [urlOfLength(listingUrlMax + 1)] })).valid).toBe(false)
+  })
+
+  it('caps every link URL at the same host length', () => {
+    expect(
+      validateManifest(withPlugin({ links: { support: urlOfLength(listingUrlMax) } })).valid,
+      'validator:209 .max(PLUGIN_LINK_URL_MAX)'
+    ).toBe(true)
+    expect(validateManifest(withPlugin({ links: { support: urlOfLength(listingUrlMax + 1) } })).valid).toBe(false)
+  })
+
+  it.each(linkKeys)('accepts and preserves the host link key %s', (key) => {
+    const result = validateManifest(withPlugin({ links: { [key]: 'https://example.com/x' } }))
+    expect(result.errors).toEqual([])
+    expect(
+      result.manifest?.plugin.links?.[key],
+      'validator:267-273 declares exactly these five keys'
+    ).toBe('https://example.com/x')
+  })
+
+  it('refines on http(s) exactly as the host isHttpUrl does', () => {
+    // src/shared/http-url.ts accepts only the http:/https: protocol of a parseable URL.
+    for (const bad of ['ftp://example.com/a.png', 'javascript:alert(1)', 'example.com/a.png']) {
+      expect(validateManifest(withPlugin({ screenshots: [bad] })).valid, bad).toBe(false)
+      expect(validateManifest(withPlugin({ links: { homepage: bad } })).valid, bad).toBe(false)
+    }
   })
 })

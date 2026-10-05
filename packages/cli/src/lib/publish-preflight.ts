@@ -133,6 +133,37 @@ export function checkDeclaredPermissions(permissions: string[] | undefined): Pre
   return { name, status: 'pass', message: `Declares: ${permissions.join(', ')}` }
 }
 
+// Never 'fail': a bare listing still installs and still publishes, it just
+// renders a thin marketplace detail page — README, screenshots and links are
+// all optional host-side.
+export function checkListingCompleteness(input: {
+  hasReadme: boolean
+  screenshots: unknown
+  links: unknown
+}): PreflightResult {
+  const name = 'Listing'
+  const missing: string[] = []
+  if (!input.hasReadme) missing.push('a README.md at the plugin root')
+  if (!Array.isArray(input.screenshots) || input.screenshots.length === 0) {
+    missing.push('screenshots (plugin.screenshots)')
+  }
+
+  const links = input.links
+  const hasLinks =
+    typeof links === 'object' && links !== null && Object.values(links).some((v) => typeof v === 'string')
+  if (!hasLinks) missing.push('support links (plugin.links)')
+
+  if (missing.length === 0) {
+    return { name, status: 'pass', message: 'README, screenshots and support links are all present' }
+  }
+  return {
+    name,
+    status: 'warn',
+    message: `Listing will be bare — missing: ${missing.join(', ')}`,
+    suggestion: 'Add a README.md next to manifest.json, hosted http(s) image URLs under plugin.screenshots, and support/homepage URLs under plugin.links — the marketplace detail page renders all three.'
+  }
+}
+
 export function summarizePreflight(results: PreflightResult[]): {
   counts: Record<PreflightStatus, number>
   hasFailure: boolean
