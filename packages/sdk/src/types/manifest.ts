@@ -323,6 +323,12 @@ export interface PluginManifest {
     }
   }
   /**
+   * The Omniscio plugin-SDK contract this plugin needs — not the version of
+   * this package. Write it bare (`"2.0.0"`): the host reads a bare version as a
+   * minimum, "this contract or newer", while a caret range such as `"^3.0.0"`
+   * is "this major only" and gets the plugin marked incompatible and hidden
+   * whenever the host's contract major differs.
+   *
    * Optional, matching the host — an absent `sdkVersion` is read as "a v1
    * in-process plugin", which is why four of the host's own builtins ship
    * without one. This was required here and rejected them.

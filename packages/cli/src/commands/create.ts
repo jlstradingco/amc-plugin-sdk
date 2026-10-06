@@ -168,6 +168,22 @@ export function buildPackageJson(opts: {
 }
 
 /**
+ * The `sdkVersion` every scaffolded manifest declares. It is the Omniscio HOST's
+ * plugin-SDK contract — `AMC_PLUGIN_SDK_VERSION` in Agent-Orchestrator
+ * `src/shared/plugin-sdk-version.ts` — NOT this package's version: the host is on
+ * contract 2.0.0 while these packages are 3.x, and the two move independently.
+ *
+ * Bare on purpose: the host reads a bare version as a minimum ("this contract or
+ * newer"), but a caret range as "same major only". CLI 3.0.0 wrote `^3.0.0` here,
+ * in step with the npm range in buildPackageJson, and every plugin it scaffolded
+ * was marked incompatible and lost its toolbar button.
+ *
+ * Raise it only when the host constant moves and new plugins need the newer
+ * contract. The npm range in buildPackageJson is what follows this package's major.
+ */
+const HOST_SDK_CONTRACT_FLOOR = '2.0.0'
+
+/**
  * Assemble the scaffolded `manifest.json` for a template. Kept pure (no filesystem)
  * so every template's manifest can be unit-tested against the SDK's own
  * `validateManifest` — the drift that silently broke the github-issues example
@@ -210,7 +226,7 @@ export function buildManifest(opts: {
     settings: [],
     storage: { collections: {} },
     migrations: [],
-    sdkVersion: '^3.0.0',
+    sdkVersion: HOST_SDK_CONTRACT_FLOOR,
   }
 
   manifest.ui = {

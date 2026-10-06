@@ -13,6 +13,27 @@ together.
 
 ## [3.1.0] - 2026-09-22
 
+### Fixed — new plugins no longer start out hidden in Omniscio (2026-09-25)
+
+`amc-plugin create` in CLI 3.0.0 wrote `"sdkVersion": "^3.0.0"` into every new
+plugin's manifest. That field is the Omniscio **host's** plugin-SDK contract, not
+this package's version, and Omniscio provides contract `2.0.0`. It reads a caret
+range as "this major only", so it marked every plugin scaffolded by CLI 3.0.0
+incompatible and hid its toolbar button. The cause was the 3.0.0 floor raise
+below, which moved the manifest field in step with the npm dependency range: the
+npm range was right to move, the manifest field was not.
+
+New plugins now declare a bare `"2.0.0"`, which Omniscio reads as a minimum
+("this contract or newer"), so they load on every Omniscio since v0.1.103 and keep
+loading as the host contract advances. The seven example manifests and the docs
+carried the same caret and are fixed too; the manifest guide now explains the
+rule. A new test checks every template and example against a hand-kept copy of
+the host's contract.
+
+**If you created a plugin with CLI 3.0.0**, change `sdkVersion` in its
+`manifest.json` to `"2.0.0"` and publish a new version. Leave the
+`@agent-mc/plugin-sdk` range in `package.json` as it is.
+
 ### Added — `plugin.screenshots` and `plugin.links` on the manifest (2026-09-22)
 
 The marketplace detail page renders a screenshot gallery and a Support tab, and the

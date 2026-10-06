@@ -10,7 +10,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
   "settings": [ ... ],
   "storage": { "collections": { ... } },
   "migrations": [ ... ],
-  "sdkVersion": "^3.0.0",
+  "sdkVersion": "2.0.0",
   "ui": { ... },
   "backend": { ... },
   "permissions": [ ... ],
@@ -25,7 +25,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `settings` | array | Yes | User-configurable settings (can be empty `[]`) |
 | `storage` | object | Yes | Database collection schemas (can be `{ "collections": {} }`) |
 | `migrations` | array | Yes | Schema migration operations (can be empty `[]`) |
-| `sdkVersion` | string | Yes | Required SDK version (e.g. `"^3.0.0"`) |
+| `sdkVersion` | string | Yes | Omniscio plugin-SDK contract the plugin needs, as a bare minimum (e.g. `"2.0.0"`) |
 | `ui` | object | No | UI entry point and sidebar config |
 | `backend` | object | No | Backend entry point and resource limits |
 | `permissions` | array | No | Requested API permissions |
@@ -536,15 +536,15 @@ Requires the `cron` permission.
 
 ## `sdkVersion`
 
-Declares the SDK version your plugin was built against. AMC uses this for compatibility checks.
+The Omniscio plugin-SDK **contract** your plugin needs — not the version of the `@agent-mc/plugin-sdk` package. Omniscio checks it against the contract it provides, and a plugin it cannot satisfy is marked incompatible and loses its toolbar button.
 
 ```json
 {
-  "sdkVersion": "^3.0.0"
+  "sdkVersion": "2.0.0"
 }
 ```
 
-Use semver range syntax. The scaffolder sets this to `"^3.0.0"` by default.
+Write a bare version. A bare version means "this contract or newer", so your plugin keeps loading as Omniscio moves forward. A caret range means "this major only": it breaks on the next contract major, and `"^3.0.0"` — what CLI 3.0.0 scaffolded — is refused outright by Omniscio's `2.0.0` contract. The scaffolder writes `"2.0.0"`, the contract Omniscio has provided since v0.1.103, and leaves the SDK dependency in `package.json` as an ordinary npm range.
 
 ## Complete Examples
 
@@ -565,7 +565,7 @@ Use semver range syntax. The scaffolder sets this to `"^3.0.0"` by default.
   "settings": [],
   "storage": { "collections": {} },
   "migrations": [],
-  "sdkVersion": "^3.0.0",
+  "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "My Widget", "icon": "layout-dashboard" }
@@ -610,7 +610,7 @@ Use semver range syntax. The scaffolder sets this to `"^3.0.0"` by default.
     }
   },
   "migrations": [],
-  "sdkVersion": "^3.0.0",
+  "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "Data Sync", "icon": "refresh-cw" }
@@ -675,7 +675,7 @@ Use semver range syntax. The scaffolder sets this to `"^3.0.0"` by default.
     }
   },
   "migrations": [],
-  "sdkVersion": "^3.0.0",
+  "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "Monitor Suite", "icon": "activity" }

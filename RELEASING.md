@@ -86,14 +86,23 @@ npm view @agent-mc/plugin-dev-shell version
 2. **Sweep the version drift.** Several places pin a published SDK range and can
    only be updated once the version exists on npm:
    - `examples/*/package.json` — the `@agent-mc/plugin-sdk` dependency range.
-   - `examples/*/manifest.json` — the `sdkVersion` range.
    - Any README or doc that names the current version.
    Land this as a follow-up commit (`docs: sweep SDK version drift after the
    X.Y.Z release`). Doing it *before* publishing would point the examples at a
    version nobody can install.
-   Leave `packages/cli/src/commands/create.ts`'s scaffold `sdkVersion` alone
-   unless you mean to raise the floor for newly created plugins — it is
-   deliberately wide.
+   **Never sweep a manifest `sdkVersion`** — not in `examples/*/manifest.json`,
+   not in the docs, not in `packages/cli/src/commands/create.ts`. It is the
+   Omniscio host's plugin-SDK contract (`AMC_PLUGIN_SDK_VERSION` in
+   Agent-Orchestrator `src/shared/plugin-sdk-version.ts`), not this package's
+   version, and it is written bare because the host reads a bare version as a
+   minimum. Moving it to `^3.0.0` with the 3.0.0 release made Omniscio
+   (contract `2.0.0`) hide every plugin that CLI scaffolded. Raise it only when
+   the host constant moves and new plugins need the newer contract, and update
+   the host copy in `packages/cli/src/__tests__/host-sdk-contract.test.ts` in
+   the same change. The scaffold's npm range (`buildPackageJson` in the same
+   file) is the value that follows this package: raise it in the release commit
+   of a new major, before publishing, or the published CLI scaffolds plugins that
+   resolve to the previous major.
 3. **Reconcile the AMC host, if permissions changed.** The AMC app keeps an
    acknowledgement fixture at `tests/unit/lint/fixtures/sdk-permission-support.ts`
    listing which permissions the published SDK understands, guarded by

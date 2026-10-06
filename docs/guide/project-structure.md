@@ -49,7 +49,7 @@ The central configuration file. Declares your plugin's identity, settings, permi
   "settings": [],
   "storage": { "collections": {} },
   "migrations": [],
-  "sdkVersion": "^3.0.0",
+  "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
     "sidebar": { "title": "My Plugin", "icon": "puzzle" }
