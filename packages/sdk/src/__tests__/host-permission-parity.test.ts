@@ -139,7 +139,14 @@ describe('SDK <-> host permission parity', () => {
     // Re-derived from the host's
     // session/98c53684-6b6e-4c82-b57b-27c39c68c368-stt-transcribe-bridge branch
     // (see HOST_MIRROR_PROVENANCE in the fixture; not yet on origin/master).
-    expect(HOST_PERMISSIONS.length).toBe(31)
+    //
+    // 31 -> 37 on 2026-09-23: stale a SIXTH time — the 30-day staleness guard
+    // below fired first, on every branch. Six added, all host-ahead:
+    // `auth.sharedSignIn`, `boards.link`, `sessions.observeStatus`,
+    // `chrome.widget`, `documents.read`, `documents.write`. Re-derived by
+    // generation from host master@b477981a4d, byte-identical to origin/master
+    // that day (see HOST_MIRROR_PROVENANCE).
+    expect(HOST_PERMISSIONS.length).toBe(37)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

@@ -15,16 +15,17 @@
 // updates the SDK enum, then reconcile the allow-lists below.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// LAST RECONCILED: 2026-08-24, against host commit `3c1302a26a` on the host's
-// `session/98c53684-6b6e-4c82-b57b-27c39c68c368-stt-transcribe-bridge` branch.
-// NOT origin/master this time: fetched origin/master's copy of the file directly
-// and confirmed it has neither `stt` nor `microphone` yet, so the branch is the
-// only source of truth for them right now. The next reconciler should check
-// whether that branch has since landed and update this note. Full detail lives
-// in HOST_MIRROR_PROVENANCE below, which the staleness guard test reads.
+// LAST RECONCILED: 2026-09-23, against host commit `b477981a4d` on the host's
+// `master`. Its src/shared/plugin-permissions.ts is byte-identical to
+// origin/master@a3f3a97aed as of that day (`git diff origin/master master --
+// src/shared/plugin-permissions.ts` was empty), so the stt/microphone branch
+// noted by the previous reconciliation has landed. Full detail lives in
+// HOST_MIRROR_PROVENANCE below, which the staleness guard test reads.
 //
-// 29 -> 31: added `stt` and `microphone`, inserted immediately after `tts` to
-// match the host's own declared order. Generate rather than hand-copy:
+// 31 -> 37: added `auth.sharedSignIn`, `boards.link`, `sessions.observeStatus`,
+// `chrome.widget`, `documents.read` and `documents.write`, each inserted where
+// the host declares it. All six are host-ahead (see HOST_AHEAD_PERMISSIONS).
+// Generate rather than hand-copy:
 //
 //   sed -n '/^export type PluginPermission/,/^$/p' src/shared/plugin-permissions.ts \
 //     | grep -oE "'[^']+'" | tr -d "'"
@@ -33,8 +34,9 @@
 // file between SHAs instead of re-reading 200 lines and eyeballing the delta.
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// HISTORY — why this file is worth distrusting. It has now gone stale FIVE
-// times, and each recurrence was found only because somebody happened to look:
+// HISTORY — why this file is worth distrusting. It has now gone stale SIX
+// times; the first five were found only because somebody happened to look,
+// the sixth by the staleness guard doing its job:
 //
 //  1. 2026-07-15..27 — claimed 14 while the host union was 19, and claimed
 //     `firebase` was "an ungated browser namespace, not a host permission".
@@ -65,6 +67,14 @@
 //     The new lesson: the count pin (`HOST_PERMISSIONS.length === 29`) could
 //     not have caught this, and neither could any assertion in this repo. The
 //     drift was entirely in the host's METHOD surface, which no SDK test reads.
+//  6. 2026-09-23 — claimed 31 while the host held 37. This time the 30-day
+//     staleness guard fired first, on EVERY branch of this repo at once (CI on
+//     PR #78 went red on a change that never touched permissions), which is the
+//     guard working as designed. Missing: `auth.sharedSignIn`, `boards.link`,
+//     `sessions.observeStatus`, `chrome.widget`, `documents.read`,
+//     `documents.write` — all host-ahead (the host gates and describes them;
+//     the SDK enum has none of them). Re-derived by generation from host
+//     master@b477981a4d, byte-identical to origin/master@a3f3a97aed that day.
 //
 //
 // RECURRENCE #4 HAS A SECOND LESSON, and it is the more expensive one. The
@@ -95,17 +105,19 @@
  */
 export const HOST_MIRROR_PROVENANCE = {
   /** ISO date this mirror was last reconciled against the host source file. */
-  reconciledAt: '2026-08-24',
+  reconciledAt: '2026-09-23',
   /** Full SHA of the host commit the strings below were read from. */
-  sourceCommit: '3c1302a26abef367f3bf7c14c0fb82825f92b2e1',
-  sourceBranch: 'session/98c53684-6b6e-4c82-b57b-27c39c68c368-stt-transcribe-bridge',
+  sourceCommit: 'b477981a4d11ee21ca8fc99abe4f61cfc10528f9',
+  sourceBranch: 'master',
   /**
    * False means sourceBranch had not merged to origin/master as of
    * reconciledAt, so the strings below are ahead of what a plain
    * origin/master checkout would show. Re-verify before assuming this is
-   * still the case.
+   * still the case. True here: the host's src/shared/plugin-permissions.ts
+   * was byte-identical between local master and origin/master@a3f3a97aed on
+   * the reconciliation day.
    */
-  onOriginMaster: false,
+  onOriginMaster: true,
 } as const
 
 /** The exact permission strings the host recognizes and gates. */
@@ -125,12 +137,16 @@ export const HOST_PERMISSIONS = [
   'rss',
   'auth',
   'auth.session',
+  'auth.sharedSignIn',
   'sessions.readHistory',
   'boards.read',
+  'boards.link',
   'sessions.launchAny',
+  'sessions.observeStatus',
   'inbox',
   'navigation',
   'chrome',
+  'chrome.widget',
   'launch',
   'firebase',
   'recording',
@@ -141,6 +157,8 @@ export const HOST_PERMISSIONS = [
   'workspace.read',
   'workspace.write',
   'workspace.exec',
+  'documents.read',
+  'documents.write',
 ] as const
 
 // --- Documented known-deltas (intentional, tracked drift) -------------------
@@ -195,6 +213,22 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  *
  * Note this is the one allow-list that has never gone stale — all six were still
  * absent from the SDK at the 2026-08-11 reconciliation.
+ *
+ * Six more joined on 2026-09-23 (recurrence #6), read from the host's
+ * PLUGIN_PERMISSION_INFO at master@b477981a4d:
+ *
+ * - `auth.sharedSignIn` (elevated): "Shared Sign-In".
+ * - `boards.link` (elevated): "Attach to your tasks" — links plugin items to
+ *   the user's boards; the sibling of the still-untyped `boards.read`.
+ * - `sessions.observeStatus`: "Session Activity" — see when sessions start,
+ *   finish or need you; never their text. A companion/status-overlay grant.
+ * - `chrome.widget`: "Header Widget" — a live status widget in the app header.
+ * - `documents.read` and `documents.write` (elevated): "Read your documents" /
+ *   "Create, edit and delete your documents". The SDK already types a
+ *   `documents` BRIDGE namespace (types/bridge.ts), but neither permission
+ *   string is in the SDK enum yet, so a manifest declaring them still fails
+ *   `amc-plugin validate` — that is the gap to close, in the same change that
+ *   adds them to the enum and the namespace map.
  */
 export const HOST_AHEAD_PERMISSIONS = [
   'boards.read',
@@ -203,6 +237,12 @@ export const HOST_AHEAD_PERMISSIONS = [
   'coreRead',
   'oauth',
   'channel',
+  'auth.sharedSignIn',
+  'boards.link',
+  'sessions.observeStatus',
+  'chrome.widget',
+  'documents.read',
+  'documents.write',
 ] as const
 
 /**
