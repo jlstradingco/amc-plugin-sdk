@@ -38,7 +38,7 @@ The CLI walks you through an interactive prompt:
 ? Description: An AMC plugin
 ? Author: Your Name
 ? Category: other
-? Lucide icon name: puzzle
+? Icon — a path to your logo in the package (assets/icon.svg), or a Lucide name for a generic glyph: assets/icon.svg
 
 Scaffolding my-plugin with template: basic...
 
