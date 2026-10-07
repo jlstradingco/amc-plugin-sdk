@@ -11,6 +11,24 @@ together.
 
 ## [Unreleased]
 
+### Fixed — new plugins no longer start out wearing the stock puzzle glyph
+
+`plugin.icon` accepts either a Lucide icon **name** (Omniscio draws a generic stock
+glyph) or a **path** to an image inside the package (Omniscio draws your logo), and
+nothing told the two apart. `amc-plugin create` defaulted to the name `puzzle`, so
+16 of the 17 plugins on the live registry (measured 2026-09-21) shipped a stock glyph, several while
+carrying a perfectly good logo in their own package.
+
+- `create` now defaults `--icon` to `assets/icon.svg` and writes a neutral
+  placeholder SVG there for you to replace. A Lucide name passed with `--icon` is
+  left alone.
+- `validate` now checks the icon: it warns (exit code unchanged) when `plugin.icon`
+  is a Lucide name, and fails when it is a packaged path that is missing from the
+  package or an unsafe path (`..`, a leading `/`, a drive letter or a URL scheme).
+- The SDK exports a new `classifyPluginIcon()` that returns `lucide-name`,
+  `packaged-path`, `url` or `unsafe-path`, so tools can make the same distinction.
+- The manifest guide now explains both icon forms and corrects the stated fallback.
+
 ## [3.1.0] - 2026-09-22
 
 ### Fixed — new plugins no longer start out hidden in Omniscio (2026-09-25)

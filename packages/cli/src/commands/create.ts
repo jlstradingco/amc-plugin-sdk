@@ -278,7 +278,14 @@ export const createCommand = new Command('create')
   .option('--author <author>', 'Plugin author')
   .option('--category <category>', 'Plugin category', 'other')
   .option('--tags <tags>', 'Comma-separated discoverability tags (defaults to the category)')
-  .option('--icon <icon>', 'Lucide icon name', 'puzzle')
+  // Defaults to a PACKAGED path, not a Lucide name. The old default ('puzzle') did exactly
+  // what it said and shipped a puzzle piece -- the scaffold was actively steering every new
+  // plugin at a generic glyph, and 16 of 17 published plugins followed it.
+  .option(
+    '--icon <icon>',
+    'Path to your logo inside the package (e.g. assets/icon.svg), or a Lucide icon name for a generic glyph',
+    'assets/icon.svg'
+  )
   .option('--skip-install', 'Skip npm install')
   .option('--skip-git', 'Skip git init and initial commit')
   .description('Scaffold a new AMC plugin project')
@@ -312,7 +319,7 @@ export const createCommand = new Command('create')
       author = opts.author!
       category = opts.category ?? 'other'
       tags = parseTagsInput(opts.tags, category)
-      icon = opts.icon ?? 'puzzle'
+      icon = opts.icon ?? 'assets/icon.svg'
     } else {
       const response = await prompts([
         { type: 'text', name: 'displayName', message: 'Display name', initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
@@ -320,7 +327,12 @@ export const createCommand = new Command('create')
         { type: 'text', name: 'author', message: 'Author' },
         { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
         { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: '' },
-        { type: 'text', name: 'icon', message: 'Lucide icon name', initial: 'puzzle' },
+        {
+          type: 'text',
+          name: 'icon',
+          message: 'Icon — a path to your logo in the package (assets/icon.svg), or a Lucide name for a generic glyph',
+          initial: 'assets/icon.svg'
+        },
       ])
 
       if (!response.author) {
@@ -442,6 +454,28 @@ describe('${displayName} backend', () => {
   })
 })
 `)
+    }
+
+    // The scaffold now DEFAULTS plugin.icon to a packaged path, so it has to ship a file at
+    // that path — otherwise every freshly-created plugin would fail its own `validate` with
+    // "Icon file not found". A neutral placeholder the developer replaces with their real
+    // mark; monochrome `currentColor` so it reads on both light and dark surfaces.
+    // Only written when the icon IS a packaged path and nothing is there already, so a
+    // developer who passed --icon with their own file or a Lucide name is untouched.
+    if (icon.includes('/') && !icon.startsWith('http')) {
+      const iconTarget = path.join(targetDir, icon)
+      if (!fs.existsSync(iconTarget)) {
+        fs.mkdirSync(path.dirname(iconTarget), { recursive: true })
+        fs.writeFileSync(
+          iconTarget,
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <!-- Placeholder logo for ${displayName}. Replace this file with your own mark. -->
+  <rect x="3" y="3" width="18" height="18" rx="5" />
+  <path d="M9 12h6M12 9v6" />
+</svg>
+`
+        )
+      }
     }
 
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
