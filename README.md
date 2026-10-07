@@ -68,7 +68,7 @@ Standalone Electron shell loads your plugin UI in a webview with a full `MockPlu
 
 **Banned Import Scanner**
 
-Build and validate commands scan compiled output for forbidden imports (`electron`, `child_process`, `better-sqlite3`, `worker_threads`) to enforce the sandbox boundary.
+Build, validate and publish scan compiled output for forbidden imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) to enforce the sandbox boundary. `build` warns so you catch it early, `validate` fails, and `publish`'s preflight blocks the upload — so a banned import cannot reach the marketplace by skipping a step.
 
 </td>
 </tr>

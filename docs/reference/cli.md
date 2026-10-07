@@ -79,7 +79,7 @@ amc-plugin build
 1. Validates `manifest.json` against the SDK schema.
 2. Runs `tsc` to compile TypeScript to `dist/`.
 3. Copies non-TS files from `src/ui/` to `dist/ui/` (HTML, CSS, images).
-4. Scans `dist/` for banned imports (`electron`, `child_process`, `better-sqlite3`, `worker_threads`).
+4. Scans `dist/` for banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) and **warns** on a hit. `validate` runs the same scan and fails instead.
 
 **Example:**
 
@@ -113,7 +113,30 @@ amc-plugin validate
 | UI entry point | Verifies the declared UI entry file exists |
 | Backend entry point | Verifies the declared backend entry file exists |
 | TypeScript | Runs `tsc --noEmit` to check for type errors |
-| Banned imports | Scans `dist/` for disallowed Node/Electron imports |
+| Banned imports | Scans `dist/` for disallowed Node/Electron imports — see below |
+
+**Banned imports, in detail.** The scan reads every `.js` file under `dist/` and rejects
+`electron`, `better-sqlite3`, `worker_threads` and `child_process`, matching all four
+forms a plugin can emit (`require('x')`, `import … from 'x'`, side-effect `import 'x'`,
+and dynamic `import('x')`), for both the bare and `node:`-prefixed spellings of the two
+Node builtins. Only the module name inside the quotes is matched, so a package that
+merely starts with a banned name — `electron-store`, `child_process-promise` — is not
+flagged.
+
+Because the scan walks all of `dist/`, it also sees any dependency you vendor in there.
+`child_process` in particular is common in third-party code, so if you bundle
+dependencies into `dist/` rather than declaring them, expect the scan to find them. That
+is working as intended: whatever ships in `dist/` runs under Node's `--permission`, which
+denies spawning a process regardless of which file asked.
+
+**Where the scan looks — and its one limit.** It reads your project on disk (`dist/`, or a
+flat plugin's as-authored entry dirs), not the `.amcplugin` archive itself. `build`,
+`validate` and `publish`'s preflight all resolve that location the same way, so they never
+disagree about what "the shipped files" means. The limit: if you build an archive and then
+delete the output it was made from, there is nothing left to inspect — which is exactly
+why that case warns instead of passing. Treat this as a guardrail against accident, not a
+sandbox; the runtime boundary is the worker itself, which cannot reach these modules no
+matter what passes the scan.
 
 **Example:**
 
@@ -180,10 +203,21 @@ amc-plugin preflight [options]
 | Version | Manifest version is already published (marketplace versions are **immutable**) or older than the latest published version | &mdash; |
 | Changelog | &mdash; | No changelog provided |
 | Permissions | An unknown permission is declared | Duplicate permissions |
+| Banned imports | The shipped files import a banned module ([details](#validate)) | There is no built output to scan |
 | Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
 | Listing | &mdash; | No `README.md` at the plugin root, an absent or empty `plugin.screenshots`, or an absent or empty `plugin.links` — the marketplace detail page would be bare (see [Publishing → What your listing shows](../guide/publishing.md#what-your-listing-shows)) |
 
 If the marketplace registry is unreachable, the version check is skipped rather than blocking.
+
+::: tip Why the banned-import check appears twice
+`validate` is a check you choose to run; this is the one standing between a banned import
+and the marketplace. Both use the same rule and look in the same place, so a plugin that
+passes `validate` passes here.
+
+"No built output to scan" **warns rather than fails** — with nothing inspected, zero hits
+proves nothing, and reporting a pass would be a false all-clear. Run `amc-plugin build`
+first so the files you are about to upload are the ones that get checked.
+:::
 
 **Example:**
 
