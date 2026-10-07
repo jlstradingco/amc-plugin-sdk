@@ -11,15 +11,37 @@ import {
   checkPackageSize,
   checkDeclaredPermissions,
   checkListingCompleteness,
+  checkBannedImports,
   summarizePreflight,
   type PreflightResult
 } from '../lib/publish-preflight.js'
-import { findRootReadme } from '../lib/project.js'
+import { findRootReadme, resolveBannedScanDirs } from '../lib/project.js'
+import { scanBannedImports } from '../lib/banned-imports.js'
 import { ok, fail, warn, info, heading, manifestNotFound } from '../lib/output.js'
 
 export interface PreflightRunResult {
   results: PreflightResult[]
   hasFailure: boolean
+}
+
+/**
+ * The upload gate for the sandbox boundary: resolve what ships, scan it, and turn the
+ * hits into a verdict. `validate` enforces the same rule, but an author has to CHOOSE
+ * to run it — this is the check standing between a banned import and the marketplace.
+ *
+ * Exported so tests exercise the SHIPPED path rather than re-deriving these three steps.
+ * A test that reproduces the wiring can pass while the wiring itself is wrong: an earlier
+ * cut of this change did exactly that, and the copy had already drifted (production
+ * relativised the hits, the test's copy did not) inside the same commit that exists to
+ * delete two other drifted copies.
+ */
+export function bannedImportsResult(cwd: string, manifest: unknown): PreflightResult {
+  const scanDirs = resolveBannedScanDirs(cwd, manifest as Parameters<typeof resolveBannedScanDirs>[1])
+  // Preflight renders one line per check, so drop the project prefix — three absolute
+  // paths run to ~250 characters of mostly-repeated directory. `validate` prints each
+  // hit on its own line and can afford the full path; this cannot.
+  const hits = scanDirs.flatMap(scanBannedImports).map(hit => hit.split(cwd + path.sep).join(''))
+  return checkBannedImports(hits, scanDirs.length)
 }
 
 // Gathers all raw inputs (manifest, published version, package size, README
@@ -69,6 +91,8 @@ export async function runPreflight(
     screenshots: manifest.plugin.screenshots,
     links: manifest.plugin.links
   }))
+
+  results.push(bannedImportsResult(cwd, manifest))
 
   const packagePath = opts.packagePath ?? findPackage(cwd)
   if (packagePath && fs.existsSync(packagePath)) {

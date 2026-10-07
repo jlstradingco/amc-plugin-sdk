@@ -2,10 +2,17 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 // Plugin backend code runs against a deliberately narrow surface: it must never
-// reach for the Electron runtime, a native SQLite driver, or raw worker threads —
-// those are host-only capabilities the plugin API withholds on purpose. `validate`
-// (and, transitively, `package`) scan the shippable JS and refuse to bundle a plugin
-// that smuggles one in.
+// reach for the Electron runtime, a native SQLite driver, raw worker threads, or a
+// child process — those are host-only capabilities the plugin API withholds on
+// purpose. `validate` scans the shippable JS and REFUSES a plugin that smuggles one
+// in; `build` scans the same way but only warns, so an author sees it early.
+// (`package` does NOT scan — it validates the manifest only.)
+//
+// `child_process` is the costliest of the four to get wrong, and the reason this list
+// is enforced at all: a marketplace plugin backend runs under Node's --permission,
+// which denies spawning, so a plugin built on it passes review, publishes, installs — and then fails every
+// single call at runtime. Catching it here is the difference between a build error
+// and a shipped plugin that can never work.
 //
 // Every banned module is matched in ALL the forms a plugin can actually emit:
 //   - CJS      `require('x')`
@@ -14,7 +21,16 @@ import * as path from 'node:path'
 // AMC plugins are ESM (`"type": "module"`), so tsc compiles their source to the
 // `from` form — the require-only patterns this replaces silently missed a plain
 // `import Database from 'better-sqlite3'`.
-const BANNED_MODULES = ['electron', 'better-sqlite3', 'worker_threads', 'node:worker_threads']
+// Both spellings of a node: builtin are listed, because a plugin can legally write
+// either and tsc preserves whichever the author typed.
+const BANNED_MODULES = [
+  'electron',
+  'better-sqlite3',
+  'worker_threads',
+  'node:worker_threads',
+  'child_process',
+  'node:child_process',
+]
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

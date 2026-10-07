@@ -11,6 +11,22 @@ together.
 
 ## [Unreleased]
 
+### Fixed — the CLI now enforces the documented `child_process` ban, and `publish` is gated on it
+
+The docs have always listed `child_process` (and `node:child_process`) as a banned
+import, but the scan never checked for it. Marketplace plugin backends run under Node's
+`--permission`, which denies spawning a child process, so a plugin built on it passed review, published,
+installed, and then failed every call at runtime.
+
+- `validate` and `build` now flag `child_process` / `node:child_process` in the
+  shippable JS, in the CJS, ESM and dynamic-import forms.
+- `build` used to carry its own private copy of the scanner, which had drifted
+  from `validate`'s. It now uses the shared one, and all three callers resolve
+  the directories to scan through one helper.
+- `publish` (and `preflight`) now fail on a banned import. It was only reachable
+  by remembering to run `validate` first. With no built output to scan, the check
+  warns rather than reporting a clean pass.
+
 ## [3.1.0] - 2026-09-22
 
 ### Fixed — new plugins no longer start out hidden in Omniscio (2026-09-25)

@@ -33,6 +33,52 @@ describe('findBannedImports', () => {
     ])
   })
 
+  // child_process is the ban the docs have always promised (README, getting-started,
+  // publishing, cli reference) but the scan never implemented. A plugin backend runs
+  // under Node's --permission, which denies spawning, so shelling out to a CLI is not merely
+  // discouraged — such a plugin can pass review, publish, install, and never run.
+  it('flags the node: prefixed child_process spelling — the form tsc emits', () => {
+    expect(findBannedImports(`import { spawn } from 'node:child_process'`)).toEqual([
+      'node:child_process',
+    ])
+  })
+
+  it('flags the bare child_process spelling', () => {
+    expect(findBannedImports(`import { execFile } from 'child_process'`)).toEqual([
+      'child_process',
+    ])
+  })
+
+  it('flags a CommonJS require of child_process', () => {
+    expect(findBannedImports(`const { spawn } = require('child_process')`)).toEqual([
+      'child_process',
+    ])
+  })
+
+  it('flags a side-effect import of child_process', () => {
+    expect(findBannedImports(`import 'node:child_process'`)).toEqual(['node:child_process'])
+  })
+
+  it('flags a dynamic import of child_process', () => {
+    expect(findBannedImports(`await import('node:child_process')`)).toEqual([
+      'node:child_process',
+    ])
+  })
+
+  it('reports the two child_process spellings as distinct modules, each once', () => {
+    // The `node:` prefix lives INSIDE the quotes, so the bare pattern cannot also match
+    // the prefixed spelling — neither entry double-reports the other.
+    const src = [
+      `const { spawn } = require('child_process')`,
+      `import { execFile } from 'node:child_process'`,
+    ].join('\n')
+    expect(findBannedImports(src).sort()).toEqual(['child_process', 'node:child_process'])
+  })
+
+  it('does not false-match child_process-promise, a real npm package', () => {
+    expect(findBannedImports(`import cp from 'child_process-promise'`)).toEqual([])
+  })
+
   it('does not flag benign SDK / third-party imports', () => {
     const clean = [
       `import { PluginActivate } from '@agent-mc/plugin-sdk'`,
@@ -91,5 +137,18 @@ describe('scanBannedImports', () => {
 
   it('scans a missing directory to an empty result', () => {
     expect(scanBannedImports(path.join(dir, 'does-not-exist'))).toEqual([])
+  })
+
+  it('names the file and the module for a nested child_process import', () => {
+    // This is the exact shape `validate` must report so an author can find the culprit:
+    // github-integration shipped three such files and validate said "No banned imports".
+    const nested = path.join(dir, 'backend', 'gh')
+    fs.mkdirSync(nested, { recursive: true })
+    const offending = path.join(nested, 'gh-run.js')
+    fs.writeFileSync(offending, `import { spawn } from 'node:child_process'\nexport const x = 1\n`)
+    const hits = scanBannedImports(dir)
+    expect(hits).toHaveLength(1)
+    expect(hits[0]).toContain('node:child_process')
+    expect(hits[0]).toContain(offending)
   })
 })
