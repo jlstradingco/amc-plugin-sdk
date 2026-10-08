@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { isBannedScanTarget } from './banned-imports.js'
 
 /**
  * A flat-JS / webview plugin has no TypeScript compile step — its files ship
@@ -51,10 +52,7 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   addTopSegment(manifest.backend?.entryPoint)
   for (const dir of CONVENTIONAL_DIRS) names.add(dir)
 
-  const entries = [...names].filter((name) => fs.existsSync(path.join(cwd, name)))
-  const readme = findRootReadme(cwd)
-  if (readme) entries.push(readme)
-  return entries
+  return [...names].filter((name) => fs.existsSync(path.join(cwd, name)))
 }
 
 /**
@@ -63,15 +61,40 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
  * `install` so both agree on exactly what a plugin consists of. A TypeScript
  * plugin ships its compiled `dist/` tree (plus an optional top-level `assets/`);
  * a flat-JS plugin ships its as-authored folders. A root README.md ships in
- * both cases (when present) so the marketplace listing can render it.
+ * both cases (when present) so the marketplace listing can render it. It is
+ * added here rather than in `collectFlatPackageEntries`, because that list also
+ * feeds the banned-import scan, and the README is packaged but holds no code.
  */
 export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): string[] {
-  if (!isTypeScriptProject(cwd)) return collectFlatPackageEntries(cwd, manifest)
-  const entries = ['dist']
-  if (fs.existsSync(path.join(cwd, 'assets'))) entries.push('assets')
+  const typeScript = isTypeScriptProject(cwd)
+  const entries = typeScript ? ['dist'] : collectFlatPackageEntries(cwd, manifest)
+  if (typeScript && fs.existsSync(path.join(cwd, 'assets'))) entries.push('assets')
   const readme = findRootReadme(cwd)
   if (readme) entries.push(readme)
   return entries
+}
+
+/**
+ * The paths a banned-import scan should walk for this plugin: a TypeScript
+ * plugin's compiled `dist/`, or a flat plugin's as-authored entry dirs and code files. Returns
+ * ABSOLUTE paths, and only ones that exist — so an empty result genuinely means
+ * "there is nothing built to inspect", which callers must not mistake for "clean".
+ *
+ * Single source of truth for `build`, `validate` and `publish`'s preflight. It is
+ * shared rather than repeated on purpose: `build` used to carry its own copy of the
+ * whole scanner, which silently stayed require-only after the shared one learned the
+ * ESM form tsc emits — the drift that let a `child_process` plugin pass every check
+ * and ship unrunnable.
+ */
+export function resolveBannedScanDirs(cwd: string, manifest: FlatManifestLike): string[] {
+  if (!isTypeScriptProject(cwd)) {
+    // A flat entry can be a single file, and the README or an index.html is packaged but
+    // holds nothing to scan — counting it would turn "nothing was scanned" into a pass.
+    return collectFlatPackageEntries(cwd, manifest)
+      .map((entry) => path.join(cwd, entry))
+      .filter(isBannedScanTarget)
+  }
+  return [path.join(cwd, 'dist')].filter((dir) => fs.existsSync(dir))
 }
 
 /** Recursively copy every non-`.ts` file from `src` into `dest`. */

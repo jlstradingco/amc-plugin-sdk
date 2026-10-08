@@ -25,6 +25,10 @@ const MB = 1024 * 1024
 const HARD_LIMIT_MB = 50
 const WARN_LIMIT_MB = 25
 
+// A plugin with a dozen offending files should not push the rest of the preflight
+// report off the reader's screen — name a few and count the rest.
+const MAX_NAMED_BANNED_FILES = 3
+
 // Returns -1, 0, or 1 comparing dotted numeric versions (ignores pre-release tags).
 export function compareSemver(a: string, b: string): number {
   const parse = (v: string) => v.split('-')[0].split('.').map(n => Number.parseInt(n, 10) || 0)
@@ -162,6 +166,47 @@ export function checkListingCompleteness(input: {
     message: `Listing will be bare — missing: ${missing.join(', ')}`,
     suggestion: 'Add a README.md next to manifest.json, hosted http(s) image URLs under plugin.screenshots, and support/homepage URLs under plugin.links — the marketplace detail page renders all three.'
   }
+}
+
+/**
+ * Gate the upload on the same banned-import rule `validate` enforces.
+ *
+ * `validate` is something an author chooses to run; this is the check that stands in
+ * the way of the marketplace. Skipping it here is how a plugin built on `child_process`
+ * cleared every gate and shipped incapable of running — the backend runs under Node's
+ * --permission, which denies spawning, so the import compiles, installs, and then fails
+ * every call.
+ *
+ * `scannedDirCount` is not decoration: with nothing to scan, zero hits proves nothing.
+ * Reporting `pass` there would be a false all-clear, so that case warns instead.
+ * It does not block, because absence of evidence is not evidence of a violation.
+ */
+export function checkBannedImports(hits: string[], scannedDirCount: number): PreflightResult {
+  const name = 'Banned imports'
+
+  if (hits.length > 0) {
+    const named = hits.slice(0, MAX_NAMED_BANNED_FILES).join(', ')
+    const rest = hits.length - MAX_NAMED_BANNED_FILES
+    const suffix = rest > 0 ? ` (+${rest} more)` : ''
+    return {
+      name,
+      status: 'fail',
+      message: `${hits.length} banned import(s): ${named}${suffix}`,
+      suggestion:
+        "Marketplace plugin backends run under Node's --permission, which blocks these modules. Run 'amc-plugin validate' for the full list, and use HTTPS instead of shelling out to a CLI."
+    }
+  }
+
+  if (scannedDirCount === 0) {
+    return {
+      name,
+      status: 'warn',
+      message: 'Could not scan — no built output found',
+      suggestion: "Run 'amc-plugin build' so the shipped files can be checked before upload."
+    }
+  }
+
+  return { name, status: 'pass', message: 'No banned imports' }
 }
 
 export function summarizePreflight(results: PreflightResult[]): {

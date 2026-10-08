@@ -4,7 +4,8 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, info, actionableError, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, copyNonTsFiles, collectFlatPackageEntries } from '../lib/project.js'
+import { isTypeScriptProject, copyNonTsFiles, resolveBannedScanDirs } from '../lib/project.js'
+import { scanBannedImports } from '../lib/banned-imports.js'
 
 export const buildCommand = new Command('build')
   .description('Compile plugin TypeScript to JavaScript and validate manifest')
@@ -29,7 +30,7 @@ export const buildCommand = new Command('build')
     // ship as-authored. Running tsc here would hang (nothing to compile).
     if (!isTypeScriptProject(cwd)) {
       info('No tsconfig.json — flat plugin, skipping TypeScript compilation')
-      warnBannedImports(collectFlatPackageEntries(cwd, manifest).map(e => path.join(cwd, e)))
+      warnBannedImports(resolveBannedScanDirs(cwd, manifest))
       ok('Build complete (flat plugin)')
       return
     }
@@ -48,41 +49,19 @@ export const buildCommand = new Command('build')
       copyNonTsFiles(srcUi, distUi)
     }
 
-    warnBannedImports([path.join(cwd, 'dist')])
+    warnBannedImports(resolveBannedScanDirs(cwd, manifest))
     ok('Build complete')
   })
 
+// `build` reports the SAME banned-import list `validate` enforces, but only as a
+// warning — the author sees it early, and `validate` is where it hard-fails. This
+// used to be a private copy of the scanner, which silently drifted: it stayed
+// require-only after #32 taught the shared one to catch the ESM `import … from`
+// form that tsc actually emits, and it never learned `child_process` at all.
 function warnBannedImports(dirs: string[]): void {
   const warnings = dirs.flatMap(scanBannedImports)
   if (warnings.length > 0) {
     warn('Banned import warnings:')
     warnings.forEach(w => warn(`  ${w}`))
   }
-}
-
-const BANNED_PATTERNS = [
-  /require\(['"]electron['"]\)/,
-  /from\s+['"]electron['"]/,
-  /require\(['"]better-sqlite3['"]\)/,
-  /require\(['"]node:worker_threads['"]\)/,
-]
-
-function scanBannedImports(dir: string): string[] {
-  const warnings: string[] = []
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return warnings
-
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      warnings.push(...scanBannedImports(fullPath))
-    } else if (entry.name.endsWith('.js')) {
-      const content = fs.readFileSync(fullPath, 'utf-8')
-      for (const pattern of BANNED_PATTERNS) {
-        if (pattern.test(content)) {
-          warnings.push(`${fullPath}: banned import matching ${pattern}`)
-        }
-      }
-    }
-  }
-  return warnings
 }
