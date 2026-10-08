@@ -38,7 +38,7 @@ amc-plugin create <name> [options]
 | `--author <author>` | Plugin author | &mdash; |
 | `--category <category>` | Category: `planning`, `development`, `testing`, `devops`, `productivity`, `other` | `other` |
 | `--tags <tags>` | Comma-separated discoverability tags (≤10, ≤30 chars each). Blank falls back to the category | category |
-| `--icon <icon>` | Lucide icon name | `puzzle` |
+| `--icon <icon>` | Path to your logo inside the package, or a Lucide icon name for a generic glyph. A placeholder SVG is written at the default path for you to replace | `assets/icon.svg` |
 | `--skip-install` | Skip `npm install` after scaffolding | `false` |
 | `--skip-git` | Skip `git init` and initial commit | `false` |
 

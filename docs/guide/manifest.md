@@ -60,7 +60,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `version` | string | Yes | Semver version (e.g. `"1.0.0"`) |
 | `author` | string | Yes | Author name or organization |
 | `description` | string | Yes | Short description shown in the marketplace |
-| `icon` | string | Yes | Image filename (e.g. `"icon.png"`) or [Lucide](https://lucide.dev/icons) icon name as fallback |
+| `icon` | string | Yes | **Path to an image in your package** (e.g. `"assets/icon.svg"`) — your real logo — **or** a [Lucide](https://lucide.dev/icons) icon name for a generic stock glyph. See [Plugin Icon](#plugin-icon). |
 | `category` | string | Yes | One of: `planning`, `development`, `testing`, `devops`, `productivity`, `other` |
 | `license` | object | Yes | `{ "type": "free" }`, `{ "type": "paid" }`, or `{ "type": "trial" }` |
 | `minAppVersion` | string | No | Minimum AMC version required to run this plugin |
@@ -98,11 +98,52 @@ Your plugin's icon appears in the Marketplace card (40 × 40 px) and detail page
 
 **Recommended:** 128 × 128 px PNG with a transparent background. The image is displayed at 40 px in Marketplace cards and 56 px in the detail view, so a 128 px source gives crisp rendering on high-DPI screens.
 
-When you upload your plugin to the Marketplace, AMC automatically extracts the icon from the package and hosts it. If no image file is found, AMC falls back to showing the first letter of the plugin name.
+When you upload your plugin to the Marketplace, Omniscio automatically extracts the icon from
+the package and hosts it.
 
-::: tip
-You can still use a [Lucide](https://lucide.dev/icons) icon name (e.g. `"puzzle"`) as a lightweight fallback, but an image file gives your plugin a distinctive look in the Marketplace.
-:::
+#### The two forms, and why it matters
+
+`icon` accepts either a **path to an image in your package** or a **[Lucide](https://lucide.dev/icons)
+icon name**, and nothing about the field tells them apart:
+
+| What you write | What every user sees |
+|---|---|
+| `"assets/icon.svg"` | **your logo** |
+| `"newspaper"` | a generic stock glyph |
+
+Measured on the live registry in September 2026: **16 of 17 published plugins shipped a stock
+glyph**, several of them while carrying a perfectly good logo inside their own package that was
+never used. If you have a logo, point `icon` at it.
+
+#### Use both fields
+
+Set `plugin.icon` to your image **and** keep a Lucide name in `ui.sidebar.icon`. That name is
+the fallback the host draws when the image cannot be loaded — offline, or before the plugin
+catalogue has finished loading. A plugin with only a path and no fallback name shows a puzzle
+piece in those moments.
+
+```json
+{
+  "plugin": { "icon": "assets/icon.svg" },
+  "ui": { "sidebar": { "icon": "sparkles" } }
+}
+```
+
+#### What `amc-plugin validate` tells you
+
+- **Warns** when `icon` is a Lucide name — you will ship a stock glyph. Not an error; a stock
+  glyph is a legitimate choice, just rarely the intended one.
+- **Fails** when `icon` is a path to a file that is not actually in your package. The
+  Marketplace's extractor skips a missing icon and publishes anyway, so this check is the only
+  place that problem is ever visible. A file that exists in your project but sits outside what
+  `package` ships (for a TypeScript plugin: `dist/`, `assets/` and the README) fails too, so
+  keep your logo under `assets/`.
+- **Fails** on a path that escapes the package (`../`, an absolute path, a drive letter, or a
+  URL scheme).
+
+`amc-plugin create` scaffolds `assets/icon.svg` with a placeholder for you to replace. It writes
+a placeholder only for an `.svg` path inside the project; for another format such as `.png`,
+add the file yourself, and it refuses a path that escapes the project.
 
 ## `settings` Array
 

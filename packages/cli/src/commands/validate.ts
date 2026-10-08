@@ -2,9 +2,9 @@ import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
-import { validateManifest } from '@agent-mc/plugin-sdk'
-import { ok, fail, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, collectFlatPackageEntries } from '../lib/project.js'
+import { validateManifest, classifyPluginIcon } from '@agent-mc/plugin-sdk'
+import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
+import { isTypeScriptProject, collectFlatPackageEntries, collectPackageEntries } from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 
 export const validateCommand = new Command('validate')
@@ -26,6 +26,49 @@ export const validateCommand = new Command('validate')
       hasErrors = true
     } else {
       ok('Manifest schema')
+    }
+
+    // WARN, never fail: a stock glyph is a legitimate choice, just rarely the one a developer
+    // meant to make. `icon` accepts a Lucide NAME (a generic glyph) or a PATH into your
+    // package (your actual logo), the schema is `z.string().min(1)`, and nothing distinguished
+    // them -- so 16 of the 17 plugins on the live registry shipped a stock glyph, several
+    // while carrying a perfectly good logo in their own package. Exit code is unchanged.
+    const iconKind = classifyPluginIcon(manifest.plugin?.icon)
+    if (iconKind === 'lucide-name') {
+      warn(
+        `Icon "${manifest.plugin?.icon}" is a Lucide icon NAME, so Omniscio will draw a generic ` +
+          `stock glyph rather than your logo.`
+      )
+      console.warn(
+        `    To show your own logo, point plugin.icon at an image in your package ` +
+          `(for example "assets/icon.svg") and keep the name as ui.sidebar.icon, ` +
+          `which is the fallback glyph.`
+      )
+    } else if (iconKind === 'unsafe-path') {
+      fail(
+        `Icon "${manifest.plugin?.icon}" is not a usable path — it must be a plain, relative ` +
+          `path inside your package (no "..", no leading "/", no drive letter or URL scheme).`
+      )
+      hasErrors = true
+    } else if (iconKind === 'packaged-path') {
+      const iconFile = path.join(cwd, manifest.plugin.icon)
+      // `package` ships only a fixed set of top-level entries, so a file that exists in the
+      // project folder can still never reach the marketplace.
+      const shipped = collectPackageEntries(cwd, manifest)
+      if (fs.existsSync(iconFile) && !shipped.includes(manifest.plugin.icon.split('/')[0])) {
+        fail(
+          `Icon file ${manifest.plugin.icon} will not be shipped: the package contains only ` +
+            `${shipped.join(', ')}. Move it under assets/ and update plugin.icon.`
+        )
+        hasErrors = true
+      } else if (fs.existsSync(iconFile)) {
+        ok(`Icon file present (${manifest.plugin.icon})`)
+      } else {
+        // The marketplace's extractor silently skips a missing icon and publishes anyway, so
+        // catching it here is the only place it is ever visible.
+        fail(`Icon file not found in the package: ${manifest.plugin.icon}`)
+        hasErrors = true
+      }
     }
 
     if (manifest.sdkVersion) {
