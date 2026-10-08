@@ -20,6 +20,8 @@ installed, and then failed every call at runtime.
 
 - `validate` and `build` now flag `child_process` / `node:child_process` in the
   shippable JS, in the CJS, ESM and dynamic-import forms.
+- The scan reads `.js`, `.mjs` and `.cjs` files, and a flat plugin's single-file entries
+  (for example `backend.entryPoint: "server.js"`), not only folders.
 - `build` used to carry its own private copy of the scanner, which had drifted
   from `validate`'s. It now uses the shared one, and all three callers resolve
   the directories to scan through one helper.
