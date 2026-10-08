@@ -24,7 +24,10 @@ carrying a perfectly good logo in their own package.
   left alone.
 - `validate` now checks the icon: it warns (exit code unchanged) when `plugin.icon`
   is a Lucide name, and fails when it is a packaged path that is missing from the
-  package or an unsafe path (`..`, a leading `/`, a drive letter or a URL scheme).
+  package, is not among the entries `package` ships (so a logo under `images/` fails
+  rather than silently disappearing), or is an unsafe path (`..`, a leading `/`, a drive
+  letter or a URL scheme). `create` refuses an unsafe `--icon` path and writes the
+  placeholder only for `.svg` paths.
 - The SDK exports a new `classifyPluginIcon()` that returns `lucide-name`,
   `packaged-path`, `url` or `unsafe-path`, so tools can make the same distinction.
 - The manifest guide now explains both icon forms and corrects the stated fallback.

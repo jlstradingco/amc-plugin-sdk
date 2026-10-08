@@ -92,4 +92,42 @@ describe('plugin icon: scaffold default and validate', () => {
     expect(output).toContain('is not a usable path')
     expect(status).not.toBe(0)
   }, SHELL_OUT_TIMEOUT_MS)
+
+  it('refuses an --icon path that escapes the project, and writes nothing outside it', () => {
+    const r = spawnSync(
+      'node',
+      [cliDist, 'create', 'icon-escape', '--template', 'webview', '--display-name', 'x', '--description', 'x',
+        '--author', 'x', '--icon', '../outside/icon.svg', '--skip-install', '--skip-git'],
+      { cwd: tmpDir, encoding: 'utf-8' },
+    )
+    expect(r.status).not.toBe(0)
+    expect(fs.existsSync(path.join(tmpDir, 'outside'))).toBe(false)
+    expect(fs.existsSync(path.join(tmpDir, 'icon-escape'))).toBe(false)
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('does not write SVG text into a non-SVG icon path', () => {
+    const dir = create('icon-png-path', ['--icon assets/logo.png'])
+    expect(readManifest(dir).plugin.icon).toBe('assets/logo.png')
+    expect(fs.existsSync(path.join(dir, 'assets', 'logo.png'))).toBe(false)
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('writes the placeholder at a custom .svg path inside the project', () => {
+    const dir = create('icon-custom-svg', ['--icon assets/brand/logo.svg'])
+    expect(fs.readFileSync(path.join(dir, 'assets', 'brand', 'logo.svg'), 'utf-8')).toContain('<svg')
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('fails validate on an icon that exists on disk but is not shipped in the package', () => {
+    // `package` ships ui/, assets/, prompts/ and the README for a flat plugin, so a logo
+    // under images/ is present in the project folder yet never reaches the marketplace.
+    const dir = create('icon-unshipped')
+    const manifest = readManifest(dir)
+    manifest.plugin.icon = 'images/logo.svg'
+    fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify(manifest, null, 2))
+    fs.mkdirSync(path.join(dir, 'images'))
+    fs.writeFileSync(path.join(dir, 'images', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    const { status, output } = validate(dir)
+    expect(output).toContain('will not be shipped')
+    expect(output).not.toContain('Icon file present')
+    expect(status).not.toBe(0)
+  }, SHELL_OUT_TIMEOUT_MS)
 })

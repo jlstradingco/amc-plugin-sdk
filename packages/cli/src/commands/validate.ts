@@ -4,7 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest, classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, collectFlatPackageEntries } from '../lib/project.js'
+import { isTypeScriptProject, collectFlatPackageEntries, collectPackageEntries } from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 
 export const validateCommand = new Command('validate')
@@ -52,7 +52,16 @@ export const validateCommand = new Command('validate')
       hasErrors = true
     } else if (iconKind === 'packaged-path') {
       const iconFile = path.join(cwd, manifest.plugin.icon)
-      if (fs.existsSync(iconFile)) {
+      // `package` ships only a fixed set of top-level entries, so a file that exists in the
+      // project folder can still never reach the marketplace.
+      const shipped = collectPackageEntries(cwd, manifest)
+      if (fs.existsSync(iconFile) && !shipped.includes(manifest.plugin.icon.split('/')[0])) {
+        fail(
+          `Icon file ${manifest.plugin.icon} will not be shipped: the package contains only ` +
+            `${shipped.join(', ')}. Move it under assets/ and update plugin.icon.`
+        )
+        hasErrors = true
+      } else if (fs.existsSync(iconFile)) {
         ok(`Icon file present (${manifest.plugin.icon})`)
       } else {
         // The marketplace's extractor silently skips a missing icon and publishes anyway, so

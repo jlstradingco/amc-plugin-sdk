@@ -3,6 +3,7 @@ import prompts from 'prompts'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { execSync } from 'node:child_process'
+import { classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, actionableError } from '../lib/output.js'
 
 const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
@@ -348,6 +349,17 @@ export const createCommand = new Command('create')
       icon = response.icon
     }
 
+    // Decided once, here, by the same classifier `validate` uses — a hand-rolled test of the
+    // icon string disagreed with it and let `../x.svg` write outside the new project.
+    const iconKind = classifyPluginIcon(icon)
+    if (iconKind === 'unsafe-path') {
+      actionableError(
+        `Invalid --icon: ${icon}`,
+        'Use a plain relative path inside the plugin (for example assets/icon.svg), a Lucide icon name, or an http(s) URL.'
+      )
+      process.exit(1)
+    }
+
     const targetDir = path.resolve(process.cwd(), name)
     if (fs.existsSync(targetDir)) {
       fail(`Directory ${name} already exists`)
@@ -460,9 +472,13 @@ describe('${displayName} backend', () => {
     // that path — otherwise every freshly-created plugin would fail its own `validate` with
     // "Icon file not found". A neutral placeholder the developer replaces with their real
     // mark; monochrome `currentColor` so it reads on both light and dark surfaces.
-    // Only written when the icon IS a packaged path and nothing is there already, so a
-    // developer who passed --icon with their own file or a Lucide name is untouched.
-    if (icon.includes('/') && !icon.startsWith('http')) {
+    // Only written when the icon is a packaged .svg path and nothing is there already: a
+    // developer who passed --icon with a Lucide name is untouched, and SVG text is never
+    // written into a .png/.jpg path. Any other packaged format is the developer's to add.
+    if (iconKind === 'packaged-path' && !/.svg$/i.test(icon)) {
+      info(`Add your logo at ${icon} before you package — the scaffold only writes an .svg placeholder.`)
+    }
+    if (iconKind === 'packaged-path' && /.svg$/i.test(icon)) {
       const iconTarget = path.join(targetDir, icon)
       if (!fs.existsSync(iconTarget)) {
         fs.mkdirSync(path.dirname(iconTarget), { recursive: true })

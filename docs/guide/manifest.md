@@ -135,11 +135,15 @@ piece in those moments.
   glyph is a legitimate choice, just rarely the intended one.
 - **Fails** when `icon` is a path to a file that is not actually in your package. The
   Marketplace's extractor skips a missing icon and publishes anyway, so this check is the only
-  place that problem is ever visible.
+  place that problem is ever visible. A file that exists in your project but sits outside what
+  `package` ships (for a TypeScript plugin: `dist/`, `assets/` and the README) fails too, so
+  keep your logo under `assets/`.
 - **Fails** on a path that escapes the package (`../`, an absolute path, a drive letter, or a
   URL scheme).
 
-`amc-plugin create` scaffolds `assets/icon.svg` with a placeholder for you to replace.
+`amc-plugin create` scaffolds `assets/icon.svg` with a placeholder for you to replace. It writes
+a placeholder only for an `.svg` path inside the project; for another format such as `.png`,
+add the file yourself, and it refuses a path that escapes the project.
 
 ## `settings` Array
 
