@@ -186,6 +186,19 @@ describe('resolveBannedScanDirs', () => {
     expect(dirs).toEqual([path.join(tmp, 'ui')])
   })
 
+  it('keeps a single-file code entry of a flat plugin, since the scanner reads files directly', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'server.js'), 'export {}')
+    const dirs = resolveBannedScanDirs(tmp, { backend: { entryPoint: 'server.js' } })
+    expect(dirs).toEqual([path.join(tmp, 'server.js')])
+  })
+
+  it('drops a non-code root file of a flat plugin, which has nothing to scan', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'index.html'), '<html></html>')
+    expect(resolveBannedScanDirs(tmp, { ui: { entryPoint: 'index.html' } })).toEqual([])
+  })
+
   it('returns absolute paths so a caller never has to re-join them', () => {
     fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
     fs.mkdirSync(path.join(tmp, 'dist'))

@@ -60,6 +60,37 @@ describe('preflight banned-import gate (composed end to end)', () => {
     expect(verdict.message).toContain('app.js')
   })
 
+  it('blocks a flat plugin whose backend entry is a single root FILE, not a folder', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'server.js'), `const cp = require('child_process')
+`)
+
+    const verdict = preflightBannedVerdict(tmp, { backend: { entryPoint: 'server.js' } })
+    expect(verdict.status).toBe('fail')
+    expect(verdict.message).toContain('server.js')
+  })
+
+  it('blocks a flat plugin whose backend is an .mjs module', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'backend'))
+    fs.writeFileSync(path.join(tmp, 'backend', 'index.mjs'), `import { spawn } from 'node:child_process'
+`)
+
+    const verdict = preflightBannedVerdict(tmp, { backend: { entryPoint: 'backend/index.mjs' } })
+    expect(verdict.status).toBe('fail')
+    expect(verdict.message).toContain('index.mjs')
+  })
+
+  it('warns instead of passing a flat plugin whose only entry is a non-code root file', () => {
+    // index.html is packaged but holds nothing the scanner can read, so it must not count
+    // as having scanned something.
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'index.html'), '<html></html>')
+
+    const verdict = preflightBannedVerdict(tmp, { ui: { entryPoint: 'index.html' } })
+    expect(verdict.status).toBe('warn')
+  })
+
   it('warns instead of passing when a packaged plugin has no built output left to scan', () => {
     // The evasion/foot-gun shape: a .amcplugin exists from an earlier build, but dist/
     // has since been removed. Nothing to inspect must never read as "all clear".

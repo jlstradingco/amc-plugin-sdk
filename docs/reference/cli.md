@@ -115,7 +115,7 @@ amc-plugin validate
 | TypeScript | Runs `tsc --noEmit` to check for type errors |
 | Banned imports | Scans `dist/` for disallowed Node/Electron imports — see below |
 
-**Banned imports, in detail.** The scan reads every `.js` file under `dist/` and rejects
+**Banned imports, in detail.** The scan reads every `.js`, `.mjs` and `.cjs` file under `dist/` (for a flat plugin: the entry folders and single entry files you ship as authored) and rejects
 `electron`, `better-sqlite3`, `worker_threads` and `child_process`, matching all four
 forms a plugin can emit (`require('x')`, `import … from 'x'`, side-effect `import 'x'`,
 and dynamic `import('x')`), for both the bare and `node:`-prefixed spellings of the two

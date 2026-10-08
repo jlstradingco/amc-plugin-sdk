@@ -66,24 +66,26 @@ export function findBannedImports(content: string): string[] {
   return hits
 }
 
+// `.mjs` and `.cjs` are the same runtime code as `.js`: a flat plugin can ship either.
+const SCANNABLE_FILE = /.(js|mjs|cjs)$/
+
+/** Whether `target` is something `scanBannedImports` can inspect: a directory, or a JS file. */
+export function isBannedScanTarget(target: string): boolean {
+  if (!fs.existsSync(target)) return false
+  return fs.statSync(target).isDirectory() || SCANNABLE_FILE.test(target)
+}
+
 /**
- * Recursively scan a directory's `.js` files for banned imports, returning a
- * `"<file>: <module>"` line per offending reference. A missing / non-directory
- * path scans to nothing.
+ * Scan a directory (recursively) or a single file for banned imports, returning a
+ * `"<file>: <module>"` line per offending reference. Only `.js`, `.mjs` and `.cjs` files
+ * are read; a missing path, or any other kind of file, scans to nothing.
  */
-export function scanBannedImports(dir: string): string[] {
-  const errors: string[] = []
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return errors
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      errors.push(...scanBannedImports(fullPath))
-    } else if (entry.name.endsWith('.js')) {
-      const content = fs.readFileSync(fullPath, 'utf-8')
-      for (const module of findBannedImports(content)) {
-        errors.push(`${fullPath}: ${module}`)
-      }
-    }
+export function scanBannedImports(target: string): string[] {
+  if (!isBannedScanTarget(target)) return []
+  if (!fs.statSync(target).isDirectory()) {
+    return findBannedImports(fs.readFileSync(target, 'utf-8')).map((module) => `${target}: ${module}`)
   }
-  return errors
+  return fs
+    .readdirSync(target)
+    .flatMap((name) => scanBannedImports(path.join(target, name)))
 }

@@ -135,6 +135,32 @@ describe('scanBannedImports', () => {
     expect(scanBannedImports(dir)).toEqual([])
   })
 
+  it('scans .mjs and .cjs files, which are the same runtime code as .js', () => {
+    fs.writeFileSync(path.join(dir, 'a.mjs'), `import { spawn } from 'node:child_process'`)
+    fs.writeFileSync(path.join(dir, 'b.cjs'), `const e = require('electron')`)
+    const hits = scanBannedImports(dir).sort()
+    expect(hits).toHaveLength(2)
+    expect(hits[0]).toContain('a.mjs')
+    expect(hits[1]).toContain('b.cjs')
+  })
+
+  it('scans a single FILE target directly, not only directories', () => {
+    // A flat plugin can declare backend.entryPoint: "server.js" at the package root, so the
+    // thing handed to the scanner is the file itself.
+    const file = path.join(dir, 'server.js')
+    fs.writeFileSync(file, `const cp = require('child_process')`)
+    const hits = scanBannedImports(file)
+    expect(hits).toHaveLength(1)
+    expect(hits[0]).toContain(file)
+    expect(hits[0]).toContain('child_process')
+  })
+
+  it('ignores a single file target that is not JavaScript', () => {
+    const file = path.join(dir, 'notes.txt')
+    fs.writeFileSync(file, `require('child_process')`)
+    expect(scanBannedImports(file)).toEqual([])
+  })
+
   it('scans a missing directory to an empty result', () => {
     expect(scanBannedImports(path.join(dir, 'does-not-exist'))).toEqual([])
   })

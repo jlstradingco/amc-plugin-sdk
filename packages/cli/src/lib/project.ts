@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { isBannedScanTarget } from './banned-imports.js'
 
 /**
  * A flat-JS / webview plugin has no TypeScript compile step — its files ship
@@ -74,8 +75,8 @@ export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): 
 }
 
 /**
- * The directories a banned-import scan should walk for this plugin: a TypeScript
- * plugin's compiled `dist/`, or a flat plugin's as-authored entry dirs. Returns
+ * The paths a banned-import scan should walk for this plugin: a TypeScript
+ * plugin's compiled `dist/`, or a flat plugin's as-authored entry dirs and code files. Returns
  * ABSOLUTE paths, and only ones that exist — so an empty result genuinely means
  * "there is nothing built to inspect", which callers must not mistake for "clean".
  *
@@ -87,7 +88,11 @@ export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): 
  */
 export function resolveBannedScanDirs(cwd: string, manifest: FlatManifestLike): string[] {
   if (!isTypeScriptProject(cwd)) {
-    return collectFlatPackageEntries(cwd, manifest).map((entry) => path.join(cwd, entry))
+    // A flat entry can be a single file, and the README or an index.html is packaged but
+    // holds nothing to scan — counting it would turn "nothing was scanned" into a pass.
+    return collectFlatPackageEntries(cwd, manifest)
+      .map((entry) => path.join(cwd, entry))
+      .filter(isBannedScanTarget)
   }
   return [path.join(cwd, 'dist')].filter((dir) => fs.existsSync(dir))
 }
