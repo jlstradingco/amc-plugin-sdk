@@ -3,10 +3,23 @@ import prompts from 'prompts'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { execSync } from 'node:child_process'
+import { classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, actionableError } from '../lib/output.js'
 
 const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
 type Template = typeof TEMPLATES[number]
+
+const isSvgPath = (icon: string): boolean => icon.toLowerCase().endsWith('.svg')
+
+// Top-level folders a scaffolded plugin's package ships a packaged icon from — the same rule
+// `validate` applies via collectPackageEntries. No template ships files at the project root,
+// and a TypeScript plugin's package carries only dist/ (build output) and assets/.
+const SHIPPED_ICON_ROOTS: Record<Template, string[]> = {
+  basic: ['assets'],
+  'with-backend': ['assets'],
+  full: ['assets'],
+  webview: ['assets', 'ui', 'prompts'],
+}
 
 const CATEGORIES = ['planning', 'development', 'testing', 'devops', 'productivity', 'other'] as const
 
@@ -278,7 +291,14 @@ export const createCommand = new Command('create')
   .option('--author <author>', 'Plugin author')
   .option('--category <category>', 'Plugin category', 'other')
   .option('--tags <tags>', 'Comma-separated discoverability tags (defaults to the category)')
-  .option('--icon <icon>', 'Lucide icon name', 'puzzle')
+  // Defaults to a PACKAGED path, not a Lucide name. The old default ('puzzle') did exactly
+  // what it said and shipped a puzzle piece -- the scaffold was actively steering every new
+  // plugin at a generic glyph, and 16 of 17 published plugins followed it.
+  .option(
+    '--icon <icon>',
+    'Path to your logo inside the package (e.g. assets/icon.svg), or a Lucide icon name for a generic glyph',
+    'assets/icon.svg'
+  )
   .option('--skip-install', 'Skip npm install')
   .option('--skip-git', 'Skip git init and initial commit')
   .description('Scaffold a new AMC plugin project')
@@ -312,7 +332,7 @@ export const createCommand = new Command('create')
       author = opts.author!
       category = opts.category ?? 'other'
       tags = parseTagsInput(opts.tags, category)
-      icon = opts.icon ?? 'puzzle'
+      icon = opts.icon ?? 'assets/icon.svg'
     } else {
       const response = await prompts([
         { type: 'text', name: 'displayName', message: 'Display name', initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
@@ -320,7 +340,12 @@ export const createCommand = new Command('create')
         { type: 'text', name: 'author', message: 'Author' },
         { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
         { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: '' },
-        { type: 'text', name: 'icon', message: 'Lucide icon name', initial: 'puzzle' },
+        {
+          type: 'text',
+          name: 'icon',
+          message: 'Icon — a path to your logo in the package (assets/icon.svg), or a Lucide name for a generic glyph',
+          initial: 'assets/icon.svg'
+        },
       ])
 
       if (!response.author) {
@@ -334,6 +359,25 @@ export const createCommand = new Command('create')
       category = response.category
       tags = parseTagsInput(response.tags, category)
       icon = response.icon
+    }
+
+    // Decided once, here, by the same classifier `validate` uses — a hand-rolled test of the
+    // icon string disagreed with it and let `../x.svg` write outside the new project.
+    const iconKind = classifyPluginIcon(icon)
+    if (iconKind === 'unsafe-path') {
+      actionableError(
+        `Invalid --icon: ${icon}`,
+        'Use a plain relative path inside the plugin (for example assets/icon.svg), a Lucide icon name, or an http(s) URL.'
+      )
+      process.exit(1)
+    }
+    const shippedRoots = SHIPPED_ICON_ROOTS[template]
+    if (iconKind === 'packaged-path' && !shippedRoots.includes(icon.split('/')[0])) {
+      actionableError(
+        `--icon ${icon} would not be shipped in the package`,
+        `The ${template} template ships only ${shippedRoots.join(', ')}. Use a path under assets/, for example assets/icon.svg.`
+      )
+      process.exit(1)
     }
 
     const targetDir = path.resolve(process.cwd(), name)
@@ -442,6 +486,32 @@ describe('${displayName} backend', () => {
   })
 })
 `)
+    }
+
+    // The scaffold now DEFAULTS plugin.icon to a packaged path, so it has to ship a file at
+    // that path — otherwise every freshly-created plugin would fail its own `validate` with
+    // "Icon file not found". A neutral placeholder the developer replaces with their real
+    // mark; monochrome `currentColor` so it reads on both light and dark surfaces.
+    // Only written when the icon is a packaged .svg path and nothing is there already: a
+    // developer who passed --icon with a Lucide name is untouched, and SVG text is never
+    // written into a .png/.jpg path. Any other packaged format is the developer's to add.
+    if (iconKind === 'packaged-path' && !isSvgPath(icon)) {
+      info(`Add your logo at ${icon} before you package — the scaffold only writes an .svg placeholder.`)
+    }
+    if (iconKind === 'packaged-path' && isSvgPath(icon)) {
+      const iconTarget = path.join(targetDir, icon)
+      if (!fs.existsSync(iconTarget)) {
+        fs.mkdirSync(path.dirname(iconTarget), { recursive: true })
+        fs.writeFileSync(
+          iconTarget,
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <!-- Placeholder logo for ${displayName}. Replace this file with your own mark. -->
+  <rect x="3" y="3" width="18" height="18" rx="5" />
+  <path d="M9 12h6M12 9v6" />
+</svg>
+`
+        )
+      }
     }
 
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))

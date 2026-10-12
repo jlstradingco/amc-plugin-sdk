@@ -107,6 +107,8 @@ export type {
 // Validators (runtime value exports)
 export { manifestSchema, validateManifest, PLUGIN_PERMISSIONS } from './validators/manifest.js'
 export type { ManifestValidationResult } from './validators/manifest.js'
+export { classifyPluginIcon } from './validators/plugin-icon-kind.js'
+export type { PluginIconKind } from './validators/plugin-icon-kind.js'
 
 // Tool-activity transcript markers (runtime value exports). Import these rather
 // than hardcoding the glyphs - see the module for provenance and codepoints.
