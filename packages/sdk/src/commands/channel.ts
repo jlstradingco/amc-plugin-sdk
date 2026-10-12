@@ -39,7 +39,8 @@ export type CommandMode = 'read' | 'write'
 
 /**
  * One command a channel accepts. `parse` runs BEFORE the command is accepted — throw to refuse
- * the input, and nothing is queued. `run` does the work; its result must be plain JSON data.
+ * the input, and nothing is queued. Return the input you validated: `CommandMapOf` types the
+ * panel's input from it. `run` does the work; its result must be plain JSON data.
  * `mode: 'write'` (the default) commands run one at a time in arrival order; `mode: 'read'`
  * commands may run alongside each other, up to `limits.maxParallelReads`.
  */
@@ -151,6 +152,8 @@ interface SavedCopy {
   type: string
   input?: unknown
   acceptedAt: number
+  /** Arrival order within one run of the plugin: two commands can share a millisecond. */
+  seq?: number
 }
 
 interface ChannelConfig {
@@ -277,6 +280,7 @@ class CommandQueue {
   private readonly runningReads = new Set<Entry>()
   private runningWrite: Entry | undefined
   private savedCopiesUnreadable = false
+  private nextSeq = 0
 
   constructor(
     private readonly ctx: PluginContext,
@@ -460,7 +464,7 @@ class CommandQueue {
 
   private async saveCopy(entry: Entry): Promise<void> {
     if (!this.config.durable) return
-    const copy: SavedCopy = { type: entry.type, input: entry.input, acceptedAt: entry.acceptedAt }
+    const copy: SavedCopy = { type: entry.type, input: entry.input, acceptedAt: entry.acceptedAt, seq: this.nextSeq++ }
     try {
       await this.ctx.storage.set(this.copyKey(entry.id), copy)
     } catch {
@@ -492,7 +496,7 @@ class CommandQueue {
       this.ctx.log.error(`[commands] ${this.config.name}: saved commands could not be read; the channel refuses commands until the plugin restarts.`)
       return
     }
-    for (const { key, value } of sortByAcceptedAt(saved)) await this.requeue(key, value)
+    for (const { key, value } of sortByArrival(saved)) await this.requeue(key, value)
   }
 
   private async requeue(key: string, value: unknown): Promise<void> {
@@ -552,9 +556,11 @@ function asSavedCopy(value: unknown): SavedCopy | undefined {
   return typeof copy.type === 'string' && typeof copy.acceptedAt === 'number' ? (copy as SavedCopy) : undefined
 }
 
-function sortByAcceptedAt(saved: Array<{ key: string; value: unknown }>): Array<{ key: string; value: unknown }> {
+/** Arrival order: by time, then by sequence for commands that arrived in the same millisecond. */
+function sortByArrival(saved: Array<{ key: string; value: unknown }>): Array<{ key: string; value: unknown }> {
   const at = (value: unknown): number => asSavedCopy(value)?.acceptedAt ?? 0
-  return [...saved].sort((a, b) => at(a.value) - at(b.value) || a.key.localeCompare(b.key))
+  const seq = (value: unknown): number => asSavedCopy(value)?.seq ?? 0
+  return [...saved].sort((a, b) => at(a.value) - at(b.value) || seq(a.value) - seq(b.value) || a.key.localeCompare(b.key))
 }
 
 function settledOrTimeout(settled: Promise<void>, ms: number): Promise<void> {
