@@ -27,8 +27,13 @@ import type {
   Recording,
   QueryOptions,
   SessionMessage,
-  SpendReportBreakdown
+  SpendReportBreakdown,
+  PluginRpc,
+  PluginHost
 } from '../types/index.js'
+
+export { createRpcDouble } from './rpc-double.js'
+export type { RpcDouble } from './rpc-double.js'
 
 /** Zeroed spend breakdown — the shape a brand-new install reports. */
 function emptySpendBreakdown(): SpendReportBreakdown {
@@ -81,6 +86,13 @@ export interface TestContextOptions {
   // are webview-only and are no longer on PluginContext, so an option to seed
   // them would be accepted and then do nothing.
   spend?: Partial<SpendReportBreakdown>
+  /**
+   * Install a panel-to-backend channel as `ctx.rpc` — usually `createRpcDouble().rpc`. Without
+   * it `ctx.rpc` is absent, exactly as on an Omniscio older than v0.1.92.
+   */
+  rpc?: PluginRpc
+  /** Install `ctx.host`. Without it `ctx.host` is absent, as on every released Omniscio so far. */
+  host?: PluginHost
   db?: {
     /**
      * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
@@ -595,7 +607,9 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
     },
 
-    workspace: workspaceNotFakeable()
+    workspace: workspaceNotFakeable(),
+    ...(opts.rpc ? { rpc: opts.rpc } : {}),
+    ...(opts.host ? { host: opts.host } : {})
   }
 
   harness.ctx = ctx
