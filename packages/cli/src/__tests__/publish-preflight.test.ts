@@ -6,6 +6,7 @@ import {
   checkPackageSize,
   checkDeclaredPermissions,
   checkListingCompleteness,
+  checkBannedImports,
   summarizePreflight,
   type PreflightResult
 } from '../lib/publish-preflight.js'
@@ -196,6 +197,48 @@ describe('checkListingCompleteness', () => {
       expect(r.status).toBe('warn')
       expect(r.suggestion).toBeTruthy()
     }
+  })
+})
+
+describe('checkBannedImports', () => {
+  it('fails and names the offending file when a banned import is found', () => {
+    const r = checkBannedImports(['dist/backend/gh/gh-run.js: node:child_process'], 1)
+    expect(r.status).toBe('fail')
+    expect(r.message).toContain('gh-run.js')
+    expect(r.message).toContain('node:child_process')
+    expect(r.suggestion).toBeTruthy()
+  })
+
+  it('passes when a scanned tree is clean', () => {
+    const r = checkBannedImports([], 1)
+    expect(r.status).toBe('pass')
+  })
+
+  // The whole point of this check is that publish STOPS. A `warn` on a real hit would
+  // leave the gap exactly as it was — the author sees a line and uploads anyway.
+  it('produces a failure that summarizePreflight turns into hasFailure', () => {
+    expect(summarizePreflight([checkBannedImports(['dist/x.js: child_process'], 1)]).hasFailure).toBe(true)
+  })
+
+  // A check that reports success precisely when it inspected nothing is worse than no
+  // check — it is a false all-clear. Reachable when a prebuilt .amcplugin exists but
+  // dist/ has since been removed.
+  it('warns rather than passing when there was nothing to scan', () => {
+    const r = checkBannedImports([], 0)
+    expect(r.status).toBe('warn')
+    expect(r.message).toMatch(/no.*scan|nothing.*scan|could not/i)
+  })
+
+  it('does not turn a nothing-to-scan warning into a publish blocker', () => {
+    expect(summarizePreflight([checkBannedImports([], 0)]).hasFailure).toBe(false)
+  })
+
+  it('caps the named files and reports the remainder rather than dumping every path', () => {
+    const hits = Array.from({ length: 7 }, (_, i) => `dist/f${i}.js: child_process`)
+    const r = checkBannedImports(hits, 1)
+    expect(r.status).toBe('fail')
+    expect(r.message).toMatch(/\+\s*4\s*more/i)
+    expect(r.message).not.toContain('f6.js')
   })
 })
 

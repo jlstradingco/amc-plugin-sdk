@@ -146,7 +146,17 @@ All checks PASSED
 ```
 
 ::: warning
-The `validate` command also scans compiled output for banned imports (`electron`, `child_process`, `better-sqlite3`, `node:worker_threads`). Plugins run in a sandboxed worker and cannot access these modules directly.
+The `validate` command also scans compiled output for banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) and **fails** on a hit. `build` runs the same scan but only warns, so you catch it earlier, and `publish` runs it again and refuses to upload — the same rule at all three points. Marketplace plugin backends run under Node's `--permission` and cannot access these modules directly.
+:::
+
+::: danger `child_process` will not work, even though it compiles
+`child_process` is the module authors most often reach for, usually to shell out to a
+CLI. A marketplace plugin backend runs under Node's `--permission`, which **denies spawning a child process**,
+so the import compiles, the plugin installs — and then every call fails at runtime.
+
+Use HTTPS to talk to external services instead; the sandbox allows outbound network
+requests. If you genuinely need a host capability the plugin API does not expose, ask for
+it rather than shelling out.
 :::
 
 ## Package

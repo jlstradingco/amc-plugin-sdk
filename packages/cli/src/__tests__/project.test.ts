@@ -7,6 +7,7 @@ import {
   collectFlatPackageEntries,
   collectPackageEntries,
   findRootReadme,
+  resolveBannedScanDirs,
 } from '../lib/project.js'
 
 let tmp: string
@@ -72,17 +73,6 @@ describe('collectFlatPackageEntries', () => {
     const manifest = { ui: { entryPoint: 'index.html' } }
     expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['index.html'])
   })
-
-  it('appends README.md last, after the entry-point dirs', () => {
-    fs.mkdirSync(path.join(tmp, 'ui'))
-    fs.mkdirSync(path.join(tmp, 'backend'))
-    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
-    const manifest = {
-      ui: { entryPoint: 'ui/index.html' },
-      backend: { entryPoint: 'backend/index.js' },
-    }
-    expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['ui', 'backend', 'README.md'])
-  })
 })
 
 describe('collectPackageEntries', () => {
@@ -105,6 +95,17 @@ describe('collectPackageEntries', () => {
     fs.mkdirSync(path.join(tmp, 'ui'))
     const manifest = { ui: { entryPoint: 'ui/index.html' } }
     expect(collectPackageEntries(tmp, manifest)).toEqual(['ui'])
+  })
+
+  it('appends README.md last for a flat plugin, after its entry-point dirs', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    fs.mkdirSync(path.join(tmp, 'backend'))
+    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
+    const manifest = {
+      ui: { entryPoint: 'ui/index.html' },
+      backend: { entryPoint: 'backend/index.js' },
+    }
+    expect(collectPackageEntries(tmp, manifest)).toEqual(['ui', 'backend', 'README.md'])
   })
 
   it('appends README.md last for a TypeScript plugin', () => {
@@ -150,5 +151,57 @@ describe('findRootReadme', () => {
 
   it('returns null on an empty directory', () => {
     expect(findRootReadme(tmp)).toBeNull()
+  })
+})
+
+// One resolver, three callers. `build`, `validate` and `preflight` must all decide
+// WHERE to look the same way — the drift between two hand-rolled copies is exactly
+// what let a child_process plugin through the scan in the first place.
+describe('resolveBannedScanDirs', () => {
+  it('resolves a TypeScript project to its dist/ directory', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    expect(resolveBannedScanDirs(tmp, {})).toEqual([path.join(tmp, 'dist')])
+  })
+
+  it('resolves a TypeScript project with no dist/ to nothing, rather than a phantom path', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    expect(resolveBannedScanDirs(tmp, {})).toEqual([])
+  })
+
+  it('resolves a flat plugin to its as-authored entry dirs, not dist/', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    const dirs = resolveBannedScanDirs(tmp, { ui: { entryPoint: 'ui/index.html' } })
+    expect(dirs).toEqual([path.join(tmp, 'ui')])
+  })
+
+  // The README ships in the package, but it is not code: listed here it would count
+  // as something scanned and turn preflight's nothing-to-scan warning into a pass.
+  it('leaves the packaged README out of a flat plugin\'s scan dirs', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    const dirs = resolveBannedScanDirs(tmp, { ui: { entryPoint: 'ui/index.html' } })
+    expect(dirs).toEqual([path.join(tmp, 'ui')])
+  })
+
+  it('keeps a single-file code entry of a flat plugin, since the scanner reads files directly', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'server.js'), 'export {}')
+    const dirs = resolveBannedScanDirs(tmp, { backend: { entryPoint: 'server.js' } })
+    expect(dirs).toEqual([path.join(tmp, 'server.js')])
+  })
+
+  it('drops a non-code root file of a flat plugin, which has nothing to scan', () => {
+    fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
+    fs.writeFileSync(path.join(tmp, 'index.html'), '<html></html>')
+    expect(resolveBannedScanDirs(tmp, { ui: { entryPoint: 'index.html' } })).toEqual([])
+  })
+
+  it('returns absolute paths so a caller never has to re-join them', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    for (const d of resolveBannedScanDirs(tmp, {})) expect(path.isAbsolute(d)).toBe(true)
   })
 })
