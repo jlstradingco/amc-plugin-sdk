@@ -1,6 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { checkForgedRowsAreInert, describeForgedRowsAreInert, type ForgedRowsOptions, type TestApi } from '../testing/index.js'
-import { MAIL_COMMANDS, MAIL_MANIFEST, mailPlugin, type Drain } from './fixtures/command-plugins.js'
+import {
+  HISTORY_MANIFEST,
+  HISTORY_ROWS,
+  historyPlugin,
+  MAIL_COMMANDS,
+  MAIL_MANIFEST,
+  mailPlugin,
+  type Drain,
+  type HistorySightings,
+} from './fixtures/command-plugins.js'
 
 /** The effects probe: every request the plugin sends. */
 function options(drain: Drain, overrides: Partial<ForgedRowsOptions> = {}): ForgedRowsOptions {
@@ -36,6 +45,20 @@ describe('checkForgedRowsAreInert', () => {
       await expect(checkForgedRowsAreInert(options(drain))).rejects.toThrow(/Forged rows ran/)
     }
   )
+
+  it('FAILS a plugin that runs commands it finds in ctx.storage, which agents can write', async () => {
+    await expect(checkForgedRowsAreInert(options('storage'))).rejects.toThrow(/Forged rows ran/)
+  })
+
+  it('edits and re-arms every existing row, and restarts on every row, however many (150 here)', async () => {
+    const seen: HistorySightings = { atStart: [], rearmed: [] }
+    const check = checkForgedRowsAreInert(options('none', { manifest: HISTORY_MANIFEST, activate: historyPlugin(seen) }))
+    await expect(check).resolves.toBeUndefined()
+    // One start before the forging and one on the copied data: both must see every row.
+    expect(seen.atStart).toEqual([HISTORY_ROWS, HISTORY_ROWS])
+    expect(seen.rearmed.length).toBeGreaterThan(0)
+    expect(seen.rearmed.every((count) => count === HISTORY_ROWS)).toBe(true)
+  })
 
   it('FAILS a plugin that drains on a timer, given a settle that lets the time pass', async () => {
     vi.useFakeTimers()

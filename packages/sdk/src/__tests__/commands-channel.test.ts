@@ -484,6 +484,37 @@ describe('retireRows settles legacy command rows once and never runs them', () =
     await expect(channel.retireRows('commands')).resolves.toBe(1)
     expect(runs).toEqual([])
   })
+
+  it('settles every still-to-run row however many there are: 250 pending rows leave none', async () => {
+    const { channel, harness, runs } = setup()
+    for (let n = 0; n < 250; n++) {
+      await harness.ctx.db.insert('commands', { type: 'send', payload: { to: `r${n}` }, status: 'pending' })
+    }
+    await expect(channel.retireRows('commands')).resolves.toBe(250)
+    await expect(harness.ctx.db.query('commands', { where: { status: 'pending' }, limit: 1000 })).resolves.toEqual([])
+    expect(runs).toEqual([])
+  })
+
+  it('stops when rows do not change, and warns once with the table and how many are left, never their data', async () => {
+    const { channel, harness } = setup()
+    for (let n = 0; n < 150; n++) {
+      await harness.ctx.db.insert('commands', { type: 'send', payload: { to: SECRET }, status: 'pending' })
+    }
+    // Every update "succeeds" and nothing changes, as if an agent re-armed each row at once.
+    harness.ctx.db.update = () => Promise.resolve()
+    await expect(channel.retireRows('commands')).resolves.toEqual(expect.any(Number))
+    const warns = harness.logs.filter((log) => log.level === 'warn' && log.message.includes('retireRows'))
+    expect(warns).toHaveLength(1)
+    expect(warns[0]!.message).toContain('"commands"')
+    expect(warns[0]!.message).toContain('150')
+    expect(JSON.stringify(harness.logs)).not.toContain(SECRET)
+  })
+
+  it('refuses a retiredStatus that is itself a still-to-run status, before touching a row', async () => {
+    const { channel, harness } = setup()
+    await harness.ctx.db.insert('commands', { type: 'send', payload: { to: 'x' }, status: 'pending' })
+    await expect(channel.retireRows('commands', { retiredStatus: 'pending' })).rejects.toThrow(/retiredStatus/)
+  })
 })
 
 /** Compile-time check that the client is typed from the backend's spec. */
