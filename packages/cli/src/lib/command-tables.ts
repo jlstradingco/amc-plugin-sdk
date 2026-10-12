@@ -8,6 +8,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { checkCommandTables } from '@agent-mc/plugin-sdk'
+import { scannableFiles } from './banned-imports.js'
 import type { PreflightResult } from './publish-preflight.js'
 import { fail, info, ok, warn } from './output.js'
 
@@ -26,7 +27,6 @@ const WARN_SUGGESTION = 'Make sure no table row can make your plugin act; see th
  */
 const PENDING_POLL =
   /\.query(?:All)?\s*\([^)]{0,200}?\b(?:(?:\w*_)?(?:status|state)|[a-z]\w*(?:Status|State))\s*:\s*['"](?:pending|queued)['"]/g
-const SCRIPT_FILE = /\.(?:c|m)?js$/
 
 export function commandTablesPreflight(manifest: unknown): PreflightResult {
   const report = checkCommandTables(manifest)
@@ -67,20 +67,7 @@ export function findPendingPolls(content: string): number[] {
 
 /** `<file>:<line>` for every pending-row query in the given files and folders. */
 export function scanPendingPolls(paths: string[]): string[] {
-  return scriptFiles(paths).flatMap((file) =>
+  return paths.flatMap((entry) => scannableFiles(entry)).flatMap((file) =>
     findPendingPolls(fs.readFileSync(file, 'utf-8')).map((line) => `${file}:${line}`)
   )
-}
-
-function scriptFiles(paths: string[]): string[] {
-  const files: string[] = []
-  for (const entry of paths) {
-    if (!fs.existsSync(entry)) continue
-    if (fs.statSync(entry).isDirectory()) {
-      files.push(...scriptFiles(fs.readdirSync(entry).map((name) => path.join(entry, name))))
-    } else if (SCRIPT_FILE.test(entry)) {
-      files.push(entry)
-    }
-  }
-  return files
 }

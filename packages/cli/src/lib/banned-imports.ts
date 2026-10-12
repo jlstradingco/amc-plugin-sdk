@@ -76,16 +76,25 @@ export function isBannedScanTarget(target: string): boolean {
 }
 
 /**
+ * The files a scan of the shipped code reads under `target`: every `.js`, `.mjs` and `.cjs`
+ * file of a directory (recursively), or `target` itself when it is one. A missing path, or any
+ * other kind of file, yields nothing. Every scan of the shipped code walks through here.
+ */
+export function scannableFiles(target: string): string[] {
+  if (!isBannedScanTarget(target)) return []
+  if (!fs.statSync(target).isDirectory()) return [target]
+  return fs
+    .readdirSync(target)
+    .flatMap((name) => scannableFiles(path.join(target, name)))
+}
+
+/**
  * Scan a directory (recursively) or a single file for banned imports, returning a
  * `"<file>: <module>"` line per offending reference. Only `.js`, `.mjs` and `.cjs` files
  * are read; a missing path, or any other kind of file, scans to nothing.
  */
 export function scanBannedImports(target: string): string[] {
-  if (!isBannedScanTarget(target)) return []
-  if (!fs.statSync(target).isDirectory()) {
-    return findBannedImports(fs.readFileSync(target, 'utf-8')).map((module) => `${target}: ${module}`)
-  }
-  return fs
-    .readdirSync(target)
-    .flatMap((name) => scanBannedImports(path.join(target, name)))
+  return scannableFiles(target).flatMap((file) =>
+    findBannedImports(fs.readFileSync(file, 'utf-8')).map((module) => `${file}: ${module}`)
+  )
 }
