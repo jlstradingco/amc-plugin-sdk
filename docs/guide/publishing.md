@@ -198,10 +198,18 @@ pending  -->  approved  (published to marketplace)
 The review checks for:
 
 - Valid manifest schema and SDK version compatibility
-- No banned imports (`electron`, `child_process`, `better-sqlite3`, `node:worker_threads`)
+- No banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings)
 - Correct entry points (UI and/or backend files exist)
 - Package size within the 50 MB limit
 - Security review of plugin behavior
+
+::: tip You will hit the banned-import rule before review, not at it
+`amc-plugin publish` runs the same scan as part of its [preflight](/reference/cli#preflight)
+and refuses to upload on a hit, so this is not a surprise you discover days later in a
+rejection. `--skip-preflight` bypasses it deliberately, but the rule still applies at
+review — and, more to the point, at runtime: marketplace plugin backends run under Node's
+`--permission`, which blocks these modules, so a plugin built on one installs and then fails every call.
+:::
 
 ::: warning
 The marketplace enforces a **50 MB** package size limit. The `amc-plugin package` command warns you if your archive exceeds this.

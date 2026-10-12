@@ -4,7 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, collectFlatPackageEntries } from '../lib/project.js'
+import { isTypeScriptProject, resolveBannedScanDirs } from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 
 export const validateCommand = new Command('validate')
@@ -71,10 +71,9 @@ export const validateCommand = new Command('validate')
     }
 
     // Scan for banned imports: TS plugins in dist/, flat plugins in their
-    // as-authored entry dirs.
-    const scanDirs = flat
-      ? collectFlatPackageEntries(cwd, manifest).map(e => path.join(cwd, e))
-      : [path.join(cwd, 'dist')].filter(d => fs.existsSync(d))
+    // as-authored entry dirs. Shared with `build` and publish's preflight so all
+    // three look in the same place.
+    const scanDirs = resolveBannedScanDirs(cwd, manifest)
     if (scanDirs.length > 0) {
       const banned = scanDirs.flatMap(scanBannedImports)
       if (banned.length > 0) {
