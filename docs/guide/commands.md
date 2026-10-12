@@ -21,8 +21,10 @@ panel to your backend, and it is meant to be the easy way too.
    (`outcome-unknown`) — never "failed", never "nothing ran".
 5. **Old Omniscio versions fail safe.** Before v0.1.92 the panel gets an "update Omniscio" error
    and writes nothing. It never falls back to rows.
-6. **No leaks.** Inputs and results are never logged and never written to tables. A command kept
-   across restarts lives only in your plugin's private storage, which outside callers cannot read.
+6. **No leaks, and no storage.** Inputs and results are never logged and never written to tables
+   or to storage. The channel never reads or writes `ctx.storage` at all: an AI agent on the
+   person's computer can read and change a plugin's storage, so the channel keeps nothing there to
+   trust. Commands live only in memory, so a restart drops the ones still waiting.
 7. **Bounded.** The queue, parallel reads, input size and uncollected results all have limits.
 8. **One check, one answer.** The [ship check](#the-ship-check) reads only your manifest, so
    `validate`, `preflight` and `publish` agree.

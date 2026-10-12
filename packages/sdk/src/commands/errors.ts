@@ -7,7 +7,7 @@
  * - `worker-not-ready` — the plugin's backend is not running, or is an older build without this
  *   channel. The host refused before delivering, so nothing ran.
  * - `refused` — the backend or the host turned the command away (a full queue, an input over the
- *   size limit, a busy host, a saved copy that was gone). Nothing ran.
+ *   size limit, a busy host). Nothing ran.
  * - `invalid-input` — the input is not plain JSON data, or the command's `parse` rejected it.
  *   Nothing ran.
  * - `failed` — the command ran and threw, or ran but its result could not be sent back.

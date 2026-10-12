@@ -126,10 +126,11 @@ async function awaitResult(
 }
 
 /**
- * Ask until the backend answers. A failed call usually means the backend is restarting; asking
- * again cannot run anything, and a durable command may still finish — or be refused — after the
- * restart, so the client keeps asking for {@link RECONNECT_WINDOW_MS} before it calls the
- * outcome unknown.
+ * Ask until the backend answers. A failed call usually means the backend is briefly unreachable
+ * or restarting; asking again cannot run anything, and the command may still finish if the
+ * backend comes back without a restart, so the client keeps asking for
+ * {@link RECONNECT_WINDOW_MS} before it calls the outcome unknown. A restarted backend no longer
+ * knows the command and answers `unknown` at once.
  */
 async function askStatus(backend: BridgeBackend, name: string, id: string): Promise<StatusReply> {
   const giveUpAt = Date.now() + RECONNECT_WINDOW_MS

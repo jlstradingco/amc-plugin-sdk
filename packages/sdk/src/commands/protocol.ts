@@ -35,9 +35,10 @@ export type StartReply =
  * command and `runningForMs` is how long THAT one has been running (0 when nothing is). A
  * number that keeps growing is a stuck command, cleared only by restarting the plugin.
  *
- * `done`, `failed` and `refused` are handed over exactly once; asking again answers `unknown`,
- * as does an id this backend never accepted, one that expired uncollected, or one lost in a
- * restart. `refused` after acceptance means it was never run (its saved copy was gone).
+ * `done` and `failed` are handed over exactly once; asking again answers `unknown`, as does an id
+ * this backend never accepted, one that expired uncollected, or one lost in a restart (commands
+ * live only in memory). This backend no longer answers `refused` after acceptance; the state stays
+ * in the protocol so a panel still understands an older backend that did.
  */
 export type StatusReply =
   | { state: 'pending'; waiting: 'queued' | 'running'; runningForMs: number }
