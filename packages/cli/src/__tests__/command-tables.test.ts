@@ -99,6 +99,18 @@ describe('the pending-rows code hint', () => {
     expect(findPendingPolls(code)).toEqual([])
   })
 
+  it('finds a status column with a longer name, in snake or camel case, only for waiting work', () => {
+    const code = [
+      'const pending = await ctx.db.query(COLLECTION, {',
+      "  where: { summary_status: 'pending', is_deleted: 0 },",
+      '})',
+      "const jobs = await ctx.db.query('jobs', { where: { jobState: 'queued' } })",
+      "await ctx.db.query('items', { where: { summary_status: 'done' } })",
+      "await ctx.db.query('items', { where: { status_code: 'pending' } })",
+    ].join('\n')
+    expect(findPendingPolls(code)).toEqual([1, 4])
+  })
+
   it('scans folders and single files, and warns in validate without failing it', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-pending-'))
     try {

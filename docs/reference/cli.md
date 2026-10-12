@@ -140,7 +140,7 @@ Column names are read by their words: `payloadJson`, `payload_json` and `payload
 |---|---|
 | **Fails** | A table has an **instruction** column (any word `type`, `command`, `cmd`, `action`, `op`, `operation`, `kind`, `method`, `verb`), an **argument** column (last word `payload`, `args`, `arguments`, `params`, `parameters`, `input`, `inputs`, `body`, `data`, `prompt`) and a **status** column (last word `status` or `state`) |
 | **Warns** | A prompt-like column (last word `prompt`, `instruction(s)`, `script`) with a status; a queue-like table name (`queue`, `job(s)`, `command(s)`, `action(s)`, `outbox`…) with a status and an instruction or argument column; a table that is `agentWritable` and has a status |
-| **Warns** (`validate` only) | Shipped JS that asks a table for its `pending` or `queued` rows (`.query(…, { where: { status: 'pending' } })`) |
+| **Warns** (`validate` only) | Shipped JS that asks a table for its `pending` or `queued` rows (`.query(…, { where: { status: 'pending' } })`, also when the column has a longer name such as `summary_status` or `jobState`) |
 | **Passes with a notice** | A failing table that carries a written `commandTableWaiver` (20–500 characters) and is not `agentWritable` |
 
 **How to fix a failure:** move the commands onto the [command channel](../guide/commands) and

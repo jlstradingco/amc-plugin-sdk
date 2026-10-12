@@ -19,8 +19,13 @@ const BLOCK_SUGGESTION =
 
 const WARN_SUGGESTION = 'Make sure no table row can make your plugin act; see the Panel commands guide.'
 
-/** A db query that filters on a pending/queued status: how a backend drains a command table. */
-const PENDING_POLL = /\.query(?:All)?\s*\([^)]{0,200}?\b(?:status|state)\s*:\s*['"](?:pending|queued)['"]/g
+/**
+ * A db query that filters on a pending/queued status: how a backend drains a command table. The key
+ * is `status` or `state`, alone or ending a longer name (`summary_status`, `jobState`); the value
+ * must be waiting work, so other status filters stay quiet.
+ */
+const PENDING_POLL =
+  /\.query(?:All)?\s*\([^)]{0,200}?\b(?:(?:\w*_)?(?:status|state)|[a-z]\w*(?:Status|State))\s*:\s*['"](?:pending|queued)['"]/g
 const SCRIPT_FILE = /\.(?:c|m)?js$/
 
 export function commandTablesPreflight(manifest: unknown): PreflightResult {
