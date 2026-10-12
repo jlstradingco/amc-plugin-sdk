@@ -135,6 +135,14 @@ describe('createMockContext — faithful db', () => {
     expect(page.map((r) => r.n)).toEqual([1, 2])
   })
 
+  it('query returns one page of 100 rows when no limit is given, like Omniscio', async () => {
+    for (let i = 0; i < 150; i++) await ctx.db.insert('nums', { n: i })
+    expect(await ctx.db.query('nums')).toHaveLength(100)
+    const second = await ctx.db.query('nums', { offset: 100 })
+    expect(second.map((r) => r.n)).toEqual(Array.from({ length: 50 }, (_, i) => 100 + i))
+    expect(await ctx.db.query('nums', { limit: 50_000 })).toHaveLength(150)
+  })
+
   it('getById returns the stored row or null', async () => {
     const row = await ctx.db.insert('todos', { title: 'a' })
     const found = await ctx.db.getById('todos', row.id as string)

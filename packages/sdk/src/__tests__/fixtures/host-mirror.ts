@@ -116,6 +116,20 @@ export const HOST_AGENT_WRITABLE = {
 } as const
 
 /**
+ * How the host pages `ctx.db.query`, read from GitHub master **05a1a59ab5 (2026-10-13)**,
+ * `plugin-storage.ts:1112-1123` with `finitePageValue` at :224: `limit ?? 100`, truncated, a value
+ * that is not a number falls back to 100, clamped to [1, 10000]; an offset only when it is truthy,
+ * clamped to [0, 1000000]; no `orderBy` means `ORDER BY rowid ASC` (insertion order).
+ */
+export const HOST_DB_QUERY_PAGE = {
+  sourceCommit: '05a1a59ab58ec1813770f7a167b64feb0c120052',
+  onGitHubMaster: true,
+  defaultLimit: 100,
+  maxLimit: 10_000,
+  maxOffset: 1_000_000,
+} as const
+
+/**
  * Every text the host rejects an `AgentMC.backend.invoke` with, at host master 8d41f0cdf6. The
  * host sends no error codes, so the command client classifies by these texts; this list is what
  * keeps that classification honest. `notDelivered` and `busy` fail BEFORE the call reaches a

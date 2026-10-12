@@ -216,6 +216,33 @@ export function estimatePayloadBytes(value: unknown): number {
   return new TextEncoder().encode(JSON.stringify(value) ?? '').length
 }
 
+/** Omniscio's page bounds for `ctx.db.query` (`plugin-storage.ts`). */
+const HOST_QUERY_PAGE = { defaultLimit: 100, maxLimit: 10_000, maxOffset: 1_000_000 } as const
+
+/**
+ * The page Omniscio returns for a query's `limit` and `offset`: 100 rows when no limit is given,
+ * never more than 10,000, and an offset only when one is given, never past 1,000,000. Values are
+ * truncated to whole numbers; one that is not a number falls back to the default.
+ *
+ * Exported so the dev shell pages the same way — a plugin that reads one page where it needs all
+ * of them must fail its tests here, not in front of a user.
+ */
+export function hostQueryPage(options?: Pick<QueryOptions, 'limit' | 'offset'>): { offset: number; limit: number } {
+  const { defaultLimit, maxLimit, maxOffset } = HOST_QUERY_PAGE
+  const limit = clamp(wholeNumberOr(options?.limit ?? defaultLimit, defaultLimit), 1, maxLimit)
+  const offset = options?.offset ? clamp(wholeNumberOr(options.offset, 0), 0, maxOffset) : 0
+  return { offset, limit }
+}
+
+function wholeNumberOr(value: unknown, fallback: number): number {
+  const n = Math.trunc(Number(value))
+  return Number.isFinite(n) ? n : fallback
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}
+
 function matchesWhere(row: Record<string, unknown>, where?: Record<string, unknown>): boolean {
   if (!where) return true
   return Object.entries(where).every(([k, v]) => row[k] === v)
@@ -241,9 +268,8 @@ function applyQuery(
       })
     }
   }
-  const offset = options?.offset ?? 0
-  const end = options?.limit !== undefined ? offset + options.limit : undefined
-  return out.slice(offset, end)
+  const { offset, limit } = hostQueryPage(options)
+  return out.slice(offset, offset + limit)
 }
 
 /**
