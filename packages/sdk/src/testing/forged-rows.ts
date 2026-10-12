@@ -8,8 +8,9 @@
  * 1. starts the plugin and runs each command once through the channel (the positive control),
  *    failing unless the `effects` probe sees it — a probe that cannot see a command run could
  *    never see a forged one either;
- * 2. forges rows of every command type into every declared table, and edits and re-arms the rows
- *    the plugin wrote itself;
+ * 2. forges rows of every command type into every declared table, edits and re-arms every row the
+ *    plugin wrote itself (all of them, page by page), and plants each command in `ctx.storage`,
+ *    which an AI agent can write too;
  * 3. fires everything that could drain a table — every cron, the start-up hooks, a second round
  *    of channel commands, and a full restart on the same data — and fails on any extra effect.
  *
@@ -62,6 +63,10 @@ interface RunningPlugin {
 const FORGED_STATUSES = ['pending', 'queued']
 /** Columns the host stamps on every row; a forged copy of a row must not carry them. */
 const HOST_COLUMNS = new Set(['id', 'created_at', 'updated_at'])
+/** Rows read at a time. Omniscio answers a query with no limit with one page of 100. */
+const PAGE = 100
+/** Omniscio stops an offset at 1,000,000; past it every read would return the same page. */
+const MAX_OFFSET = 1_000_000
 
 export function describeForgedRowsAreInert(api: TestApi, options: ForgedRowsOptions): void {
   api.describe(`forged rows are inert (command channel "${options.channel}")`, () => {
@@ -78,6 +83,7 @@ export async function checkForgedRowsAreInert(options: ForgedRowsOptions): Promi
   const plugin = await startPlugin(options, createTestContext({ ...options.context }), settle)
   const perCommand = await positiveControl(options, plugin, settle)
   await forgeRows(plugin.harness.ctx, options.manifest, options.commands)
+  await forgeStorage(plugin.harness.ctx, options)
 
   await expectNoEffects(options, plugin.harness, 'firing its crons and start-up hooks', async () => {
     await fireTriggers(plugin)
@@ -175,7 +181,7 @@ async function expectNoEffects(options: ForgedRowsOptions, harness: TestHarness,
   if (extra > 0) {
     throw new Error(
       `Forged rows ran: ${when} after rows were forged caused ${extra} effect(s). ` +
-        'A row must never make the plugin act; take commands only through the channel.'
+        'A row or a stored record must never make the plugin act; take commands only through the channel.'
     )
   }
 }
@@ -191,13 +197,34 @@ async function fireTriggers(plugin: RunningPlugin): Promise<void> {
 /** Insert rows of every command type into every table, and edit and re-arm the existing ones. */
 async function forgeRows(ctx: PluginContext, manifest: unknown, samples: ForgedRowsOptions['commands']): Promise<void> {
   for (const [table, schema] of declaredTables(manifest)) {
-    const existing = await ctx.db.query(table)
+    const existing = await allRows(ctx, table)
     for (const [index, row] of existing.entries()) {
       await ctx.db.update(table, String(row.id), forgedFields(schema.columns, samples[index % samples.length]!, 'pending', false))
     }
     for (const sample of samples) {
       for (const status of FORGED_STATUSES) await ctx.db.insert(table, forgedFields(schema.columns, sample, status, true))
     }
+  }
+}
+
+/**
+ * Plant each command in ctx.storage, in the shape the SDK's old durable channel saved and replayed —
+ * any agent can write it there through Omniscio's control server.
+ */
+async function forgeStorage(ctx: PluginContext, options: ForgedRowsOptions): Promise<void> {
+  for (const [index, { type, input }] of options.commands.entries()) {
+    await ctx.storage.set(`__commands:${options.channel}:forged-${index}`, { type, input, acceptedAt: 0 })
+  }
+}
+
+/** Every row of a table, page by page: a check that read only the first page would miss the rest. */
+async function allRows(ctx: PluginContext, table: string): Promise<Record<string, unknown>[]> {
+  const rows: Record<string, unknown>[] = []
+  for (let offset = 0; ; offset += PAGE) {
+    if (offset > MAX_OFFSET) throw new Error(`checkForgedRowsAreInert: "${table}" has more rows than a query can reach.`)
+    const page = await ctx.db.query(table, { limit: PAGE, offset })
+    rows.push(...page)
+    if (page.length < PAGE) return rows
   }
 }
 
@@ -226,7 +253,7 @@ function placeholder(columnType: unknown): unknown {
 
 async function copyData(from: PluginContext, to: PluginContext, manifest: unknown): Promise<void> {
   for (const [table] of declaredTables(manifest)) {
-    for (const row of await from.db.query(table)) {
+    for (const row of await allRows(from, table)) {
       await to.db.insert(table, Object.fromEntries(Object.entries(row).filter(([column]) => !HOST_COLUMNS.has(column))))
     }
   }
