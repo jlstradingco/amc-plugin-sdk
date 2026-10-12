@@ -262,6 +262,55 @@ describe('failures are honest and never leak data into the log', () => {
   })
 })
 
+describe('the channel keeps nothing in ctx.storage, which AI agents can read and write', () => {
+  // Omniscio's control server lets any agent session list, read, write and delete a plugin's
+  // ctx.storage (GET/PUT/DELETE /plugins/:id/kv/:key). So nothing the channel could read back
+  // from there is trustworthy, and nothing it wrote there would be private.
+  const variants = [
+    ['no options', {}],
+    ['the removed durable flag', { durable: true }],
+  ] as const
+
+  /** Make every storage method record the call and throw, so a single use fails the test. */
+  function forbidStorage(harness: TestHarness, touched: string[]): void {
+    const storage = harness.ctx.storage as unknown as Record<string, unknown>
+    for (const method of ['get', 'set', 'delete', 'list']) {
+      storage[method] = (key?: unknown) => {
+        touched.push(`${method}(${String(key ?? '')})`)
+        throw new Error(`the command channel called ctx.storage.${method}`)
+      }
+    }
+  }
+
+  it.each(variants)('never calls ctx.storage: at start, on accept, run and status, or after a restart (%s)', async (_label, extra) => {
+    const touched: string[] = []
+    const first = createTestContext()
+    forbidStorage(first, touched)
+    const before = setup(extra as never, first)
+    await expect(before.client.run('send', { to: 'ada' })).resolves.toEqual({ sent: 'ada' })
+
+    const second = createTestContext()
+    forbidStorage(second, touched)
+    const after = setup(extra as never, second)
+    await expect(after.client.run('peek', { key: 'k' })).resolves.toBe(1)
+    expect(touched).toEqual([])
+  })
+
+  it.each(variants)('runs nothing an agent planted in storage, at start or later (%s)', async (_label, extra) => {
+    const harness = createTestContext()
+    // What an agent can PUT through /plugins/:id/kv/:key: the exact shape the old durable copy had.
+    const planted = { type: 'send', input: { to: 'attacker' }, acceptedAt: 0 }
+    await harness.ctx.storage.set(`__commands:${NAME}:planted`, planted)
+    const { client, double, runs } = setup(extra as never, harness)
+    await flush()
+    await expect(client.run('send', { to: 'ada' })).resolves.toEqual({ sent: 'ada' })
+    await flush()
+    expect(runs).toEqual(['send:ada'])
+    await expect(status(double, 'planted')).resolves.toEqual({ state: 'unknown' })
+    await expect(harness.ctx.storage.get(`__commands:${NAME}:planted`)).resolves.toEqual(planted)
+  })
+})
+
 describe('durable channels keep a private copy that makes a restart safe', () => {
   /** A fresh worker on the same plugin data: a new harness holding the old storage. */
   async function restart(old: TestHarness): Promise<Setup> {
