@@ -56,6 +56,9 @@ const OUTCOME_UNKNOWN = "Lost contact with the plugin's background service. The 
 const NOT_JSON = 'A command input must be plain JSON data.'
 /** Pause between status calls, so a fast `pending` answer cannot become a busy loop. */
 const POLL_GAP_MS = 250
+/** How long to keep asking while the backend is unreachable (a restart takes seconds). */
+const RECONNECT_WINDOW_MS = 60_000
+const RECONNECT_GAP_MS = 2_000
 const SETTLED_STATES = new Set(['done', 'failed', 'refused', 'unknown'])
 
 export function createCommandClient<M extends CommandMap = CommandMap>(
@@ -122,16 +125,26 @@ async function awaitResult(
   }
 }
 
-/** Once the backend has the command, any failure to hear back means the outcome is unknown. */
+/**
+ * Ask until the backend answers. A failed call usually means the backend is restarting; asking
+ * again cannot run anything, and a durable command may still finish — or be refused — after the
+ * restart, so the client keeps asking for {@link RECONNECT_WINDOW_MS} before it calls the
+ * outcome unknown.
+ */
 async function askStatus(backend: BridgeBackend, name: string, id: string): Promise<StatusReply> {
-  let reply: unknown
-  try {
-    reply = await backend.invoke(statusMethod(name), { v: PROTOCOL_VERSION, id })
-  } catch {
-    throw new CommandError('outcome-unknown', OUTCOME_UNKNOWN)
+  const giveUpAt = Date.now() + RECONNECT_WINDOW_MS
+  for (;;) {
+    let reply: unknown
+    try {
+      reply = await backend.invoke(statusMethod(name), { v: PROTOCOL_VERSION, id })
+    } catch {
+      if (Date.now() >= giveUpAt) throw new CommandError('outcome-unknown', OUTCOME_UNKNOWN)
+      await new Promise((resolve) => setTimeout(resolve, RECONNECT_GAP_MS))
+      continue
+    }
+    if (!isStatusReply(reply)) throw new CommandError('outcome-unknown', OUTCOME_UNKNOWN)
+    return reply
   }
-  if (!isStatusReply(reply)) throw new CommandError('outcome-unknown', OUTCOME_UNKNOWN)
-  return reply
 }
 
 function isStatusReply(value: unknown): value is StatusReply {

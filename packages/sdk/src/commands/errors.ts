@@ -11,8 +11,9 @@
  * - `invalid-input` — the input is not plain JSON data, or the command's `parse` rejected it.
  *   Nothing ran.
  * - `failed` — the command ran and threw, or ran but its result could not be sent back.
- * - `outcome-unknown` — contact was lost after the backend may have accepted it. It may or may
- *   not have run; never retry it blindly.
+ * - `outcome-unknown` — contact was lost after the backend may have accepted it, and did not come
+ *   back within a minute (or the backend no longer knew the command). It may or may not have run;
+ *   never retry it blindly.
  */
 export type CommandErrorCode =
   | 'host-too-old'

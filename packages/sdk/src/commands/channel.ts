@@ -298,7 +298,7 @@ class CommandQueue {
     const input = this.checkedInput(rawInput)
     this.checkCapacity()
     const parsed = parseOrRefuse(spec, input)
-    const entry = this.addEntry(String(type), spec, input, parsed)
+    const entry = this.addEntry(String(type), spec.mode ?? 'write', input, parsed)
     await this.saveCopy(entry)
     this.enqueue(entry)
     return entry.id
@@ -368,7 +368,7 @@ class CommandQueue {
 
   private addEntry(
     type: string,
-    spec: CommandSpecs[string],
+    mode: CommandMode,
     input: unknown,
     parsed: unknown,
     id: string = crypto.randomUUID(),
@@ -378,7 +378,7 @@ class CommandQueue {
     const settled = new Promise<void>((resolve) => {
       markSettled = resolve
     })
-    const entry: Entry = { id, type, mode: spec.mode ?? 'write', acceptedAt, settled, markSettled, input, parsed, state: 'queued', startedAt: 0, settledAt: 0 }
+    const entry: Entry = { id, type, mode, acceptedAt, settled, markSettled, input, parsed, state: 'queued', startedAt: 0, settledAt: 0 }
     this.entries.set(id, entry)
     return entry
   }
@@ -508,13 +508,15 @@ class CommandQueue {
     try {
       parsed = spec.parse(copy.input)
     } catch {
-      return this.dropCopy(key, id, 'no longer valid')
+      return this.dropCopy(key, id, 'invalid')
     }
-    this.enqueue(this.addEntry(copy.type, spec, copy.input, parsed, id, copy.acceptedAt))
+    this.enqueue(this.addEntry(copy.type, spec.mode ?? 'write', copy.input, parsed, id, copy.acceptedAt))
   }
 
-  private async dropCopy(key: string, id: string, why: string): Promise<void> {
-    this.ctx.log.warn(`[commands] ${this.config.name}: saved command ${id} is ${why}; dropped without running.`)
+  /** It never ran, and the backend knows it: a panel still waiting is told `refused`, not left guessing. */
+  private async dropCopy(key: string, id: string, reason: keyof typeof DROP_REFUSALS): Promise<void> {
+    this.ctx.log.warn(`[commands] ${this.config.name}: saved command ${id} was dropped without running (${reason}).`)
+    this.settle(this.addEntry('', 'write', undefined, undefined, id), 'refused', undefined, DROP_REFUSALS[reason])
     try {
       await this.ctx.storage.delete(key)
     } catch {
@@ -522,6 +524,11 @@ class CommandQueue {
     }
   }
 }
+
+const DROP_REFUSALS = {
+  unreadable: 'Its saved copy could not be read after a restart, so it was not run.',
+  invalid: "After an update its saved input no longer passes the command's checks, so it was not run.",
+} as const
 
 const CLAIM_REFUSALS = {
   missing: 'Its saved copy is gone, so it was not run.',

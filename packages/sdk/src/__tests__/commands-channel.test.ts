@@ -326,6 +326,63 @@ describe('durable channels keep a private copy that makes a restart safe', () =>
     expect(await savedCopies(after.harness)).toBe(0)
   })
 
+  describe('a panel still waiting when the plugin restarts', () => {
+    /** Accept a stuck write, then start `send` from a panel, then restart onto `commands`. */
+    async function restartWhileWaiting(options: { durable: boolean; commands: CommandSpecs }) {
+      vi.useFakeTimers()
+      const double = createRpcDouble()
+      const before = createTestContext({ rpc: double.rpc })
+      createCommandChannel(before.ctx, { name: NAME, commands: demoCommands([]), durable: options.durable })
+      await acceptedId(double, 'stuck', null)
+      const client = createCommandClient<CommandMapOf<DemoCommands>>(NAME, { backend: double.backend })
+      const outcome = client.run('send', { to: 'b' }).then(
+        (result) => ({ result }),
+        (error: unknown) => ({ error })
+      )
+      await vi.advanceTimersByTimeAsync(0)
+      double.setStopped(true)
+      const after = createTestContext({ rpc: double.rpc })
+      for (const { key, value } of await before.ctx.storage.list()) await after.ctx.storage.set(key, value)
+      await createCommandChannel(after.ctx, { name: NAME, commands: options.commands, durable: options.durable }).ready
+      double.setStopped(false)
+      await vi.advanceTimersByTimeAsync(5_000)
+      return outcome
+    }
+
+    it('is told refused — it never ran — when the update can no longer accept its saved input', async () => {
+      const runs: string[] = []
+      const updated = {
+        ...demoCommands(runs),
+        send: defineCommand({
+          parse: (input: unknown) => {
+            const { to, subject } = asRecord(input)
+            if (typeof subject !== 'string') throw new Error('subject is now required')
+            return { to: String(to), subject }
+          },
+          run: async ({ to }) => {
+            runs.push(`send:${to}`)
+            return { sent: to }
+          },
+        }),
+      }
+      const outcome = await restartWhileWaiting({ durable: true, commands: updated })
+      expect(outcome).toMatchObject({ error: { code: 'refused', message: expect.stringContaining('no longer passes') } })
+      expect(runs).toEqual([])
+    })
+
+    it('gets the result when its durable command resumes after the restart', async () => {
+      const runs: string[] = []
+      const outcome = await restartWhileWaiting({ durable: true, commands: demoCommands(runs) })
+      expect(outcome).toEqual({ result: { sent: 'b' } })
+      expect(runs).toEqual(['send:b'])
+    })
+
+    it('is told the outcome is unknown when the channel was not durable', async () => {
+      const outcome = await restartWhileWaiting({ durable: false, commands: demoCommands([]) })
+      expect(outcome).toMatchObject({ error: { code: 'outcome-unknown' } })
+    })
+  })
+
   it('refuses at creation a durable input limit the host could not store', () => {
     const { ctx } = createTestContext()
     expect(() =>
@@ -388,4 +445,3 @@ export type _ClientTyping = [
   ? true
   : never
 export const _clientTyping: _ClientTyping = true
-void ({} as CommandSpecs)

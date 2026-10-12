@@ -102,12 +102,23 @@ describe('a failed start is classified by what the host actually said', () => {
 })
 
 describe('once the backend has accepted the command', () => {
-  it('a backend that stops mid-command leaves the outcome unknown', async () => {
-    const { double, client } = slowChannel()
-    const run = client.run('slow', null)
-    await new Promise((resolve) => setImmediate(resolve))
+  it('keeps asking while the backend restarts, then calls the outcome unknown if it never returns', async () => {
+    vi.useFakeTimers()
+    const { double } = slowChannel()
+    let attempts = 0
+    const counting: BridgeBackend = {
+      invoke: (method, ...args) => {
+        attempts++
+        return double.backend.invoke(method, ...args)
+      },
+    }
+    const outcome = createCommandClient('demo', { backend: counting }).run('slow', null).catch((err: unknown) => err)
+    await vi.advanceTimersByTimeAsync(0)
     double.setStopped(true)
-    await expect(run).rejects.toMatchObject({ code: 'outcome-unknown' })
+    await vi.advanceTimersByTimeAsync(61_000)
+    expect(await outcome).toMatchObject({ code: 'outcome-unknown' })
+    // One start, then a status call every 2 seconds for the minute the backend stayed away.
+    expect(attempts).toBeGreaterThan(20)
   })
 
   it.each([undefined, 'garbage', { state: 'pending' }, { state: 'bogus' }])(
