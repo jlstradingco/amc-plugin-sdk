@@ -112,6 +112,8 @@ export interface CommandChannel<S extends CommandSpecs> {
   /**
    * Settle every old row still marked to-run in a legacy command table, once, WITHOUT running it.
    * Call it at start-up: a row an agent re-arms later is settled again on the next start.
+   * It reads page after page, however many rows there are. Rows that do not change when retired
+   * are left for the next start with one warning, so it can never loop forever.
    * Returns how many rows it settled.
    */
   retireRows(collection: string, options?: RetireRowsOptions): Promise<number>
@@ -124,6 +126,10 @@ const STATUS_WAIT_MS = 15_000
 /** Finished results nobody collected, beyond this many, are dropped oldest first. */
 const MAX_UNCLAIMED_RESULTS = 200
 const DEFAULT_ACTIVE_STATUSES = ['pending', 'queued', 'running']
+/** Rows retireRows reads at a time: Omniscio's own default page. */
+const RETIRE_PAGE = 100
+/** One read counts what a stalled retire left behind; Omniscio caps any page at 10,000 rows. */
+const COUNT_PAGE = 10_000
 
 type Settled = 'done' | 'failed'
 
@@ -238,15 +244,52 @@ function isRequest(value: unknown): value is Record<string, unknown> {
 
 async function retireRows(ctx: PluginContext, collection: string, options: RetireRowsOptions = {}): Promise<number> {
   const { statusColumn = 'status', activeStatuses = DEFAULT_ACTIVE_STATUSES, retiredStatus = 'error' } = options
+  if (activeStatuses.includes(retiredStatus)) {
+    throw new Error(
+      `retireRows: retiredStatus "${retiredStatus}" is one of the activeStatuses, so a retired row would still look to-run`
+    )
+  }
   const note = options.noteColumn ? { [options.noteColumn]: RETIRED_ROW_NOTE } : {}
+  const update = { [statusColumn]: retiredStatus, ...note }
   let retired = 0
+  let left = 0
   for (const status of activeStatuses) {
-    for (const row of await ctx.db.query(collection, { where: { [statusColumn]: status } })) {
-      await ctx.db.update(collection, String(row.id), { [statusColumn]: retiredStatus, ...note })
-      retired++
-    }
+    const where = { [statusColumn]: status }
+    const outcome = await retireStatus(ctx, collection, where, update)
+    retired += outcome.retired
+    if (outcome.stalled) left += (await ctx.db.query(collection, { where, limit: COUNT_PAGE })).length
+  }
+  if (left > 0) {
+    ctx.log.warn(
+      `[commands] retireRows: ${left} rows in "${collection}" are still marked to run after being retired; ` +
+        'the next start settles them again.'
+    )
   }
   return retired
+}
+
+/**
+ * Retire the rows matching `where`, re-reading the first page until it comes back short: each
+ * update moves a row out of `where`, so an offset would skip rows. A page with nothing new means
+ * the rows are not changing (an agent re-arming them as fast as they go), so it stops there.
+ */
+async function retireStatus(
+  ctx: PluginContext,
+  collection: string,
+  where: Record<string, unknown>,
+  update: Record<string, unknown>
+): Promise<{ retired: number; stalled: boolean }> {
+  const seen = new Set<string>()
+  for (;;) {
+    const page = await ctx.db.query(collection, { where, limit: RETIRE_PAGE })
+    const fresh = page.filter((row) => !seen.has(String(row.id)))
+    for (const row of fresh) {
+      seen.add(String(row.id))
+      await ctx.db.update(collection, String(row.id), update)
+    }
+    if (page.length < RETIRE_PAGE) return { retired: seen.size, stalled: fresh.length < page.length }
+    if (fresh.length === 0) return { retired: seen.size, stalled: true }
+  }
 }
 
 class CommandQueue {
