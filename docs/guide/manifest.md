@@ -189,6 +189,7 @@ Declare user-configurable settings that appear in AMC's Settings > Plugins > You
 | `min` | number | No | Minimum value (for `number` type) |
 | `max` | number | No | Maximum value (for `number` type) |
 | `testAction` | object | No | Adds a test button next to the setting (see below) |
+| `agentWritable` | boolean | No | Let an outside (control-server) change to this setting apply at once; without it the change waits for the person's approval. See [Outside writes](#outside-writes-agentwritable) |
 
 ### Test Actions
 
@@ -278,6 +279,53 @@ a duplicate.
 ::: tip
 Every collection automatically gets an `id` column (TEXT, primary key), a `created_at` column, and an `updated_at` column. You do not need to declare these.
 :::
+
+### Outside writes: `agentWritable`
+
+Omniscio's local control server — the API every AI agent session on the computer can reach — has
+generic routes that write plugin tables (`POST`, `PATCH` and `DELETE /plugins/:id/db/:collection`).
+On Omniscio builds that carry the plugin-table fence, those writes are refused (HTTP 403,
+`PLUGIN_COLLECTION_NOT_AGENT_WRITABLE`) for every key unless the table opts in:
+
+```json
+"notes": {
+  "columns": { "title": "text", "body": "text" },
+  "agentWritable": true
+}
+```
+
+- **Opt in only plain data an agent may freely edit** — never a table your plugin acts on: a command
+  queue, a job list, a rule it runs.
+- **Your own backend and panel write every table as before.** The fence covers only the outside door.
+- **Reads stay open.** Agents can still read every table.
+- **Older Omniscio builds ignore the key** and leave every table writable from outside, so never rely
+  on it for safety: take commands through the [command channel](./commands) instead.
+
+The same key on a setting (`settings[].agentWritable`) lets an outside settings change apply at
+once. Without it the change waits for the person's approval card, and a `password` setting can never
+be changed from outside.
+
+### Command tables: `commandTableWaiver`
+
+`amc-plugin validate`, `preflight` and `publish` fail when a table can hold a runnable command — an
+instruction column (`type`, `command`, `action`, `op`, `kind`, `method`…), an argument column
+(`payload`, `args`, `params`, `input`, `body`, `data`, `prompt`, also as `payloadJson` /
+`payload_json`) and a status column (`status`, `state`, `*_status`). See
+[Panel commands](./commands) for the safe pattern and the [CLI reference](../reference/cli#command-tables)
+for the full rule.
+
+If such a table is genuinely safe — say, a read-only history of finished commands the backend never
+reads back — say why in the table itself:
+
+```json
+"command_log": {
+  "columns": { "type": "text", "payload": "json", "status": "text" },
+  "commandTableWaiver": "History of finished commands for the activity view; the backend never reads it back."
+}
+```
+
+The waiver must be 20 to 500 characters. Marketplace review sees it; Omniscio ignores it. A waiver
+never covers a table that is also `agentWritable`.
 
 ## `migrations` Array
 

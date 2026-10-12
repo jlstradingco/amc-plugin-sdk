@@ -109,6 +109,7 @@ amc-plugin validate
 | Check | Description |
 |---|---|
 | Manifest schema | Validates `manifest.json` against the SDK schema |
+| Command tables | Fails on a table that can hold a runnable command; warns on fuzzier shapes — see [Command tables](#command-tables) |
 | SDK version | Ensures `sdkVersion` field is present |
 | UI entry point | Verifies the declared UI entry file exists |
 | Backend entry point | Verifies the declared backend entry file exists |
@@ -123,6 +124,39 @@ amc-plugin validate
 ```
 
 **Exit codes:** `0` all checks passed, `1` one or more checks failed.
+
+#### Command tables
+
+A plugin's backend must act only on commands from its own panel or its own code, never on a table
+row: AI agents on the person's computer can read every table, and on older Omniscio builds write
+them too (see [Panel commands](../guide/commands)). So `validate`, `preflight` and `publish` all run
+one rule over the tables your manifest declares. It reads only `manifest.json`, so the three always
+agree. It is the same `checkCommandTables` function the SDK exports.
+
+Column names are read by their words: `payloadJson`, `payload_json` and `payload-json` all read as
+"payload", and a trailing `json` / `text` / `raw` word is ignored.
+
+| Result | When |
+|---|---|
+| **Fails** | A table has an **instruction** column (any word `type`, `command`, `cmd`, `action`, `op`, `operation`, `kind`, `method`, `verb`), an **argument** column (last word `payload`, `args`, `arguments`, `params`, `parameters`, `input`, `inputs`, `body`, `data`, `prompt`) and a **status** column (last word `status` or `state`) |
+| **Warns** | A prompt-like column (last word `prompt`, `instruction(s)`, `script`) with a status; a queue-like table name (`queue`, `job(s)`, `command(s)`, `action(s)`, `outbox`…) with a status and an instruction or argument column; a table that is `agentWritable` and has a status |
+| **Warns** (`validate` only) | Shipped JS that asks a table for its `pending` or `queued` rows (`.query(…, { where: { status: 'pending' } })`) |
+| **Passes with a notice** | A failing table that carries a written `commandTableWaiver` (20–500 characters) and is not `agentWritable` |
+
+**How to fix a failure:** move the commands onto the [command channel](../guide/commands) and
+reduce the table to a job list (`label`, `status`, `error`, times), or — if the table is genuinely
+safe — add a `commandTableWaiver` explaining why. Marketplace review sees the waiver.
+
+**What it cannot catch.** It is a second line of defence, not a proof:
+
+- an instruction without an instruction column (a `prompt` + `status` table only warns);
+- programs stored as data (a workflow graph in a row), or a re-armable status over plain data;
+- authority fields (an approval flag, a spending cap, a host that receives secrets);
+- a JSON blob hiding the shape, or table names built at run time;
+- anyone who skips it: `publish --skip-preflight`, a CLI older than 3.2.0, or a raw upload.
+
+The plugin-table fence in Omniscio (`agentWritable`) and the command channel are the real
+protection; this check stops the classic mistake from shipping by accident.
 
 ---
 
@@ -180,6 +214,7 @@ amc-plugin preflight [options]
 | Version | Manifest version is already published (marketplace versions are **immutable**) or older than the latest published version | &mdash; |
 | Changelog | &mdash; | No changelog provided |
 | Permissions | An unknown permission is declared | Duplicate permissions |
+| Command tables | A table can hold a runnable command ([the rule](#command-tables)) and carries no valid waiver | A fuzzier command-like shape |
 | Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
 | Listing | &mdash; | No `README.md` at the plugin root, an absent or empty `plugin.screenshots`, or an absent or empty `plugin.links` — the marketplace detail page would be bare (see [Publishing → What your listing shows](../guide/publishing.md#what-your-listing-shows)) |
 
