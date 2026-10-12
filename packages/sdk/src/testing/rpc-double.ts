@@ -29,41 +29,46 @@ const NOT_RUNNING = 'Plugin backend is not running'
 const STOPPED_MID_CALL = 'Plugin was stopped'
 const ARGS_NOT_SERIALISABLE = 'Bridge args not serialisable for backend.invoke'
 
+/** What the fake host holds between calls. */
+interface HostState {
+  readonly handlers: Map<string, (...args: unknown[]) => unknown>
+  readonly calls: RpcDouble['calls']
+  readonly stopListeners: Set<() => void>
+  stopped: boolean
+}
+
 export function createRpcDouble(): RpcDouble {
-  const handlers = new Map<string, (...args: unknown[]) => unknown>()
-  const calls: RpcDouble['calls'] = []
-  const stopListeners = new Set<() => void>()
-  let stopped = false
-
-  async function invoke(method: string, ...args: unknown[]): Promise<unknown> {
-    if (stopped) throw new Error(NOT_RUNNING)
-    const delivered = deliver(args)
-    calls.push({ method, args: delivered })
-    const handler = handlers.get(method)
-    if (!handler) throw new Error(`No backend handler registered for '${method}'`)
-    const result = await runUntilStopped(() => handler(...delivered), stopListeners)
-    try {
-      return jsonImage(result)
-    } catch {
-      throw new Error(HOST_NON_SERIALIZABLE_TEXT)
-    }
-  }
-
+  const state: HostState = { handlers: new Map(), calls: [], stopListeners: new Set(), stopped: false }
   return {
     rpc: {
       handle: (method, handler) => {
-        handlers.set(method, handler)
+        state.handlers.set(method, handler)
       },
       removeHandler: (method) => {
-        handlers.delete(method)
+        state.handlers.delete(method)
       },
     },
-    backend: { invoke },
-    calls,
+    backend: { invoke: (method, ...args) => invokeLikeHost(state, method, args) },
+    calls: state.calls,
     setStopped: (value) => {
-      stopped = value
-      if (value) for (const stop of [...stopListeners]) stop()
+      state.stopped = value
+      if (value) for (const stop of [...state.stopListeners]) stop()
     },
+  }
+}
+
+/** One `backend.invoke`, failing and transforming data the way the host does. */
+async function invokeLikeHost(state: HostState, method: string, args: unknown[]): Promise<unknown> {
+  if (state.stopped) throw new Error(NOT_RUNNING)
+  const delivered = deliver(args)
+  state.calls.push({ method, args: delivered })
+  const handler = state.handlers.get(method)
+  if (!handler) throw new Error(`No backend handler registered for '${method}'`)
+  const result = await runUntilStopped(() => handler(...delivered), state.stopListeners)
+  try {
+    return jsonImage(result)
+  } catch {
+    throw new Error(HOST_NON_SERIALIZABLE_TEXT)
   }
 }
 
