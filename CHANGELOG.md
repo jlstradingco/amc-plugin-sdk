@@ -26,8 +26,8 @@ carrying a perfectly good logo in their own package.
   is a Lucide name, and fails when it is a packaged path that is missing from the
   package, is not among the entries `package` ships (so a logo under `images/` fails
   rather than silently disappearing), or is an unsafe path (`..`, a leading `/`, a drive
-  letter or a URL scheme). `create` refuses an unsafe `--icon` path and writes the
-  placeholder only for `.svg` paths.
+  letter or a URL scheme). `create` refuses an unsafe `--icon` path, or one the template
+  would not ship (use a path under `assets/`), and writes the placeholder only for `.svg` paths.
 - The SDK exports a new `classifyPluginIcon()` that returns `lucide-name`,
   `packaged-path`, `url` or `unsafe-path`, so tools can make the same distinction.
 - The manifest guide now explains both icon forms and corrects the stated fallback.

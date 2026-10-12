@@ -143,7 +143,9 @@ piece in those moments.
 
 `amc-plugin create` scaffolds `assets/icon.svg` with a placeholder for you to replace. It writes
 a placeholder only for an `.svg` path inside the project; for another format such as `.png`,
-add the file yourself, and it refuses a path that escapes the project.
+add the file yourself. It refuses a path that escapes the project, and a path outside the folders
+the package ships (`assets/` for TypeScript templates; `assets/`, `ui/` and `prompts/` for `webview`),
+so `create` and `validate` always agree.
 
 ## `settings` Array
 

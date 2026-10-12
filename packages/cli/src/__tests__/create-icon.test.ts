@@ -130,4 +130,40 @@ describe('plugin icon: scaffold default and validate', () => {
     expect(output).not.toContain('Icon file present')
     expect(status).not.toBe(0)
   }, SHELL_OUT_TIMEOUT_MS)
+
+  // `create` and `validate` must agree: an --icon path the scaffold's package would not ship
+  // can never pass validate, so it is refused up front instead of leaving a plugin that fails.
+  const createRaw = (name: string, template: string, icon: string) =>
+    spawnSync(
+      'node',
+      [cliDist, 'create', name, '--template', template, '--display-name', 'x', '--description', 'x',
+        '--author', 'x', '--icon', icon, '--skip-install', '--skip-git'],
+      { cwd: tmpDir, encoding: 'utf-8' },
+    )
+
+  it.each([
+    ['icon.png', 'webview'],
+    ['images/logo.svg', 'webview'],
+    ['icon.png', 'basic'],
+    ['ui/logo.svg', 'basic'],
+  ])('refuses --icon %s on the %s template, which would not ship it, and writes nothing', (icon, template) => {
+    const name = `icon-refuse-${template}-${icon.replace(/[^a-z]/g, '-')}`
+    const r = createRaw(name, template, icon)
+    expect(r.status).not.toBe(0)
+    expect(`${r.stdout}${r.stderr}`).toContain('assets/')
+    expect(fs.existsSync(path.join(tmpDir, name))).toBe(false)
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('accepts a webview icon under ui/, which a flat plugin ships, and it passes validate', () => {
+    const dir = create('icon-webview-ui', ['--icon ui/logo.svg'])
+    expect(fs.existsSync(path.join(dir, 'ui', 'logo.svg'))).toBe(true)
+    const { status, output } = validate(dir)
+    expect(output).toContain('Icon file present (ui/logo.svg)')
+    expect(status).toBe(0)
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('does not treat a lookalike extension as an .svg and write SVG text into it', () => {
+    const dir = create('icon-xsvg', ['--icon assets/logo.xsvg'])
+    expect(fs.existsSync(path.join(dir, 'assets', 'logo.xsvg'))).toBe(false)
+  }, SHELL_OUT_TIMEOUT_MS)
 })

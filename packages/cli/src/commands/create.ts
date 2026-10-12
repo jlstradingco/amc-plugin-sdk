@@ -9,6 +9,18 @@ import { ok, fail, info, actionableError } from '../lib/output.js'
 const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
 type Template = typeof TEMPLATES[number]
 
+const isSvgPath = (icon: string): boolean => icon.toLowerCase().endsWith('.svg')
+
+// Top-level folders a scaffolded plugin's package ships a packaged icon from — the same rule
+// `validate` applies via collectPackageEntries. No template ships files at the project root,
+// and a TypeScript plugin's package carries only dist/ (build output) and assets/.
+const SHIPPED_ICON_ROOTS: Record<Template, string[]> = {
+  basic: ['assets'],
+  'with-backend': ['assets'],
+  full: ['assets'],
+  webview: ['assets', 'ui', 'prompts'],
+}
+
 const CATEGORIES = ['planning', 'development', 'testing', 'devops', 'productivity', 'other'] as const
 
 function escapeHtml(str: string): string {
@@ -359,6 +371,14 @@ export const createCommand = new Command('create')
       )
       process.exit(1)
     }
+    const shippedRoots = SHIPPED_ICON_ROOTS[template]
+    if (iconKind === 'packaged-path' && !shippedRoots.includes(icon.split('/')[0])) {
+      actionableError(
+        `--icon ${icon} would not be shipped in the package`,
+        `The ${template} template ships only ${shippedRoots.join(', ')}. Use a path under assets/, for example assets/icon.svg.`
+      )
+      process.exit(1)
+    }
 
     const targetDir = path.resolve(process.cwd(), name)
     if (fs.existsSync(targetDir)) {
@@ -475,10 +495,10 @@ describe('${displayName} backend', () => {
     // Only written when the icon is a packaged .svg path and nothing is there already: a
     // developer who passed --icon with a Lucide name is untouched, and SVG text is never
     // written into a .png/.jpg path. Any other packaged format is the developer's to add.
-    if (iconKind === 'packaged-path' && !/.svg$/i.test(icon)) {
+    if (iconKind === 'packaged-path' && !isSvgPath(icon)) {
       info(`Add your logo at ${icon} before you package — the scaffold only writes an .svg placeholder.`)
     }
-    if (iconKind === 'packaged-path' && /.svg$/i.test(icon)) {
+    if (iconKind === 'packaged-path' && isSvgPath(icon)) {
       const iconTarget = path.join(targetDir, icon)
       if (!fs.existsSync(iconTarget)) {
         fs.mkdirSync(path.dirname(iconTarget), { recursive: true })
