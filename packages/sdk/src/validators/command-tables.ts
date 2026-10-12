@@ -59,7 +59,7 @@ export interface ColumnRoles {
   prompt: boolean
 }
 
-interface TableSchema {
+export interface TableSchema {
   columns: Record<string, unknown>
   agentWritable?: unknown
   commandTableWaiver?: unknown
@@ -168,7 +168,8 @@ function fuzzyFindings(table: string, shape: TableShape, agentWritable: boolean)
   return findings
 }
 
-function declaredTables(manifest: unknown): Array<[string, TableSchema]> {
+/** The manifest's declared tables, skipping anything malformed. Shared with the testing kit. */
+export function declaredTables(manifest: unknown): Array<[string, TableSchema]> {
   const storage = isRecord(manifest) ? manifest.storage : undefined
   const collections = isRecord(storage) ? storage.collections : undefined
   if (!isRecord(collections)) return []

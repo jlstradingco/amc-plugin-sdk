@@ -34,6 +34,8 @@ import type {
 
 export { createRpcDouble } from './rpc-double.js'
 export type { RpcDouble } from './rpc-double.js'
+export { checkForgedRowsAreInert, describeForgedRowsAreInert } from './forged-rows.js'
+export type { ForgedRowsOptions, TestApi } from './forged-rows.js'
 
 /** Zeroed spend breakdown — the shape a brand-new install reports. */
 function emptySpendBreakdown(): SpendReportBreakdown {
