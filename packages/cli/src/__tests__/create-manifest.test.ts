@@ -8,7 +8,7 @@ import { buildManifest } from '../commands/create.js'
 // github-issues example (cron gained required `label` / `approvalRequired`): the
 // `full` template is the only scaffold carrying a cron job + cli endpoints, so a
 // schema change there would slip through until someone ran validate by hand.
-const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
+const TEMPLATES = ['basic', 'with-backend', 'full', 'webview', 'widget'] as const
 
 const base = {
   id: 'my-plugin',
@@ -33,6 +33,18 @@ describe('buildManifest', () => {
       ui: { entryPoint: string }
     }
     expect(manifest.ui.entryPoint).toBe('ui/index.html')
+  })
+
+  it('widget template is a flat webview that declares the titlebar widget', () => {
+    const manifest = buildManifest({ ...base, template: 'widget' }) as {
+      ui: { entryPoint: string; widget: { entryPoint: string } }
+      permissions: string[]
+    }
+    expect(manifest.ui.entryPoint).toBe('ui/index.html')
+    expect(manifest.ui.widget.entryPoint).toBe('ui/widget.html')
+    // chrome.widget requires an explicit chrome beside it; the validator enforces the pairing.
+    expect(manifest.permissions).toEqual(['chrome', 'chrome.widget'])
+    expect('backend' in manifest).toBe(false)
   })
 
   it('compiled templates point UI at the dist build output', () => {

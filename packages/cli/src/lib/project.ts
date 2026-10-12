@@ -13,7 +13,7 @@ export function isTypeScriptProject(cwd: string): boolean {
 }
 
 interface FlatManifestLike {
-  ui?: { entryPoint?: string }
+  ui?: { entryPoint?: string; widget?: { entryPoint?: string } }
   backend?: { entryPoint?: string }
 }
 
@@ -49,6 +49,8 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   }
 
   addTopSegment(manifest.ui?.entryPoint)
+  // The titlebar widget's popover page ships too, wherever the author put it.
+  addTopSegment(manifest.ui?.widget?.entryPoint)
   addTopSegment(manifest.backend?.entryPoint)
   for (const dir of CONVENTIONAL_DIRS) names.add(dir)
 

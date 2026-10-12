@@ -337,3 +337,58 @@ describe('createTestContext — spend', () => {
     })
   })
 })
+
+// `core` mirrors the host's read rules (plugin-core-read-service.ts): an unknown
+// id is `null` / `[]` rather than an error, and `messages.list` caps at 200 where
+// `window` can only lower the cap.
+describe('createTestContext — core (coreRead)', () => {
+  const sessions = [
+    { id: 's1', projectId: 'p1', name: 'One', status: 'idle', lastActiveAt: '2026-01-01T00:00:00.000Z' },
+    { id: 's2', projectId: 'p2', name: 'Two', status: 'running', lastActiveAt: '2026-01-02T00:00:00.000Z' },
+  ]
+  const projects = [
+    { id: 'p1', name: 'First', folderPath: '/a' },
+    { id: 'p2', name: 'Second', folderPath: '/b' },
+  ]
+  const makeMessages = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `m${i}`,
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `message ${i}`,
+      timestamp: '2026-01-01T00:00:00.000Z',
+    }))
+
+  it('is empty by default, like a brand-new install', async () => {
+    const { ctx } = createTestContext()
+    expect(await ctx.core.sessions.list()).toEqual([])
+    expect(await ctx.core.projects.list()).toEqual([])
+    expect(await ctx.core.sessions.get('nope')).toBeNull()
+    expect(await ctx.core.projects.get('nope')).toBeNull()
+    expect(await ctx.core.messages.list('nope')).toEqual([])
+  })
+
+  it('lists and gets seeded sessions and projects, filtering sessions by projectId', async () => {
+    const { ctx } = createTestContext({ core: { sessions, projects } })
+    expect(await ctx.core.sessions.list()).toHaveLength(2)
+    expect((await ctx.core.sessions.list({ projectId: 'p2' })).map((s) => s.id)).toEqual(['s2'])
+    expect((await ctx.core.sessions.get('s1'))?.name).toBe('One')
+    expect((await ctx.core.projects.get('p2'))?.folderPath).toBe('/b')
+    expect(await ctx.core.sessions.get('missing')).toBeNull()
+  })
+
+  it('caps messages at 200 and lets window only lower it', async () => {
+    const { ctx } = createTestContext({
+      core: { sessions, messages: { s1: makeMessages(250) } },
+    })
+    expect(await ctx.core.messages.list('s1')).toHaveLength(200)
+    expect(await ctx.core.messages.list('s1', 5)).toHaveLength(5)
+    expect(await ctx.core.messages.list('s1', 1000)).toHaveLength(200)
+    expect(await ctx.core.messages.list('s1', 0)).toHaveLength(200)
+    expect((await ctx.core.messages.list('s1', 2)).map((m) => m.id)).toEqual(['m0', 'm1'])
+  })
+
+  it('returns [] for messages of a session it was not given', async () => {
+    const { ctx } = createTestContext({ core: { sessions, messages: { ghost: makeMessages(3) } } })
+    expect(await ctx.core.messages.list('ghost')).toEqual([])
+  })
+})

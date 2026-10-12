@@ -62,6 +62,7 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | **cli** | Logs handler registration but endpoints are not reachable |
 | **sidebar** | Logs `setBadge` and `setItems` calls |
 | **toast** | Logs toast messages and notifications to the console |
+| **core** | Read-only sample data: three sessions, two projects and a few messages. An unknown id answers `null` / `[]`, and `messages.list` honours the 200-message cap and `window` |
 
 ::: tip
 The `http` mock is a passthrough to real `fetch`, so network requests to external APIs work in the dev shell exactly as they would in production. This is useful for testing integrations.
@@ -144,10 +145,25 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | Notifications | Logs to console | Real OS notifications |
 | Plugin permissions | Not enforced | Enforced at runtime |
 | Sidebar badge/items | Logs to console | Updates AMC sidebar |
+| Titlebar widget (`AgentMC.widget`) | Not available | Drawn by Omniscio in the titlebar |
+| `ctx.core` data | Fixed sample data | The user's real sessions, projects and messages |
 
 ::: tip
 For integration testing with real AMC APIs, install your built plugin into AMC directly. Use `npm run package` to create the `.amcplugin` file, then install it through Settings > Plugins > Install from file.
 :::
+
+### Titlebar widgets are tested inside Omniscio
+
+The dev shell has no titlebar and injects no widget bridge into its webview, so `AgentMC.widget` is **not available** there: calling `AgentMC.widget.set(...)` throws a `TypeError`. The SDK deliberately ships no widget mock, since a fake would only tell you your call type-checks, not that the host accepts and draws it. Guard the call so the rest of your page still runs in the shell:
+
+```typescript
+const amc = (window as unknown as { AgentMC?: AgentMC }).AgentMC
+if (amc?.widget?.set) {
+  await amc.widget.set({ shape: 'stat', value: '3', label: 'open items', icon: 'Bell' })
+}
+```
+
+To see a widget, run `npm run package` and install the `.amcplugin` through Settings > Plugins > Install from file. The `widget` template (`amc-plugin create my-widget --template widget`) already contains this guard.
 
 ## Window Configuration
 

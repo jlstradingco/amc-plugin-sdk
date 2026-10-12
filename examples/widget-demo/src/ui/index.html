@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p { color: var(--surface-500, #666); margin-bottom: 16px; }
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    label { min-width: 72px; font-size: 0.875rem; }
+    button, select { padding: 6px 12px; font: inherit; }
+    #status { margin-top: 16px; font-size: 0.875rem; color: var(--surface-500, #666); }
+  </style>
+</head>
+<body>
+  <h1>Widget Demo</h1>
+  <p>Pick a shape and a tone, then press Show. The widget appears in the Omniscio titlebar.</p>
+
+  <div class="row">
+    <label for="shape">Shape</label>
+    <select id="shape">
+      <option value="stat">stat</option>
+      <option value="pill">pill</option>
+      <option value="dot">dot</option>
+      <option value="gauge">gauge</option>
+      <option value="sparkline">sparkline</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="tone">Tone</label>
+    <select id="tone">
+      <option value="neutral">neutral</option>
+      <option value="running">running</option>
+      <option value="needs-you">needs-you</option>
+      <option value="error">error</option>
+      <option value="ember">ember</option>
+      <option value="accent">accent</option>
+    </select>
+  </div>
+  <div class="row">
+    <label for="progress">Progress</label>
+    <input id="progress" type="range" min="0" max="100" value="60">
+  </div>
+  <div class="row">
+    <button id="btn-show">Show</button>
+    <button id="btn-clear">Clear</button>
+  </div>
+  <p id="status"></p>
+
+  <script src="plugin.js"></script>
+</body>
+</html>

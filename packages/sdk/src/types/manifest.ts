@@ -225,6 +225,13 @@ export type PluginPermission =
   // column value and status — through the webview's `AgentMC.boards` namespace
   // (`list`, `requestAccess`). The namespace itself is not typed by this SDK yet.
   | 'boards.read'
+  // Draws a live status widget in Omniscio's titlebar through `AgentMC.widget`
+  // (webview only). Requires an explicit `chrome` alongside it — the validator
+  // enforces the pairing, as it does for `workspace.write` and `workspace.read`.
+  | 'chrome.widget'
+  // Elevated: a blanket read of the user's sessions, projects and message text
+  // through `ctx.core` (backend only). See `PluginCore`.
+  | 'coreRead'
   // Workspace — read/write/exec against the user's real project checkouts and
   // worktrees, gated per project by a runtime grant on top of the install-time
   // permission. All three are live host-side (see `WorkspaceApi`).
@@ -331,6 +338,14 @@ export interface PluginManifest {
     sidebar?: { title: string; icon: string }
     /** A separate always-on-top window. The host opens it on enable. */
     overlay?: { entryPoint: string }
+    /**
+     * The page shown in the popover that opens when the user clicks your
+     * titlebar widget (a 320x256 frame). Requires the `chrome.widget` permission
+     * to have any effect. Without it, clicking the widget opens the plugin's own
+     * panel instead. Must be a plugin-relative path — no URL, no leading `/`, no
+     * drive letter, no `..` segment.
+     */
+    widget?: { entryPoint: string }
     /** Hide AMC's project panel while this plugin's view is open, for a plugin that owns the full width. */
     hideProjectPanel?: boolean
     /**

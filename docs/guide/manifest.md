@@ -458,12 +458,20 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
 | `sidebar.title` | string | No | 50 | Label shown in AMC's sidebar |
 | `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
 | `overlay.entryPoint` | string | No | 500 | A separate always-on-top window AMC opens on enable |
+| `widget.entryPoint` | string | No | 500 | The page shown in the popover when the user clicks your titlebar widget. Needs `chrome` and `chrome.widget`. **Plugin-relative only**, see below |
 | `hideProjectPanel` | boolean | No | — | Suppress AMC's project panel while your view is open. **Half of "full width" — see below** |
 | `hideSessionsPane` | boolean | No | — | Suppress the plugin sessions pane. **The other half — set it alongside `hideProjectPanel`** |
 | `sessions.label` | string | No | 100 | Heading above your plugin's session list. Defaults to the plugin name |
 | `sessions.contextTemplate` | string | No | 5000 | Extra context appended to AMC's built-in primer for every session on your plugin's project |
 | `sessions.showDivider` | boolean | No | — | Defaults to `true` |
 | `sessions.suggestedPrompts` | array | No | 4 items | Tappable prompts under the session list (`label` ≤ 60, `prompt` ≤ 2000) |
+
+`widget.entryPoint` is the 320 x 256 popover behind a [titlebar widget](../api/widget). It must be a
+plugin-relative path: not blank, no URL or scheme, no leading `/` or `\`, no drive letter and no
+`..` segment. This is stricter than `entryPoint` and `overlay.entryPoint`, and it is what Omniscio
+checks at install, so a bad path fails `amc-plugin validate` rather than showing a blank frame.
+Without it, clicking the widget opens your plugin's own panel. `chrome.widget` is only valid beside
+an explicit `chrome` permission. `amc-plugin validate` also checks that the file exists.
 
 `entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
 alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest AMC

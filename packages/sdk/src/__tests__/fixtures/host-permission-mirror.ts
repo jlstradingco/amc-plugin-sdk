@@ -80,6 +80,8 @@
 //     the SDK enum, so a plugin declaring it passes `validate` and preflight.
 //     Its webview namespace (`AgentMC.boards`) is still untyped — a named
 //     follow-up, not an oversight.
+//     The same reconciliation also moves `chrome.widget` and `coreRead` OUT of
+//     HOST_AHEAD_PERMISSIONS: the SDK gained both (AgentMC.widget, ctx.core).
 //
 //
 // RECURRENCE #4 HAS A SECOND LESSON, and it is the more expensive one. The
@@ -202,15 +204,15 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  *   third-party author cannot use it regardless.
  * - `launch` (elevated): gates `launch.open` — "Open links and files, and run
  *   programs you confirm".
- * - `coreRead` (elevated): gates the `core.*` namespace — `core.sessions.list`,
- *   `core.sessions.get`, `core.projects.list`, `core.projects.get`,
- *   `core.messages.list`. A blanket read of all sessions and projects, distinct
- *   from the opt-in, per-session `sessions.readHistory` grant the SDK does type.
  * - `oauth` (elevated): gates `oauth.authorize` — third-party sign-in.
  * - `channel` (elevated): gates `channel.connect` / `channel.send` /
  *   `channel.close` — a live connection to an external service.
  *
- * All six are listed rather than typed on purpose: guessing at a host runtime
+ * `coreRead` and `chrome.widget` LEFT this list on 2026-10-12: the SDK now
+ * types `ctx.core` (backend) and `AgentMC.widget` (webview) and has both strings
+ * in its enum, so the parity guard requires them to be absent from here.
+ *
+ * The remaining entries are listed rather than typed on purpose: guessing at a host runtime
  * shape is the exact mistake the HISTORY note above records, and the parity
  * guard already asserts a host-ahead permission has NOT leaked into the SDK enum.
  *
@@ -226,7 +228,6 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  *   accepts since 3.2.0.
  * - `sessions.observeStatus`: "Session Activity" — see when sessions start,
  *   finish or need you; never their text. A companion/status-overlay grant.
- * - `chrome.widget`: "Header Widget" — a live status widget in the app header.
  * - `documents.read` and `documents.write` (elevated): "Read your documents" /
  *   "Create, edit and delete your documents". The SDK already types a
  *   `documents` BRIDGE namespace (types/bridge.ts), but neither permission
@@ -237,13 +238,11 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
 export const HOST_AHEAD_PERMISSIONS = [
   'sessions.launchAny',
   'launch',
-  'coreRead',
   'oauth',
   'channel',
   'auth.sharedSignIn',
   'boards.link',
   'sessions.observeStatus',
-  'chrome.widget',
   'documents.read',
   'documents.write',
 ] as const
