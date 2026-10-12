@@ -30,6 +30,9 @@ could write or re-arm its rows. A plugin pinned to an older CLI is not affected 
 Fuzzier shapes (a prompt with a status, a queue-like table, an agent-writable table with a status)
 only warn. The full rule and what it cannot catch are in the CLI reference under "Command tables".
 
+`publish` and `preflight` also now fail on a banned import, such as `child_process`, in the files you
+ship. See "Fixed" below.
+
 ### Added — a private command channel between a plugin's panel and its backend
 
 A backend should act only on commands from its own panel or its own code, never on a table row.
