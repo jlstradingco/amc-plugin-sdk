@@ -33,6 +33,9 @@ only warn. The full rule and what it cannot catch are in the CLI reference under
 `publish` and `preflight` also now fail on a banned import, such as `child_process`, in the files you
 ship. See "Fixed" below.
 
+`validate` also now checks `plugin.icon`. It fails on an icon path that is unsafe, missing, or outside
+what `package` ships, and warns on a Lucide icon name. See "Fixed" below.
+
 ### Added — a private command channel between a plugin's panel and its backend
 
 A backend should act only on commands from its own panel or its own code, never on a table row.
