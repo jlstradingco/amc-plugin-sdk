@@ -67,7 +67,7 @@ export function findBannedImports(content: string): string[] {
 }
 
 // `.mjs` and `.cjs` are the same runtime code as `.js`: a flat plugin can ship either.
-const SCANNABLE_FILE = /.(js|mjs|cjs)$/
+const SCANNABLE_FILE = /\.(js|mjs|cjs)$/
 
 /** Whether `target` is something `scanBannedImports` can inspect: a directory, or a JS file. */
 export function isBannedScanTarget(target: string): boolean {
