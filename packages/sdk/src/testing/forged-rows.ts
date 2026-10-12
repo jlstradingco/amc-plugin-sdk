@@ -114,7 +114,11 @@ function recordCrons(ctx: PluginContext): string[] {
   return ids
 }
 
-async function positiveControl(options: ForgedRowsOptions, plugin: RunningPlugin, settle: () => Promise<void>): Promise<Map<string, number>> {
+async function positiveControl(
+  options: ForgedRowsOptions,
+  plugin: RunningPlugin,
+  settle: () => Promise<void>
+): Promise<Map<string, number>> {
   const perCommand = new Map<string, number>()
   for (const { type, input } of options.commands) {
     const delta = await effectsOfRunning(options, plugin, settle, type, input)
@@ -129,7 +133,12 @@ async function positiveControl(options: ForgedRowsOptions, plugin: RunningPlugin
   return perCommand
 }
 
-async function secondRound(options: ForgedRowsOptions, plugin: RunningPlugin, settle: () => Promise<void>, perCommand: Map<string, number>): Promise<void> {
+async function secondRound(
+  options: ForgedRowsOptions,
+  plugin: RunningPlugin,
+  settle: () => Promise<void>,
+  perCommand: Map<string, number>
+): Promise<void> {
   for (const { type, input } of options.commands) {
     const delta = await effectsOfRunning(options, plugin, settle, type, input)
     const expected = perCommand.get(type) ?? 0
@@ -142,7 +151,13 @@ async function secondRound(options: ForgedRowsOptions, plugin: RunningPlugin, se
   }
 }
 
-async function effectsOfRunning(options: ForgedRowsOptions, plugin: RunningPlugin, settle: () => Promise<void>, type: string, input: unknown): Promise<number> {
+async function effectsOfRunning(
+  options: ForgedRowsOptions,
+  plugin: RunningPlugin,
+  settle: () => Promise<void>,
+  type: string,
+  input: unknown
+): Promise<number> {
   const before = options.effects(plugin.harness)
   try {
     await plugin.client.run(type, input)
@@ -187,7 +202,12 @@ async function forgeRows(ctx: PluginContext, manifest: unknown, samples: ForgedR
 }
 
 /** Command-shaped values in the columns whose names say instruction, argument or status. */
-function forgedFields(columns: Record<string, unknown>, sample: ForgedRowsOptions['commands'][number], status: string, fillOthers: boolean): Record<string, unknown> {
+function forgedFields(
+  columns: Record<string, unknown>,
+  sample: ForgedRowsOptions['commands'][number],
+  status: string,
+  fillOthers: boolean
+): Record<string, unknown> {
   const fields: Record<string, unknown> = {}
   for (const [column, columnType] of Object.entries(columns)) {
     const roles = columnRoles(column)

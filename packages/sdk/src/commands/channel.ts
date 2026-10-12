@@ -353,7 +353,10 @@ class CommandQueue {
     const bytes = jsonBytes(input)
     const max = this.config.limits.maxInputBytes
     if (bytes > max) {
-      throw new CommandError('refused', `The command input is ${bytes} bytes, over this channel's ${max}-byte limit. Send an id, not a document.`)
+      throw new CommandError(
+        'refused',
+        `The command input is ${bytes} bytes, over this channel's ${max}-byte limit. Send an id, not a document.`
+      )
     }
     return input
   }
@@ -424,7 +427,8 @@ class CommandQueue {
     try {
       image = jsonImage(result)
     } catch {
-      return this.settle(entry, 'failed', undefined, `"${entry.type}" ran, but its result is not plain JSON data, so it could not be sent back.`)
+      const message = `"${entry.type}" ran, but its result is not plain JSON data, so it could not be sent back.`
+      return this.settle(entry, 'failed', undefined, message)
     }
     this.settle(entry, 'done', image)
   }
@@ -493,7 +497,10 @@ class CommandQueue {
       saved = await this.ctx.storage.list(this.copyKey(''))
     } catch {
       this.savedCopiesUnreadable = true
-      this.ctx.log.error(`[commands] ${this.config.name}: saved commands could not be read; the channel refuses commands until the plugin restarts.`)
+      this.ctx.log.error(
+        `[commands] ${this.config.name}: saved commands could not be read; ` +
+          'the channel refuses commands until the plugin restarts.'
+      )
       return
     }
     for (const { key, value } of sortByArrival(saved)) await this.requeue(key, value)

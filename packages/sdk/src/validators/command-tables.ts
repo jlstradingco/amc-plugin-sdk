@@ -25,7 +25,9 @@ const STATUS_WORDS = new Set(['status', 'state'])
 /** The last word of a column name: the column is itself an instruction, in prose. */
 const PROMPT_WORDS = new Set(['prompt', 'prompts', 'instruction', 'instructions', 'script'])
 /** Any of these words in a table name: the table holds work waiting to be done. */
-const QUEUE_WORDS = new Set(['queue', 'queues', 'queued', 'job', 'jobs', 'command', 'commands', 'cmd', 'cmds', 'action', 'actions', 'outbox'])
+const QUEUE_WORDS = new Set([
+  'queue', 'queues', 'queued', 'job', 'jobs', 'command', 'commands', 'cmd', 'cmds', 'action', 'actions', 'outbox',
+])
 /** Trailing words that only name an encoding, so `payloadJson` reads as `payload`. */
 const ENCODING_WORDS = new Set(['json', 'text', 'raw', 'str', 'blob', 'b64', 'base64'])
 
@@ -138,7 +140,8 @@ function commandTableFinding(table: string, shape: TableShape, agentWritable: bo
   const columns = [...shape.instruction, ...shape.argument, ...shape.status]
   const reason = agentWritable
     ? ' It is also open to agent writes (agentWritable), so no waiver can cover it.'
-    : ` Send commands through the panel command channel (createCommandChannel), or add "commandTableWaiver": "<why this table is safe>" to the table.`
+    : ' Send commands through the panel command channel (createCommandChannel), or add ' +
+      '"commandTableWaiver": "<why this table is safe>" to the table.'
   return {
     table,
     kind: 'command-table',
@@ -155,15 +158,30 @@ function fuzzyFindings(table: string, shape: TableShape, agentWritable: boolean)
   const findings: CommandTableFinding[] = []
   if (shape.prompt.length > 0) {
     const columns = [...shape.prompt, ...shape.status]
-    findings.push({ table, kind: 'prompt-with-status', columns, message: `Table "${table}" holds a prompt with a status (${columns.join(' + ')}). If your plugin runs these rows, an agent could re-arm one.` })
+    findings.push({
+      table,
+      kind: 'prompt-with-status',
+      columns,
+      message: `Table "${table}" holds a prompt with a status (${columns.join(' + ')}). If your plugin runs these rows, an agent could re-arm one.`,
+    })
   }
   const work = [...shape.instruction, ...shape.argument]
   if (work.length > 0 && nameWords(table).some((word) => QUEUE_WORDS.has(word))) {
     const columns = [...work, ...shape.status]
-    findings.push({ table, kind: 'queue-like-table', columns, message: `Table "${table}" looks like a work queue (${columns.join(' + ')}). Make sure your plugin never does work just because a row says so.` })
+    findings.push({
+      table,
+      kind: 'queue-like-table',
+      columns,
+      message: `Table "${table}" looks like a work queue (${columns.join(' + ')}). Make sure your plugin never does work just because a row says so.`,
+    })
   }
   if (agentWritable) {
-    findings.push({ table, kind: 'agent-writable-status', columns: [...shape.status], message: `Table "${table}" is open to agent writes and has a status (${shape.status.join(' + ')}). Never act on a row because its status changed.` })
+    findings.push({
+      table,
+      kind: 'agent-writable-status',
+      columns: [...shape.status],
+      message: `Table "${table}" is open to agent writes and has a status (${shape.status.join(' + ')}). Never act on a row because its status changed.`,
+    })
   }
   return findings
 }
