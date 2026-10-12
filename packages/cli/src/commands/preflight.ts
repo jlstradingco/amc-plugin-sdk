@@ -5,6 +5,7 @@ import { execSync } from 'node:child_process'
 import chalk from 'chalk'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { getRegistry } from '../lib/marketplace-api.js'
+import { commandTablesPreflight } from '../lib/command-tables.js'
 import {
   checkVersionAgainstRegistry,
   checkChangelog,
@@ -64,6 +65,7 @@ export async function runPreflight(
   results.push(checkVersionAgainstRegistry(manifestVersion, publishedVersion))
   results.push(checkChangelog(opts.changelog ?? null))
   results.push(checkDeclaredPermissions(manifest.permissions))
+  results.push(commandTablesPreflight(manifest))
   results.push(checkListingCompleteness({
     hasReadme: findRootReadme(cwd) !== null,
     screenshots: manifest.plugin.screenshots,
