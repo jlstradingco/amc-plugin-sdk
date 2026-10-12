@@ -13,7 +13,7 @@ export type {
   QueryOptions, SidebarItem, CliRequest, CliResponse, CliHandler,
   PluginStorage, PluginSecrets, PluginDb, PluginStorageStats, PluginSettings, PluginLogger, PluginEvents,
   PluginSessions, SessionStatus, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginFs, PluginHttp, PluginCron, PluginCli,
-  PluginSidebar, PluginToast, PluginContext,
+  PluginSidebar, PluginToast, PluginContext, PluginRpc, PluginHost,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, PluginInbox,
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
   SynthesizedSpeech, PluginTts,

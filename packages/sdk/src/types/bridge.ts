@@ -545,6 +545,32 @@ export interface BridgeStt {
 }
 
 /**
+ * `AgentMC.backend` — the panel half of your plugin's own request channel to its backend:
+ * `invoke(method, ...args)` calls the handler your backend registered with
+ * `ctx.rpc.handle(method, …)` and resolves its return value.
+ *
+ * Arguments and the result cross a JSON boundary, and a failure rejects with an `Error` whose
+ * MESSAGE is all the host sends — your handler's own message, or one of the host's when the call
+ * never arrived ("Plugin backend is not running", "No backend handler registered for …"). For
+ * commands, prefer `createCommandClient` from `@agent-mc/plugin-sdk/commands`, which turns those
+ * into typed errors that say whether the command ran.
+ *
+ * Present from Omniscio v0.1.92; `undefined` on older hosts.
+ */
+export interface BridgeBackend {
+  invoke(method: string, ...args: unknown[]): Promise<unknown>
+}
+
+/**
+ * `AgentMC.host` — what this Omniscio can do for the plugin: a curated list of capability tokens
+ * (`'ai-engine-choice'`, `'plugin-windows'`, …). Absence means no; on the phone relay only the
+ * tokens that work there are listed. Present from Omniscio v0.1.89.
+ */
+export interface BridgeHost {
+  getCapabilities(): Promise<string[]>
+}
+
+/**
  * `window.AgentMC` — the surface a plugin WEBVIEW gets.
  *
  * This is a subset of what the host exposes, not the whole of it. The host's
@@ -552,7 +578,7 @@ export interface BridgeStt {
  * a stable, documented contract. Notable untyped ones you can still reach at
  * runtime include `secrets`, `http`, `fs`, `shell`, `clipboard`, `process`,
  * `notifications`, `navigation`, `runtime`, `keybindings`, `tray`, `cron`,
- * `overlay`, `share`, `boards`, `host` and `backend.invoke`.
+ * `overlay`, `share` and `boards`.
  *
  * `recording` is deliberately ABSENT: it exists on the backend (`ctx.recording`)
  * and has no webview counterpart at all, so the `AgentMC.recording` this
@@ -583,6 +609,10 @@ export interface AgentMC {
   sessionHistory: PluginSessionHistory
   firebase: PluginFirebase
   spend: PluginSpend
+  /** Optional: absent before Omniscio v0.1.92. See {@link BridgeBackend}. */
+  backend?: BridgeBackend
+  /** Optional: absent before Omniscio v0.1.89. See {@link BridgeHost}. */
+  host?: BridgeHost
 }
 
 declare global {

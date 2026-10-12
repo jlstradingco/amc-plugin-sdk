@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { PluginPermission } from '../types/manifest.js'
+import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
 
 const pluginIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -90,6 +91,9 @@ const settingSchema = z.object({
   min: z.number().optional(),
   max: z.number().optional(),
   testAction: testActionSchema.optional(),
+  // Host `z.boolean().optional()` (plugin-manifest-validator.ts, settings). Without
+  // it a non-boolean passed here and failed at install, and a valid one was stripped.
+  agentWritable: z.boolean().optional(),
 })
 
 /**
@@ -128,6 +132,17 @@ const collectionSchema = z
     // real CREATE UNIQUE INDEX per tuple, and `collectionUpsert`'s atomicity
     // depends on the tuple existing (plugin-storage.ts:511-513, :528-538).
     uniqueIndexes: z.array(z.array(sqlIdent()).min(1)).optional(),
+    // Host `z.boolean().optional()` (plugin-manifest-validator.ts, storage.collections):
+    // opts the table IN to control-server writes. See PluginCollectionSchema.agentWritable.
+    agentWritable: z.boolean().optional(),
+    // SDK-only: the ship check reads it, the host strips it. Same bounds as
+    // isWrittenWaiver in ./command-tables.ts, so validate and the check agree.
+    commandTableWaiver: z
+      .string()
+      .trim()
+      .min(COMMAND_TABLE_WAIVER_MIN_CHARS, `must explain in at least ${COMMAND_TABLE_WAIVER_MIN_CHARS} characters why this table is safe`)
+      .max(COMMAND_TABLE_WAIVER_MAX_CHARS)
+      .optional(),
   })
   .superRefine((collection, ctx) => {
     for (const column of Object.keys(collection.columns)) {
@@ -299,6 +314,9 @@ export const PLUGIN_PERMISSIONS = [
   'inbox',
   'navigation',
   'spend',
+  // Host-real since 2026-08 (plugin-permissions.ts) and listed host-ahead until
+  // 3.2.0, so a manifest asking for it failed `validate` and preflight.
+  'boards.read',
   // All three are gated by the host and consented in its dialog; write and exec
   // gate real mutating methods. The pairing rule below requires an explicit
   // `workspace.read` alongside either of the other two.

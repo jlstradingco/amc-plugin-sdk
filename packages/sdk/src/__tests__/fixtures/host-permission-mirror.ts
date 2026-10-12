@@ -15,11 +15,11 @@
 // updates the SDK enum, then reconcile the allow-lists below.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// LAST RECONCILED: 2026-09-23, against host commit `b477981a4d` on the host's
-// `master`. Its src/shared/plugin-permissions.ts is byte-identical to
-// origin/master@a3f3a97aed as of that day (`git diff origin/master master --
-// src/shared/plugin-permissions.ts` was empty), so the stt/microphone branch
-// noted by the previous reconciliation has landed. Full detail lives in
+// LAST RECONCILED: 2026-10-12, against the host's GitHub master `0369c057eb`
+// (what users run), read with `gh api` rather than a local checkout. Its
+// src/shared/plugin-permissions.ts is blob `7dd10118a2`, byte-identical to the
+// host's local master@8d41f0cdf6 and origin/master@2181af26f9 that day — still the
+// same 37 strings as the 2026-09-23 reconciliation. Full detail lives in
 // HOST_MIRROR_PROVENANCE below, which the staleness guard test reads.
 //
 // 31 -> 37: added `auth.sharedSignIn`, `boards.link`, `sessions.observeStatus`,
@@ -75,6 +75,11 @@
 //     `documents.write` — all host-ahead (the host gates and describes them;
 //     the SDK enum has none of them). Re-derived by generation from host
 //     master@b477981a4d, byte-identical to origin/master@a3f3a97aed that day.
+//  7. 2026-10-12 (SDK 3.2.0) — not stale: the host still holds the same 37. This
+//     reconciliation moves `boards.read` OUT of HOST_AHEAD_PERMISSIONS and into
+//     the SDK enum, so a plugin declaring it passes `validate` and preflight.
+//     Its webview namespace (`AgentMC.boards`) is still untyped — a named
+//     follow-up, not an oversight.
 //
 //
 // RECURRENCE #4 HAS A SECOND LESSON, and it is the more expensive one. The
@@ -105,17 +110,17 @@
  */
 export const HOST_MIRROR_PROVENANCE = {
   /** ISO date this mirror was last reconciled against the host source file. */
-  reconciledAt: '2026-09-23',
+  reconciledAt: '2026-10-12',
   /** Full SHA of the host commit the strings below were read from. */
-  sourceCommit: 'b477981a4d11ee21ca8fc99abe4f61cfc10528f9',
+  sourceCommit: '0369c057eb1ef756f9cab0f40b04789290a7209c',
   sourceBranch: 'master',
   /**
    * False means sourceBranch had not merged to origin/master as of
    * reconciledAt, so the strings below are ahead of what a plain
    * origin/master checkout would show. Re-verify before assuming this is
-   * still the case. True here: the host's src/shared/plugin-permissions.ts
-   * was byte-identical between local master and origin/master@a3f3a97aed on
-   * the reconciliation day.
+   * still the case. True here: sourceCommit IS the host's GitHub master on
+   * the reconciliation day, and its plugin-permissions.ts blob (7dd10118a2) was
+   * identical to the host's local master.
    */
   onOriginMaster: true,
 } as const
@@ -191,8 +196,6 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  * no typed SDK `ctx` namespace, so a plugin built with this SDK cannot request
  * them. Tracked so the gap is named, not silently tolerated.
  *
- * - `boards.read`: gates the host's `boards` namespace and `assembleBoardContext`
- *   (plugin-bridge-handler.ts). No SDK `ctx.boards` type exists yet.
  * - `sessions.launchAny`: gates the `sessions.fanout` method on the EXISTING
  *   sessions namespace (plugin-permission-map.ts) — a method gap, not a namespace
  *   one. The host describes it as "Granted only to built-in plugins", so a
@@ -219,7 +222,8 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  *
  * - `auth.sharedSignIn` (elevated): "Shared Sign-In".
  * - `boards.link` (elevated): "Attach to your tasks" — links plugin items to
- *   the user's boards; the sibling of the still-untyped `boards.read`.
+ *   the user's boards; the write-side sibling of `boards.read`, which the SDK
+ *   accepts since 3.2.0.
  * - `sessions.observeStatus`: "Session Activity" — see when sessions start,
  *   finish or need you; never their text. A companion/status-overlay grant.
  * - `chrome.widget`: "Header Widget" — a live status widget in the app header.
@@ -231,7 +235,6 @@ export const SDK_AHEAD_PERMISSIONS = [] as const
  *   adds them to the enum and the namespace map.
  */
 export const HOST_AHEAD_PERMISSIONS = [
-  'boards.read',
   'sessions.launchAny',
   'launch',
   'coreRead',

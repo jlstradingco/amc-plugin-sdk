@@ -48,6 +48,9 @@ export type {
   PluginSidebar,
   PluginToast,
   PluginContext,
+  // The panel-to-backend request channel (`ctx.rpc`) and feature detection (`ctx.host`)
+  PluginRpc,
+  PluginHost,
   PluginAuthUser,
   PluginAuthSession,
   PluginAuth,
@@ -117,3 +120,12 @@ export {
   TOOL_RESULT_RE,
   stripToolLines,
 } from './types/markers.js'
+
+// The command-table ship check (runtime value export): one pure function over a manifest, the
+// same one `amc-plugin validate` / `preflight` / `publish` run, so it can be reused verbatim.
+export { checkCommandTables } from './validators/command-tables.js'
+export type {
+  CommandTableReport,
+  CommandTableFinding,
+  CommandTableFindingKind,
+} from './validators/command-tables.js'
