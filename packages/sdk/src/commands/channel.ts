@@ -10,9 +10,10 @@
  * - input is checked (JSON, size, the command's `parse`) before the command is accepted;
  * - write commands run one at a time, in arrival order; reads run alongside, up to a cap;
  * - an accepted command runs at most once, and its result is handed over exactly once;
- * - inputs and results are never logged and never written to tables;
- * - with `durable: true`, a command waiting at a restart resumes; one that had started never
- *   re-runs, because its private copy is deleted just before it runs;
+ * - inputs and results are never logged and never written to tables or to storage;
+ * - commands live only in memory: the channel never reads or writes `ctx.storage`, which AI agents
+ *   on the person's computer can read and write, so a restart drops the commands that were
+ *   waiting, none of them runs later, and a panel still waiting hears `outcome-unknown`;
  * - the queue, parallel reads, input size and uncollected results are all bounded.
  *
  * A command's `run` has no time limit: nothing can stop a running promise, so a timeout would
@@ -91,8 +92,6 @@ export interface CommandChannelOptions<S extends CommandSpecs> {
   /** Lowercase letters, digits and dashes; it prefixes the channel's two ctx.rpc methods. */
   name: string
   commands: S
-  /** Keep a private copy of each waiting command in `ctx.storage` (needs the `storage` permission). */
-  durable?: boolean
   limits?: Partial<CommandLimits>
 }
 
@@ -116,8 +115,6 @@ export interface CommandChannel<S extends CommandSpecs> {
    * Returns how many rows it settled.
    */
   retireRows(collection: string, options?: RetireRowsOptions): Promise<number>
-  /** Resolves once commands saved before a restart are queued again (at once when not durable). */
-  readonly ready: Promise<void>
 }
 
 export const RETIRED_ROW_NOTE = 'Not run: this plugin no longer takes commands from this table.'
@@ -126,20 +123,16 @@ export const RETIRED_ROW_NOTE = 'Not run: this plugin no longer takes commands f
 const STATUS_WAIT_MS = 15_000
 /** Finished results nobody collected, beyond this many, are dropped oldest first. */
 const MAX_UNCLAIMED_RESULTS = 200
-/** The host stores at most 1 MiB of JSON per value; a saved copy needs room for its envelope. */
-const DURABLE_INPUT_MAX_BYTES = 1024 * 1024 - 1024
 const DEFAULT_ACTIVE_STATUSES = ['pending', 'queued', 'running']
 
-type Settled = 'done' | 'failed' | 'refused'
+type Settled = 'done' | 'failed'
 
 interface Entry {
   readonly id: string
   readonly type: string
   readonly mode: CommandMode
-  readonly acceptedAt: number
   readonly settled: Promise<void>
   readonly markSettled: () => void
-  input: unknown
   parsed: unknown
   state: 'queued' | 'running' | Settled
   startedAt: number
@@ -148,18 +141,9 @@ interface Entry {
   message?: string
 }
 
-interface SavedCopy {
-  type: string
-  input?: unknown
-  acceptedAt: number
-  /** Arrival order within one run of the plugin: two commands can share a millisecond. */
-  seq?: number
-}
-
 interface ChannelConfig {
   name: string
   commands: CommandSpecs
-  durable: boolean
   limits: CommandLimits
 }
 
@@ -177,12 +161,11 @@ export function createCommandChannel<S extends CommandSpecs>(
     submit: <K extends keyof S & string>(type: K, input: unknown) =>
       queue.submit(type, input) as Promise<CommandResult<S[K]>>,
     retireRows: (collection, retireOptions) => retireRows(ctx, collection, retireOptions),
-    ready: queue.ready,
   }
 }
 
 function resolveConfig(options: CommandChannelOptions<CommandSpecs>): ChannelConfig {
-  const { name, commands, durable = false } = options
+  const { name, commands } = options
   if (typeof name !== 'string' || !CHANNEL_NAME_PATTERN.test(name)) {
     throw new Error(`createCommandChannel: name "${String(name)}" must match ${CHANNEL_NAME_PATTERN}`)
   }
@@ -194,26 +177,20 @@ function resolveConfig(options: CommandChannelOptions<CommandSpecs>): ChannelCon
       throw new Error(`createCommandChannel: command "${type}" needs a parse and a run function`)
     }
   }
-  return { name, commands, durable, limits: resolveLimits(options.limits, durable) }
+  return { name, commands, limits: resolveLimits(options.limits) }
 }
 
-function resolveLimits(overrides: Partial<CommandLimits> | undefined, durable: boolean): CommandLimits {
+function resolveLimits(overrides: Partial<CommandLimits> | undefined): CommandLimits {
   const limits = { ...DEFAULT_COMMAND_LIMITS, ...overrides }
   for (const [key, value] of Object.entries(limits)) {
     if (!Number.isInteger(value) || value < 1) {
       throw new Error(`createCommandChannel: limits.${key} must be a positive whole number`)
     }
   }
-  if (durable && limits.maxInputBytes > DURABLE_INPUT_MAX_BYTES) {
-    throw new Error(
-      `createCommandChannel: a durable channel's limits.maxInputBytes can be at most ` +
-        `${DURABLE_INPUT_MAX_BYTES} (Omniscio stores at most 1 MiB per value)`
-    )
-  }
   return limits
 }
 
-/** Two channels with one name would both resume the same saved commands — twice the run. */
+/** Two channels with one name would fight over the same two ctx.rpc methods. */
 function claimName(ctx: object, name: string): void {
   const names = claimedNames.get(ctx) ?? new Set<string>()
   if (names.has(name)) {
@@ -273,33 +250,23 @@ async function retireRows(ctx: PluginContext, collection: string, options: Retir
 }
 
 class CommandQueue {
-  readonly ready: Promise<void>
   private readonly entries = new Map<string, Entry>()
   private readonly waitingWrites: Entry[] = []
   private readonly waitingReads: Entry[] = []
   private readonly runningReads = new Set<Entry>()
   private runningWrite: Entry | undefined
-  private savedCopiesUnreadable = false
-  private nextSeq = 0
 
   constructor(
     private readonly ctx: PluginContext,
     private readonly config: ChannelConfig
-  ) {
-    this.ready = config.durable ? this.recover() : Promise.resolve()
-  }
+  ) {}
 
   async accept(type: unknown, rawInput: unknown): Promise<string> {
-    await this.ready
-    if (this.savedCopiesUnreadable) {
-      throw new CommandError('refused', 'Saved commands could not be read, so this channel is closed until the plugin restarts.')
-    }
     const spec = this.specFor(type)
     const input = this.checkedInput(rawInput)
     this.checkCapacity()
     const parsed = parseOrRefuse(spec, input)
-    const entry = this.addEntry(String(type), spec.mode ?? 'write', input, parsed)
-    await this.saveCopy(entry)
+    const entry = this.addEntry(String(type), spec.mode ?? 'write', parsed)
     this.enqueue(entry)
     return entry.id
   }
@@ -369,19 +336,13 @@ class CommandQueue {
     }
   }
 
-  private addEntry(
-    type: string,
-    mode: CommandMode,
-    input: unknown,
-    parsed: unknown,
-    id: string = crypto.randomUUID(),
-    acceptedAt: number = Date.now()
-  ): Entry {
+  private addEntry(type: string, mode: CommandMode, parsed: unknown): Entry {
     let markSettled = (): void => {}
     const settled = new Promise<void>((resolve) => {
       markSettled = resolve
     })
-    const entry: Entry = { id, type, mode, acceptedAt, settled, markSettled, input, parsed, state: 'queued', startedAt: 0, settledAt: 0 }
+    const id = crypto.randomUUID()
+    const entry: Entry = { id, type, mode, settled, markSettled, parsed, state: 'queued', startedAt: 0, settledAt: 0 }
     this.entries.set(id, entry)
     return entry
   }
@@ -414,8 +375,6 @@ class CommandQueue {
   private async execute(entry: Entry): Promise<void> {
     entry.state = 'running'
     entry.startedAt = Date.now()
-    const claim = await this.claimCopy(entry)
-    if (claim !== 'claimed') return this.settle(entry, 'refused', undefined, CLAIM_REFUSALS[claim])
     let result: unknown
     try {
       result = await this.config.commands[entry.type]!.run(entry.parsed)
@@ -438,7 +397,6 @@ class CommandQueue {
     entry.result = result
     entry.message = message
     entry.settledAt = Date.now()
-    entry.input = undefined
     entry.parsed = undefined
     entry.markSettled()
     this.dropOldestUncollected()
@@ -459,88 +417,7 @@ class CommandQueue {
       }
     }
   }
-
-  // ── durable: the private copy in ctx.storage ────────────────────────────────
-
-  private copyKey(id: string): string {
-    return `__commands:${this.config.name}:${id}`
-  }
-
-  private async saveCopy(entry: Entry): Promise<void> {
-    if (!this.config.durable) return
-    const copy: SavedCopy = { type: entry.type, input: entry.input, acceptedAt: entry.acceptedAt, seq: this.nextSeq++ }
-    try {
-      await this.ctx.storage.set(this.copyKey(entry.id), copy)
-    } catch {
-      this.entries.delete(entry.id)
-      throw new CommandError('refused', 'The command could not be saved, so it was not queued.')
-    }
-  }
-
-  /** Delete the private copy BEFORE running: a crash mid-run can then never run it again. */
-  private async claimCopy(entry: Entry): Promise<'claimed' | 'missing' | 'stuck'> {
-    if (!this.config.durable) return 'claimed'
-    const key = this.copyKey(entry.id)
-    try {
-      const copy = await this.ctx.storage.get(key)
-      if (copy === undefined || copy === null) return 'missing'
-      await this.ctx.storage.delete(key)
-      return 'claimed'
-    } catch {
-      return 'stuck'
-    }
-  }
-
-  private async recover(): Promise<void> {
-    let saved: Array<{ key: string; value: unknown }>
-    try {
-      saved = await this.ctx.storage.list(this.copyKey(''))
-    } catch {
-      this.savedCopiesUnreadable = true
-      this.ctx.log.error(
-        `[commands] ${this.config.name}: saved commands could not be read; ` +
-          'the channel refuses commands until the plugin restarts.'
-      )
-      return
-    }
-    for (const { key, value } of sortByArrival(saved)) await this.requeue(key, value)
-  }
-
-  private async requeue(key: string, value: unknown): Promise<void> {
-    const id = key.slice(this.copyKey('').length)
-    const copy = asSavedCopy(value)
-    const spec = copy ? ownSpec(this.config.commands, copy.type) : undefined
-    if (!copy || !spec) return this.dropCopy(key, id, 'unreadable')
-    let parsed: unknown
-    try {
-      parsed = spec.parse(copy.input)
-    } catch {
-      return this.dropCopy(key, id, 'invalid')
-    }
-    this.enqueue(this.addEntry(copy.type, spec.mode ?? 'write', copy.input, parsed, id, copy.acceptedAt))
-  }
-
-  /** It never ran, and the backend knows it: a panel still waiting is told `refused`, not left guessing. */
-  private async dropCopy(key: string, id: string, reason: keyof typeof DROP_REFUSALS): Promise<void> {
-    this.ctx.log.warn(`[commands] ${this.config.name}: saved command ${id} was dropped without running (${reason}).`)
-    this.settle(this.addEntry('', 'write', undefined, undefined, id), 'refused', undefined, DROP_REFUSALS[reason])
-    try {
-      await this.ctx.storage.delete(key)
-    } catch {
-      this.ctx.log.warn(`[commands] ${this.config.name}: could not delete saved command ${id}; it is dropped again at the next start.`)
-    }
-  }
 }
-
-const DROP_REFUSALS = {
-  unreadable: 'Its saved copy could not be read after a restart, so it was not run.',
-  invalid: "After an update its saved input no longer passes the command's checks, so it was not run.",
-} as const
-
-const CLAIM_REFUSALS = {
-  missing: 'Its saved copy is gone, so it was not run.',
-  stuck: 'Its saved copy could not be cleared, so it was not run.',
-} as const
 
 function ownSpec(commands: CommandSpecs, type: unknown): CommandSpecs[string] | undefined {
   return typeof type === 'string' && Object.prototype.hasOwnProperty.call(commands, type) ? commands[type] : undefined
@@ -555,26 +432,13 @@ function parseOrRefuse(spec: CommandSpecs[string], input: unknown): unknown {
 }
 
 function isSettled(entry: Entry): boolean {
-  return entry.state === 'done' || entry.state === 'failed' || entry.state === 'refused'
+  return entry.state === 'done' || entry.state === 'failed'
 }
 
 function longestRunning(entries: Set<Entry>): Entry | undefined {
   let oldest: Entry | undefined
   for (const entry of entries) if (!oldest || entry.startedAt < oldest.startedAt) oldest = entry
   return oldest
-}
-
-function asSavedCopy(value: unknown): SavedCopy | undefined {
-  if (typeof value !== 'object' || value === null) return undefined
-  const copy = value as Partial<SavedCopy>
-  return typeof copy.type === 'string' && typeof copy.acceptedAt === 'number' ? (copy as SavedCopy) : undefined
-}
-
-/** Arrival order: by time, then by sequence for commands that arrived in the same millisecond. */
-function sortByArrival(saved: Array<{ key: string; value: unknown }>): Array<{ key: string; value: unknown }> {
-  const at = (value: unknown): number => asSavedCopy(value)?.acceptedAt ?? 0
-  const seq = (value: unknown): number => asSavedCopy(value)?.seq ?? 0
-  return [...saved].sort((a, b) => at(a.value) - at(b.value) || seq(a.value) - seq(b.value) || a.key.localeCompare(b.key))
 }
 
 function settledOrTimeout(settled: Promise<void>, ms: number): Promise<void> {

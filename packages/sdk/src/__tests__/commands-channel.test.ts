@@ -7,7 +7,6 @@ import {
   RETIRED_ROW_NOTE,
   type CommandChannelOptions,
   type CommandMapOf,
-  type CommandSpecs,
 } from '../commands/index.js'
 import { PROTOCOL_VERSION, startMethod, statusMethod } from '../commands/protocol.js'
 import { createRpcDouble, createTestContext, type RpcDouble, type TestHarness } from '../testing/index.js'
@@ -311,132 +310,30 @@ describe('the channel keeps nothing in ctx.storage, which AI agents can read and
   })
 })
 
-describe('durable channels keep a private copy that makes a restart safe', () => {
-  /** A fresh worker on the same plugin data: a new harness holding the old storage. */
-  async function restart(old: TestHarness): Promise<Setup> {
-    const next = createTestContext()
-    for (const { key, value } of await old.ctx.storage.list()) await next.ctx.storage.set(key, value)
-    const fresh = setup({ durable: true }, next)
-    await fresh.channel.ready
-    return fresh
-  }
+describe('a restart drops the commands that were waiting, for good', () => {
+  it('runs none of them later, and a panel still waiting hears outcome-unknown', async () => {
+    vi.useFakeTimers()
+    const double = createRpcDouble()
+    const before = createTestContext({ rpc: double.rpc })
+    createCommandChannel(before.ctx, { name: NAME, commands: demoCommands([]) })
+    await acceptedId(double, 'stuck', null)
+    const client = createCommandClient<CommandMapOf<DemoCommands>>(NAME, { backend: double.backend })
+    const outcome = client.run('send', { to: 'b' }).then(
+      (result) => ({ result }),
+      (error: unknown) => ({ error })
+    )
+    await vi.advanceTimersByTimeAsync(0)
 
-  const savedCopies = async (h: TestHarness) => (await h.ctx.storage.list(`__commands:${NAME}:`)).length
+    // The worker restarts: a new context and a new channel take over the same panel methods.
+    double.setStopped(true)
+    const runs: string[] = []
+    const after = createTestContext({ rpc: double.rpc })
+    createCommandChannel(after.ctx, { name: NAME, commands: demoCommands(runs) })
+    double.setStopped(false)
+    await vi.advanceTimersByTimeAsync(5_000)
 
-  it('saves a copy while a command waits and deletes it just before the command runs', async () => {
-    const { double, harness, gates } = setup({ durable: true })
-    const first = gate()
-    gates.set('first', first)
-    const firstId = await acceptedId(double, 'send', { to: 'first' })
-    await flush()
-    const secondId = await acceptedId(double, 'send', { to: 'second' })
-    expect(await savedCopies(harness)).toBe(1)
-    first.open()
-    await expect(status(double, firstId)).resolves.toMatchObject({ state: 'done' })
-    await expect(status(double, secondId)).resolves.toMatchObject({ state: 'done' })
-    expect(await savedCopies(harness)).toBe(0)
-  })
-
-  it('resumes waiting commands after a restart, in order, and never re-runs the one that had started', async () => {
-    // A frozen clock gives every command the same millisecond — the tie that once let
-    // recovery replay them in random-id order.
-    vi.useFakeTimers({ toFake: ['Date'] })
-    const before = setup({ durable: true })
-    before.gates.set('started', gate())
-    await acceptedId(before.double, 'send', { to: 'started' })
-    await flush()
-    const waitingIds = [await acceptedId(before.double, 'send', { to: 'w1' }), await acceptedId(before.double, 'send', { to: 'w2' })]
-
-    const after = await restart(before.harness)
-    await Promise.all(waitingIds.map((id) => status(after.double, id)))
-    expect(after.runs).toEqual(['send:w1', 'send:w2'])
-    expect(await savedCopies(after.harness)).toBe(0)
-  })
-
-  it('refuses to run a waiting command whose saved copy disappeared', async () => {
-    const { double, harness, gates, runs } = setup({ durable: true })
-    const first = gate()
-    gates.set('first', first)
-    await acceptedId(double, 'send', { to: 'first' })
-    await flush()
-    const secondId = await acceptedId(double, 'send', { to: 'second' })
-    for (const { key } of await harness.ctx.storage.list(`__commands:${NAME}:`)) await harness.ctx.storage.delete(key)
-    first.open()
-    await expect(status(double, secondId)).resolves.toMatchObject({ state: 'refused' })
-    expect(runs).toEqual(['send:first'])
-  })
-
-  it('drops a saved command that no longer parses, without running it', async () => {
-    const before = setup({ durable: true })
-    await before.harness.ctx.storage.set(`__commands:${NAME}:broken`, { type: 'send', input: { to: 7 }, acceptedAt: 1 })
-    const after = await restart(before.harness)
-    await flush()
-    expect(after.runs).toEqual([])
-    expect(await savedCopies(after.harness)).toBe(0)
-  })
-
-  describe('a panel still waiting when the plugin restarts', () => {
-    /** Accept a stuck write, then start `send` from a panel, then restart onto `commands`. */
-    async function restartWhileWaiting(options: { durable: boolean; commands: CommandSpecs }) {
-      vi.useFakeTimers()
-      const double = createRpcDouble()
-      const before = createTestContext({ rpc: double.rpc })
-      createCommandChannel(before.ctx, { name: NAME, commands: demoCommands([]), durable: options.durable })
-      await acceptedId(double, 'stuck', null)
-      const client = createCommandClient<CommandMapOf<DemoCommands>>(NAME, { backend: double.backend })
-      const outcome = client.run('send', { to: 'b' }).then(
-        (result) => ({ result }),
-        (error: unknown) => ({ error })
-      )
-      await vi.advanceTimersByTimeAsync(0)
-      double.setStopped(true)
-      const after = createTestContext({ rpc: double.rpc })
-      for (const { key, value } of await before.ctx.storage.list()) await after.ctx.storage.set(key, value)
-      await createCommandChannel(after.ctx, { name: NAME, commands: options.commands, durable: options.durable }).ready
-      double.setStopped(false)
-      await vi.advanceTimersByTimeAsync(5_000)
-      return outcome
-    }
-
-    it('is told refused — it never ran — when the update can no longer accept its saved input', async () => {
-      const runs: string[] = []
-      const updated = {
-        ...demoCommands(runs),
-        send: defineCommand({
-          parse: (input: unknown) => {
-            const { to, subject } = asRecord(input)
-            if (typeof subject !== 'string') throw new Error('subject is now required')
-            return { to: String(to), subject }
-          },
-          run: async ({ to }) => {
-            runs.push(`send:${to}`)
-            return { sent: to }
-          },
-        }),
-      }
-      const outcome = await restartWhileWaiting({ durable: true, commands: updated })
-      expect(outcome).toMatchObject({ error: { code: 'refused', message: expect.stringContaining('no longer passes') } })
-      expect(runs).toEqual([])
-    })
-
-    it('gets the result when its durable command resumes after the restart', async () => {
-      const runs: string[] = []
-      const outcome = await restartWhileWaiting({ durable: true, commands: demoCommands(runs) })
-      expect(outcome).toEqual({ result: { sent: 'b' } })
-      expect(runs).toEqual(['send:b'])
-    })
-
-    it('is told the outcome is unknown when the channel was not durable', async () => {
-      const outcome = await restartWhileWaiting({ durable: false, commands: demoCommands([]) })
-      expect(outcome).toMatchObject({ error: { code: 'outcome-unknown' } })
-    })
-  })
-
-  it('refuses at creation a durable input limit the host could not store', () => {
-    const { ctx } = createTestContext()
-    expect(() =>
-      createCommandChannel(ctx, { name: NAME, commands: {}, durable: true, limits: { maxInputBytes: 2 * 1024 * 1024 } })
-    ).toThrow(/at most/)
+    await expect(outcome).resolves.toMatchObject({ error: { code: 'outcome-unknown' } })
+    expect(runs).toEqual([])
   })
 })
 
