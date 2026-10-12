@@ -1,6 +1,6 @@
 # API Reference
 
-The AMC Plugin SDK exposes 21 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The AMC Plugin SDK exposes 24 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -28,6 +28,8 @@ The AMC Plugin SDK exposes 21 APIs to plugins. Some are available on both the fr
 | [Firebase](./firebase) | The user's Firebase accounts and projects | Webview only | `firebase` |
 | [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
 | [Workspace](./workspace) | The user's real project checkouts and worktrees | Backend only | `workspace.read` / `.write` / `.exec` |
+| [Backend Calls](#backend-calls) | Call your backend's handlers from your panel | Both | None |
+| [Host Capabilities](#host-capabilities) | Feature-detect what this Omniscio supports | Both | None |
 
 ## Access Patterns
 
@@ -50,6 +52,40 @@ export function activate(ctx: PluginContext) {
 const value = await AgentMC.storage.get('initialized')
 AgentMC.toast.show({ type: 'info', message: 'Hello from the UI' })
 ```
+
+## Backend Calls
+
+Your backend registers a handler with `ctx.rpc`, and your panel calls it with `AgentMC.backend.invoke`. The call resolves to whatever the handler returns.
+
+```typescript
+// backend
+ctx.rpc?.handle('notes:count', async () => (await ctx.db.query('notes')).length)
+
+// panel
+const count = await AgentMC.backend?.invoke('notes:count')
+```
+
+| Member | Description |
+|---|---|
+| `ctx.rpc.handle(method, handler)` | Register (or replace) the handler for `method` |
+| `ctx.rpc.removeHandler(method)` | Remove it |
+| `AgentMC.backend.invoke(method, ...args)` | Call it from your panel |
+
+- Needs Omniscio v0.1.92. Both members are `undefined` on older hosts, so check before you call.
+- Arguments and the result travel as JSON, and a thrown error reaches the panel as its message only.
+- The host gives up on a call after 240 seconds, and refuses more than 100 calls in flight per plugin.
+- For anything that changes data, use the [command channel](../guide/commands) instead: it checks input, runs changes one at a time and reports honest outcomes on top of these calls.
+
+## Host Capabilities
+
+`AgentMC.host.getCapabilities()` resolves to the capability tokens this Omniscio supports, such as `'ai-engine-choice'`. A missing token means no. It needs no permission and exists from Omniscio v0.1.89.
+
+```typescript
+const tokens = (await AgentMC.host?.getCapabilities()) ?? []
+const canPickEngine = tokens.includes('ai-engine-choice')
+```
+
+The backend twin, `ctx.host.getCapabilities()`, is typed ahead of the Omniscio release that adds it, and is `undefined` until then.
 
 ## Bridge-Only APIs
 
