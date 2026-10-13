@@ -146,6 +146,9 @@ describe('SDK <-> host permission parity', () => {
     // `chrome.widget`, `documents.read`, `documents.write`. Re-derived by
     // generation from host master@b477981a4d, byte-identical to origin/master
     // that day (see HOST_MIRROR_PROVENANCE).
+    //
+    // Still 37 on 2026-10-12 (GitHub host master 0369c057eb): the 3.2.0 change
+    // moved `boards.read` from HOST_AHEAD into the SDK enum, not into the host.
     expect(HOST_PERMISSIONS.length).toBe(37)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
@@ -199,6 +202,11 @@ describe('SDK <-> host permission parity', () => {
       recording: { surface: CTX, key: 'recording' },
       inbox: { surface: CTX, key: 'inbox' },
       spend: { surface: CTX, key: 'spend' },
+      // Accepted since 3.2.0 so a plugin may declare it; the host's webview
+      // `boards` namespace (`list`, `requestAccess`) is real but not typed by this
+      // SDK yet. That typing is a named follow-up — classify it here the day
+      // `AgentMC.boards` lands in types/bridge.ts.
+      'boards.read': null,
       // All three tiers of the workspace capability are carried by the single
       // `ctx.workspace` namespace; the host splits read/write/exec per METHOD
       // rather than per namespace. Backend-only — the webview case throws.

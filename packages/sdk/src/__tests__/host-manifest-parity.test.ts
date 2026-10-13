@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { validateManifest } from '../validators/manifest.js'
 import {
+  HOST_AGENT_WRITABLE,
   HOST_LISTING_BOUNDS,
   HOST_MIGRATION_OPS,
   HOST_REJECTED_MIGRATION_OPS,
@@ -272,5 +273,41 @@ describe(`plugin listing parity (${HOST_SOURCES.manifestValidator}:18-19, 206, 2
       expect(validateManifest(withPlugin({ screenshots: [bad] })).valid, bad).toBe(false)
       expect(validateManifest(withPlugin({ links: { homepage: bad } })).valid, bad).toBe(false)
     }
+  })
+})
+
+describe(`agentWritable parity (${HOST_SOURCES.manifestValidator}:${HOST_AGENT_WRITABLE.collectionValidatorLine}, :${HOST_AGENT_WRITABLE.settingValidatorLine})`, () => {
+  // The host fence lives on local master only (HOST_AGENT_WRITABLE.onGitHubMaster). Older hosts
+  // strip the key, so these assertions are about this SDK not rejecting or stripping a value the
+  // fence-carrying host reads, and rejecting what that host would refuse.
+  const collectionWith = (agentWritable: unknown) => ({
+    ...baseManifest,
+    storage: { collections: { notes: { columns: { title: 'text' }, agentWritable } } },
+  })
+  const settingWith = (agentWritable: unknown) => ({
+    ...baseManifest,
+    settings: [{ key: 'engine', label: 'Engine', type: 'text', default: '', agentWritable }],
+  })
+
+  it.each([true, false])('preserves agentWritable: %s on a table instead of stripping it', (value) => {
+    const result = validateManifest(collectionWith(value))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.storage.collections.notes?.agentWritable, 'host types/plugins.ts PluginCollectionSchema.agentWritable').toBe(value)
+  })
+
+  it.each([true, false])('preserves agentWritable: %s on a setting instead of stripping it', (value) => {
+    const result = validateManifest(settingWith(value))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.settings[0]?.agentWritable, 'host types/plugins.ts PluginSettingDefinition.agentWritable').toBe(value)
+  })
+
+  it.each(['yes', 1, null, {}])('refuses a non-boolean agentWritable (%j), as the host z.boolean() does', (value) => {
+    expect(validateManifest(collectionWith(value)).valid, 'table').toBe(false)
+    expect(validateManifest(settingWith(value)).valid, 'setting').toBe(false)
+  })
+
+  it('keeps it optional: a table or setting without it still validates', () => {
+    expect(validateManifest(collectionWith(undefined)).valid).toBe(true)
+    expect(validateManifest(settingWith(undefined)).valid).toBe(true)
   })
 })

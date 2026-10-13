@@ -411,6 +411,20 @@ See the [Spend API](../api/spend).
 
 ---
 
+### `boards.read`
+
+**Grants access to:** the webview's `AgentMC.boards` namespace — `requestAccess()` and `list()`
+
+Read the full contents of the boards the person grants your plugin: every item, column value and
+status. The person chooses which boards — `requestAccess()` asks them — and nothing is shared until
+they do.
+
+Accepted by the SDK since 3.2.0, so a manifest declaring it passes `amc-plugin validate` and
+preflight. The `boards` namespace itself is not typed by this SDK yet: call it through
+`window.AgentMC` with your own types for now.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -447,6 +461,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate AMC to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
+| `boards.read` | `AgentMC.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
 | `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |
 | `workspace.exec` | `WorkspaceApi.run` | Run one bounded command in a granted project, behind a native confirm |

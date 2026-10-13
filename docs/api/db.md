@@ -18,6 +18,13 @@ interface QueryOptions {
 }
 ```
 
+**A query returns one page.** Without a `limit` you get at most the first **100** rows — in insertion
+order unless you pass `orderBy` — and a `limit` above 10,000 is capped at 10,000. To read every row,
+page with `offset` until a page comes back short. If your code changes rows so they stop matching
+`where` (marking them done, say), re-read from the start instead: an offset would skip rows.
+`createTestContext()` and the dev shell page the same way, so a test that reads only one page fails
+there, not in front of a person.
+
 ## Methods
 
 ### `insert(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>`

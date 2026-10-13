@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { createTestContext } from '../testing/index.js'
+import { createTestContext, hostQueryPage } from '../testing/index.js'
+import { HOST_DB_QUERY_PAGE } from './fixtures/host-mirror.js'
 
 describe('createTestContext — identity + defaults', () => {
   it('exposes plugin identity and a dataDir', () => {
@@ -72,6 +73,45 @@ describe('db — real in-memory collection', () => {
 
     await ctx.db.deleteWhere('c', { v: 42 })
     expect(await ctx.db.query('c')).toHaveLength(0)
+  })
+})
+
+// Omniscio returns one page of 100 rows when a query gives no limit. A double that returned every
+// row let code that reads only the first page pass its tests (retireRows did, on PR #83).
+describe('db.query pages exactly like Omniscio', () => {
+  async function table(size: number) {
+    const harness = createTestContext()
+    const ids: string[] = []
+    for (let n = 0; n < size; n++) ids.push(String((await harness.ctx.db.insert('t', { n })).id))
+    return { db: harness.ctx.db, ids }
+  }
+
+  it('returns the first 100 rows, in insertion order, when no limit is given', async () => {
+    const { db, ids } = await table(250)
+    const rows = await db.query('t')
+    expect(rows.map((row) => row.id)).toEqual(ids.slice(0, HOST_DB_QUERY_PAGE.defaultLimit))
+  })
+
+  it('reaches every row with limit and offset', async () => {
+    const { db, ids } = await table(250)
+    const pages = [0, 100, 200].map((offset) => db.query('t', { limit: 100, offset }))
+    const seen = (await Promise.all(pages)).flat().map((row) => row.id)
+    expect(seen).toEqual(ids)
+  })
+
+  it.each([
+    [{}, { offset: 0, limit: 100 }],
+    [{ limit: 0 }, { offset: 0, limit: 1 }],
+    [{ limit: -5 }, { offset: 0, limit: 1 }],
+    [{ limit: 2.7 }, { offset: 0, limit: 2 }],
+    [{ limit: 'many' }, { offset: 0, limit: 100 }],
+    [{ limit: null }, { offset: 0, limit: 100 }],
+    [{ limit: 50_000 }, { offset: 0, limit: HOST_DB_QUERY_PAGE.maxLimit }],
+    [{ offset: '5' }, { offset: 5, limit: 100 }],
+    [{ offset: -3 }, { offset: 0, limit: 100 }],
+    [{ offset: 2_000_000 }, { offset: HOST_DB_QUERY_PAGE.maxOffset, limit: 100 }],
+  ])('turns %j into the page the host would read: %j', (options, page) => {
+    expect(hostQueryPage(options as never)).toEqual(page)
   })
 })
 

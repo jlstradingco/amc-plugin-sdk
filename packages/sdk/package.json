@@ -1,6 +1,6 @@
 {
   "name": "@agent-mc/plugin-sdk",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "SDK for building Agent Mission Control plugins",
   "type": "module",
   "main": "./dist/index.js",
@@ -29,6 +29,12 @@
       "import": "./dist/testing/index.js",
       "require": "./dist/cjs/testing/index.js",
       "default": "./dist/testing/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "import": "./dist/commands/index.js",
+      "require": "./dist/cjs/commands/index.js",
+      "default": "./dist/commands/index.js"
     }
   },
   "files": [

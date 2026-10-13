@@ -11,6 +11,97 @@ together.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-12
+
+### Upgrading to CLI 3.2.0 — read this before you bump
+
+`amc-plugin validate`, `preflight` and `publish` now **fail** on a manifest that declares a table
+able to hold a runnable command: an instruction column (`type`, `command`, `action`…), an argument
+column (`payload`, `payloadJson`, `args`…) and a status column (`status`, `state`…) together. That is
+the shape of a "commands" queue a backend drains, and any AI agent session on the person's computer
+could write or re-arm its rows. A plugin pinned to an older CLI is not affected until it moves to
+3.2.0. When it does, there are two ways forward:
+
+- **Move the commands onto the new command channel** (below), then retire the table or reduce it to
+  a job list (`label`, `status`, `error`, times).
+- **Or, if the table is genuinely safe**, add `"commandTableWaiver": "<why>"` to it (20–500
+  characters). Marketplace review sees the reason. A waiver never covers an `agentWritable` table.
+
+Fuzzier shapes (a prompt with a status, a queue-like table, an agent-writable table with a status)
+only warn. The full rule and what it cannot catch are in the CLI reference under "Command tables".
+
+`publish` and `preflight` also now fail on a banned import, such as `child_process`, in the files you
+ship. See "Fixed" below.
+
+`validate` also now checks `plugin.icon`. It fails on an icon path that is unsafe, missing, or outside
+what `package` ships, and warns on a Lucide icon name. See "Fixed" below.
+
+Your own tests may also change: `createTestContext` and the dev shell now page `db.query` like
+Omniscio (100 rows unless you pass a `limit`), so a test that read more than 100 rows from one query
+fails now, as the same code would on Omniscio. See "Changed" below.
+
+### Added — a private command channel between a plugin's panel and its backend
+
+A backend should act only on commands from its own panel or its own code, never on a table row.
+`@agent-mc/plugin-sdk/commands` makes that the easy path:
+
+- `createCommandChannel(ctx, { name, commands })` (backend). Each command checks its input before
+  it is accepted. Writes run one at a time in arrival order; reads run in parallel up to a cap.
+  Each result is handed over once, inputs and results are never logged, and the queue, input size
+  and uncollected results are bounded.
+- Commands live only in memory. The channel never reads or writes `ctx.storage`: an AI agent session
+  on the person's computer can list, read and change a plugin's storage, so a command kept there
+  could leak its input or be planted to run. A restart drops the commands still waiting, and their
+  panels hear `outcome-unknown`.
+- `channel.submit()` runs a command from the plugin's own code (for example an approved CLI action);
+  `channel.retireRows()` settles a legacy command table's waiting rows once, without running them.
+  It reads every page, warns once when rows will not change, and refuses a `retiredStatus` that is
+  itself still-to-run.
+- `createCommandClient(name)` (panel) returns typed `CommandError`s that say whether the command
+  ran: `host-too-old`, `worker-not-ready`, `refused`, `invalid-input`, `failed` and
+  `outcome-unknown`. It never writes a row. A waiting command reports how long the command ahead of
+  it has been running (`onPending`), so a stuck queue is visible. The client keeps asking through a
+  backend restart for up to a minute.
+- The channel needs Omniscio v0.1.92 (`ctx.rpc` / `AgentMC.backend.invoke`): set
+  `plugin.minAppVersion` to `"0.1.92"`. On older hosts the panel gets `host-too-old` and writes
+  nothing.
+
+See the new "Panel commands" guide.
+
+### Added — `describeForgedRowsAreInert` and `createRpcDouble` in the testing kit
+
+`createRpcDouble()` stands in for Omniscio's panel-to-backend channel: it makes the same JSON round
+trip and fails with Omniscio's own messages. `describeForgedRowsAreInert({ describe, it }, options)`
+runs each command once through the channel, then forges, edits and re-arms rows of every command
+type in every declared table (every row, page by page) and plants each command in `ctx.storage`. It
+fires every cron, the start-up hooks, a second round of commands and a restart, and fails on any
+extra effect. `createTestContext` takes `rpc` and `host` options.
+
+### Changed — the test double and the dev shell page `db.query` like Omniscio
+
+- `createTestContext`'s `db.query` returns one page of 100 rows when a query gives no `limit`,
+  caps `limit` at 10,000 and `offset` at 1,000,000, and truncates both, exactly as Omniscio does. It
+  used to return every row, so code that reads only the first page passed its tests. The rule is
+  exported as `hostQueryPage`.
+- The dev shell's `db.query` pages the same way, so a plugin under development sees the page
+  Omniscio will hand it.
+
+### Added — the types Omniscio already had
+
+- `ctx.rpc` (`PluginRpc`) and `AgentMC.backend` (`BridgeBackend`): the panel-to-backend request
+  channel, present since Omniscio v0.1.92.
+- `ctx.host` (`PluginHost`) and `AgentMC.host` (`BridgeHost`): capability tokens for feature
+  detection. The webview half has existed since v0.1.89; the backend half is new on the host side.
+- `agentWritable` on storage tables and on settings. On Omniscio builds that carry the plugin-table
+  fence, a table only accepts writes from the local control server when it opts in, and a setting
+  only changes from outside at once when it opts in. Older builds strip the key.
+- All four members are optional, so existing plugins and hand-written test doubles keep compiling.
+
+### Added — `boards.read` is an accepted permission
+
+The host has gated `boards.read` since 2026-08; a manifest declaring it failed `amc-plugin
+validate` and preflight. It now passes. The webview `AgentMC.boards` namespace is not typed yet.
+
 ### Fixed — new plugins no longer start out wearing the stock puzzle glyph
 
 `plugin.icon` accepts either a Lucide icon **name** (Omniscio draws a generic stock

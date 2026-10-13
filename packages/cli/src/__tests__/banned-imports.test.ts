@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { findBannedImports, scanBannedImports } from '../lib/banned-imports.js'
+import { findBannedImports, scanBannedImports, scannableFiles } from '../lib/banned-imports.js'
 
 describe('findBannedImports', () => {
   it('flags a CommonJS require of a banned module', () => {
@@ -159,6 +159,17 @@ describe('scanBannedImports', () => {
     const file = path.join(dir, 'notes.txt')
     fs.writeFileSync(file, `require('child_process')`)
     expect(scanBannedImports(file)).toEqual([])
+  })
+
+  it('reads only files whose extension is .js, .mjs or .cjs — not x.njs, nor a file merely named xjs', () => {
+    // The extension needs its dot: without it, any name that ends in "js" was read as code.
+    for (const name of ['a.js', 'b.mjs', 'c.cjs', 'x.njs', 'xjs']) {
+      fs.writeFileSync(path.join(dir, name), `const e = require('electron')`)
+    }
+    expect(scannableFiles(dir).map((file) => path.basename(file)).sort()).toEqual(['a.js', 'b.mjs', 'c.cjs'])
+    expect(scanBannedImports(dir)).toHaveLength(3)
+    expect(scanBannedImports(path.join(dir, 'x.njs'))).toEqual([])
+    expect(scanBannedImports(path.join(dir, 'xjs'))).toEqual([])
   })
 
   it('scans a missing directory to an empty result', () => {

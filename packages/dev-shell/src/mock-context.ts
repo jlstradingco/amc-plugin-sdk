@@ -5,7 +5,7 @@ import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plug
 // The dev shell is itself a development tool, so depending on the SDK's testing
 // entry is in-band: it keeps ONE definition of the backend message row rather
 // than a second copy that can drift from the host.
-import { createMockSessionMessage, estimatePayloadBytes } from '@agent-mc/plugin-sdk/testing'
+import { createMockSessionMessage, estimatePayloadBytes, hostQueryPage } from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -252,10 +252,9 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
             })
           }
         }
-        const offset = options?.offset ?? 0
-        const sliced = options?.limit !== undefined
-          ? rows.slice(offset, offset + options.limit)
-          : rows.slice(offset)
+        // One page, the way Omniscio returns it: 100 rows unless the query sets a limit.
+        const { offset, limit } = hostQueryPage(options)
+        const sliced = rows.slice(offset, offset + limit)
         if (shouldLog) console.log(`${prefix} [db] query(${col}) -> ${sliced.length} rows`)
         return Promise.resolve(sliced.map(clone))
       },

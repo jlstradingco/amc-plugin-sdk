@@ -94,6 +94,73 @@ export const HOST_REJECTED_MIGRATION_OPS = ['remove_column', 'remove_index'] as 
  */
 export const HOST_RESERVED_COLUMNS = ['id', 'created_at', 'updated_at'] as const
 
+/**
+ * The plugin-table fence (`agentWritable`), read from host LOCAL master **8d41f0cdf6
+ * (2026-10-09)**. It is NOT on the host's GitHub master (checked at 0369c057eb, 2026-10-12): it
+ * ships with the pending Omniscio plugin-table fence PR, so no released Omniscio honours it yet.
+ * Re-verify `onGitHubMaster` before relying on it, and flip it in the change that sees it land.
+ *
+ * Meaning (`.claude/memory/contracts/plugin-command-trust-contract.md`): on a TABLE it opts the
+ * table IN to control-server writes, which are otherwise refused 403 for every key; on a SETTING
+ * it lets a control-server PATCH apply at once instead of waiting for the person's card.
+ */
+export const HOST_AGENT_WRITABLE = {
+  sourceCommit: '8d41f0cdf61d7f19c76a1c88dcd00238f50c98a1',
+  onGitHubMaster: false,
+  /** `agentWritable: z.boolean().optional()` on a storage collection — validator:387 */
+  collectionValidatorLine: 387,
+  /** `agentWritable: z.boolean().optional()` on a settings entry — validator:331 */
+  settingValidatorLine: 331,
+  /** The refusal code — cli-server-plugin-storage.ts:34, sent at :186 */
+  refusalCode: 'PLUGIN_COLLECTION_NOT_AGENT_WRITABLE',
+} as const
+
+/**
+ * How the host pages `ctx.db.query`, read from GitHub master **05a1a59ab5 (2026-10-13)**,
+ * `plugin-storage.ts:1112-1123` with `finitePageValue` at :224: `limit ?? 100`, truncated, a value
+ * that is not a number falls back to 100, clamped to [1, 10000]; an offset only when it is truthy,
+ * clamped to [0, 1000000]; no `orderBy` means `ORDER BY rowid ASC` (insertion order).
+ */
+export const HOST_DB_QUERY_PAGE = {
+  sourceCommit: '05a1a59ab58ec1813770f7a167b64feb0c120052',
+  onGitHubMaster: true,
+  defaultLimit: 100,
+  maxLimit: 10_000,
+  maxOffset: 1_000_000,
+} as const
+
+/**
+ * Every text the host rejects an `AgentMC.backend.invoke` with, at host master 8d41f0cdf6. The
+ * host sends no error codes, so the command client classifies by these texts; this list is what
+ * keeps that classification honest. `notDelivered` and `busy` fail BEFORE the call reaches a
+ * handler (nothing ran). `ambiguous` may fail after the handler started — the client must say
+ * the outcome is unknown.
+ */
+export const HOST_INVOKE_FAILURES = {
+  notDelivered: [
+    /** plugin-worker-host.ts:1466 — dispatchInvoke with no child process */
+    'Plugin backend is not running',
+    /** plugin-bridge-handler.ts:1224 — the `backend` case before the runtime is up */
+    'plugin runtime is not ready',
+    /** plugin-bridge-handler.ts:1228 — a UI-only or v1 plugin */
+    'plugin "my-plugin" has no running backend to invoke',
+    /** plugin-worker-entry-helpers.ts:827 — createRpcBridge dispatch, no handler for the method */
+    "No backend handler registered for 'demo:cmd.start'",
+  ],
+  /** plugin-worker-host.ts:1471 — the per-plugin in-flight cap (MAX_INFLIGHT_INVOKES_PER_PLUGIN = 100) */
+  busy: ['Too many in-flight backend calls (max 100)'],
+  ambiguous: [
+    /** plugin-worker-host.ts:1478 — INVOKE_DISPATCH_TIMEOUT_MS, 240 s */
+    'Backend call timed out',
+    /** plugin-worker-host.ts:1490 — drainPendingInvokeCalls on terminate or crash */
+    'Plugin was stopped',
+    /** plugin-worker-entry.ts:558 — the handler's return value could not be sent */
+    'Plugin backend returned a non-serializable value',
+    /** plugin-bridge-preload.ts:131 — the webview's 660 s backstop */
+    'Plugin bridge call backend.invoke timed out after 660s',
+  ],
+} as const
+
 /** `ALL_SESSION_STATUSES` — `session-status.ts:22-40`. */
 export const HOST_SESSION_STATUSES = [
   'running',

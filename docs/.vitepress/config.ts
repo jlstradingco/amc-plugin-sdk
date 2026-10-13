@@ -34,6 +34,7 @@ export default defineConfig({
             { text: 'Project Structure', link: '/guide/project-structure' },
             { text: 'Manifest', link: '/guide/manifest' },
             { text: 'Permissions', link: '/guide/permissions' },
+            { text: 'Panel Commands', link: '/guide/commands' },
             { text: 'Dev Shell', link: '/guide/dev-shell' },
             { text: 'Publishing', link: '/guide/publishing' },
             { text: 'Automations', link: '/guide/automations' }

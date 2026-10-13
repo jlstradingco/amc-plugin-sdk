@@ -123,6 +123,36 @@ export interface PluginSettings {
   get(key: string): Promise<unknown>
 }
 
+/**
+ * The backend half of your plugin's own panel-to-backend request channel: your panel calls
+ * `AgentMC.backend.invoke(method, ...args)` and awaits what your handler returns. Only your own
+ * panel (and, where Omniscio relays it, the person's approved phone) can reach it — the local
+ * control server that AI agent sessions use cannot. For commands, prefer
+ * `createCommandChannel` from `@agent-mc/plugin-sdk/commands`, which builds on this.
+ *
+ * Three host behaviours the signatures cannot show:
+ * - Arguments and the return value cross a JSON boundary (the worker uses Node's `json` IPC
+ *   serialization): a `Date` arrives as a string, `undefined` in an array as `null`, and a
+ *   `BigInt` or cyclic return value fails the call.
+ * - A thrown error reaches the panel as its MESSAGE only — no class, no `code`.
+ * - The host gives up after 240 seconds, and caps a plugin at 100 calls in flight.
+ *
+ * Present from Omniscio v0.1.92; `undefined` on older hosts.
+ */
+export interface PluginRpc {
+  /** Register (or replace) the handler for `method`. Handlers stay in the worker. */
+  handle(method: string, handler: (...args: unknown[]) => unknown): void
+  removeHandler(method: string): void
+}
+
+/**
+ * What this Omniscio can do for a plugin: a curated list of capability tokens such as
+ * `'ai-engine-choice'`. Absence of a token means no. Read-only and ungated.
+ */
+export interface PluginHost {
+  getCapabilities(): Promise<string[]>
+}
+
 export interface PluginLogger {
   info(message: string, ...args: unknown[]): void
   warn(message: string, ...args: unknown[]): void
@@ -1217,6 +1247,17 @@ export interface PluginContext {
   auth: PluginAuth
   recording: PluginRecording
   spend: PluginSpend
+  /**
+   * Your panel's request channel to this backend — see {@link PluginRpc}. Optional because
+   * Omniscio before v0.1.92 has none: check for it rather than assuming it.
+   */
+  rpc?: PluginRpc
+  /**
+   * Feature detection — see {@link PluginHost}. Optional, and absent on every released
+   * Omniscio so far: the backend `host` namespace exists only on unreleased host builds (the
+   * webview's `AgentMC.host` has existed since v0.1.89). Read it as `ctx.host?.getCapabilities()`.
+   */
+  host?: PluginHost
   // NOTE: `tts`, `sessionHistory` and `firebase` are deliberately ABSENT.
   //
   // All three are real capabilities, but they live on the WEBVIEW bridge only —

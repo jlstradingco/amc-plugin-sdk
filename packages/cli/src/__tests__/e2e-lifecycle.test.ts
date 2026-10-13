@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 
 /**
  * Wire up a scaffolded plugin's node_modules with the SDK and TypeScript
@@ -241,5 +241,37 @@ describe('Webview (flat-JS) plugin lifecycle E2E', () => {
     expect(files).toEqual(['webview-e2e-plugin-1.0.0.amcplugin'])
     // Flat plugins must never trigger a TypeScript compile.
     expect(fs.existsSync(path.join(pluginDir, 'dist'))).toBe(false)
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  // The command-table ship check, end to end: the same manifest change flips validate's exit code.
+  const validateWith = (edit: (manifest: Record<string, unknown>) => void) => {
+    const manifestPath = path.join(pluginDir, 'manifest.json')
+    const original = fs.readFileSync(manifestPath, 'utf-8')
+    const manifest = JSON.parse(original) as Record<string, unknown>
+    edit(manifest)
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
+    try {
+      const run = spawnSync(process.execPath, [cliDist, 'validate'], { cwd: pluginDir, encoding: 'utf-8' })
+      return { status: run.status, output: `${run.stdout}${run.stderr}` }
+    } finally {
+      fs.writeFileSync(manifestPath, original)
+    }
+  }
+
+  it('validate fails a plugin that declares a command table', () => {
+    const result = validateWith((manifest) => {
+      manifest.storage = { collections: { commands: { columns: { type: 'text', payload: 'json', status: 'text' } } } }
+    })
+    expect(result.output).toContain('can hold a runnable command')
+    expect(result.status).toBe(1)
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('validate passes the same plugin once the table only lists jobs, and accepts boards.read', () => {
+    const result = validateWith((manifest) => {
+      manifest.storage = { collections: { commands: { columns: { label: 'text', status: 'text', error: 'text' } } } }
+      manifest.permissions = ['boards.read']
+    })
+    expect(result.output).not.toContain('can hold a runnable command')
+    expect(result.status).toBe(0)
   }, SHELL_OUT_TIMEOUT_MS)
 })

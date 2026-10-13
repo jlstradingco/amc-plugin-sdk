@@ -6,6 +6,7 @@ import { validateManifest, classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
 import { isTypeScriptProject, resolveBannedScanDirs, collectPackageEntries } from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
+import { reportCommandTables } from '../lib/command-tables.js'
 
 export const validateCommand = new Command('validate')
   .description('Run all validation checks without building (CI-friendly)')
@@ -127,6 +128,9 @@ export const validateCommand = new Command('validate')
         ok('No banned imports')
       }
     }
+
+    // A table that can hold a runnable command fails here, in preflight and in publish alike.
+    if (reportCommandTables(manifest, scanDirs, cwd)) hasErrors = true
 
     if (hasErrors) {
       fail('Validation failed')

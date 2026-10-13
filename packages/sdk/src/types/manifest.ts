@@ -30,6 +30,30 @@ export interface PluginCollectionSchema {
    * SQLite error rather than silently inserting a duplicate.
    */
   uniqueIndexes?: string[][]
+  /**
+   * Opt this table IN to writes from Omniscio's local control server — the
+   * `POST` / `PATCH` / `DELETE /plugins/:id/db/:collection` routes every AI agent
+   * session on the computer can reach. Absent or `false` (the default), the host
+   * refuses every such write with a 403 for every key, so an agent cannot insert,
+   * edit or re-arm your rows. Your own backend and panel still write normally.
+   *
+   * Set it only on plain data an agent may freely edit, never on a table your
+   * plugin acts on (a command queue, a job list, a rule it runs).
+   *
+   * Hosts that predate the plugin-table fence strip the key and keep the old open
+   * door, so never rely on it for safety there — see the command channel guide.
+   * Mirrors the host's `PluginCollectionSchema.agentWritable`
+   * (plugin-command-trust-contract.md).
+   */
+  agentWritable?: boolean
+  /**
+   * A written reason why this table is safe even though `amc-plugin validate`
+   * flags it as a command table (an instruction column, an argument column and a
+   * status column). 20 to 500 characters. The CLI's ship check and marketplace
+   * review read it; the host strips it. A waiver never covers an `agentWritable`
+   * table.
+   */
+  commandTableWaiver?: string
 }
 
 /**
@@ -164,6 +188,14 @@ export interface PluginSettingDefinition {
   min?: number
   max?: number
   testAction?: PluginSettingTestAction
+  /**
+   * Let a control-server write (`PATCH /plugins/:id/settings`) change this setting
+   * at once. Absent or `false` (the default), such a write waits for the person's
+   * approval card; a `password` setting is refused outright either way. The
+   * in-app settings screen is unaffected. Hosts that predate the plugin-table
+   * fence strip the key. Mirrors the host's `PluginSettingDefinition.agentWritable`.
+   */
+  agentWritable?: boolean
 }
 
 export type PluginPermission =
@@ -189,6 +221,10 @@ export type PluginPermission =
   | 'inbox'
   | 'navigation'
   | 'spend'
+  // Read the full contents of the boards the user grants the plugin — every item,
+  // column value and status — through the webview's `AgentMC.boards` namespace
+  // (`list`, `requestAccess`). The namespace itself is not typed by this SDK yet.
+  | 'boards.read'
   // Workspace — read/write/exec against the user's real project checkouts and
   // worktrees, gated per project by a runtime grant on top of the install-time
   // permission. All three are live host-side (see `WorkspaceApi`).

@@ -112,13 +112,15 @@ Declare in `manifest.json` — AMC shows these at install and enforces at runtim
 
 ## Exports
 
-This package provides three entry points:
+This package provides five entry points:
 
 | Import path | What it provides |
 |---|---|
-| `@agent-mc/plugin-sdk` | All TypeScript types + `validateManifest()` + `manifestSchema` |
+| `@agent-mc/plugin-sdk` | All TypeScript types + `validateManifest()` + `manifestSchema` + `checkCommandTables()` |
 | `@agent-mc/plugin-sdk/browser` | `AgentMC` browser bridge type for UI plugins |
 | `@agent-mc/plugin-sdk/validators` | Zod manifest schema and validation function |
+| `@agent-mc/plugin-sdk/commands` | `createCommandChannel` (backend) and `createCommandClient` (panel): a private command channel agents cannot write to |
+| `@agent-mc/plugin-sdk/testing` | `createTestContext`, `createRpcDouble` and `describeForgedRowsAreInert` for plugin tests |
 
 ## Backend Lifecycle
 
@@ -139,6 +141,7 @@ Full guides, API reference, and examples: **[AMC Plugin SDK Docs](https://jlstra
 - [Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started) — scaffold your first plugin
 - [Manifest Reference](https://jlstradingco.github.io/amc-plugin-sdk/guide/manifest) — full manifest.json spec
 - [Permissions](https://jlstradingco.github.io/amc-plugin-sdk/guide/permissions) — what each permission grants
+- [Panel Commands](https://jlstradingco.github.io/amc-plugin-sdk/guide/commands) — send commands from your panel to your backend safely
 - [API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/) — all 20 capability interfaces
 
 ## License
