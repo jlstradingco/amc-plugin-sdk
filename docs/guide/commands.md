@@ -103,10 +103,10 @@ Every failure is a `CommandError` whose `code` says what is known about whether 
 |---|---|---|
 | `host-too-old` | This Omniscio has no panel-to-backend channel (before v0.1.92) | No — nothing was sent or written |
 | `worker-not-ready` | The backend is not running, or is an older build without this channel | No |
-| `refused` | Turned away: full queue, input over the limit, a busy host, or a saved command dropped after an update | No |
+| `refused` | Turned away: full queue, input over the limit, or a busy host | No |
 | `invalid-input` | The input is not plain JSON data, or `parse` rejected it (its message is passed through) | No |
 | `failed` | It ran and threw (the error's message is passed through), or ran but its result could not be sent back | Yes |
-| `outcome-unknown` | Contact was lost after the backend may have accepted it, and it did not come back within a minute | Maybe — never retry it blindly |
+| `outcome-unknown` | Contact was lost after the backend may have accepted it and did not come back within a minute, or the plugin restarted before handing over the result | Maybe — never retry it blindly |
 
 ## How commands run
 
@@ -131,27 +131,22 @@ running.
 **A stuck command holds the queue.** While a write never finishes, later writes wait (they are not
 run and not lost), and each status answer says how long the stuck one has been running:
 `onPending` receives `{ waiting: 'queued', runningForMs }`. To clear it, restart the plugin
-(disable and re-enable it, or restart Omniscio). Without `durable`, the waiting commands are then
-gone and their panels are told `outcome-unknown`; with it, they resume.
+(disable and re-enable it, or restart Omniscio). The waiting commands are then gone, none of them
+runs later, and their panels are told `outcome-unknown`.
 
-## Surviving a restart: `durable: true`
+## After a restart
 
-```typescript
-createCommandChannel(ctx, { name: 'mail', commands, durable: true })
-```
+Commands live only in your backend's memory. When the plugin restarts — an update, a crash, or you
+clearing a stuck command — every command that was waiting or running is gone, and none of them runs
+later.
 
-- **A waiting command survives a restart.** Each accepted command keeps one private copy in
-  `ctx.storage` (declare the `storage` permission). When the plugin starts again, the waiting
-  commands run, in their original order.
-- **A started command never runs twice.** Its copy is deleted just before it runs, so a crash
-  mid-run cannot repeat it. If the copy is gone or cannot be deleted, the command is `refused`
-  instead of run.
-- **An update can refuse a saved command.** If the new version's `parse` rejects a saved input,
-  the command is dropped without running and its waiting panel is told `refused`.
-- **The panel waits through the restart.** While the backend is away, the panel keeps asking for
-  up to a minute, so it hears the real outcome.
-- **Durable inputs must stay under 1 MiB.** Omniscio stores at most 1 MiB per value, so
-  `maxInputBytes` cannot go higher.
+- **A panel still waiting hears `outcome-unknown`.** While the backend is away the panel keeps
+  asking for up to a minute; the restarted backend no longer knows the command, so the panel cannot
+  say whether it ran. Show that, and let the person check before sending it again.
+- **Nothing is kept in `ctx.storage`, on purpose.** An AI agent on the person's computer can list,
+  read and change a plugin's storage through Omniscio's local control server. A command saved there
+  could be read (its input leaks) or planted (it would run at the next start), so the channel saves
+  none.
 
 ## Commands from your own code
 
@@ -196,9 +191,11 @@ ctx.cli.handle('/send', async (req) => ({ status: 200, body: await channel.submi
   simulates a stopped backend.
 - **`describeForgedRowsAreInert()`** — the test that matters. It runs each of your commands once
   through the channel (and fails if your `effects` probe cannot see it run), then forges, edits and
-  re-arms rows of every command type in every table your manifest declares. Then it fires every cron,
-  the start-up hooks, a second round of commands and a restart on the same data, and fails if
-  anything extra happened.
+  re-arms rows of every command type in every table your manifest declares — every row, page by
+  page — and plants each command in `ctx.storage`. Then it fires every cron, the start-up hooks, a
+  second round of commands and a restart on the same data, and fails if anything extra happened.
+  It plants storage records only where the channel itself once kept them (`__commands:<channel>:`);
+  if your plugin keeps command-like records of its own in storage, test those yourself.
 
 ```typescript
 import { describe, it } from 'vitest'
@@ -232,6 +229,9 @@ written `commandTableWaiver`. The rule, its warnings and what it cannot see are 
 ## What this does not protect
 
 - **Reads.** Agents can still read every table your plugin declares; nothing here hides data.
+- **Your own use of `ctx.storage`.** Agents can list, read and change it too. Keep credentials in
+  [`ctx.secrets`](../api/secrets), and never act on what storage returns as if it were an
+  instruction.
 - **A plugin that keeps acting on rows** by its own code, channel or not.
 - **Anyone who controls the person's screen or disk.** They can act as the person.
 - **Anything the ship check cannot see:** see its limits in the [CLI reference](../reference/cli#command-tables).

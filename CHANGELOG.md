@@ -36,6 +36,10 @@ ship. See "Fixed" below.
 `validate` also now checks `plugin.icon`. It fails on an icon path that is unsafe, missing, or outside
 what `package` ships, and warns on a Lucide icon name. See "Fixed" below.
 
+Your own tests may also change: `createTestContext` and the dev shell now page `db.query` like
+Omniscio (100 rows unless you pass a `limit`), so a test that read more than 100 rows from one query
+fails now, as the same code would on Omniscio. See "Changed" below.
+
 ### Added — a private command channel between a plugin's panel and its backend
 
 A backend should act only on commands from its own panel or its own code, never on a table row.
@@ -45,11 +49,14 @@ A backend should act only on commands from its own panel or its own code, never 
   it is accepted. Writes run one at a time in arrival order; reads run in parallel up to a cap.
   Each result is handed over once, inputs and results are never logged, and the queue, input size
   and uncollected results are bounded.
-- `durable: true` keeps a private copy of each waiting command in `ctx.storage`, so it survives a
-  restart. The copy is deleted just before the command runs, so a crash can never run it twice. A
-  saved command that an update can no longer accept is refused rather than run.
+- Commands live only in memory. The channel never reads or writes `ctx.storage`: an AI agent session
+  on the person's computer can list, read and change a plugin's storage, so a command kept there
+  could leak its input or be planted to run. A restart drops the commands still waiting, and their
+  panels hear `outcome-unknown`.
 - `channel.submit()` runs a command from the plugin's own code (for example an approved CLI action);
   `channel.retireRows()` settles a legacy command table's waiting rows once, without running them.
+  It reads every page, warns once when rows will not change, and refuses a `retiredStatus` that is
+  itself still-to-run.
 - `createCommandClient(name)` (panel) returns typed `CommandError`s that say whether the command
   ran: `host-too-old`, `worker-not-ready`, `refused`, `invalid-input`, `failed` and
   `outcome-unknown`. It never writes a row. A waiting command reports how long the command ahead of
@@ -66,8 +73,18 @@ See the new "Panel commands" guide.
 `createRpcDouble()` stands in for Omniscio's panel-to-backend channel: it makes the same JSON round
 trip and fails with Omniscio's own messages. `describeForgedRowsAreInert({ describe, it }, options)`
 runs each command once through the channel, then forges, edits and re-arms rows of every command
-type in every declared table. It fires every cron, the start-up hooks, a second round of commands
-and a restart, and fails on any extra effect. `createTestContext` takes `rpc` and `host` options.
+type in every declared table (every row, page by page) and plants each command in `ctx.storage`. It
+fires every cron, the start-up hooks, a second round of commands and a restart, and fails on any
+extra effect. `createTestContext` takes `rpc` and `host` options.
+
+### Changed — the test double and the dev shell page `db.query` like Omniscio
+
+- `createTestContext`'s `db.query` returns one page of 100 rows when a query gives no `limit`,
+  caps `limit` at 10,000 and `offset` at 1,000,000, and truncates both, exactly as Omniscio does. It
+  used to return every row, so code that reads only the first page passed its tests. The rule is
+  exported as `hostQueryPage`.
+- The dev shell's `db.query` pages the same way, so a plugin under development sees the page
+  Omniscio will hand it.
 
 ### Added — the types Omniscio already had
 

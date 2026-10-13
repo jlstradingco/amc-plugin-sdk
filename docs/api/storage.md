@@ -5,6 +5,14 @@ Simple key-value storage for persisting plugin data across sessions and restarts
 **Availability:** Both (backend `ctx.storage` / frontend `AgentMC.storage`)
 **Required Permission:** `storage`
 
+::: warning AI agents can read and write this storage
+An AI agent session on the person's computer can list, read, change and delete your plugin's storage
+keys through Omniscio's local control server. Never keep secrets here (use [`ctx.secrets`](./secrets)
+for credentials), and never act on a stored value as if it were an instruction without checking it
+yourself. To take commands from your panel safely, use the [command channel](../guide/commands),
+which keeps nothing in storage.
+:::
+
 ## Methods
 
 ### `get(key: string): Promise<unknown>`

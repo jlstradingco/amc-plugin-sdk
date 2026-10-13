@@ -534,7 +534,7 @@ amc-plugin test [patterns...] [options]
 
 The SDK ships a test harness at `@agent-mc/plugin-sdk/testing` that gives you a
 faithful in-memory `PluginContext` — real storage and db (query / where / orderBy /
-limit), plus capture surfaces for toasts, notifications, logs, events, sidebar,
+limit, paged like Omniscio: 100 rows unless you pass a `limit`), plus capture surfaces for toasts, notifications, logs, events, sidebar,
 and inbox, and triggers for cron jobs and CLI handlers. No AMC or Electron needed.
 
 ```ts

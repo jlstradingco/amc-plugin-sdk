@@ -50,7 +50,7 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | API | Mock behavior |
 |---|---|
 | **storage** | Persisted KV store -- survives restarts via `.amc-dev/amc-dev-storage.json` in your plugin dir (in-memory only when no data dir is set) |
-| **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy` (`{ col: 'asc' | 'desc' }`), `limit`/`offset`; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
+| **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy` (`{ col: 'asc' | 'desc' }`), `limit`/`offset`, and returns one page of 100 rows when you give no `limit`, like Omniscio; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
 | **settings** | Seeded from an `amc-dev-settings.json` dev config file next to your plugin; `getAll()`/`get(key)` read from it (empty when the file is absent) |
 | **log** | Prints to the terminal with a `[plugin:your-id]` prefix |
 | **events** | In-memory `EventEmitter`, backend-only. Backend-to-backend delivery matches AMC, but an emit does NOT reach the dev shell's webview -- in AMC it reaches both surfaces. Exercise UI-facing events in AMC itself |
@@ -134,7 +134,7 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | UI rendering | Full (Electron webview) | Full (Electron webview) |
 | Theme CSS variables | Injected by shell HTML | Injected by AMC |
 | Storage | Persisted to `.amc-dev/` (JSON file) | SQLite `plugin_kv` (persistent) |
-| DB | Faithful in-memory store (where/orderBy/limit) -- lost on restart | SQLite tables (persistent) |
+| DB | Faithful in-memory store (where/orderBy/limit, 100-row default page) -- lost on restart | SQLite tables (persistent) |
 | Settings | Seeded from `amc-dev-settings.json` | Configured in AMC settings UI |
 | Sessions | Mock IDs, no real Claude process | Real Claude Code sessions |
 | AI generation | Returns placeholder strings | Calls Anthropic API |
