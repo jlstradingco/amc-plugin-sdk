@@ -6,6 +6,7 @@ import { validateManifest } from '../validators/manifest.js'
 import {
   collectManifestEntryPaths,
   manifestEntryPathProblems,
+  MANIFEST_ENTRY_PATH_FIELDS,
 } from '../validators/manifest-entry-path.js'
 import {
   HOST_ENTRY_PATH_PROVENANCE,
@@ -137,6 +138,15 @@ describe('validateManifest runs the host entry-path rule on all six fields', () 
     expect(validateManifest(manifest).valid).toBe(manifestEntryPathProblems(value).length === 0)
   })
 
+  it('covers every path field the host rule declares', () => {
+    // MANIFEST_ENTRY_PATH_FIELDS is the host's own list. When a re-copy of the rule adds a field,
+    // this fails until ENTRY_PATH_FIELDS (and so every case above) covers it too.
+    const declaredFields = MANIFEST_ENTRY_PATH_FIELDS.map((field) =>
+      field.replace('ui.windows[].', 'ui.windows.main.')
+    )
+    expect([...declaredFields].sort()).toEqual(ENTRY_PATH_FIELDS.map((placement) => placement.field).sort())
+  })
+
   it('checks exactly the fields the host rule walks', () => {
     // The rule's own collector is the host's statement of which fields are path-typed. A field it
     // walks that the schema does not check is a door left open.
@@ -151,28 +161,42 @@ describe('validateManifest runs the host entry-path rule on all six fields', () 
       },
       backend: { entryPoint: '../index.js' },
     }
-    const hostFields = collectManifestEntryPaths(everyField).map((entry) => entry.field)
-    expect(hostFields).toEqual(ENTRY_PATH_FIELDS.map((placement) => placement.field))
+    const hostFields = collectManifestEntryPaths(everyField).map((entry) => entry.field).sort()
+    expect(hostFields).toEqual(ENTRY_PATH_FIELDS.map((placement) => placement.field).sort())
 
     const refusedFields = validateManifest(everyField).errors.map((error) => error.split(': ')[0])
-    expect(refusedFields).toEqual(hostFields)
+    expect(refusedFields.sort()).toEqual(hostFields)
   })
 
-  it('reports each broken dimension with the host message', () => {
-    const expectations: ReadonlyArray<[unknown, string]> = [
-      ['   ', 'entryPoint must not be blank'],
-      ['a'.repeat(501), 'entryPoint must be at most 500 characters'],
-      ['ui/ta\tb.html', 'entryPoint must not contain a tab, newline or carriage return'],
-      ['https://attacker.example/x.html', 'entryPoint must be a plugin-relative path, not a URL or scheme'],
-      ['/etc/passwd', 'entryPoint must be relative to the plugin directory, not an absolute path'],
-      ['C:/x.html', 'entryPoint must be relative to the plugin directory, not a drive-qualified path'],
-      ['%2e%2e/x.html', 'entryPoint must not contain a ".." path segment'],
-    ]
-    for (const [entryPath, message] of expectations) {
-      expect(validateManifest({ ...baseManifest, ui: { entryPoint: entryPath } }).errors).toContain(
-        `ui.entryPoint: ${message}`
-      )
-    }
+  it.each([
+    { problem: 'blank', entryPath: '   ', message: 'entryPoint must not be blank' },
+    { problem: 'too-long', entryPath: 'a'.repeat(501), message: 'entryPoint must be at most 500 characters' },
+    {
+      problem: 'control-character',
+      entryPath: 'ui/ta\tb.html',
+      message: 'entryPoint must not contain a tab, newline or carriage return',
+    },
+    {
+      problem: 'scheme',
+      entryPath: 'https://attacker.example/x.html',
+      message: 'entryPoint must be a plugin-relative path, not a URL or scheme',
+    },
+    {
+      problem: 'absolute',
+      entryPath: '/etc/passwd',
+      message: 'entryPoint must be relative to the plugin directory, not an absolute path',
+    },
+    {
+      problem: 'drive',
+      entryPath: 'C:/x.html',
+      message: 'entryPoint must be relative to the plugin directory, not a drive-qualified path',
+    },
+    { problem: 'parent-segment', entryPath: '%2e%2e/x.html', message: 'entryPoint must not contain a ".." path segment' },
+  ])('reports a $problem path with the host message', ({ entryPath, message }) => {
+    // toContain, not toEqual: a drive path also matches the host's scheme pattern (`C:`).
+    expect(validateManifest({ ...baseManifest, ui: { entryPoint: entryPath } }).errors).toContain(
+      `ui.entryPoint: ${message}`
+    )
   })
 
   it('reports every dimension a path breaks, not only the first', () => {
@@ -214,13 +238,53 @@ describe('the three ui surfaces the SDK used to drop', () => {
     ])
   })
 
-  it('refuses a window size outside the host bounds', () => {
-    const result = validateManifest({
-      ...baseManifest,
-      ui: { windows: { main: { entryPoint: 'ui/main.html', width: 100 } } },
-    })
+  it('accepts exactly four windows', () => {
+    const windows = Object.fromEntries(
+      ['a', 'b', 'c', 'd'].map((key) => [key, { entryPoint: `ui/${key}.html` }])
+    )
+    expect(validateManifest({ ...baseManifest, ui: { windows } }).errors).toEqual([])
+  })
+
+  const windowWith = (key: string, surface: object) => ({
+    ...baseManifest,
+    ui: { windows: { [key]: { entryPoint: 'ui/main.html', ...surface } } },
+  })
+
+  it.each([
+    { label: 'a 40-character key', manifest: windowWith('a'.repeat(40), {}) },
+    { label: 'a key with digits and hyphens', manifest: windowWith('2nd-screen', {}) },
+    { label: 'the smallest size', manifest: windowWith('main', { width: 200, height: 200 }) },
+    { label: 'the largest size', manifest: windowWith('main', { width: 10000, height: 10000 }) },
+    { label: 'a 120-character title', manifest: windowWith('main', { title: 't'.repeat(120) }) },
+  ])('accepts a window with $label', ({ manifest }) => {
+    expect(validateManifest(manifest).errors).toEqual([])
+  })
+
+  it.each([
+    { label: 'a 41-character key', manifest: windowWith('a'.repeat(41), {}), field: `ui.windows.${'a'.repeat(41)}` },
+    { label: 'a key starting with a hyphen', manifest: windowWith('-main', {}), field: 'ui.windows.-main' },
+    { label: 'an empty key', manifest: windowWith('', {}), field: 'ui.windows.' },
+    { label: 'a width below 200', manifest: windowWith('main', { width: 199 }), field: 'ui.windows.main.width' },
+    { label: 'a width above 10000', manifest: windowWith('main', { width: 10001 }), field: 'ui.windows.main.width' },
+    { label: 'a height below 200', manifest: windowWith('main', { height: 199 }), field: 'ui.windows.main.height' },
+    { label: 'a height above 10000', manifest: windowWith('main', { height: 10001 }), field: 'ui.windows.main.height' },
+    { label: 'a fractional width', manifest: windowWith('main', { width: 640.5 }), field: 'ui.windows.main.width' },
+    { label: 'an empty title', manifest: windowWith('main', { title: '' }), field: 'ui.windows.main.title' },
+    { label: 'a 121-character title', manifest: windowWith('main', { title: 't'.repeat(121) }), field: 'ui.windows.main.title' },
+  ])('refuses a window with $label', ({ manifest, field }) => {
+    const result = validateManifest(manifest)
     expect(result.valid).toBe(false)
-    expect(result.errors[0]).toMatch(/^ui\.windows\.main\.width: /)
+    expect(result.errors.map((error) => error.split(': ')[0])).toContain(field)
+  })
+
+  it.each([
+    { field: 'ui.overlay.entryPoint', ui: { overlay: {} } },
+    { field: 'ui.settingsPanel.entryPoint', ui: { settingsPanel: {} } },
+    { field: 'ui.widget.entryPoint', ui: { widget: {} } },
+    { field: 'ui.windows.main.entryPoint', ui: { windows: { main: { title: 'Main' } } } },
+  ])('requires $field once its surface is declared', ({ field, ui }) => {
+    const result = validateManifest({ ...baseManifest, ui })
+    expect(result.errors.map((error) => error.split(': ')[0])).toContain(field)
   })
 })
 
