@@ -11,6 +11,29 @@ together.
 
 ## [Unreleased]
 
+Everything here is additive. `sdkVersion` (the Omniscio host contract your manifest declares) and the CLI's `2.0.0` floor are unchanged.
+
+### Added — titlebar widgets (`chrome.widget`)
+
+You can now build a widget in the Omniscio titlebar end to end.
+
+- New permission **`chrome.widget`**. It requires an explicit `chrome` alongside it, and `amc-plugin validate` enforces that pairing the way Omniscio does.
+- New webview API **`AgentMC.widget`** with `set(spec)` and `clear()`, and the types `WidgetSpec`, `WidgetShape`, `WidgetTone` and `BridgeWidget`. You send data (a shape, up to 8 characters of `value`, up to 16 of `label`, a semantic tone and an icon name) and Omniscio draws it. See [the Widget API](docs/api/widget.md), which also lists the icon names Omniscio accepts.
+- New manifest field **`ui.widget.entryPoint`**: the page shown in the 320 x 256 popover when the widget is clicked. It must be a plugin-relative path, with the same rules Omniscio applies. `amc-plugin validate` checks the file exists and `package` ships it wherever it lives.
+- New scaffold: `amc-plugin create my-widget --template widget`.
+- New example: `examples/widget-demo`.
+- The dev shell has no titlebar, so it has no widget mock; try widgets inside Omniscio.
+
+### Added — reading sessions and projects (`coreRead`)
+
+- New elevated permission **`coreRead`** and the backend namespace **`ctx.core`**: `core.sessions.list/get`, `core.projects.list/get` and `core.messages.list` (capped at 200 messages per call). Types: `CoreSession`, `CoreProject`, `CoreMessage`, `PluginCore`. See [the Core API](docs/api/core.md).
+- `createTestContext({ core })` seeds it, and the dev shell serves a small set of sample sessions, projects and messages.
+- `PluginContext` gains an optional `core` member, like `rpc` and `host`, so a `PluginContext` double you build yourself keeps compiling. Check for it (`if (!ctx.core) …`) before use.
+
+### Changed
+
+- `chrome.widget` and `coreRead` are no longer host-ahead in the SDK's permission mirror (reconciled on 2026-10-12 against the host's GitHub master `0369c057eb`).
+
 ## [3.2.0] - 2026-10-12
 
 ### Upgrading to CLI 3.2.0 — read this before you bump

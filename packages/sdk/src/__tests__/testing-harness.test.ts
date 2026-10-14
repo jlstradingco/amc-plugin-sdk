@@ -337,3 +337,69 @@ describe('createTestContext — spend', () => {
     })
   })
 })
+
+// `core` mirrors the host's read rules (plugin-core-read-service.ts): an unknown
+// id is `null` / `[]` rather than an error, and `messages.list` caps at 200 where
+// `window` can only lower the cap.
+describe('createTestContext — core (coreRead)', () => {
+  // `PluginContext.core` is optional; the harness always installs it, so a missing one is a
+  // harness bug and must fail here rather than read as an empty install.
+  const coreOf = (ctx: ReturnType<typeof createTestContext>['ctx']) => {
+    if (!ctx.core) throw new Error('createTestContext did not install ctx.core')
+    return ctx.core
+  }
+
+  it('always installs ctx.core, even with no core option', () => {
+    expect(createTestContext().ctx.core).toBeDefined()
+  })
+
+  const sessions = [
+    { id: 's1', projectId: 'p1', name: 'One', status: 'idle', lastActiveAt: '2026-01-01T00:00:00.000Z' },
+    { id: 's2', projectId: 'p2', name: 'Two', status: 'running', lastActiveAt: '2026-01-02T00:00:00.000Z' },
+  ]
+  const projects = [
+    { id: 'p1', name: 'First', folderPath: '/a' },
+    { id: 'p2', name: 'Second', folderPath: '/b' },
+  ]
+  const makeMessages = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `m${i}`,
+      role: (i % 2 === 0 ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: `message ${i}`,
+      timestamp: '2026-01-01T00:00:00.000Z',
+    }))
+
+  it('is empty by default, like a brand-new install', async () => {
+    const { ctx } = createTestContext()
+    expect(await coreOf(ctx).sessions.list()).toEqual([])
+    expect(await coreOf(ctx).projects.list()).toEqual([])
+    expect(await coreOf(ctx).sessions.get('nope')).toBeNull()
+    expect(await coreOf(ctx).projects.get('nope')).toBeNull()
+    expect(await coreOf(ctx).messages.list('nope')).toEqual([])
+  })
+
+  it('lists and gets seeded sessions and projects, filtering sessions by projectId', async () => {
+    const { ctx } = createTestContext({ core: { sessions, projects } })
+    expect(await coreOf(ctx).sessions.list()).toHaveLength(2)
+    expect((await coreOf(ctx).sessions.list({ projectId: 'p2' })).map((s) => s.id)).toEqual(['s2'])
+    expect((await coreOf(ctx).sessions.get('s1'))?.name).toBe('One')
+    expect((await coreOf(ctx).projects.get('p2'))?.folderPath).toBe('/b')
+    expect(await coreOf(ctx).sessions.get('missing')).toBeNull()
+  })
+
+  it('caps messages at 200 and lets window only lower it', async () => {
+    const { ctx } = createTestContext({
+      core: { sessions, messages: { s1: makeMessages(250) } },
+    })
+    expect(await coreOf(ctx).messages.list('s1')).toHaveLength(200)
+    expect(await coreOf(ctx).messages.list('s1', 5)).toHaveLength(5)
+    expect(await coreOf(ctx).messages.list('s1', 1000)).toHaveLength(200)
+    expect(await coreOf(ctx).messages.list('s1', 0)).toHaveLength(200)
+    expect((await coreOf(ctx).messages.list('s1', 2)).map((m) => m.id)).toEqual(['m0', 'm1'])
+  })
+
+  it('returns [] for messages of a session it was not given', async () => {
+    const { ctx } = createTestContext({ core: { sessions, messages: { ghost: makeMessages(3) } } })
+    expect(await coreOf(ctx).messages.list('ghost')).toEqual([])
+  })
+})

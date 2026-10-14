@@ -544,6 +544,77 @@ export interface BridgeStt {
   isConfigured(): Promise<boolean>
 }
 
+/** The five shapes Omniscio can draw for a titlebar widget. A closed set: you pick one, the host draws it. */
+export type WidgetShape = 'stat' | 'pill' | 'dot' | 'gauge' | 'sparkline'
+
+/**
+ * What a widget MEANS, never what colour it is. Omniscio maps each tone to its
+ * own palette, so a plugin cannot paint itself the shade of red the app reserves
+ * for real errors.
+ */
+export type WidgetTone = 'neutral' | 'running' | 'needs-you' | 'error' | 'ember' | 'accent'
+
+/**
+ * The data for one titlebar widget, passed to {@link BridgeWidget.set}.
+ *
+ * You supply DATA; Omniscio draws every pixel. There is deliberately no way to
+ * pass markup, a colour or an image. The host re-validates the spec and a
+ * spec that breaks any bound below is rejected, not truncated.
+ */
+export interface WidgetSpec {
+  /** Which of the five host-drawn shapes to render. */
+  shape: WidgetShape
+  /**
+   * The headline text, at most 8 characters. The cap is an anti-phishing
+   * control, not a layout one: 8 + 16 characters cannot hold a sentence such as
+   * "Session expired, sign in", so a plugin cannot impersonate the app in its
+   * own titlebar.
+   */
+  value?: string
+  /** A short caption, at most 16 characters. See `value` for why it is capped. */
+  label?: string
+  /** Hover text, at most 120 characters. */
+  tooltip?: string
+  /** The widget's meaning. Defaults to the host's neutral look. */
+  tone?: WidgetTone
+  /**
+   * A Lucide icon NAME from Omniscio's allow-list, 1-50 characters of
+   * `A-Z a-z 0-9 -`. Never a URL, data URI or markup. A name that is not on the
+   * list draws the generic `Puzzle` glyph, and the allow-list is deliberately
+   * small: `Puzzle`, `Bookmark`, `Star`, `Bell`, `Folder`, `FileText`,
+   * `Search`, `Zap`, `Heart`, `Tag`, `Calendar`, `Clock`, `Code`, `Terminal`,
+   * `Package`, `ListChecks`, `Wand2`, `Sparkles`, `ShieldCheck`. Names are
+   * case-sensitive.
+   */
+  icon?: string
+  /** 0 to 1, for the `gauge` shape. */
+  progress?: number
+  /** Up to 32 finite numbers, for the `sparkline` shape. */
+  series?: number[]
+  /**
+   * `'popover'` (the default) opens a 320x256 popover on click: your
+   * `ui.widget.entryPoint` page if the manifest declares one, otherwise your
+   * plugin's own panel. `'none'` makes the widget a pure, non-clickable
+   * indicator.
+   */
+  panel?: 'popover' | 'none'
+}
+
+/**
+ * `AgentMC.widget` — a live status widget in Omniscio's titlebar. Webview only:
+ * the host builds no `ctx.widget` for backends. Requires BOTH the `chrome` and
+ * `chrome.widget` permissions.
+ *
+ * Each `set` REPLACES the previous spec. Calls coalesce to at most one update
+ * per 250 ms (the last one wins) and re-sending an identical spec is a no-op, so
+ * it is safe to call on every state change. A plugin has at most one widget.
+ */
+export interface BridgeWidget {
+  set(spec: WidgetSpec): Promise<void>
+  /** Remove the widget from the titlebar. */
+  clear(): Promise<void>
+}
+
 /**
  * `AgentMC.backend` — the panel half of your plugin's own request channel to its backend:
  * `invoke(method, ...args)` calls the handler your backend registered with
@@ -613,6 +684,8 @@ export interface AgentMC {
   backend?: BridgeBackend
   /** Optional: absent before Omniscio v0.1.89. See {@link BridgeHost}. */
   host?: BridgeHost
+  /** Webview-only. See {@link BridgeWidget}. */
+  widget: BridgeWidget
 }
 
 declare global {

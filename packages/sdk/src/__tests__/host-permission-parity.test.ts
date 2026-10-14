@@ -207,6 +207,10 @@ describe('SDK <-> host permission parity', () => {
       // SDK yet. That typing is a named follow-up — classify it here the day
       // `AgentMC.boards` lands in types/bridge.ts.
       'boards.read': null,
+      // Backend-only — the host puts `core` on the worker ctx, not the webview.
+      coreRead: { surface: CTX, key: 'core' },
+      // Webview-only — the host builds no ctx.widget; `AgentMC.widget` carries it.
+      'chrome.widget': { surface: BRIDGE, key: 'widget' },
       // All three tiers of the workspace capability are carried by the single
       // `ctx.workspace` namespace; the host splits read/write/exec per METHOD
       // rather than per namespace. Backend-only — the webview case throws.

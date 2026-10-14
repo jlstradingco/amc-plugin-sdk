@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process'
 import { classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, actionableError } from '../lib/output.js'
 
-const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
+const TEMPLATES = ['basic', 'with-backend', 'full', 'webview', 'widget'] as const
 type Template = typeof TEMPLATES[number]
 
 const isSvgPath = (icon: string): boolean => icon.toLowerCase().endsWith('.svg')
@@ -19,6 +19,8 @@ const SHIPPED_ICON_ROOTS: Record<Template, string[]> = {
   'with-backend': ['assets'],
   full: ['assets'],
   webview: ['assets', 'ui', 'prompts'],
+  // Flat like `webview`, so it ships the same folders. Keep widget.html under ui/.
+  widget: ['assets', 'ui', 'prompts'],
 }
 
 const CATEGORIES = ['planning', 'development', 'testing', 'devops', 'productivity', 'other'] as const
@@ -54,6 +56,65 @@ export function parseTagsInput(raw: string | undefined, fallbackCategory: string
     if (out.length >= MAX_TAGS) break
   }
   return out.length > 0 ? out : [fallbackCategory]
+}
+
+// The widget template's plugin script. Pushes DATA to the titlebar widget — a shape,
+// short text, a meaning (tone) and an icon NAME — and Omniscio draws every pixel.
+// `value` is capped at 8 characters and `label` at 16 by the host, on purpose.
+const WIDGET_PLUGIN_JS = `// Plain-JS webview plugin that draws a titlebar widget. No build step.
+//
+// You send DATA; Omniscio draws it. Pick a shape, a short value (8 characters
+// max), a short label (16 max), a tone (a MEANING, not a colour) and an icon
+// NAME from Omniscio's allow-list. Updates coalesce to one per 250 ms, and
+// sending an identical spec again does nothing, so push whenever your state changes.
+const amc = window.AgentMC
+
+// The dev shell (amc-plugin dev) has no titlebar, so this API is missing there.
+// Widgets can only be tried inside Omniscio itself.
+if (!amc || !amc.widget || !amc.widget.set) {
+  console.log('AgentMC.widget is not available here. Load this plugin inside Omniscio to see it.')
+} else {
+  let count = 0
+
+  const push = () =>
+    amc.widget.set({
+      shape: 'stat',
+      value: String(count),
+      label: 'my widget',
+      tone: 'neutral',
+      icon: 'Sparkles',
+      tooltip: 'Updated ' + count + ' time(s)',
+    })
+
+  push()
+  setInterval(() => {
+    count += 1
+    push()
+  }, 5000)
+}
+`
+
+function buildWidgetPopoverHtml(displayName: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(displayName)} widget</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
+    h1 { font-size: 1rem; margin-bottom: 6px; }
+    p { font-size: 0.875rem; color: var(--surface-500, #666); }
+  </style>
+</head>
+<body>
+  <!-- Shown in the 320x256 popover that opens when the user clicks your titlebar widget. -->
+  <h1>${escapeHtml(displayName)}</h1>
+  <p>This page opens when the widget is clicked. Replace it with whatever detail sits behind your number.</p>
+</body>
+</html>
+`
 }
 
 // Scaffolded .gitignore. Beyond build output, it excludes env/secret files up front
@@ -217,7 +278,7 @@ export function buildManifest(opts: {
   template: Template
 }): Record<string, unknown> {
   const { id, displayName, author, description, icon, category, tags, template } = opts
-  const isWebview = template === 'webview'
+  const isWebview = template === 'webview' || template === 'widget'
   const hasBackend = template === 'with-backend' || template === 'full'
 
   const manifest: Record<string, unknown> = {
@@ -245,6 +306,13 @@ export function buildManifest(opts: {
   manifest.ui = {
     entryPoint: isWebview ? 'ui/index.html' : 'dist/ui/index.html',
     sidebar: { title: displayName, icon },
+  }
+
+  // Titlebar widget (widget template): `chrome.widget` requires an explicit `chrome`
+  // beside it, and `ui.widget.entryPoint` is the page shown in the click popover.
+  if (template === 'widget') {
+    manifest.permissions = ['chrome', 'chrome.widget']
+    manifest.ui = { ...(manifest.ui as Record<string, unknown>), widget: { entryPoint: 'ui/widget.html' } }
   }
 
   // Backend setup (with-backend and full templates)
@@ -285,7 +353,7 @@ interface CreateOptions {
 
 export const createCommand = new Command('create')
   .argument('<name>', 'Plugin name (kebab-case)')
-  .option('-t, --template <template>', 'Template: basic, with-backend, full, webview', 'basic')
+  .option('-t, --template <template>', 'Template: basic, with-backend, full, webview, widget', 'basic')
   .option('--display-name <name>', 'Display name (skips interactive prompt)')
   .option('--description <desc>', 'Plugin description')
   .option('--author <author>', 'Plugin author')
@@ -396,7 +464,7 @@ export const createCommand = new Command('create')
 
     // A webview plugin is flat-JS: files ship as-authored at the root (no tsc
     // compile step), matching how AMC's builtin plugins are structured.
-    const isWebview = template === 'webview'
+    const isWebview = template === 'webview' || template === 'widget'
     const uiRoot = isWebview ? path.join(targetDir, 'ui') : path.join(targetDir, 'src', 'ui')
 
     fs.mkdirSync(uiRoot, { recursive: true })
@@ -421,7 +489,10 @@ export const createCommand = new Command('create')
 </body>
 </html>`)
 
-    if (isWebview) {
+    if (template === 'widget') {
+      fs.writeFileSync(path.join(uiRoot, 'plugin.js'), WIDGET_PLUGIN_JS)
+      fs.writeFileSync(path.join(uiRoot, 'widget.html'), buildWidgetPopoverHtml(displayName))
+    } else if (isWebview) {
       fs.writeFileSync(path.join(uiRoot, 'plugin.js'), `// Plain-JS webview plugin — no build step. Edit and reload.
 const amc = window.AgentMC
 
@@ -587,4 +658,7 @@ describe('${displayName} backend', () => {
       console.log('  npm run build')
     }
     console.log('  npm run dev')
+    if (template === 'widget') {
+      console.log('\nNote: the dev shell has no titlebar, so the widget only appears inside Omniscio.')
+    }
   })

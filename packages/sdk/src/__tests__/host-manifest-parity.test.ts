@@ -88,6 +88,65 @@ describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
     ).toBe('overlay/index.html')
   })
 
+  describe('ui.widget (titlebar widget popover page)', () => {
+    const withWidget = (entryPoint: string) =>
+      validateManifest({
+        ...baseManifest,
+        permissions: ['chrome', 'chrome.widget'],
+        ui: { widget: { entryPoint } },
+      })
+
+    it('preserves ui.widget.entryPoint, which the host declares and serves', () => {
+      const result = withWidget('ui/widget.html')
+      expect(result.errors).toEqual([])
+      expect(result.manifest?.ui?.widget?.entryPoint).toBe('ui/widget.html')
+    })
+
+    it.each([
+      ['a URL', 'https://example.com/widget.html'],
+      ['a scheme', 'file:///etc/passwd'],
+      ['a blank value', '   '],
+      ['an absolute path', '/ui/widget.html'],
+      ['a backslash-absolute path', '\\ui\\widget.html'],
+      ['a drive-qualified path', 'C:widget.html'],
+      ['a parent segment', 'ui/../../widget.html'],
+      ['a backslash parent segment', 'ui\\..\\widget.html'],
+    ])('rejects %s, as the host does', (_label, entryPoint) => {
+      expect(withWidget(entryPoint).valid, `entryPoint ${JSON.stringify(entryPoint)}`).toBe(false)
+    })
+
+    it('accepts a filename that merely contains two dots', () => {
+      // Segment-wise on purpose, matching the host: a substring test for ".."
+      // would reject a legitimate `my..page.html`.
+      expect(withWidget('ui/my..page.html').errors).toEqual([])
+    })
+
+    it('enforces the host length bound', () => {
+      const tooLong = 'x'.repeat(HOST_UI_BOUNDS.widgetEntryPointMax + 1)
+      expect(withWidget(tooLong).valid).toBe(false)
+    })
+  })
+
+  describe('chrome.widget permission pairing', () => {
+    const permissionsResult = (permissions: string[]) =>
+      validateManifest({ ...baseManifest, permissions })
+
+    it('rejects chrome.widget without an explicit chrome, as the host does', () => {
+      const result = permissionsResult(['chrome.widget'])
+      expect(result.valid).toBe(false)
+      expect(result.errors.join('\n')).toContain('"chrome.widget" requires an explicit "chrome"')
+    })
+
+    it('accepts chrome.widget alongside chrome, in either order', () => {
+      expect(permissionsResult(['chrome', 'chrome.widget']).errors).toEqual([])
+      expect(permissionsResult(['chrome.widget', 'chrome']).errors).toEqual([])
+    })
+
+    it('accepts coreRead on its own', () => {
+      expect(permissionsResult(['coreRead']).errors).toEqual([])
+    })
+  })
+
   it('enforces the host length bounds rather than being merely permissive', () => {
     // An unbounded optional would pass `amc-plugin validate` and then fail at
     // install — the same inversion in the other direction.

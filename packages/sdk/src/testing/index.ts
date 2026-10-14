@@ -29,7 +29,10 @@ import type {
   SessionMessage,
   SpendReportBreakdown,
   PluginRpc,
-  PluginHost
+  PluginHost,
+  CoreSession,
+  CoreProject,
+  CoreMessage
 } from '../types/index.js'
 
 export { createRpcDouble } from './rpc-double.js'
@@ -50,6 +53,9 @@ function emptySpendBreakdown(): SpendReportBreakdown {
     notableCharges: []
   }
 }
+
+/** The host's per-call ceiling on `ctx.core.messages.list`. */
+const CORE_MESSAGES_CAP = 200
 
 export interface CapturedLog {
   level: 'info' | 'warn' | 'error' | 'debug'
@@ -95,6 +101,17 @@ export interface TestContextOptions {
   rpc?: PluginRpc
   /** Install `ctx.host`. Without it `ctx.host` is absent, as on every released Omniscio so far. */
   host?: PluginHost
+  /**
+   * Seed `ctx.core` (the `coreRead` permission). Empty by default, like a brand-new
+   * install. `messages` is keyed by session id; the mock applies the host's
+   * 200-message cap and `window` rule, and answers `null` / `[]` for ids it was
+   * not given, as the host does for an unknown session.
+   */
+  core?: {
+    sessions?: CoreSession[]
+    projects?: CoreProject[]
+    messages?: Record<string, CoreMessage[]>
+  }
   db?: {
     /**
      * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
@@ -633,6 +650,37 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     // `undefined` in production. See the note on PluginContext in ../types/context.ts.
     spend: {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
+    },
+
+    // Mirrors the host's read rules: a missing id is `null` / `[]` rather than an
+    // error, and `messages.list` caps at 200, where `window` can only lower it.
+    core: {
+      sessions: {
+        list: (filter) =>
+          Promise.resolve(
+            (opts.core?.sessions ?? []).filter(
+              (s) => !filter?.projectId || s.projectId === filter.projectId
+            )
+          ),
+        get: (sessionId) =>
+          Promise.resolve((opts.core?.sessions ?? []).find((s) => s.id === sessionId) ?? null)
+      },
+      projects: {
+        list: () => Promise.resolve([...(opts.core?.projects ?? [])]),
+        get: (projectId) =>
+          Promise.resolve((opts.core?.projects ?? []).find((p) => p.id === projectId) ?? null)
+      },
+      messages: {
+        list: (sessionId, window) => {
+          const known = (opts.core?.sessions ?? []).some((s) => s.id === sessionId)
+          if (!known) return Promise.resolve([])
+          const cap =
+            typeof window === 'number' && window > 0 && window < CORE_MESSAGES_CAP
+              ? window
+              : CORE_MESSAGES_CAP
+          return Promise.resolve((opts.core?.messages?.[sessionId] ?? []).slice(0, cap))
+        }
+      }
     },
 
     workspace: workspaceNotFakeable(),

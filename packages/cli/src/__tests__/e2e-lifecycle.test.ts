@@ -275,3 +275,73 @@ describe('Webview (flat-JS) plugin lifecycle E2E', () => {
     expect(result.status).toBe(0)
   }, SHELL_OUT_TIMEOUT_MS)
 })
+
+describe('Widget plugin lifecycle E2E', () => {
+  let tmpDir: string
+  let pluginDir: string
+  const cliDist = path.resolve(__dirname, '../../dist/index.js')
+
+  beforeAll(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-e2e-widget-'))
+    pluginDir = path.join(tmpDir, 'widget-e2e-plugin')
+  })
+
+  afterAll(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('scaffolds a flat widget plugin with a popover page and the two permissions', () => {
+    execSync(
+      [
+        `node "${cliDist}" create widget-e2e-plugin`,
+        '--template widget',
+        '--display-name "Widget E2E"',
+        '--description "A titlebar widget plugin"',
+        '--author "Test Author"',
+        '--category other',
+        '--skip-install',
+        '--skip-git',
+      ].join(' '),
+      { cwd: tmpDir, stdio: 'pipe' },
+    )
+
+    expect(fs.existsSync(path.join(pluginDir, 'ui', 'index.html'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'ui', 'plugin.js'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'ui', 'widget.html'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(false)
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'))
+    expect(manifest.permissions).toEqual(['chrome', 'chrome.widget'])
+    expect(manifest.ui.widget.entryPoint).toBe('ui/widget.html')
+
+    const script = fs.readFileSync(path.join(pluginDir, 'ui', 'plugin.js'), 'utf-8')
+    expect(script).toContain('amc.widget.set')
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('passes validate, including the widget entry point check', () => {
+    const out = execSync(`node "${cliDist}" validate`, { cwd: pluginDir, stdio: 'pipe' }).toString()
+    expect(out).toContain('Widget entry point exists')
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('fails validate when the widget page is missing from disk', () => {
+    const page = path.join(pluginDir, 'ui', 'widget.html')
+    const saved = fs.readFileSync(page)
+    fs.rmSync(page)
+    try {
+      expect(() => execSync(`node "${cliDist}" validate`, { cwd: pluginDir, stdio: 'pipe' })).toThrow()
+    } finally {
+      fs.writeFileSync(page, saved)
+    }
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('packages ui/widget.html into the archive', () => {
+    execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
+
+    const files = fs.readdirSync(pluginDir).filter((f) => f.endsWith('.amcplugin'))
+    expect(files).toEqual(['widget-e2e-plugin-1.0.0.amcplugin'])
+    // A zip stores each entry's path uncompressed in its headers, so the popover
+    // page's presence can be read without unzipping.
+    const archive = fs.readFileSync(path.join(pluginDir, files[0]!))
+    expect(archive.includes('ui/widget.html')).toBe(true)
+  }, SHELL_OUT_TIMEOUT_MS)
+})

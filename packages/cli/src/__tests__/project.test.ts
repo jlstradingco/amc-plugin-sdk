@@ -40,6 +40,13 @@ describe('collectFlatPackageEntries', () => {
     expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['ui'])
   })
 
+  it('includes the top-level dir of the titlebar widget page when it lives elsewhere', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    fs.mkdirSync(path.join(tmp, 'widget'))
+    const manifest = { ui: { entryPoint: 'ui/index.html', widget: { entryPoint: 'widget/popover.html' } } }
+    expect(new Set(collectFlatPackageEntries(tmp, manifest))).toEqual(new Set(['ui', 'widget']))
+  })
+
   it('includes backend, assets and prompts dirs when present', () => {
     fs.mkdirSync(path.join(tmp, 'ui'))
     fs.mkdirSync(path.join(tmp, 'backend'))

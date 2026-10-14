@@ -192,6 +192,30 @@ const migrationSchema = z.object({
 // One deliberate remaining gap, in the SDK-is-looser direction: the host
 // requires the `ui` block itself, while we keep it optional — tightening that
 // would reject the backend-only manifests this SDK has always accepted.
+// A served asset path that must stay INSIDE the plugin directory. Mirrors the
+// host's `pluginRelativeEntryPath` (plugin-manifest-validator.ts), which it
+// applies to `ui.widget.entryPoint`: no blank value, no URL scheme, no absolute
+// or drive-qualified path, no `..` segment on either separator.
+const pluginRelativeEntryPath = z
+  .string()
+  .min(1)
+  .max(500)
+  .refine((value) => value.trim().length > 0, {
+    message: 'entryPoint must not be blank',
+  })
+  .refine((value) => !/^([a-zA-Z][a-zA-Z0-9+.-]*:)/.test(value), {
+    message: 'entryPoint must be a plugin-relative path, not a URL or scheme',
+  })
+  .refine((value) => !value.startsWith('/') && !value.startsWith('\\'), {
+    message: 'entryPoint must be relative to the plugin directory, not an absolute path',
+  })
+  .refine((value) => !/^[a-zA-Z]:/.test(value), {
+    message: 'entryPoint must be relative to the plugin directory, not a drive-qualified path',
+  })
+  .refine((value) => !value.split(/[/\\]/).includes('..'), {
+    message: 'entryPoint must not contain a ".." path segment',
+  })
+
 const uiSchema = z.object({
   entryPoint: z.string().min(1).max(500).optional(),
   sidebar: z
@@ -205,6 +229,9 @@ const uiSchema = z.object({
       entryPoint: z.string().min(1).max(500),
     })
     .optional(),
+  // The titlebar widget's popover page. Unlike its `entryPoint` / `overlay`
+  // siblings the host bounds this one for containment at install time.
+  widget: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
   hideProjectPanel: z.boolean().optional(),
   // The sibling opt-out. Host-real and host-validated (plugin-manifest-validator
   // ts, alongside hideProjectPanel), and it was absent here — so a full-width
@@ -317,6 +344,11 @@ export const PLUGIN_PERMISSIONS = [
   // Host-real since 2026-08 (plugin-permissions.ts) and listed host-ahead until
   // 3.2.0, so a manifest asking for it failed `validate` and preflight.
   'boards.read',
+  // `chrome.widget` is a webview-only titlebar widget (`AgentMC.widget`) and
+  // needs an explicit `chrome` alongside it (superRefine below). `coreRead` is
+  // the elevated backend read of sessions, projects and messages (`ctx.core`).
+  'chrome.widget',
+  'coreRead',
   // All three are gated by the host and consented in its dialog; write and exec
   // gate real mutating methods. The pairing rule below requires an explicit
   // `workspace.read` alongside either of the other two.
@@ -379,6 +411,18 @@ export const manifestSchema = z.object({
     // Without this rule `permissions: ["workspace.write"]` passed
     // `amc-plugin validate`, then failed BOTH the publish gate and the install.
     const permissions = manifest.permissions ?? []
+    // `chrome.widget` draws in the titlebar, the highest-trust surface in the
+    // app. The host requires an explicit `chrome` sibling for the same reason it
+    // requires `workspace.read`: the consent card the user reads must match the
+    // permissions array the plugin actually holds, so nothing is implied.
+    if (permissions.includes('chrome.widget') && !permissions.includes('chrome')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['permissions'],
+        message:
+          '"chrome.widget" requires an explicit "chrome" permission in the same manifest: add chrome to permissions',
+      })
+    }
     if (permissions.includes('workspace.read')) return
     for (const perm of ['workspace.write', 'workspace.exec'] as const) {
       if (permissions.includes(perm)) {

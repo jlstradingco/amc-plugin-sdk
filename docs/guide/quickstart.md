@@ -126,4 +126,4 @@ Then in **Agent Mission Control**: **Settings → Plugins → Install from file*
 - [Project Structure](./project-structure) — every file, explained
 - [Permissions](./permissions) — unlock storage, sessions, AI, HTTP, and more
 - [API Reference](/api/) — the complete `AgentMC` surface
-- [Examples](/examples/) — seven runnable plugins to learn from
+- [Examples](/examples/) — eight runnable plugins to learn from

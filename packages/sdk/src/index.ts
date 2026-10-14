@@ -102,6 +102,16 @@ export type {
   WorkspaceExecPollRequest,
   WorkspaceExecPollResponse,
   WorkspaceApi,
+  // Core read (`coreRead`)
+  CoreSession,
+  CoreProject,
+  CoreMessage,
+  PluginCore,
+  // Titlebar widget (`chrome.widget`)
+  WidgetShape,
+  WidgetTone,
+  WidgetSpec,
+  BridgeWidget,
   // Backend types
   PluginBackend,
   PluginActivate,

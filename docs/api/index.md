@@ -1,6 +1,6 @@
 # API Reference
 
-The AMC Plugin SDK exposes 24 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The AMC Plugin SDK exposes 26 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -30,6 +30,8 @@ The AMC Plugin SDK exposes 24 APIs to plugins. Some are available on both the fr
 | [Workspace](./workspace) | The user's real project checkouts and worktrees | Backend only | `workspace.read` / `.write` / `.exec` |
 | [Backend Calls](#backend-calls) | Call your backend's handlers from your panel | Both | None |
 | [Host Capabilities](#host-capabilities) | Feature-detect what this Omniscio supports | Both | None |
+| [Core](./core) | Read-only view of the user's sessions, projects and message text | Backend only | `coreRead` |
+| [Widget](./widget) | A live status widget in the Omniscio titlebar | Webview only | `chrome` + `chrome.widget` |
 
 ## Access Patterns
 
