@@ -38,8 +38,6 @@ export const HOST_UI_BOUNDS = {
   /** `sidebar.title` / `sidebar.icon`: `min(1).max(50)` — validator:222-227 */
   sidebarTitleMax: 50,
   sidebarIconMax: 50,
-  /** `overlay.entryPoint`: same entry-path rule, REQUIRED when `overlay` present */
-  overlayEntryPointMax: 500,
   /** `sessions.contextTemplate`: `z.string().max(5000).optional()` — NOTE: no `.min(1)` — validator:246 */
   contextTemplateMax: 5000,
   /** `sessions.label`: `min(1).max(100)` — validator:247 */
