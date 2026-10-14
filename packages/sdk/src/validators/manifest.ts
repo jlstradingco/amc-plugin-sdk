@@ -208,8 +208,17 @@ const migrationSchema = z.object({
   operations: z.array(migrationOperationSchema),
 })
 
+// `ui.windows` bounds, from the host's shared/types/plugins.ts (PLUGIN_WINDOWS_MAX,
+// PLUGIN_WINDOW_KEY_MAX) and its validator's window schema.
+const PLUGIN_WINDOWS_MAX = 4
+const PLUGIN_WINDOW_KEY_MAX = 40
+const PLUGIN_WINDOW_TITLE_MAX = 120
+const PLUGIN_WINDOW_SIZE_MIN = 200
+const PLUGIN_WINDOW_SIZE_MAX = 10000
+const pluginWindowKeyRegex = /^[a-z0-9][a-z0-9-]*$/
+
 // Every bound below is copied from the host validator
-// (plugin-manifest-validator.ts:220-265) so this SDK accepts exactly what the
+// (plugin-manifest-validator.ts, its `ui` block) so this SDK accepts exactly what the
 // host does inside a `ui` block. A stricter SDK rejects manifests that install
 // fine; a looser one lets `amc-plugin validate` pass something the host refuses.
 //
@@ -232,6 +241,26 @@ const uiSchema = z.object({
     .object({
       entryPoint: pluginRelativeEntryPath,
     })
+    .optional(),
+  // The three host surfaces below were missing here, so zod stripped them and
+  // their entry paths were never checked: `amc-plugin validate` approved a
+  // `ui.widget.entryPoint` of `../other-plugin/x.html` that the host refuses.
+  settingsPanel: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
+  widget: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
+  windows: z
+    .record(
+      z.string().min(1).max(PLUGIN_WINDOW_KEY_MAX).regex(pluginWindowKeyRegex),
+      z.object({
+        entryPoint: pluginRelativeEntryPath,
+        title: z.string().min(1).max(PLUGIN_WINDOW_TITLE_MAX).optional(),
+        width: z.number().int().min(PLUGIN_WINDOW_SIZE_MIN).max(PLUGIN_WINDOW_SIZE_MAX).optional(),
+        height: z.number().int().min(PLUGIN_WINDOW_SIZE_MIN).max(PLUGIN_WINDOW_SIZE_MAX).optional(),
+      })
+    )
+    .refine(
+      (windows) => Object.keys(windows).length <= PLUGIN_WINDOWS_MAX,
+      `at most ${PLUGIN_WINDOWS_MAX} windows may be declared`
+    )
     .optional(),
   hideProjectPanel: z.boolean().optional(),
   // The sibling opt-out. Host-real and host-validated (plugin-manifest-validator
