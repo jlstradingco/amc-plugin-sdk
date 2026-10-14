@@ -30,12 +30,15 @@ export const HOST_SOURCES = {
 
 /** Length bounds inside the `ui` block — `plugin-manifest-validator.ts:220-265`. */
 export const HOST_UI_BOUNDS = {
-  /** `entryPoint: z.string().min(1).max(500).optional()` — validator:221 */
+  /**
+   * `MANIFEST_ENTRY_PATH_MAX` in the host's shared/plugin-manifest-entry-path.ts, which owns every
+   * entry-path bound now (vendored and pinned by host-entry-path-parity.test.ts).
+   */
   entryPointMax: 500,
   /** `sidebar.title` / `sidebar.icon`: `min(1).max(50)` — validator:222-227 */
   sidebarTitleMax: 50,
   sidebarIconMax: 50,
-  /** `overlay.entryPoint`: `min(1).max(500)`, REQUIRED when `overlay` present — validator:228-232 */
+  /** `overlay.entryPoint`: same entry-path rule, REQUIRED when `overlay` present */
   overlayEntryPointMax: 500,
   /** `sessions.contextTemplate`: `z.string().max(5000).optional()` — NOTE: no `.min(1)` — validator:246 */
   contextTemplateMax: 5000,
