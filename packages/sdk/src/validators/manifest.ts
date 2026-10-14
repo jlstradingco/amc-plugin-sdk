@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import type { PluginPermission } from '../types/manifest.js'
 import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
+import {
+  manifestEntryPathProblems,
+  MANIFEST_ENTRY_PATH_MAX,
+  type ManifestEntryPathProblem,
+} from './manifest-entry-path.js'
 
 const pluginIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -41,6 +46,29 @@ const isHttpUrl = (value: string): boolean => {
 }
 
 const listingUrl = z.string().max(LISTING_URL_MAX).refine(isHttpUrl, 'must be an http:// or https:// URL')
+
+// A path a manifest declares must name a file INSIDE the plugin's own package. The rule is the
+// host's own module, copied byte-for-byte into manifest-entry-path.ts and pinned to the host by
+// host-entry-path-parity.test.ts, so this schema refuses exactly the paths the host refuses.
+// The messages are the host validator's, one per problem. Keyed by problem so a dimension the host
+// adds fails tsc here instead of being reported with no message.
+const ENTRY_PATH_MESSAGES: Record<Exclude<ManifestEntryPathProblem, 'not-a-string'>, string> = {
+  blank: 'entryPoint must not be blank',
+  'too-long': `entryPoint must be at most ${MANIFEST_ENTRY_PATH_MAX} characters`,
+  'control-character': 'entryPoint must not contain a tab, newline or carriage return',
+  scheme: 'entryPoint must be a plugin-relative path, not a URL or scheme',
+  absolute: 'entryPoint must be relative to the plugin directory, not an absolute path',
+  drive: 'entryPoint must be relative to the plugin directory, not a drive-qualified path',
+  'parent-segment': 'entryPoint must not contain a ".." path segment',
+}
+
+const pluginRelativeEntryPath = z.string().superRefine((entryPath, ctx) => {
+  for (const problem of manifestEntryPathProblems(entryPath)) {
+    // `not-a-string` cannot reach here: z.string() has already refused a non-string.
+    if (problem === 'not-a-string') continue
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: ENTRY_PATH_MESSAGES[problem] })
+  }
+})
 
 const pluginInfoSchema = z.object({
   id: z.string().min(1).regex(pluginIdRegex, 'Plugin ID must be kebab-case (lowercase alphanumeric + hyphens)'),
@@ -193,7 +221,7 @@ const migrationSchema = z.object({
 // requires the `ui` block itself, while we keep it optional — tightening that
 // would reject the backend-only manifests this SDK has always accepted.
 const uiSchema = z.object({
-  entryPoint: z.string().min(1).max(500).optional(),
+  entryPoint: pluginRelativeEntryPath.optional(),
   sidebar: z
     .object({
       title: z.string().min(1).max(50),
@@ -202,7 +230,7 @@ const uiSchema = z.object({
     .optional(),
   overlay: z
     .object({
-      entryPoint: z.string().min(1).max(500),
+      entryPoint: pluginRelativeEntryPath,
     })
     .optional(),
   hideProjectPanel: z.boolean().optional(),
@@ -359,7 +387,7 @@ export const manifestSchema = z.object({
   ui: uiSchema.optional(),
   sdkVersion: z.string().min(1).max(50).optional(),
   backend: z.object({
-    entryPoint: z.string().min(1).max(500),
+    entryPoint: pluginRelativeEntryPath,
     resourceLimits: resourceLimitsSchema.optional(),
   }).optional(),
   // `.max(50)` mirrors the host's cap on the array length.
