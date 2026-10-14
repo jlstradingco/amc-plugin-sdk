@@ -28,7 +28,7 @@ You can now build a widget in the Omniscio titlebar end to end.
 
 - New elevated permission **`coreRead`** and the backend namespace **`ctx.core`**: `core.sessions.list/get`, `core.projects.list/get` and `core.messages.list` (capped at 200 messages per call). Types: `CoreSession`, `CoreProject`, `CoreMessage`, `PluginCore`. See [the Core API](docs/api/core.md).
 - `createTestContext({ core })` seeds it, and the dev shell serves a small set of sample sessions, projects and messages.
-- `PluginContext` gains a required `core` member. Code that builds its own `PluginContext` double (rather than using `createTestContext`) will need to add one.
+- `PluginContext` gains an optional `core` member, like `rpc` and `host`, so a `PluginContext` double you build yourself keeps compiling. Check for it (`if (!ctx.core) …`) before use.
 
 ### Changed
 

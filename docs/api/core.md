@@ -5,6 +5,8 @@ Read-only access to the user's sessions, projects and the text of their messages
 **Availability:** Backend only (`ctx.core`)
 **Required Permission:** `coreRead` (elevated)
 
+`ctx.core` is typed as optional (`core?: PluginCore`), like `ctx.rpc` and `ctx.host`. Check for it and fail with a clear message rather than assuming it, as the example below does.
+
 ::: warning This reads everything the user has
 `coreRead` is a **blanket** read across all of the user's sessions and projects, not a per-session grant. Omniscio lists it as an elevated permission and describes it to the user as "Read your sessions, projects, and the text of their messages (never their secrets)". Ask for it only when you are genuinely building something that needs the whole picture, and say why in your plugin description.
 
@@ -67,9 +69,13 @@ import type { PluginActivate } from '@agent-mc/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => ({
   async onEnable() {
-    const projects = await ctx.core.projects.list()
+    const core = ctx.core
+    if (!core) {
+      throw new Error('This plugin needs ctx.core: declare `coreRead` and run it on an Omniscio that provides it.')
+    }
+    const projects = await core.projects.list()
     for (const project of projects) {
-      const sessions = await ctx.core.sessions.list({ projectId: project.id })
+      const sessions = await core.sessions.list({ projectId: project.id })
       ctx.log.info(`${project.name}: ${sessions.length} sessions`)
     }
   },
@@ -101,9 +107,9 @@ const h = createTestContext({
   },
 })
 
-await h.ctx.core.sessions.list({ projectId: 'p1' })  // [ s1 ]
-await h.ctx.core.messages.list('s1', 1)              // at most one message
-await h.ctx.core.sessions.get('nope')                // null, as on the host
+await h.ctx.core?.sessions.list({ projectId: 'p1' })  // [ s1 ]
+await h.ctx.core?.messages.list('s1', 1)              // at most one message
+await h.ctx.core?.sessions.get('nope')                // null, as on the host
 ```
 
 The mock applies the host's 200-message cap and the `window` rule. The dev shell serves a small fixed set of sample sessions, projects and messages, so you can see your UI against something.

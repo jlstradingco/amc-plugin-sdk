@@ -1324,8 +1324,12 @@ export interface PluginContext {
    * webview's `AgentMC.host` has existed since v0.1.89). Read it as `ctx.host?.getCapabilities()`.
    */
   host?: PluginHost
-  /** Backend only. Requires `coreRead`. See {@link PluginCore}. */
-  core: PluginCore
+  /**
+   * Backend only. Requires `coreRead`. See {@link PluginCore}. Optional, like `rpc` and `host`,
+   * so a `PluginContext` double written before the SDK typed it still compiles: check for it
+   * (`if (!ctx.core) …`) rather than assuming it.
+   */
+  core?: PluginCore
   // NOTE: `tts`, `sessionHistory` and `firebase` are deliberately ABSENT.
   //
   // All three are real capabilities, but they live on the WEBVIEW bridge only —

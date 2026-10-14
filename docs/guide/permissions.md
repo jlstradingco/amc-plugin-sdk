@@ -451,9 +451,11 @@ There is no `ctx.widget`: the host builds none for backends. See the [Widget API
 Read the user's sessions, projects and the text of their messages. This is an **elevated** permission and a **blanket** read: it covers everything the user has, not a session or project they picked. Omniscio describes it to the user as "Read your sessions, projects, and the text of their messages (never their secrets)".
 
 ```typescript
-const projects = await ctx.core.projects.list()
-const sessions = await ctx.core.sessions.list({ projectId: projects[0].id })
-const messages = await ctx.core.messages.list(sessions[0].id, 20) // at most 200
+const core = ctx.core // optional, like ctx.rpc and ctx.host: check before use
+if (!core) throw new Error('This plugin needs ctx.core (the coreRead permission).')
+const projects = await core.projects.list()
+const sessions = await core.sessions.list({ projectId: projects[0].id })
+const messages = await core.messages.list(sessions[0].id, 20) // at most 200
 ```
 
 Prefer [`sessions.readHistory`](#sessions-readhistory) when you only need history the user chose to hand over: that one is opt-in per session, and `coreRead` is not. See the [Core API](../api/core).
