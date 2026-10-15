@@ -458,12 +458,27 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
 | `sidebar.title` | string | No | 50 | Label shown in AMC's sidebar |
 | `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
 | `overlay.entryPoint` | string | No | 500 | A separate always-on-top window AMC opens on enable |
+| `settingsPanel.entryPoint` | string | No | 500 | Your own settings screen, opened from a "Settings" button on your plugin's card. The `settings` fields still render |
+| `widget.entryPoint` | string | No | 500 | The popover AMC opens when your app-header widget is clicked |
+| `windows.<key>.entryPoint` | string | No | 500 | A pop-out surface you open with `window.open(key)`. Up to 4; keys are lowercase letters, digits and hyphens (≤ 40); optional `title` (≤ 120), `width` and `height` (200–10000 px) |
 | `hideProjectPanel` | boolean | No | — | Suppress AMC's project panel while your view is open. **Half of "full width" — see below** |
 | `hideSessionsPane` | boolean | No | — | Suppress the plugin sessions pane. **The other half — set it alongside `hideProjectPanel`** |
 | `sessions.label` | string | No | 100 | Heading above your plugin's session list. Defaults to the plugin name |
 | `sessions.contextTemplate` | string | No | 5000 | Extra context appended to AMC's built-in primer for every session on your plugin's project |
 | `sessions.showDivider` | boolean | No | — | Defaults to `true` |
 | `sessions.suggestedPrompts` | array | No | 4 items | Tappable prompts under the session list (`label` ≤ 60, `prompt` ≤ 2000) |
+
+::: warning Every entry point must stay inside your package
+`amc-plugin validate` applies AMC's own entry-path rule to `ui.entryPoint` and the
+`overlay`, `settingsPanel`, `widget`, `windows` and `backend` entry points. A path fails if it:
+
+- is blank, longer than 500 characters, or contains a tab or line break;
+- starts with `/` or `\`, a drive letter (`C:`) or a URL scheme (`file:`, `https:`…);
+- has a `..` segment, with either separator.
+
+`%2e`, `%2f` and `%5c` count as `.`, `/` and `\`, so `%2e%2e/x.html` fails too. A filename with
+two dots, such as `my..page.html`, is fine. AMC refuses to load a plugin that breaks this rule.
+:::
 
 `entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
 alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest AMC
@@ -544,7 +559,7 @@ Declares the backend entry point and optional resource limits.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `entryPoint` | string | Yes | Path to the compiled JS file exporting `activate` |
+| `entryPoint` | string | Yes | Path to the compiled JS file exporting `activate`. Must stay inside your package — see the entry-path rule under the `ui` block |
 | `resourceLimits.memoryMb` | number | No | Memory limit for the backend worker (in MB) |
 
 Omit the entire `backend` block if your plugin is UI-only.

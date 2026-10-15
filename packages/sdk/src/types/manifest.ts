@@ -331,6 +331,23 @@ export interface PluginManifest {
     sidebar?: { title: string; icon: string }
     /** A separate always-on-top window. The host opens it on enable. */
     overlay?: { entryPoint: string }
+    /**
+     * The plugin's own settings screen, opened from a "Settings" button on its
+     * card in Settings -> Plugins. Additive: the `settings` array still renders.
+     */
+    settingsPanel?: { entryPoint: string }
+    /**
+     * The popover the host opens when its app-header widget is clicked. Without
+     * it, clicking the widget opens the plugin's sidebar panel instead.
+     */
+    widget?: { entryPoint: string }
+    /**
+     * Pop-out surfaces the plugin may open in their own OS window, keyed by the
+     * name it passes to `window.open(key)`. At most 4; keys are lowercase
+     * letters, digits and hyphens (up to 40 characters); width and height are
+     * 200-10000 px.
+     */
+    windows?: Record<string, { entryPoint: string; title?: string; width?: number; height?: number }>
     /** Hide AMC's project panel while this plugin's view is open, for a plugin that owns the full width. */
     hideProjectPanel?: boolean
     /**
