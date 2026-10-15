@@ -36,6 +36,7 @@ const baseManifest = {
     category: 'productivity',
     license: { type: 'free' },
   },
+  sdkVersion: '2.0.0',
 }
 
 /** Every field the host checks, with how to place one entry path into a manifest there. */
