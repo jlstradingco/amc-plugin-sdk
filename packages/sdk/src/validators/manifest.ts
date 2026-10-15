@@ -397,13 +397,26 @@ export interface ManifestValidationResult {
   manifest?: z.infer<typeof manifestSchema>
 }
 
+// The host's authorManifestProblems (shared/plugin-manifest-schema.ts). The host still LOADS such a
+// manifest — its backend just never starts — so the rule belongs to authoring doors like this one,
+// not to the schema.
+const SDK_VERSION_REQUIRED_PROBLEM =
+  'sdkVersion: Required - it selects the host worker loader, the only backend there is, so a manifest without it declares a backend that can never start'
+
+function authorManifestProblems(input: unknown): string[] {
+  if (typeof input !== 'object' || input === null) return []
+  const manifest = input as Record<string, unknown>
+  return manifest.backend && !manifest.sdkVersion ? [SDK_VERSION_REQUIRED_PROBLEM] : []
+}
+
 export function validateManifest(input: unknown): ManifestValidationResult {
   const result = manifestSchema.safeParse(input)
-  if (result.success) {
+  const authorProblems = authorManifestProblems(input)
+  if (result.success && authorProblems.length === 0) {
     return { valid: true, errors: [], manifest: result.data }
   }
-  const errors = result.error.issues.map(
-    (issue) => `${issue.path.join('.')}: ${issue.message}`
-  )
-  return { valid: false, errors }
+  const schemaErrors = result.success
+    ? []
+    : result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+  return { valid: false, errors: [...schemaErrors, ...authorProblems] }
 }
