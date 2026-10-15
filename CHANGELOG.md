@@ -11,7 +11,7 @@ together.
 
 ## [Unreleased]
 
-### Fixed — a backend without `sdkVersion` no longer passes `validate`
+### Fixed — a backend without `sdkVersion` no longer passes `validateManifest`
 
 `sdkVersion` picks the Omniscio worker loader, so a backend without it never starts. `validateManifest`
 (and so `validate`, `build`, `package`, `dev`, `install` and `preflight`) now refuses a manifest that
