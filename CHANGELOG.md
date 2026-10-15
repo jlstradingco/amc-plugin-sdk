@@ -11,6 +11,13 @@ together.
 
 ## [Unreleased]
 
+### Fixed — a backend without `sdkVersion` no longer passes `validate`
+
+`sdkVersion` picks the Omniscio worker loader, so a backend without it never starts. `validateManifest`
+(and so `validate`, `build`, `package`, `dev`, `install` and `preflight`) now refuses a manifest that
+declares a `backend` and no `sdkVersion`, with Omniscio's own message. A UI-only manifest without it is
+still accepted by the validator, as Omniscio accepts it.
+
 ## [3.2.0] - 2026-10-12
 
 ### Upgrading to CLI 3.2.0 — read this before you bump
