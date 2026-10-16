@@ -11,6 +11,14 @@ together.
 
 ## [Unreleased]
 
+### Added — `sessionTools` on the manifest
+
+Omniscio gives a plugin's AI sessions no built-in tools (Read, Bash, Write, Edit…) unless the
+manifest declares `"sessionTools": true`. The SDK did not know the field, so `validateManifest`
+dropped it and accepted a value that was not `true` or `false`. It is now typed on
+`PluginManifest`, kept by `validateManifest`, refused when not a boolean, and documented in the
+manifest guide and on both session `create()` methods.
+
 ## [3.2.0] - 2026-10-12
 
 ### Upgrading to CLI 3.2.0 — read this before you bump
