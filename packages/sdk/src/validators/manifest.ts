@@ -366,6 +366,9 @@ export const manifestSchema = z.object({
   permissions: z.array(permissionSchema).max(50).optional(),
   cli: z.object({ endpoints: z.array(cliEndpointSchema).max(200) }).optional(),
   cron: z.object({ jobs: z.array(cronJobSchema) }).optional(),
+  // Host-real (plugin-manifest-schema.ts): without it zod strips the one switch that gives a
+  // plugin's sessions their built-in tools.
+  sessionTools: z.boolean().optional(),
   workspace: workspaceSchema.optional(),
 })
   .superRefine((manifest, ctx) => {

@@ -119,6 +119,9 @@ export interface BridgeSession {
    * resolve to the SAME `sessionId` — the in-flight key is the prompt hash
    * (`plugin-bridge/session-handler.ts`, the `coalesceSpawn(key, …)` call keyed on
    * `hashPrompt`).
+   *
+   * The session has NO built-in tools (Read, Bash, Edit…) unless the manifest
+   * declares `sessionTools: true` (see `PluginManifest.sessionTools`).
    */
   create(opts: {
     prompt?: string

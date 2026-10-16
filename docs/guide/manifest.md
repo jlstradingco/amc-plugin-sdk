@@ -28,6 +28,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `sdkVersion` | string | Yes | Omniscio plugin-SDK contract the plugin needs, as a bare minimum (e.g. `"2.0.0"`) |
 | `ui` | object | No | UI entry point and sidebar config |
 | `backend` | object | No | Backend entry point and resource limits |
+| `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
 | `permissions` | array | No | Requested API permissions |
 | `cli` | object | No | CLI endpoint declarations |
 | `cron` | object | No | Cron job declarations |
@@ -636,6 +637,25 @@ The Omniscio plugin-SDK **contract** your plugin needs — not the version of th
 ```
 
 Write a bare version. A bare version means "this contract or newer", so your plugin keeps loading as Omniscio moves forward. A caret range means "this major only": it breaks on the next contract major, and `"^3.0.0"` — what CLI 3.0.0 scaffolded — is refused outright by Omniscio's `2.0.0` contract. The scaffolder writes `"2.0.0"`, the contract Omniscio has provided since v0.1.103, and leaves the SDK dependency in `package.json` as an ordinary npm range.
+
+## `sessionTools`
+
+Gives the AI sessions your plugin starts (`ctx.sessions.create` or `AgentMC.session.create`) the
+built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
+
+```json
+{
+  "sessionTools": true
+}
+```
+
+- **Off unless you declare it.** Without `true`, a session your plugin starts can only answer in
+  text. That is the right default for a plugin that answers from documents it did not write.
+- **Declare it only if your sessions must change files or run commands** — for example, a plugin
+  whose session edits code and pushes it.
+- **The user sees it at install** as "Agent Sessions". Adding it in an update asks them to approve
+  again.
+- It must be `true` or `false`; anything else fails `amc-plugin validate`.
 
 ## Complete Examples
 

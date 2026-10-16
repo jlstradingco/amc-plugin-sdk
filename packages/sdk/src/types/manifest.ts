@@ -376,6 +376,14 @@ export interface PluginManifest {
       memoryMb?: number
     }
   }
+  /**
+   * Give this plugin's AI sessions (`ctx.sessions.create`, `AgentMC.session.create`) the
+   * built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
+   *
+   * OFF unless declared: without `true`, a plugin session can only answer in text. The user
+   * sees it at install as "Agent Sessions", and an update that turns it on asks them again.
+   */
+  sessionTools?: boolean
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]

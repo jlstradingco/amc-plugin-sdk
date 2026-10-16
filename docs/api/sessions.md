@@ -29,6 +29,10 @@ Create a new Claude Code session on your plugin's own virtual project.
 
 **Returns:** `Promise<{ sessionId: string }>` -- the ID of the newly created session.
 
+::: tip The session has no built-in tools by default
+It can only answer in text unless your manifest declares [`sessionTools: true`](../guide/manifest#sessiontools).
+:::
+
 ::: warning There is no `projectId` option
 Earlier SDK versions declared one. AMC has **always** derived the project from your plugin ID
 (`__plugin_<id>__`) and has never read a caller-supplied project, so code passing `projectId`
@@ -188,6 +192,9 @@ The frontend `BridgeSession` interface is available as `AgentMC.session`.
 :::
 
 ### `create(opts: { prompt?: string }): Promise<{ sessionId: string }>`
+
+Like the backend `create()`, the session has no built-in tools unless your manifest declares
+[`sessionTools: true`](../guide/manifest#sessiontools).
 
 ```typescript
 const { sessionId } = await AgentMC.session.create({
