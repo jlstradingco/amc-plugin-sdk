@@ -255,6 +255,9 @@ export interface PluginSessions {
    * plugin-background, which is what decides whether AMC surfaces it in the
    * sidebar or hides it as plugin chatter. It is read on THIS backend surface
    * only; the webview's `AgentMC.session.create` silently discards it.
+   *
+   * The session has NO built-in tools (Read, Bash, Edit…) unless the manifest
+   * declares `sessionTools: true` (see `PluginManifest.sessionTools`).
    */
   create(opts: { prompt?: string; userInitiated?: boolean }): Promise<{ sessionId: string }>
   sendMessage(sessionId: string, text: string): Promise<void>
