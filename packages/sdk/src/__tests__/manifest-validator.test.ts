@@ -335,6 +335,22 @@ describe('host-parity rules', () => {
     })
   })
 
+  describe('sessionTools', () => {
+    // Host: `sessionTools: z.boolean().optional()` (shared/plugin-manifest-schema.ts). Dropping it
+    // here would hide the one switch that gives a plugin's sessions their built-in tools.
+    it.each([true, false])('keeps sessionTools: %s in the validated manifest', (sessionTools) => {
+      const result = validateManifest({ ...validManifest, sessionTools })
+      expect(result.errors).toEqual([])
+      expect(result.manifest?.sessionTools).toBe(sessionTools)
+    })
+
+    it.each(['true', 1, null])('refuses a sessionTools of %j', (sessionTools) => {
+      const result = validateManifest({ ...validManifest, sessionTools })
+      expect(result.valid).toBe(false)
+      expect(result.errors[0]).toMatch(/^sessionTools: /)
+    })
+  })
+
   describe('SQL identifier validation', () => {
     // The host interpolates these names into DDL wrapped in double quotes
     // WITHOUT escaping an embedded quote, so this regex is the injection
