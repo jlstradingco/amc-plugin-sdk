@@ -17,19 +17,21 @@ allowBuilds:
 # `pnpm.overrides` field (which it now ignores). These pin transitive vite /
 # esbuild past the advisories fixed in the 1.1.0 release train.
 overrides:
+  source-map-js: ^1.2.2
   vite@>=7.0.0 <7.3.5: '>=7.3.5'
   esbuild@>=0.27.0 <0.28.1: '>=0.28.1'
   # brace-expansion ships in the RUNTIME dep of the published CLI:
   # @agent-mc/plugin-cli > archiver@8 > readdir-glob > minimatch > brace-expansion.
-  # 5.0.6 carries three high-severity ReDoS advisories; >=5.0.9 patches all three,
-  # and it is a same-major patch bump so the archiver tree resolves unchanged (F028).
-  brace-expansion@>=5.0.0 <5.0.9: '>=5.0.9'
+  # 5.0.6 carried three high-severity ReDoS advisories (fixed in 5.0.9); this floor also
+  # covers the later recursion and quadratic-expansion advisories; same-major patch bump,
+  # so the archiver tree resolves unchanged (F028).
+  brace-expansion@>=5.0.0 <5.0.12: '>=5.0.12'
   # DEV/build-time only (docs vitepress + vue compiler toolchain), never shipped in the
   # published @agent-mc packages — but cheap, same-major patch bumps that every consumer
   # range (postcss `^3.3.11`, `^8`) already accepts, so pinned rather than tolerated (RT-F029):
-  #   nanoid  — two high ReDoS/predictability advisories, fixed in 3.3.18
+  #   nanoid  — high ReDoS/predictability advisories, floor 3.3.19
   #   postcss — moderate source-map path-traversal, fixed in 8.5.23
-  nanoid@>=3.0.0 <3.3.18: '>=3.3.18'
+  nanoid@>=3.0.0 <3.3.19: '>=3.3.19 <4.0.0'
   postcss@>=8.0.0 <8.5.23: '>=8.5.23'
   #
   # ACCEPTED dev-only risk — deliberately NOT overridden, because the only fix is a
