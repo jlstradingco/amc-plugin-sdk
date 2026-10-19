@@ -103,22 +103,16 @@ const settingOptionSchema = z.object({
   label: z.string(),
 })
 
-const testActionSchema = z.object({
-  namespace: z.string(),
-  method: z.string(),
-  label: z.string(),
-})
-
 const settingSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
   description: z.string().optional(),
   type: z.enum(['toggle', 'select', 'text', 'number', 'password']),
   options: z.array(settingOptionSchema).optional(),
+  optionsSource: z.enum(['ai-engines']).optional(),
   default: z.unknown(),
   min: z.number().optional(),
   max: z.number().optional(),
-  testAction: testActionSchema.optional(),
   // Host `z.boolean().optional()` (plugin-manifest-validator.ts, settings). Without
   // it a non-boolean passed here and failed at install, and a valid one was stripped.
   agentWritable: z.boolean().optional(),

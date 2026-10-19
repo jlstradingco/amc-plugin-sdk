@@ -1,7 +1,7 @@
 export type {
   PluginLicenseType, PluginCategory, PluginSource, PluginCollectionColumnType,
   PluginCollectionSchema, PluginMigrationOperation, PluginMigration,
-  PluginSettingOption, PluginSettingTestAction, PluginSettingDefinition,
+  PluginSettingOption, PluginSettingDefinition,
   PluginSuggestedPrompt,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
   PluginManifest, PluginSupportLinks, PluginRegistryEntry, PluginRuntimeStatus,

@@ -8,7 +8,6 @@ export type {
   PluginMigrationOperation,
   PluginMigration,
   PluginSettingOption,
-  PluginSettingTestAction,
   PluginSettingDefinition,
   PluginSuggestedPrompt,
   PluginPermission,

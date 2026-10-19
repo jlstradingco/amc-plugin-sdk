@@ -11,6 +11,16 @@ together.
 
 ## [Unreleased]
 
+### Fixed — a `settings[]` entry declares exactly the host's keys
+
+`PluginSettingDefinition` and `validateManifest` accepted `testAction`, a field no Omniscio
+code reads, so `amc-plugin validate` passed a manifest whose test button the app silently
+ignored; `PluginSettingTestAction` is no longer exported. In the other direction the SDK
+stripped `optionsSource`, which the host does read to build the live AI engine list, so a
+manifest validated through the SDK lost a field the host honours; it is now typed and kept.
+A settings key outside the host's set is stripped rather than refused, exactly as the host's
+plain `z.object` strips it, so an existing manifest carrying `testAction` still validates.
+
 ### Fixed — `PluginManifest` matches the host manifest schema again
 
 `PluginManifest` was missing two top-level keys Omniscio accepts and still carried three the

@@ -176,22 +176,16 @@ export interface PluginSettingOption {
   label: string
 }
 
-export interface PluginSettingTestAction {
-  namespace: string
-  method: string
-  label: string
-}
-
 export interface PluginSettingDefinition {
   key: string
   label: string
   description?: string
   type: 'toggle' | 'select' | 'text' | 'number' | 'password'
   options?: PluginSettingOption[]
+  optionsSource?: 'ai-engines'
   default: unknown
   min?: number
   max?: number
-  testAction?: PluginSettingTestAction
   /**
    * Let a control-server write (`PATCH /plugins/:id/settings`) change this setting
    * at once. Absent or `false` (the default), such a write waits for the person's

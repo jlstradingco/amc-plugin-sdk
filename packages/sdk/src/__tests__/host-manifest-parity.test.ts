@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import { validateManifest } from '../validators/manifest.js'
+import type { PluginSettingDefinition } from '../types/manifest.js'
 import {
   HOST_AGENT_WRITABLE,
   HOST_LISTING_BOUNDS,
   HOST_MIGRATION_OPS,
   HOST_REJECTED_MIGRATION_OPS,
   HOST_RESERVED_COLUMNS,
+  HOST_SETTINGS_KEYS,
   HOST_SOURCES,
   HOST_UI_BOUNDS,
 } from './fixtures/host-mirror.js'
@@ -36,6 +38,74 @@ const baseManifest = {
   migrations: [],
   sdkVersion: '^1.0.0',
 }
+
+describe(`settings[] item parity (${HOST_SOURCES.manifestSchema}, settings)`, () => {
+  const settingWith = (extra: Record<string, unknown>) => ({
+    ...baseManifest,
+    settings: [{ key: 'engine', label: 'Engine', type: 'select', default: '', ...extra }],
+  })
+
+  it('keeps exactly the keys the host declares, and no others', () => {
+    const result = validateManifest(
+      settingWith({
+        description: 'Which engine runs',
+        options: [{ value: 'a', label: 'A' }],
+        optionsSource: 'ai-engines',
+        min: 0,
+        max: 1,
+        agentWritable: true,
+        testAction: { namespace: 'scan', method: 'probe', label: 'Test' },
+      })
+    )
+    expect(result.errors).toEqual([])
+    expect(Object.keys(result.manifest?.settings[0] ?? {}).sort()).toEqual(
+      [...HOST_SETTINGS_KEYS].sort()
+    )
+  })
+
+  it('strips testAction the way the host z.object does, instead of declaring it', () => {
+    const result = validateManifest(
+      settingWith({ testAction: { namespace: 'scan', method: 'probe', label: 'Test' } })
+    )
+    expect(result.valid).toBe(true)
+    expect(result.manifest?.settings[0]).not.toHaveProperty('testAction')
+  })
+
+  it('preserves optionsSource, which the host reads for its live engine list', () => {
+    const result = validateManifest(settingWith({ optionsSource: 'ai-engines' }))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.settings[0]?.optionsSource).toBe('ai-engines')
+  })
+
+  it('refuses an optionsSource outside the host enum', () => {
+    expect(validateManifest(settingWith({ optionsSource: 'anything-else' })).valid).toBe(false)
+  })
+})
+
+describe('the published setting type carries no field the host does not read', () => {
+  it('accepts a host-legal setting', () => {
+    const setting: PluginSettingDefinition = {
+      key: 'engine',
+      label: 'Engine',
+      type: 'text',
+      default: '',
+      optionsSource: 'ai-engines',
+    }
+    expect(setting.key).toBe('engine')
+  })
+
+  it('has no testAction field', () => {
+    const setting: PluginSettingDefinition = {
+      key: 'engine',
+      label: 'Engine',
+      type: 'text',
+      default: '',
+      // @ts-expect-error testAction is not a host settings field, so the SDK must not declare one
+      testAction: { namespace: 'scan', method: 'probe', label: 'Test' },
+    }
+    expect(setting.key).toBe('engine')
+  })
+})
 
 describe(`ui block parity (${HOST_SOURCES.manifestValidator}:220-265)`, () => {
   it('accepts a ui block carrying only hideProjectPanel', () => {

@@ -23,6 +23,7 @@
 export const HOST_SOURCES = {
   manifestValidator:
     'src/main/services/plugin/plugin-manifest-validator.ts',
+  manifestSchema: 'src/shared/plugin-manifest-schema.ts',
   storage: 'src/main/db/plugin-storage.ts',
   sessionBridge: 'src/main/services/plugin/plugin-session-bridge.ts',
   contextProvider: 'src/main/services/session-context/plugin-provider.ts',
@@ -80,6 +81,27 @@ export const HOST_LISTING_BOUNDS = {
  * (`docs/superpowers/plans/2026-05-17-amc-plugin-sdk.md:196`). The shipped host
  * renamed `remove_index` -> `drop_index` and dropped `remove_column` entirely.
  */
+/**
+ * The keys the host declares on one `settings[]` entry — `settings` in
+ * `src/shared/plugin-manifest-schema.ts` (the settings object, key through agentWritable).
+ *
+ * The host parses that entry with a plain `z.object`, so any key NOT listed here is stripped rather
+ * than refused, and a key listed here but absent from the SDK is silently deleted from every
+ * manifest validated with the SDK.
+ */
+export const HOST_SETTINGS_KEYS = [
+  'key',
+  'label',
+  'description',
+  'type',
+  'options',
+  'optionsSource',
+  'default',
+  'min',
+  'max',
+  'agentWritable',
+] as const
+
 export const HOST_MIGRATION_OPS = ['add_column', 'add_index', 'drop_index'] as const
 
 /** Ops this SDK once advertised that the host has never accepted. */
