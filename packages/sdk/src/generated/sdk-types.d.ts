@@ -488,6 +488,7 @@ export interface AgentMC {
     "get": (...args: unknown[]) => Promise<unknown>
     "getAll": (...args: unknown[]) => Promise<unknown>
     "onChange": (handler: (...args: unknown[]) => void) => () => void
+    "set": (...args: unknown[]) => Promise<unknown>
   }
   "share": {
     "publishArtifact": (...args: unknown[]) => Promise<unknown>
