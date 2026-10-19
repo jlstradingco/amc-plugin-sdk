@@ -47,6 +47,7 @@ export function createRpcDouble(): RpcDouble {
       removeHandler: (method) => {
         state.handlers.delete(method)
       },
+      emit: () => Promise.resolve(),
     },
     backend: { invoke: (method, ...args) => invokeLikeHost(state, method, args) },
     calls: state.calls,

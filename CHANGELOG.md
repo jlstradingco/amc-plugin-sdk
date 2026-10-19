@@ -11,6 +11,21 @@ together.
 
 ## [Unreleased]
 
+### Fixed — a backend without `sdkVersion` no longer passes `validateManifest`
+
+`sdkVersion` picks the Omniscio worker loader, so a backend without it never starts. `validateManifest`
+(and so `validate`, `build`, `package`, `dev`, `install` and `preflight`) now refuses a manifest that
+declares a `backend` and no `sdkVersion`, with Omniscio's own message. A UI-only manifest without it is
+still accepted by the validator, as Omniscio accepts it.
+
+### Added — `sessionTools` on the manifest
+
+Omniscio gives a plugin's AI sessions no built-in tools (Read, Bash, Write, Edit…) unless the
+manifest declares `"sessionTools": true`. The SDK did not know the field, so `validateManifest`
+dropped it and accepted a value that was not `true` or `false`. It is now typed on
+`PluginManifest`, kept by `validateManifest`, refused when not a boolean, and documented in the
+manifest guide and on both session `create()` methods.
+
 ## [3.2.0] - 2026-10-12
 
 ### Upgrading to CLI 3.2.0 — read this before you bump
@@ -35,6 +50,12 @@ ship. See "Fixed" below.
 
 `validate` also now checks `plugin.icon`. It fails on an icon path that is unsafe, missing, or outside
 what `package` ships, and warns on a Lucide icon name. See "Fixed" below.
+
+`validate` (and every command that validates the manifest) now **fails** on an entry point that leaves
+your package: a `..` segment, a leading `/` or `\`, a drive letter, a URL scheme, a tab or line break,
+or the same thing hidden behind `%2e`, `%2f` or `%5c`. Omniscio already refused to load these
+plugins, so nothing that worked stops working. Fix the path to point at a file inside your package.
+See "Fixed" below.
 
 Your own tests may also change: `createTestContext` and the dev shell now page `db.query` like
 Omniscio (100 rows unless you pass a `limit`), so a test that read more than 100 rows from one query
@@ -101,6 +122,27 @@ extra effect. `createTestContext` takes `rpc` and `host` options.
 
 The host has gated `boards.read` since 2026-08; a manifest declaring it failed `amc-plugin
 validate` and preflight. It now passes. The webview `AgentMC.boards` namespace is not typed yet.
+
+### Fixed — `validate` refuses every entry path Omniscio refuses
+
+Every entry point only had to be 1 to 500 characters, so `validate` passed paths such as
+`%2e%2e/other-plugin/index.html`, `..<tab>/x.html`, `C:\x.html` and `/etc/x.html`. Omniscio refuses
+all of them, so the plugin failed at install instead.
+
+- The SDK now runs Omniscio's own entry-path rule, copied unchanged, on all six path fields:
+  `ui.entryPoint`, `ui.overlay.entryPoint`, `ui.settingsPanel.entryPoint`,
+  `ui.widget.entryPoint`, `ui.windows.<key>.entryPoint` and `backend.entryPoint`. The error
+  messages are Omniscio's.
+- A test pins the copy to Omniscio's file and fails when the copy is edited or goes 30 days
+  without being checked against Omniscio again.
+- A filename with two dots, such as `my..page.html`, is still accepted.
+
+### Added — `ui.settingsPanel`, `ui.widget` and `ui.windows` on the manifest
+
+Omniscio reads all three, but the SDK schema did not list them, so `validate` dropped them unseen
+and never checked their paths. They are now typed on `PluginManifest` and validated with Omniscio's
+limits: at most 4 windows, keys of lowercase letters, digits and hyphens (up to 40 characters),
+titles up to 120 characters, and sizes of 200–10000 px.
 
 ### Fixed — new plugins no longer start out wearing the stock puzzle glyph
 

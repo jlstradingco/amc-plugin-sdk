@@ -398,7 +398,8 @@ describe('retireRows settles legacy command rows once and never runs them', () =
       await harness.ctx.db.insert('commands', { type: 'send', payload: { to: SECRET }, status: 'pending' })
     }
     // Every update "succeeds" and nothing changes, as if an agent re-armed each row at once.
-    harness.ctx.db.update = () => Promise.resolve()
+    harness.ctx.db.update = (_collection, id, fields) =>
+      Promise.resolve({ id, created_at: '', updated_at: '', ...fields })
     await expect(channel.retireRows('commands')).resolves.toEqual(expect.any(Number))
     const warns = harness.logs.filter((log) => log.level === 'warn' && log.message.includes('retireRows'))
     expect(warns).toHaveLength(1)

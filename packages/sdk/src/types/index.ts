@@ -11,8 +11,10 @@ export type {
 
 export type {
   QueryOptions, SidebarItem, CliRequest, CliResponse, CliHandler,
-  PluginStorage, PluginSecrets, PluginDb, PluginStorageStats, PluginSettings, PluginLogger, PluginEvents,
-  PluginSessions, SessionStatus, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginFs, PluginHttp, PluginCron, PluginCli,
+  PluginCliRequest, PluginCliResponse,
+  PluginStorage, PluginSecrets, PluginDb, PluginDbRow, PluginDbQueryOptions,
+  PluginStorageStats, PluginSettings, PluginLogger, PluginEvents,
+  PluginSessions, SessionStatus, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginEngineCatalog, PluginFs, PluginHttp, PluginHttpInit, PluginHttpResponse, PluginCron, PluginCli,
   PluginSidebar, PluginToast, PluginContext, PluginRpc, PluginHost,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, PluginInbox,
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,

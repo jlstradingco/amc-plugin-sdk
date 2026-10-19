@@ -335,6 +335,51 @@ describe('host-parity rules', () => {
     })
   })
 
+  describe('sdkVersion with a backend', () => {
+    // The host's authoring rule (authorManifestProblems, shared/plugin-manifest-schema.ts @
+    // 113b4d5): sdkVersion selects the worker loader, so a backend without it never starts.
+    const { sdkVersion: _omitted, ...withoutSdkVersion } = validManifest
+    const backend = { entryPoint: 'dist/backend/index.js' }
+
+    it('rejects a backend declared without sdkVersion, with the host message', () => {
+      const result = validateManifest({ ...withoutSdkVersion, backend })
+      expect(result.valid).toBe(false)
+      expect(result.errors).toEqual([
+        'sdkVersion: Required - it selects the host worker loader, the only backend there is, so a manifest without it declares a backend that can never start',
+      ])
+    })
+
+    it('accepts a backend declared with sdkVersion', () => {
+      expect(validateManifest({ ...validManifest, backend }).errors).toEqual([])
+    })
+
+    it('leaves a manifest with no backend alone, as the host does', () => {
+      expect(validateManifest(withoutSdkVersion).errors).toEqual([])
+    })
+
+    it('reports the rule alongside schema errors', () => {
+      const result = validateManifest({ ...withoutSdkVersion, backend, permissions: ['workspace.write'] })
+      expect(result.errors).toHaveLength(2)
+      expect(result.errors[1]).toMatch(/^sdkVersion: Required/)
+    })
+  })
+
+  describe('sessionTools', () => {
+    // Host: `sessionTools: z.boolean().optional()` (shared/plugin-manifest-schema.ts). Dropping it
+    // here would hide the one switch that gives a plugin's sessions their built-in tools.
+    it.each([true, false])('keeps sessionTools: %s in the validated manifest', (sessionTools) => {
+      const result = validateManifest({ ...validManifest, sessionTools })
+      expect(result.errors).toEqual([])
+      expect(result.manifest?.sessionTools).toBe(sessionTools)
+    })
+
+    it.each(['true', 1, null])('refuses a sessionTools of %j', (sessionTools) => {
+      const result = validateManifest({ ...validManifest, sessionTools })
+      expect(result.valid).toBe(false)
+      expect(result.errors[0]).toMatch(/^sessionTools: /)
+    })
+  })
+
   describe('SQL identifier validation', () => {
     // The host interpolates these names into DDL wrapped in double quotes
     // WITHOUT escaping an embedded quote, so this regex is the injection

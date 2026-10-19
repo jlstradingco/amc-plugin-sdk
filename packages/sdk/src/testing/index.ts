@@ -24,6 +24,8 @@ import type {
   PluginAuthUser,
   PluginAuthSession,
   PluginAiStructuredRequest,
+  PluginDbRow,
+  PluginEngineCatalog,
   Recording,
   QueryOptions,
   SessionMessage,
@@ -68,6 +70,7 @@ export interface TestContextOptions {
   /** Override ctx.ai responses. */
   ai?: {
     generateMessage?: (systemPrompt: string, userPrompt: string) => Promise<string> | string
+    listEngines?: () => Promise<PluginEngineCatalog> | PluginEngineCatalog
     generateTitle?: (text: string) => Promise<string> | string
     /** Defaults to true, so a plugin gating on it takes the configured path. */
     isConfigured?: () => Promise<boolean> | boolean
@@ -248,10 +251,10 @@ function matchesWhere(row: Record<string, unknown>, where?: Record<string, unkno
   return Object.entries(where).every(([k, v]) => row[k] === v)
 }
 
-function applyQuery(
-  rows: Record<string, unknown>[],
+function applyQuery<T extends Record<string, unknown>>(
+  rows: T[],
   options?: QueryOptions
-): Record<string, unknown>[] {
+): T[] {
   let out = rows.filter((r) => matchesWhere(r, options?.where))
   if (options?.orderBy) {
     const entry = Object.entries(options.orderBy)[0]
@@ -307,11 +310,11 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
 
   const storageMap = new Map<string, unknown>()
   const secretsMap = new Map<string, string>()
-  const collections = new Map<string, Record<string, unknown>[]>()
+  const collections = new Map<string, PluginDbRow[]>()
   const statsMethod = opts.db?.statsMethod ?? 'payload-estimate'
   const fsFiles = new Map<string, string>()
   const eventBus = new EventEmitter()
-  const cronHandlers = new Map<string, () => Promise<void>>()
+  const cronHandlers = new Map<string, () => void | Promise<void>>()
   const cliHandlers = new Map<string, CliHandler>()
   const sessionStatus = new Map<string, string>()
   const sessionMessages = new Map<string, SessionMessage[]>()
@@ -370,7 +373,12 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     db: {
       insert: (collection, data) => {
         const rows = collections.get(collection) ?? []
-        const row = { ...data, id: crypto.randomUUID(), created_at: nowIso(), updated_at: nowIso() }
+        const row: PluginDbRow = {
+          ...data,
+          id: crypto.randomUUID(),
+          created_at: nowIso(),
+          updated_at: nowIso()
+        }
         rows.push(row)
         collections.set(collection, rows)
         return Promise.resolve({ ...row })
@@ -386,7 +394,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         const row = rows.find((r) => r.id === id)
         if (!row) return Promise.reject(new Error(`No row "${id}" in "${collection}"`))
         Object.assign(row, fields, { updated_at: nowIso() })
-        return Promise.resolve()
+        return Promise.resolve({ ...row })
       },
       delete: (collection, id) => {
         const rows = collections.get(collection) ?? []
@@ -438,7 +446,12 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           return Promise.resolve({ ...existing })
         }
 
-        const row = { ...data, id: crypto.randomUUID(), created_at: nowIso(), updated_at: nowIso() }
+        const row: PluginDbRow = {
+          ...data,
+          id: crypto.randomUUID(),
+          created_at: nowIso(),
+          updated_at: nowIso()
+        }
         rows.push(row)
         collections.set(collection, rows)
         return Promise.resolve({ ...row })
@@ -494,7 +507,11 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     // provide is the same mistake in miniature — a plugin that cleans up in
     // `onDisable` would crash with `off is not a function`.
     events: {
-      emit: (channel, data) => { harness.emittedEvents.push({ channel, data }); eventBus.emit(channel, data) },
+      emit: (channel, data) => {
+        harness.emittedEvents.push({ channel, data })
+        eventBus.emit(channel, data)
+        return Promise.resolve()
+      },
       on: (channel, handler) => {
         eventBus.on(channel, handler)
       }
@@ -534,6 +551,19 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           opts.ai?.generateTitle ? opts.ai.generateTitle(text) : `[test-ai] ${text.slice(0, 40)}`
         ),
       isConfigured: () => Promise.resolve(opts.ai?.isConfigured ? opts.ai.isConfigured() : true),
+      listEngines: () =>
+        Promise.resolve(
+          opts.ai?.listEngines
+            ? opts.ai.listEngines()
+            : {
+                version: 0,
+                defaults: {
+                  session: { provider: 'test', model: null, label: 'Test' },
+                  writing: { provider: 'test', model: null, label: 'Test' }
+                },
+                engines: []
+              }
+        ),
       generateStructured: (structuredOpts) =>
         Promise.resolve(
           opts.ai?.generateStructured ? opts.ai.generateStructured(structuredOpts) : {}

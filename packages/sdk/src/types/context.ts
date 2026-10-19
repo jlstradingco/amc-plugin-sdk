@@ -48,6 +48,9 @@ export interface CliResponse {
 
 export type CliHandler = (req: CliRequest) => Promise<CliResponse>
 
+export type PluginCliRequest = CliRequest
+export type PluginCliResponse = CliResponse
+
 export interface PluginStorage {
   get(key: string): Promise<unknown>
   set(key: string, value: unknown): Promise<void>
@@ -99,11 +102,20 @@ export interface PluginStorageStats {
   secretsBytes: number
 }
 
+export interface PluginDbRow {
+  id: string
+  created_at: string
+  updated_at: string
+  [column: string]: unknown
+}
+
+export type PluginDbQueryOptions = QueryOptions
+
 export interface PluginDb {
-  insert(collection: string, data: Record<string, unknown>): Promise<Record<string, unknown>>
-  query(collection: string, options?: QueryOptions): Promise<Record<string, unknown>[]>
-  getById(collection: string, id: string): Promise<Record<string, unknown> | null>
-  update(collection: string, id: string, fields: Record<string, unknown>): Promise<void>
+  insert(collection: string, data: Record<string, unknown>): Promise<PluginDbRow>
+  query(collection: string, options?: QueryOptions): Promise<PluginDbRow[]>
+  getById(collection: string, id: string): Promise<PluginDbRow | null>
+  update(collection: string, id: string, fields: Record<string, unknown>): Promise<PluginDbRow>
   delete(collection: string, id: string): Promise<void>
   deleteWhere(collection: string, where: Record<string, unknown>): Promise<void>
   /** Atomic insert-or-update on a declared UNIQUE column tuple; returns the persisted row. */
@@ -111,7 +123,7 @@ export interface PluginDb {
     collection: string,
     conflictColumns: string[],
     data: Record<string, unknown>
-  ): Promise<Record<string, unknown>>
+  ): Promise<PluginDbRow>
   /** Row count for one collection. Cheap — an index-only scan, not a table scan. */
   count(collection: string): Promise<number>
   /** This plugin's storage footprint: per-collection row counts and allocated bytes. */
@@ -143,6 +155,7 @@ export interface PluginRpc {
   /** Register (or replace) the handler for `method`. Handlers stay in the worker. */
   handle(method: string, handler: (...args: unknown[]) => unknown): void
   removeHandler(method: string): void
+  emit(channel: string, data: unknown): Promise<void>
 }
 
 /**
@@ -161,7 +174,7 @@ export interface PluginLogger {
 }
 
 export interface PluginEvents {
-  emit(channel: string, data: unknown): void
+  emit(channel: string, data: unknown): Promise<void>
   /**
    * Subscribe to a channel.
    *
@@ -255,6 +268,9 @@ export interface PluginSessions {
    * plugin-background, which is what decides whether AMC surfaces it in the
    * sidebar or hides it as plugin chatter. It is read on THIS backend surface
    * only; the webview's `AgentMC.session.create` silently discards it.
+   *
+   * The session has NO built-in tools (Read, Bash, Edit…) unless the manifest
+   * declares `sessionTools: true` (see `PluginManifest.sessionTools`).
    */
   create(opts: { prompt?: string; userInitiated?: boolean }): Promise<{ sessionId: string }>
   sendMessage(sessionId: string, text: string): Promise<void>
@@ -301,8 +317,36 @@ export interface PluginAiStructuredRequest {
   premium?: boolean
 }
 
+export interface PluginEngineCatalog {
+  version: number
+  defaults: {
+    session: { provider: string; model: string | null; label: string }
+    writing: { provider: string; model: string | null; label: string }
+  }
+  engines: Array<{
+    id: string
+    label: string
+    ready: boolean
+    writing: boolean
+    writingReady: boolean
+    defaultModel: string | null
+    models: Array<{ id: string; label: string }>
+    data: {
+      operator: string
+      hostedIn: string | null
+      passesOn: boolean
+      dependsOnModel: boolean
+    }
+  }>
+}
+
 export interface PluginAi {
-  generateMessage(systemPrompt: string, userPrompt: string): Promise<string>
+  generateMessage(
+    systemPrompt: string,
+    userPrompt: string,
+    opts?: { provider?: string; model?: string }
+  ): Promise<string>
+  listEngines(): Promise<PluginEngineCatalog>
   generateTitle(text: string): Promise<string>
   /**
    * Whether an Anthropic API-key account exists. The other methods need one
@@ -326,6 +370,16 @@ export interface PluginFs {
   deleteFile(relativePath: string): Promise<void>
 }
 
+export type PluginHttpInit = RequestInit
+
+export interface PluginHttpResponse {
+  ok: boolean
+  status: number
+  headers?: Record<string, string>
+  json(): Promise<unknown>
+  text(): Promise<string>
+}
+
 export interface PluginHttp {
   fetch(url: string, options?: RequestInit): Promise<Response>
 }
@@ -344,7 +398,11 @@ export interface PluginHttp {
  *   never falsy. Every guarded re-register path built on it was dead code.
  */
 export interface PluginCron {
-  register(id: string, schedule: string, handler: () => Promise<void>): Promise<void>
+  register(
+    id: string,
+    schedule: string,
+    handler: () => void | Promise<void>
+  ): Promise<void>
   unregister(id: string): Promise<void>
   /** Await this. See the note above — the old `boolean` made every guard true. */
   isRegistered(id: string): Promise<boolean>

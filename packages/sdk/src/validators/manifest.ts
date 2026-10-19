@@ -1,6 +1,11 @@
 import { z } from 'zod'
-import type { PluginPermission } from '../types/manifest.js'
+import { PLUGIN_PERMISSIONS } from '../generated/sdk-facts.js'
 import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
+import {
+  manifestEntryPathProblems,
+  MANIFEST_ENTRY_PATH_MAX,
+  type ManifestEntryPathProblem,
+} from './manifest-entry-path.js'
 
 const pluginIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -41,6 +46,29 @@ const isHttpUrl = (value: string): boolean => {
 }
 
 const listingUrl = z.string().max(LISTING_URL_MAX).refine(isHttpUrl, 'must be an http:// or https:// URL')
+
+// A path a manifest declares must name a file INSIDE the plugin's own package. The rule is the
+// host's own module, copied byte-for-byte into manifest-entry-path.ts and pinned to the host by
+// host-entry-path-parity.test.ts, so this schema refuses exactly the paths the host refuses.
+// The messages are the host validator's, one per problem. Keyed by problem so a dimension the host
+// adds fails tsc here instead of being reported with no message.
+const ENTRY_PATH_MESSAGES: Record<Exclude<ManifestEntryPathProblem, 'not-a-string'>, string> = {
+  blank: 'entryPoint must not be blank',
+  'too-long': `entryPoint must be at most ${MANIFEST_ENTRY_PATH_MAX} characters`,
+  'control-character': 'entryPoint must not contain a tab, newline or carriage return',
+  scheme: 'entryPoint must be a plugin-relative path, not a URL or scheme',
+  absolute: 'entryPoint must be relative to the plugin directory, not an absolute path',
+  drive: 'entryPoint must be relative to the plugin directory, not a drive-qualified path',
+  'parent-segment': 'entryPoint must not contain a ".." path segment',
+}
+
+const pluginRelativeEntryPath = z.string().superRefine((entryPath, ctx) => {
+  for (const problem of manifestEntryPathProblems(entryPath)) {
+    // `not-a-string` cannot reach here: z.string() has already refused a non-string.
+    if (problem === 'not-a-string') continue
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: ENTRY_PATH_MESSAGES[problem] })
+  }
+})
 
 const pluginInfoSchema = z.object({
   id: z.string().min(1).regex(pluginIdRegex, 'Plugin ID must be kebab-case (lowercase alphanumeric + hyphens)'),
@@ -180,8 +208,17 @@ const migrationSchema = z.object({
   operations: z.array(migrationOperationSchema),
 })
 
+// `ui.windows` bounds, from the host's shared/types/plugins.ts (PLUGIN_WINDOWS_MAX,
+// PLUGIN_WINDOW_KEY_MAX) and its validator's window schema.
+const PLUGIN_WINDOWS_MAX = 4
+const PLUGIN_WINDOW_KEY_MAX = 40
+const PLUGIN_WINDOW_TITLE_MAX = 120
+const PLUGIN_WINDOW_SIZE_MIN = 200
+const PLUGIN_WINDOW_SIZE_MAX = 10000
+const pluginWindowKeyRegex = /^[a-z0-9][a-z0-9-]*$/
+
 // Every bound below is copied from the host validator
-// (plugin-manifest-validator.ts:220-265) so this SDK accepts exactly what the
+// (plugin-manifest-validator.ts, its `ui` block) so this SDK accepts exactly what the
 // host does inside a `ui` block. A stricter SDK rejects manifests that install
 // fine; a looser one lets `amc-plugin validate` pass something the host refuses.
 //
@@ -193,7 +230,7 @@ const migrationSchema = z.object({
 // requires the `ui` block itself, while we keep it optional — tightening that
 // would reject the backend-only manifests this SDK has always accepted.
 const uiSchema = z.object({
-  entryPoint: z.string().min(1).max(500).optional(),
+  entryPoint: pluginRelativeEntryPath.optional(),
   sidebar: z
     .object({
       title: z.string().min(1).max(50),
@@ -202,8 +239,28 @@ const uiSchema = z.object({
     .optional(),
   overlay: z
     .object({
-      entryPoint: z.string().min(1).max(500),
+      entryPoint: pluginRelativeEntryPath,
     })
+    .optional(),
+  // The three host surfaces below were missing here, so zod stripped them and
+  // their entry paths were never checked: `amc-plugin validate` approved a
+  // `ui.widget.entryPoint` of `../other-plugin/x.html` that the host refuses.
+  settingsPanel: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
+  widget: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
+  windows: z
+    .record(
+      z.string().min(1).max(PLUGIN_WINDOW_KEY_MAX).regex(pluginWindowKeyRegex),
+      z.object({
+        entryPoint: pluginRelativeEntryPath,
+        title: z.string().min(1).max(PLUGIN_WINDOW_TITLE_MAX).optional(),
+        width: z.number().int().min(PLUGIN_WINDOW_SIZE_MIN).max(PLUGIN_WINDOW_SIZE_MAX).optional(),
+        height: z.number().int().min(PLUGIN_WINDOW_SIZE_MIN).max(PLUGIN_WINDOW_SIZE_MAX).optional(),
+      })
+    )
+    .refine(
+      (windows) => Object.keys(windows).length <= PLUGIN_WINDOWS_MAX,
+      `at most ${PLUGIN_WINDOWS_MAX} windows may be declared`
+    )
     .optional(),
   hideProjectPanel: z.boolean().optional(),
   // The sibling opt-out. Host-real and host-validated (plugin-manifest-validator
@@ -283,54 +340,7 @@ const resourceLimitsSchema = z.object({
   memoryMb: z.number().int().positive().optional(),
 })
 
-/**
- * Canonical, runtime-visible list of every permission a plugin can request.
- * Single source of truth: the Zod enum below is derived from it, and the two
- * `satisfies`/exhaustiveness guards keep it byte-for-byte in sync with the
- * `PluginPermission` union in ../types/manifest.ts. The SDK<->host parity guard
- * (src/__tests__/host-permission-parity.test.ts) compares this to the vendored
- * host mirror so the two surfaces cannot silently drift.
- */
-export const PLUGIN_PERMISSIONS = [
-  'storage',
-  'secrets',
-  'sessions',
-  'sessions.readHistory',
-  'ai',
-  'tts',
-  'stt',
-  'microphone',
-  'network',
-  'cron',
-  'cli',
-  'notifications',
-  'system',
-  'rss',
-  'auth',
-  'auth.session',
-  'chrome',
-  'firebase',
-  'recording',
-  'inbox',
-  'navigation',
-  'spend',
-  // Host-real since 2026-08 (plugin-permissions.ts) and listed host-ahead until
-  // 3.2.0, so a manifest asking for it failed `validate` and preflight.
-  'boards.read',
-  // All three are gated by the host and consented in its dialog; write and exec
-  // gate real mutating methods. The pairing rule below requires an explicit
-  // `workspace.read` alongside either of the other two.
-  'workspace.read',
-  'workspace.write',
-  'workspace.exec',
-] as const satisfies readonly PluginPermission[]
-
-// Compile-time completeness: fails to type-check if a PluginPermission is added
-// to the union but not listed above (the `satisfies` clause guards the reverse).
-type _AssertAllPermissionsListed =
-  PluginPermission extends (typeof PLUGIN_PERMISSIONS)[number] ? true : never
-const _permissionExhaustiveness: _AssertAllPermissionsListed = true
-void _permissionExhaustiveness
+export { PLUGIN_PERMISSIONS } from '../generated/sdk-facts.js'
 
 const permissionSchema = z.enum(PLUGIN_PERMISSIONS)
 
@@ -359,13 +369,16 @@ export const manifestSchema = z.object({
   ui: uiSchema.optional(),
   sdkVersion: z.string().min(1).max(50).optional(),
   backend: z.object({
-    entryPoint: z.string().min(1).max(500),
+    entryPoint: pluginRelativeEntryPath,
     resourceLimits: resourceLimitsSchema.optional(),
   }).optional(),
   // `.max(50)` mirrors the host's cap on the array length.
   permissions: z.array(permissionSchema).max(50).optional(),
   cli: z.object({ endpoints: z.array(cliEndpointSchema).max(200) }).optional(),
   cron: z.object({ jobs: z.array(cronJobSchema) }).optional(),
+  // Host-real (plugin-manifest-schema.ts): without it zod strips the one switch that gives a
+  // plugin's sessions their built-in tools.
+  sessionTools: z.boolean().optional(),
   workspace: workspaceSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
@@ -397,13 +410,26 @@ export interface ManifestValidationResult {
   manifest?: z.infer<typeof manifestSchema>
 }
 
+// The host's authorManifestProblems (shared/plugin-manifest-schema.ts). The host still LOADS such a
+// manifest — its backend just never starts — so the rule belongs to authoring doors like this one,
+// not to the schema.
+const SDK_VERSION_REQUIRED_PROBLEM =
+  'sdkVersion: Required - it selects the host worker loader, the only backend there is, so a manifest without it declares a backend that can never start'
+
+function authorManifestProblems(input: unknown): string[] {
+  if (typeof input !== 'object' || input === null) return []
+  const manifest = input as Record<string, unknown>
+  return manifest.backend && !manifest.sdkVersion ? [SDK_VERSION_REQUIRED_PROBLEM] : []
+}
+
 export function validateManifest(input: unknown): ManifestValidationResult {
   const result = manifestSchema.safeParse(input)
-  if (result.success) {
+  const authorProblems = authorManifestProblems(input)
+  if (result.success && authorProblems.length === 0) {
     return { valid: true, errors: [], manifest: result.data }
   }
-  const errors = result.error.issues.map(
-    (issue) => `${issue.path.join('.')}: ${issue.message}`
-  )
-  return { valid: false, errors }
+  const schemaErrors = result.success
+    ? []
+    : result.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+  return { valid: false, errors: [...schemaErrors, ...authorProblems] }
 }

@@ -1,0 +1,744 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Omniscio plugin manifest",
+  "description": "Generated from src/shared/plugin-manifest-schema.ts, the one schema every door reads. The properties mirror that schema; the allOf half carries the cross-field rules an editor cannot infer from them.",
+  "type": "object",
+  "properties": {
+    "plugin": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "icon": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "planning",
+            "development",
+            "testing",
+            "devops",
+            "productivity",
+            "other"
+          ]
+        },
+        "license": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "free",
+                "paid",
+                "trial"
+              ]
+            }
+          },
+          "required": [
+            "type"
+          ]
+        },
+        "minAppVersion": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "screenshots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "maxItems": 8
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 30
+          },
+          "maxItems": 10
+        },
+        "links": {
+          "type": "object",
+          "properties": {
+            "homepage": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "support": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "privacy": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "contact": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "repository": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          }
+        },
+        "requiresOrganization": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "author",
+        "description",
+        "icon",
+        "category",
+        "license"
+      ]
+    },
+    "settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "toggle",
+              "select",
+              "text",
+              "number",
+              "password"
+            ]
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value",
+                "label"
+              ]
+            }
+          },
+          "optionsSource": {
+            "type": "string",
+            "enum": [
+              "ai-engines"
+            ]
+          },
+          "default": {},
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "agentWritable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type"
+        ]
+      },
+      "default": []
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "collections": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "columns": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "integer",
+                    "real",
+                    "json"
+                  ]
+                }
+              },
+              "indexes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                }
+              },
+              "uniqueIndexes": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                  },
+                  "minItems": 1
+                }
+              },
+              "cliReadOnlyColumns": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+                },
+                "maxItems": 64
+              },
+              "agentWritable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "columns"
+            ]
+          }
+        },
+        "kv": {
+          "type": "object",
+          "properties": {
+            "agentWritable": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "required": [
+        "collections"
+      ],
+      "default": {
+        "collections": {}
+      }
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "entryPoint": {
+          "type": "string"
+        },
+        "sidebar": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            },
+            "icon": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 50
+            }
+          },
+          "required": [
+            "title",
+            "icon"
+          ]
+        },
+        "overlay": {
+          "type": "object",
+          "properties": {
+            "entryPoint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "entryPoint"
+          ]
+        },
+        "settingsPanel": {
+          "type": "object",
+          "properties": {
+            "entryPoint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "entryPoint"
+          ]
+        },
+        "widget": {
+          "type": "object",
+          "properties": {
+            "entryPoint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "entryPoint"
+          ]
+        },
+        "windows": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "entryPoint": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 200,
+                "maximum": 10000
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 200,
+                "maximum": 10000
+              }
+            },
+            "required": [
+              "entryPoint"
+            ]
+          }
+        },
+        "hideProjectPanel": {
+          "type": "boolean"
+        },
+        "hideSessionsPane": {
+          "type": "boolean"
+        },
+        "sessions": {
+          "type": "object",
+          "properties": {
+            "contextTemplate": {
+              "type": "string",
+              "maxLength": 5000
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "showDivider": {
+              "type": "boolean"
+            },
+            "realProjectContext": {
+              "type": "boolean"
+            },
+            "suggestedPrompts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "label",
+                  "prompt"
+                ]
+              },
+              "maxItems": 4
+            }
+          }
+        }
+      }
+    },
+    "keybindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "shortcut": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "commandId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-zA-Z0-9-]+$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "shortcut",
+          "commandId",
+          "label"
+        ]
+      },
+      "maxItems": 20
+    },
+    "process": {
+      "type": "object",
+      "properties": {
+        "allowedCommands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[a-zA-Z0-9._+-]+$"
+          },
+          "minItems": 1,
+          "maxItems": 20
+        }
+      },
+      "required": [
+        "allowedCommands"
+      ]
+    },
+    "sdkVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "backend": {
+      "type": "object",
+      "properties": {
+        "entryPoint": {
+          "type": "string"
+        },
+        "resourceLimits": {
+          "type": "object",
+          "properties": {
+            "memoryMb": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "timeouts": {
+          "type": "object",
+          "properties": {
+            "activateMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "onEnableMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "onDisableMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "onShutdownMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "onSettingsChangedMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "onAppReadyMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "cliDispatchMs": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      },
+      "required": [
+        "entryPoint"
+      ]
+    },
+    "sessionTools": {
+      "type": "boolean"
+    },
+    "cli": {
+      "type": "object",
+      "properties": {
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "DELETE",
+                  "PATCH"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "auth": {
+                "type": "boolean"
+              },
+              "requiresConfirmation": {
+                "type": "boolean"
+              },
+              "safe": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "method",
+              "path"
+            ]
+          },
+          "maxItems": 200
+        }
+      },
+      "required": [
+        "endpoints"
+      ]
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "storage",
+          "secrets",
+          "sessions",
+          "ai",
+          "tts",
+          "stt",
+          "microphone",
+          "network",
+          "cron",
+          "cli",
+          "notifications",
+          "system",
+          "rss",
+          "auth",
+          "auth.session",
+          "auth.sharedSignIn",
+          "sessions.readHistory",
+          "boards.read",
+          "boards.link",
+          "sessions.launchAny",
+          "sessions.observeStatus",
+          "inbox",
+          "navigation",
+          "chrome",
+          "chrome.widget",
+          "launch",
+          "firebase",
+          "recording",
+          "spend",
+          "coreRead",
+          "oauth",
+          "channel",
+          "workspace.read",
+          "workspace.write",
+          "workspace.exec",
+          "documents.read",
+          "documents.write"
+        ]
+      },
+      "maxItems": 50
+    }
+  },
+  "required": [
+    "plugin",
+    "ui"
+  ],
+  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.windows, ui.windows.*.entryPoint, process.allowedCommands, backend.entryPoint, cli.endpoints, cli.endpoints.auth",
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "boards.link"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "boards.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "chrome.widget"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "chrome"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "workspace.write"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "workspace.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "workspace.exec"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "workspace.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "backend"
+        ]
+      },
+      "then": {
+        "required": [
+          "sdkVersion"
+        ]
+      }
+    }
+  ]
+}

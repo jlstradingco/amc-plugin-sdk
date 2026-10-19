@@ -21,6 +21,8 @@ AMC Plugin SDK is a monorepo providing everything you need to build, test, and d
 
 The SDK gives plugin authors a sandboxed `PluginContext` with 20 capability interfaces, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
 
+> **Where this lives.** The SDK is developed inside the Omniscio (Agent Mission Control) repository, in the `plugin-sdk/` folder. [github.com/jlstradingco/amc-plugin-sdk](https://github.com/jlstradingco/amc-plugin-sdk) is a read-only mirror that the app syncs from this folder so the public docs site keeps building — never commit there. The development commands below run inside `plugin-sdk/`.
+
 ## Features
 
 <table>
@@ -218,7 +220,7 @@ See the [Automations guide](docs/guide/automations.md) and the
 ## Architecture
 
 ```
-amc-plugin-sdk/
+plugin-sdk/                       # inside the Omniscio repository
 ├── packages/
 │   ├── sdk/                      # @agent-mc/plugin-sdk
 │   │   ├── src/
@@ -264,13 +266,15 @@ amc-plugin-sdk/
 
 ### Install & Build
 
-```bash
-# Clone the repo
-git clone https://github.com/jlstradingco/amc-plugin-sdk.git
-cd amc-plugin-sdk
+The SDK is a folder in the Omniscio repository, not a repository of its own. From an
+Omniscio checkout, work in `plugin-sdk/`:
 
-# Install dependencies
-pnpm install
+```bash
+# From the Omniscio repository root
+cd plugin-sdk
+
+# Install this folder's own workspace (the app root is not a pnpm workspace)
+pnpm install --frozen-lockfile
 
 # Build all packages
 pnpm build
@@ -333,7 +337,8 @@ Plugins declare required permissions in `manifest.json`. AMC enforces these at r
 
 ## Documentation
 
-Full documentation is available at the [AMC Plugin SDK docs site](https://jlstradingco.github.io/amc-plugin-sdk/), covering:
+The docs source is `plugin-sdk/docs/` here — VitePress, built and deployed by the mirror
+repository. It is published at the [AMC Plugin SDK docs site](https://jlstradingco.github.io/amc-plugin-sdk/), covering:
 
 - **[Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started)** — scaffold, build, and install your first plugin
 - **[API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/)** — all 20 capability interfaces documented

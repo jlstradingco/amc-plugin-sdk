@@ -191,62 +191,14 @@ export const HOST_PERMISSIONS = [
 export const SDK_AHEAD_PERMISSIONS = [] as const
 
 /**
- * Permissions the HOST gates that the SDK does NOT yet expose to external
- * authors (host-ahead). These are recognized + consented by the host but have
- * no typed SDK `ctx` namespace, so a plugin built with this SDK cannot request
- * them. Tracked so the gap is named, not silently tolerated.
+ * Permissions the HOST gates that the SDK does NOT expose (host-ahead).
  *
- * - `sessions.launchAny`: gates the `sessions.fanout` method on the EXISTING
- *   sessions namespace (plugin-permission-map.ts) — a method gap, not a namespace
- *   one. The host describes it as "Granted only to built-in plugins", so a
- *   third-party author cannot use it regardless.
- * - `launch` (elevated): gates `launch.open` — "Open links and files, and run
- *   programs you confirm".
- * - `coreRead` (elevated): gates the `core.*` namespace — `core.sessions.list`,
- *   `core.sessions.get`, `core.projects.list`, `core.projects.get`,
- *   `core.messages.list`. A blanket read of all sessions and projects, distinct
- *   from the opt-in, per-session `sessions.readHistory` grant the SDK does type.
- * - `oauth` (elevated): gates `oauth.authorize` — third-party sign-in.
- * - `channel` (elevated): gates `channel.connect` / `channel.send` /
- *   `channel.close` — a live connection to an external service.
- *
- * All six are listed rather than typed on purpose: guessing at a host runtime
- * shape is the exact mistake the HISTORY note above records, and the parity
- * guard already asserts a host-ahead permission has NOT leaked into the SDK enum.
- *
- * Note this is the one allow-list that has never gone stale — all six were still
- * absent from the SDK at the 2026-08-11 reconciliation.
- *
- * Six more joined on 2026-09-23 (recurrence #6), read from the host's
- * PLUGIN_PERMISSION_INFO at master@b477981a4d:
- *
- * - `auth.sharedSignIn` (elevated): "Shared Sign-In".
- * - `boards.link` (elevated): "Attach to your tasks" — links plugin items to
- *   the user's boards; the write-side sibling of `boards.read`, which the SDK
- *   accepts since 3.2.0.
- * - `sessions.observeStatus`: "Session Activity" — see when sessions start,
- *   finish or need you; never their text. A companion/status-overlay grant.
- * - `chrome.widget`: "Header Widget" — a live status widget in the app header.
- * - `documents.read` and `documents.write` (elevated): "Read your documents" /
- *   "Create, edit and delete your documents". The SDK already types a
- *   `documents` BRIDGE namespace (types/bridge.ts), but neither permission
- *   string is in the SDK enum yet, so a manifest declaring them still fails
- *   `amc-plugin validate` — that is the gap to close, in the same change that
- *   adds them to the enum and the namespace map.
+ * EMPTY: the SDK now declares every permission the host gates, because its
+ * `PLUGIN_PERMISSIONS` comes from the generated module the host writes into
+ * this package (src/generated/sdk-facts.ts). Any entry here means the host has
+ * added a permission the SDK enum has not caught up with.
  */
-export const HOST_AHEAD_PERMISSIONS = [
-  'sessions.launchAny',
-  'launch',
-  'coreRead',
-  'oauth',
-  'channel',
-  'auth.sharedSignIn',
-  'boards.link',
-  'sessions.observeStatus',
-  'chrome.widget',
-  'documents.read',
-  'documents.write',
-] as const
+export const HOST_AHEAD_PERMISSIONS = [] as const
 
 /**
  * Permissions whose string is recognized+gated by BOTH sides, but whose backend

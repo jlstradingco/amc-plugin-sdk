@@ -213,6 +213,17 @@ describe('SDK <-> host permission parity', () => {
       'workspace.read': { surface: CTX, key: 'workspace' },
       'workspace.write': { surface: CTX, key: 'workspace' },
       'workspace.exec': { surface: CTX, key: 'workspace' },
+      'sessions.launchAny': { surface: CTX, key: 'sessions' },
+      'sessions.observeStatus': { surface: CTX, key: 'sessions' },
+      'auth.sharedSignIn': { surface: CTX, key: 'auth' },
+      'documents.read': { surface: BRIDGE, key: 'documents' },
+      'documents.write': { surface: BRIDGE, key: 'documents' },
+      launch: null,
+      coreRead: null,
+      oauth: null,
+      channel: null,
+      'boards.link': null,
+      'chrome.widget': null,
     }
 
     // Every permission the SDK exposes must be classified above — no silent omissions.

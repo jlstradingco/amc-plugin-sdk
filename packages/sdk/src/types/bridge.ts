@@ -119,6 +119,9 @@ export interface BridgeSession {
    * resolve to the SAME `sessionId` — the in-flight key is the prompt hash
    * (`plugin-bridge/session-handler.ts`, the `coalesceSpawn(key, …)` call keyed on
    * `hashPrompt`).
+   *
+   * The session has NO built-in tools (Read, Bash, Edit…) unless the manifest
+   * declares `sessionTools: true` (see `PluginManifest.sessionTools`).
    */
   create(opts: {
     prompt?: string
@@ -309,7 +312,8 @@ export interface BridgeSessionStatusEvent {
   lastAgentMessageContent?: string | null
 }
 
-export interface BridgeEvents extends PluginEvents {
+export interface BridgeEvents extends Omit<PluginEvents, 'emit'> {
+  emit(channel: string, data: unknown): void
   /**
    * Unlike the backend's `ctx.events.on`, THIS surface really does hand back a
    * working unsubscribe — the preload wraps the host's `events.subscribe` /

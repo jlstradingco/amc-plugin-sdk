@@ -4,9 +4,22 @@ How to publish `@agent-mc/plugin-sdk`, `@agent-mc/plugin-cli` and
 `@agent-mc/plugin-dev-shell`. The three are **released together** on one version
 number.
 
-There is no publish automation. `.github/workflows/ci.yml` only builds and tests;
-nothing in CI ever runs a publish. Every release is a human running the steps
-below.
+The three packages live in **`plugin-sdk/` inside the Omniscio repository**. That
+folder is the source of truth; `github.com/jlstradingco/amc-plugin-sdk` is a
+read-only mirror the app syncs from it, and nothing is ever committed there.
+
+There is no publish automation. `plugin-sdk/.github/workflows/ci.yml` only builds
+and tests; nothing in CI ever runs a publish. Every release is a human running the
+steps below.
+
+## Where the workflows run
+
+GitHub only reads workflows at the root of a repository, so the two workflow files
+inside this folder are read **in the mirror**, where the folder becomes the
+repository root: `ci.yml` runs that repo's CI and `docs.yml` deploys the public
+docs site to GitHub Pages. The Omniscio repository carries no copy of them — the
+folder is covered there by the app's own checks. Edit these in-folder files
+whenever you change what the SDK's CI or docs site does.
 
 ## The one thing that will bite you
 
@@ -20,13 +33,16 @@ breaks.
 
 ## Before you publish
 
-1. **Working tree clean, on `master`, up to date with `origin/master`.**
+1. **Working tree clean, on the Omniscio repository's `master`, with `plugin-sdk/`
+   up to date.** Run everything from the `plugin-sdk/` folder:
+   ```sh
+   cd plugin-sdk            # from the Omniscio repository root
+   pnpm install --frozen-lockfile --ignore-scripts
+   ```
 2. **Green locally, the same way CI runs it:**
    ```sh
-   pnpm install --frozen-lockfile --ignore-scripts
-   pnpm -r build            # tsc across every package; emits dist/
+   pnpm -r build            # tsc across every package; emits dist/ (also builds the docs)
    pnpm run typecheck       # the tests too — the build configs exclude them
-   pnpm run typecheck:examples
    pnpm --workspace-concurrency=1 -r test
    ```
    `pnpm -r build` is not the whole typecheck. The build configs exclude
@@ -53,12 +69,15 @@ breaks.
    `latest` is the only version anyone actually has. (This is not hypothetical:
    `1.1.0` was stamped, changelogged, and never published; `1.2.0` had to carry
    its breaking `PluginDb` change forward.)
-3. Commit as `chore(release): bump sdk+cli+dev-shell to X.Y.Z with CHANGELOG`,
-   open a PR, and land it once CI is green.
+3. Commit as `chore(release): bump sdk+cli+dev-shell to X.Y.Z with CHANGELOG`
+   and land it on the Omniscio repository's `master` through the app's normal
+   landing flow — one commit, touching only `plugin-sdk/`. The mirror picks the
+   folder up on its next sync; nothing is committed to the mirror by hand.
 
 ## Publishing
 
-Publish the SDK **first** — the other two depend on it.
+Run every publish from the `plugin-sdk/` folder. Publish the SDK **first** — the
+other two depend on it.
 
 ```sh
 pnpm --filter @agent-mc/plugin-sdk publish --access public
@@ -80,9 +99,11 @@ npm view @agent-mc/plugin-dev-shell version
 
 ## After publishing
 
-1. **Tag it.** `git tag vX.Y.Z && git push origin vX.Y.Z`. The repo currently has
-   no tags at all, which is why "was 1.1.0 ever released?" took a registry query
-   to answer.
+1. **Tag it in the Omniscio repository** — `git tag plugin-sdk-vX.Y.Z`, on the
+   release commit. The mirror is rebuilt from this folder and carries no tags, so
+   the tag here is the only durable record of which commit shipped which version;
+   without it "was 1.1.0 ever released?" costs a registry query to answer. Never
+   push the tag to GitHub without the owner's say-so.
 2. **Sweep the version drift.** Several places pin a published SDK range and can
    only be updated once the version exists on npm:
    - `examples/*/package.json` — the `@agent-mc/plugin-sdk` dependency range.
@@ -92,8 +113,8 @@ npm view @agent-mc/plugin-dev-shell version
    version nobody can install.
    **Never sweep a manifest `sdkVersion`** — not in `examples/*/manifest.json`,
    not in the docs, not in `packages/cli/src/commands/create.ts`. It is the
-   Omniscio host's plugin-SDK contract (`AMC_PLUGIN_SDK_VERSION` in
-   Agent-Orchestrator `src/shared/plugin-sdk-version.ts`), not this package's
+   Omniscio host's plugin-SDK contract (`AMC_PLUGIN_SDK_VERSION` in the Omniscio
+   repository's `src/shared/plugin-sdk-version.ts`, outside this folder), not this package's
    version, and it is written bare because the host reads a bare version as a
    minimum. Moving it to `^3.0.0` with the 3.0.0 release made Omniscio
    (contract `2.0.0`) hide every plugin that CLI scaffolded. Raise it only when
@@ -105,7 +126,8 @@ npm view @agent-mc/plugin-dev-shell version
    resolve to the previous major.
 3. **Reconcile the AMC host, if permissions changed.** The AMC app keeps an
    acknowledgement fixture at `tests/unit/lint/fixtures/sdk-permission-support.ts`
-   listing which permissions the published SDK understands, guarded by
+   (a path at the Omniscio repository root, above this folder) listing which
+   permissions the published SDK understands, guarded by
    `plugin-sdk-permission-parity`. If this release added a permission, move it
    out of `SDK_PENDING_PERMISSIONS` and bump `SDK_RECONCILED_VERSION` there.
 

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { PluginContext, QueryOptions, SessionMessage } from '@agent-mc/plugin-sdk'
+import type { PluginContext, PluginDbRow, QueryOptions, SessionMessage } from '@agent-mc/plugin-sdk'
 // The dev shell is itself a development tool, so depending on the SDK's testing
 // entry is in-band: it keeps ONE definition of the backend message row rather
 // than a second copy that can drift from the host.
@@ -143,8 +143,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
   // Mirrors the host's per-collection tables: rows carry framework-managed
   // id/created_at/updated_at, query supports where/orderBy/limit/offset, and
   // reads/writes are cloned so held references can't corrupt the store.
-  const collections = new Map<string, Map<string, Record<string, unknown>>>()
-  const collectionOf = (name: string): Map<string, Record<string, unknown>> => {
+  const collections = new Map<string, Map<string, PluginDbRow>>()
+  const collectionOf = (name: string): Map<string, PluginDbRow> => {
     let col = collections.get(name)
     if (!col) { col = new Map(); collections.set(name, col) }
     return col
@@ -232,7 +232,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       insert: (col, data) => {
         const id = crypto.randomUUID()
         const now = new Date().toISOString()
-        const row = { ...clone(data), id, created_at: now, updated_at: now }
+        const row: PluginDbRow = { ...clone(data), id, created_at: now, updated_at: now }
         collectionOf(col).set(id, row)
         if (shouldLog) console.log(`${prefix} [db] insert(${col})`, row)
         return Promise.resolve(clone(row))
@@ -268,10 +268,15 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (!existing) {
           return Promise.reject(new Error(`db.update: no row "${id}" in collection "${col}"`))
         }
-        const updated = { ...existing, ...clone(fields), id, updated_at: new Date().toISOString() }
+        const updated: PluginDbRow = {
+          ...existing,
+          ...clone(fields),
+          id,
+          updated_at: new Date().toISOString()
+        }
         collectionOf(col).set(id, updated)
         if (shouldLog) console.log(`${prefix} [db] update(${col}, ${id})`, fields)
-        return Promise.resolve()
+        return Promise.resolve(clone(updated))
       },
       delete: (col, id) => {
         collectionOf(col).delete(id)
@@ -329,7 +334,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
         const id = crypto.randomUUID()
         const now = new Date().toISOString()
-        const row = { ...clone(data), id, created_at: now, updated_at: now }
+        const row: PluginDbRow = { ...clone(data), id, created_at: now, updated_at: now }
         target.set(id, row)
         if (shouldLog) console.log(`${prefix} [db] upsert(${col}) -> inserted ${id}`)
         return Promise.resolve(clone(row))
@@ -380,7 +385,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     // so a subscription lives until the worker exits. Handing back an `off()`
     // here would let a plugin clean up in the shell and crash in AMC.
     events: {
-      emit: (channel, data) => eventBus.emit(channel, data),
+      emit: (channel, data) => {
+        eventBus.emit(channel, data)
+        return Promise.resolve()
+      },
       on: (channel, handler) => {
         eventBus.on(channel, handler)
       },
@@ -420,6 +428,15 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       generateMessage: (_sys, user) => Promise.resolve(`[AI mock] Response to: ${user.slice(0, 100)}`),
       generateTitle: (text) => Promise.resolve(`[AI mock] Title: ${text.slice(0, 50)}`),
       isConfigured: () => Promise.resolve(true),
+      listEngines: () =>
+        Promise.resolve({
+          version: 0,
+          defaults: {
+            session: { provider: 'dev-shell', model: null, label: 'Dev shell' },
+            writing: { provider: 'dev-shell', model: null, label: 'Dev shell' }
+          },
+          engines: []
+        }),
       // Shape the mock from the tool's own inputSchema rather than returning {} —
       // a plugin that renders `tldr` and `bullets` gets something to render in
       // `amc-plugin dev` instead of a screen of undefined.

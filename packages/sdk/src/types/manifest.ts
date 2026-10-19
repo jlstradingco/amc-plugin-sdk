@@ -1,3 +1,7 @@
+import type { PluginPermission } from '../generated/sdk-facts.js'
+
+export type { PluginPermission }
+
 export type PluginLicenseType = 'free' | 'paid' | 'trial'
 
 export type PluginCategory =
@@ -198,46 +202,6 @@ export interface PluginSettingDefinition {
   agentWritable?: boolean
 }
 
-export type PluginPermission =
-  | 'storage'
-  | 'secrets'
-  | 'sessions'
-  | 'sessions.readHistory'
-  | 'ai'
-  | 'tts'
-  | 'stt'
-  | 'microphone'
-  | 'network'
-  | 'cron'
-  | 'cli'
-  | 'notifications'
-  | 'system'
-  | 'rss'
-  | 'auth'
-  | 'auth.session'
-  | 'chrome'
-  | 'firebase'
-  | 'recording'
-  | 'inbox'
-  | 'navigation'
-  | 'spend'
-  // Read the full contents of the boards the user grants the plugin — every item,
-  // column value and status — through the webview's `AgentMC.boards` namespace
-  // (`list`, `requestAccess`). The namespace itself is not typed by this SDK yet.
-  | 'boards.read'
-  // Workspace — read/write/exec against the user's real project checkouts and
-  // worktrees, gated per project by a runtime grant on top of the install-time
-  // permission. All three are live host-side (see `WorkspaceApi`).
-  //
-  // `workspace.write` does NOT imply `workspace.read`, despite what this comment
-  // claimed: the host rejects a manifest declaring write or exec without an
-  // explicit read alongside it, rather than inferring one, so that the consent
-  // card the user reads matches the array the plugin actually holds. The
-  // validator enforces the same pairing.
-  | 'workspace.read'
-  | 'workspace.write'
-  | 'workspace.exec'
-
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   path: string
@@ -331,6 +295,23 @@ export interface PluginManifest {
     sidebar?: { title: string; icon: string }
     /** A separate always-on-top window. The host opens it on enable. */
     overlay?: { entryPoint: string }
+    /**
+     * The plugin's own settings screen, opened from a "Settings" button on its
+     * card in Settings -> Plugins. Additive: the `settings` array still renders.
+     */
+    settingsPanel?: { entryPoint: string }
+    /**
+     * The popover the host opens when its app-header widget is clicked. Without
+     * it, clicking the widget opens the plugin's sidebar panel instead.
+     */
+    widget?: { entryPoint: string }
+    /**
+     * Pop-out surfaces the plugin may open in their own OS window, keyed by the
+     * name it passes to `window.open(key)`. At most 4; keys are lowercase
+     * letters, digits and hyphens (up to 40 characters); width and height are
+     * 200-10000 px.
+     */
+    windows?: Record<string, { entryPoint: string; title?: string; width?: number; height?: number }>
     /** Hide AMC's project panel while this plugin's view is open, for a plugin that owns the full width. */
     hideProjectPanel?: boolean
     /**
@@ -376,6 +357,14 @@ export interface PluginManifest {
       memoryMb?: number
     }
   }
+  /**
+   * Give this plugin's AI sessions (`ctx.sessions.create`, `AgentMC.session.create`) the
+   * built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
+   *
+   * OFF unless declared: without `true`, a plugin session can only answer in text. The user
+   * sees it at install as "Agent Sessions", and an update that turns it on asks them again.
+   */
+  sessionTools?: boolean
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]

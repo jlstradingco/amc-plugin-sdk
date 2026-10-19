@@ -1,0 +1,343 @@
+[
+  {
+    "name": "storage",
+    "label": "Storage",
+    "description": "Read and write plugin data, files, and database records",
+    "tier": "standard",
+    "namespaces": [
+      "db",
+      "fs",
+      "storage"
+    ]
+  },
+  {
+    "name": "secrets",
+    "label": "Secrets",
+    "description": "Store and read this plugin's own passwords and keys in your system keychain",
+    "tier": "standard",
+    "namespaces": [
+      "secrets"
+    ]
+  },
+  {
+    "name": "sessions",
+    "label": "Sessions",
+    "description": "Create and manage Claude Code sessions",
+    "tier": "standard",
+    "namespaces": [
+      "session",
+      "sessions"
+    ]
+  },
+  {
+    "name": "ai",
+    "label": "AI",
+    "description": "Generate AI responses using your account's API quota",
+    "tier": "standard",
+    "namespaces": [
+      "ai",
+      "writer"
+    ]
+  },
+  {
+    "name": "tts",
+    "label": "Text to Speech",
+    "description": "Read text aloud using your configured voice",
+    "tier": "standard",
+    "namespaces": [
+      "tts"
+    ]
+  },
+  {
+    "name": "stt",
+    "label": "Speech to Text",
+    "description": "Send recordings to your configured speech service to be turned into text",
+    "tier": "standard",
+    "namespaces": [
+      "stt"
+    ]
+  },
+  {
+    "name": "microphone",
+    "label": "Microphone",
+    "description": "Record from your microphone at any time while the plugin is open",
+    "tier": "elevated",
+    "namespaces": []
+  },
+  {
+    "name": "network",
+    "label": "Network",
+    "description": "Make HTTP requests to external services",
+    "tier": "standard",
+    "namespaces": [
+      "http"
+    ]
+  },
+  {
+    "name": "cron",
+    "label": "Cron",
+    "description": "Schedule recurring background tasks",
+    "tier": "standard",
+    "namespaces": [
+      "cron"
+    ]
+  },
+  {
+    "name": "cli",
+    "label": "CLI Endpoints",
+    "description": "Register CLI endpoints accessible from external tools",
+    "tier": "standard",
+    "namespaces": [
+      "cli"
+    ]
+  },
+  {
+    "name": "notifications",
+    "label": "Notifications",
+    "description": "Show toasts and system notifications",
+    "tier": "standard",
+    "namespaces": [
+      "notifications",
+      "sidebar",
+      "toast"
+    ]
+  },
+  {
+    "name": "system",
+    "label": "System",
+    "description": "Access system features like clipboard reading, opening files, and running processes",
+    "tier": "standard",
+    "namespaces": [
+      "clipboard",
+      "process",
+      "shell"
+    ]
+  },
+  {
+    "name": "rss",
+    "label": "RSS",
+    "description": "Read RSS feeds and your curated feed entries",
+    "tier": "standard",
+    "namespaces": [
+      "rss"
+    ]
+  },
+  {
+    "name": "auth",
+    "label": "Identity",
+    "description": "See who is signed in to Omniscio (your name and email).",
+    "tier": "standard",
+    "namespaces": [
+      "auth"
+    ]
+  },
+  {
+    "name": "auth.session",
+    "label": "Account Access",
+    "description": "Request scoped access tokens for Google and GitHub on your behalf.",
+    "tier": "standard",
+    "namespaces": [
+      "auth"
+    ]
+  },
+  {
+    "name": "auth.sharedSignIn",
+    "label": "Shared Sign-In",
+    "description": "Share one sign-in session with the other plugins you allow this for, so you only sign in once instead of once per plugin. Those plugins can also see each other’s saved sign-in data.",
+    "tier": "elevated",
+    "namespaces": []
+  },
+  {
+    "name": "sessions.readHistory",
+    "label": "Session History",
+    "description": "Read the full text of past Omniscio sessions and projects you grant it",
+    "tier": "standard",
+    "namespaces": [
+      "decks",
+      "sessionHistory"
+    ]
+  },
+  {
+    "name": "boards.read",
+    "label": "Boards",
+    "description": "Read the full contents of boards you grant it, including every item, column value and status",
+    "tier": "standard",
+    "namespaces": [
+      "boards",
+      "decks"
+    ]
+  },
+  {
+    "name": "boards.link",
+    "label": "Attach to your tasks",
+    "description": "Attach and detach this plugin's own content on tasks you have granted it, without changing the tasks themselves",
+    "tier": "elevated",
+    "namespaces": [
+      "boardLinks"
+    ]
+  },
+  {
+    "name": "sessions.launchAny",
+    "label": "Launch Any Session",
+    "description": "Start sessions in any of your projects, with any model or engine. Granted only to built-in plugins.",
+    "tier": "standard",
+    "namespaces": [
+      "session",
+      "sessions"
+    ]
+  },
+  {
+    "name": "sessions.observeStatus",
+    "label": "Session Activity",
+    "description": "See when your sessions start, finish, or need you. It never sees their text.",
+    "tier": "standard",
+    "namespaces": []
+  },
+  {
+    "name": "inbox",
+    "label": "Inbox",
+    "description": "Add items to your Omniscio inbox.",
+    "tier": "standard",
+    "namespaces": [
+      "inbox"
+    ]
+  },
+  {
+    "name": "navigation",
+    "label": "Navigation",
+    "description": "Navigate Omniscio to your sessions, projects, and views",
+    "tier": "standard",
+    "namespaces": [
+      "navigation"
+    ]
+  },
+  {
+    "name": "chrome",
+    "label": "Interface",
+    "description": "Add buttons and menu items to Omniscio",
+    "tier": "standard",
+    "namespaces": [
+      "contextMenu",
+      "toolbar",
+      "widget"
+    ]
+  },
+  {
+    "name": "chrome.widget",
+    "label": "Header Widget",
+    "description": "Show a live status widget in the Omniscio header: a number, a short label, and a status colour, which it can update at any time",
+    "tier": "standard",
+    "namespaces": [
+      "widget"
+    ]
+  },
+  {
+    "name": "launch",
+    "label": "Launch",
+    "description": "Open links and files, and run programs you confirm",
+    "tier": "elevated",
+    "namespaces": [
+      "launch"
+    ]
+  },
+  {
+    "name": "firebase",
+    "label": "Firebase",
+    "description": "List your signed-in Firebase accounts and projects, and start a Firebase login",
+    "tier": "standard",
+    "namespaces": [
+      "firebase",
+      "share"
+    ]
+  },
+  {
+    "name": "recording",
+    "label": "Screen Recording",
+    "description": "Start and stop screen recordings, with your confirmation each time",
+    "tier": "elevated",
+    "namespaces": [
+      "recording"
+    ]
+  },
+  {
+    "name": "spend",
+    "label": "AI Spend",
+    "description": "Read your AI cost and usage totals across all your accounts, so it can show you spend reports.",
+    "tier": "standard",
+    "namespaces": [
+      "spend"
+    ]
+  },
+  {
+    "name": "coreRead",
+    "label": "Core Read",
+    "description": "Read your sessions, projects, and the text of their messages (never their secrets)",
+    "tier": "elevated",
+    "namespaces": [
+      "core"
+    ]
+  },
+  {
+    "name": "oauth",
+    "label": "Third-Party Sign-in",
+    "description": "Sign you in to third-party services you choose to connect",
+    "tier": "elevated",
+    "namespaces": [
+      "oauth"
+    ]
+  },
+  {
+    "name": "channel",
+    "label": "Live Connection",
+    "description": "Maintain a live connection to an external service you choose",
+    "tier": "elevated",
+    "namespaces": [
+      "channel"
+    ]
+  },
+  {
+    "name": "workspace.read",
+    "label": "Workspace Files",
+    "description": "Read files in the projects you grant it access to",
+    "tier": "standard",
+    "namespaces": [
+      "workspace"
+    ]
+  },
+  {
+    "name": "workspace.write",
+    "label": "Workspace Editing",
+    "description": "Create, change, and delete files in the projects you grant it access to",
+    "tier": "elevated",
+    "namespaces": [
+      "workspace"
+    ]
+  },
+  {
+    "name": "workspace.exec",
+    "label": "Workspace Commands",
+    "description": "Run commands you approve, in the projects you grant it access to. Checking which files have changed (git status) is the one command it can run without asking.",
+    "tier": "elevated",
+    "namespaces": [
+      "workspace"
+    ]
+  },
+  {
+    "name": "documents.read",
+    "label": "Read your documents",
+    "description": "Open and search everything you have written in the app, and publish a document to a Google account you have connected",
+    "tier": "standard",
+    "namespaces": [
+      "writer"
+    ]
+  },
+  {
+    "name": "documents.write",
+    "label": "Create, edit and delete your documents",
+    "description": "Change or permanently remove anything you have written in the app, including restoring an older version over your current one",
+    "tier": "elevated",
+    "namespaces": [
+      "writer"
+    ]
+  }
+]
