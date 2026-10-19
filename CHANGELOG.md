@@ -11,6 +11,16 @@ together.
 
 ## [Unreleased]
 
+### Fixed — `PluginManifest` matches the host manifest schema again
+
+`PluginManifest` was missing two top-level keys Omniscio accepts and still carried three the
+host strips. `keybindings` (an array of `{ shortcut, commandId, label }`, at most 20) and
+`process` (`{ allowedCommands }`, 1–20 command names) are now typed. `migrations`, `cron` and
+`workspace` are gone from the interface: Omniscio's schema has no such keys, so every one of
+them was silently discarded at parse time. Cron is a runtime capability
+(`ctx.cron.register`), and schema evolution is the host's automatic ADD COLUMN sweep. A manifest
+that still declares those blocks keeps validating; only the type stops offering them.
+
 ### Fixed — a backend without `sdkVersion` no longer passes `validateManifest`
 
 `sdkVersion` picks the Omniscio worker loader, so a backend without it never starts. `validateManifest`

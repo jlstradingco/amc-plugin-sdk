@@ -282,7 +282,6 @@ export interface PluginManifest {
   storage: {
     collections: Record<string, PluginCollectionSchema>
   }
-  migrations: PluginMigration[]
   /**
    * Kept optional here even though the host requires the block, so this SDK
    * keeps accepting the backend-only manifests it has always accepted. That is
@@ -339,6 +338,14 @@ export interface PluginManifest {
       suggestedPrompts?: PluginSuggestedPrompt[]
     }
   }
+  keybindings?: {
+    shortcut: string
+    commandId: string
+    label: string
+  }[]
+  process?: {
+    allowedCommands: string[]
+  }
   /**
    * The Omniscio plugin-SDK contract this plugin needs — not the version of
    * this package. Write it bare (`"2.0.0"`): the host reads a bare version as a
@@ -369,17 +376,6 @@ export interface PluginManifest {
   cli?: {
     endpoints: PluginCliEndpoint[]
   }
-  cron?: {
-    jobs: PluginCronDefinition[]
-  }
-  /**
-   * Declaration for the `ctx.workspace` capability. Requires one or more of the
-   * `workspace.*` permissions.
-   *
-   * NOT YET IMPLEMENTED BY THE HOST — see the `workspace.*` members of
-   * {@link PluginPermission}.
-   */
-  workspace?: PluginWorkspace
 }
 
 /** Runtime state of a plugin's backend worker. */
