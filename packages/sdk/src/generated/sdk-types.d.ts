@@ -600,6 +600,7 @@ export interface PluginContext {
     "generateStructured": (...args: unknown[]) => Promise<unknown>
     "generateTitle": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
+    "listEngines": (...args: unknown[]) => Promise<unknown>
   }
   "auth": {
     "getGoogleIdToken": (...args: unknown[]) => Promise<unknown>
@@ -656,6 +657,9 @@ export interface PluginContext {
     "listDir": (...args: unknown[]) => Promise<unknown>
     "readFile": (...args: unknown[]) => Promise<unknown>
     "writeFile": (...args: unknown[]) => Promise<unknown>
+  }
+  "host": {
+    "getCapabilities": (...args: unknown[]) => Promise<unknown>
   }
   "http": {
     "fetch": (...args: unknown[]) => Promise<unknown>
