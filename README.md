@@ -337,13 +337,13 @@ Plugins declare required permissions in `manifest.json`. AMC enforces these at r
 
 ## Documentation
 
-The docs source is `plugin-sdk/docs/` here — VitePress, built and deployed by the mirror
-repository. It is published at the [AMC Plugin SDK docs site](https://jlstradingco.github.io/amc-plugin-sdk/), covering:
+The docs source is `plugin-sdk/docs/` here — VitePress, published at the
+[AMC Plugin SDK docs site](https://docs.omniscio.com/sdk/), covering:
 
-- **[Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started)** — scaffold, build, and install your first plugin
-- **[API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/)** — all 20 capability interfaces documented
-- **[Publishing](https://jlstradingco.github.io/amc-plugin-sdk/guide/publishing)** — submit to the AMC Marketplace
-- **[Examples](https://jlstradingco.github.io/amc-plugin-sdk/examples/)** — four reference plugins with full source
+- **[Getting Started](https://docs.omniscio.com/sdk/guide/getting-started)** — scaffold, build, and install your first plugin
+- **[API Reference](https://docs.omniscio.com/sdk/api/)** — all 20 capability interfaces documented
+- **[Publishing](https://docs.omniscio.com/sdk/guide/publishing)** — submit to the AMC Marketplace
+- **[Examples](https://docs.omniscio.com/sdk/examples/)** — four reference plugins with full source
 
 ## License
 

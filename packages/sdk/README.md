@@ -136,13 +136,13 @@ interface PluginBackend {
 
 ## Documentation
 
-Full guides, API reference, and examples: **[AMC Plugin SDK Docs](https://jlstradingco.github.io/amc-plugin-sdk/)**
+Full guides, API reference, and examples: **[AMC Plugin SDK Docs](https://docs.omniscio.com/sdk/)**
 
-- [Getting Started](https://jlstradingco.github.io/amc-plugin-sdk/guide/getting-started) — scaffold your first plugin
-- [Manifest Reference](https://jlstradingco.github.io/amc-plugin-sdk/guide/manifest) — full manifest.json spec
-- [Permissions](https://jlstradingco.github.io/amc-plugin-sdk/guide/permissions) — what each permission grants
-- [Panel Commands](https://jlstradingco.github.io/amc-plugin-sdk/guide/commands) — send commands from your panel to your backend safely
-- [API Reference](https://jlstradingco.github.io/amc-plugin-sdk/api/) — all 20 capability interfaces
+- [Getting Started](https://docs.omniscio.com/sdk/guide/getting-started) — scaffold your first plugin
+- [Manifest Reference](https://docs.omniscio.com/sdk/guide/manifest) — full manifest.json spec
+- [Permissions](https://docs.omniscio.com/sdk/guide/permissions) — what each permission grants
+- [Panel Commands](https://docs.omniscio.com/sdk/guide/commands) — send commands from your panel to your backend safely
+- [API Reference](https://docs.omniscio.com/sdk/api/) — all 20 capability interfaces
 
 ## License
 

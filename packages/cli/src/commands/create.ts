@@ -131,7 +131,7 @@ export function buildReadme(opts: {
     'amc-plugin publish',
     '```',
     '',
-    'See the [AMC Plugin SDK docs](https://jlstradingco.github.io/amc-plugin-sdk/) for the full guide.',
+    'See the [AMC Plugin SDK docs](https://docs.omniscio.com/sdk/) for the full guide.',
     ''
   ].join('\n')
 }

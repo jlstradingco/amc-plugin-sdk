@@ -232,32 +232,7 @@ Declare user-configurable settings that appear in AMC's Settings > Plugins > You
 | `default` | any | Yes | Default value when the user has not changed the setting |
 | `min` | number | No | Minimum value (for `number` type) |
 | `max` | number | No | Maximum value (for `number` type) |
-| `testAction` | object | No | Adds a test button next to the setting (see below) |
 | `agentWritable` | boolean | No | Let an outside (control-server) change to this setting apply at once; without it the change waits for the person's approval. See [Outside writes](#outside-writes-agentwritable) |
-
-### Test Actions
-
-A `testAction` adds a button next to the setting that calls a backend method, useful for "Test connection" buttons:
-
-```json
-{
-  "key": "apiKey",
-  "label": "API Key",
-  "type": "password",
-  "default": "",
-  "testAction": {
-    "namespace": "myPlugin",
-    "method": "testConnection",
-    "label": "Test Connection"
-  }
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `namespace` | string | Backend namespace for the method call |
-| `method` | string | Method name to invoke |
-| `label` | string | Button label (e.g. "Test Connection") |
 
 ## `storage` Block
 

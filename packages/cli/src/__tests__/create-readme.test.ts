@@ -28,6 +28,12 @@ describe('buildReadme', () => {
     expect(readme).toContain('npm run package')
   })
 
+  it('links the SDK docs at their published home, never the retired GitHub Pages site', () => {
+    const readme = buildReadme(base)
+    expect(readme).toContain('https://docs.omniscio.com/sdk/')
+    expect(readme).not.toContain('jlstradingco.github.io')
+  })
+
   it('lists the backend directory only when the plugin has a backend', () => {
     expect(buildReadme(base)).toContain('src/backend/')
     expect(buildReadme({ ...base, hasBackend: false })).not.toContain('src/backend/')
