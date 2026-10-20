@@ -361,6 +361,9 @@ export interface AgentMC {
     "updateLesson": (...args: unknown[]) => Promise<unknown>
     "updateModule": (...args: unknown[]) => Promise<unknown>
   }
+  "members": {
+    "list": (...args: unknown[]) => Promise<unknown>
+  }
   "navigation": {
     "goToSession": (...args: unknown[]) => Promise<unknown>
   }
@@ -681,6 +684,9 @@ export interface PluginContext {
     "error": (...args: unknown[]) => unknown
     "info": (...args: unknown[]) => unknown
     "warn": (...args: unknown[]) => unknown
+  }
+  "members": {
+    "list": (...args: unknown[]) => Promise<unknown>
   }
   "oauth": {
     "authorize": (...args: unknown[]) => Promise<unknown>
