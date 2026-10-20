@@ -1,6 +1,6 @@
 # Logging
 
-Structured logging that writes to AMC's log system. Log messages appear in AMC's developer tools and log files, tagged with your plugin's ID.
+Structured logging that writes to Omniscio's log system. Log messages appear in Omniscio's developer tools and log files, tagged with your plugin's ID.
 
 **Availability:** Backend only (`ctx.log`)
 **Required Permission:** None
@@ -81,7 +81,7 @@ ctx.log.error('Database write failed', { collection: 'tasks', id: 'abc-123' })
 
 ### `debug(message: string, ...args: unknown[]): void`
 
-Log a debug message. These are only visible when debug-level logging is enabled in AMC.
+Log a debug message. These are only visible when debug-level logging is enabled in Omniscio.
 
 **Parameters:**
 
@@ -109,4 +109,4 @@ ctx.log.debug('Request payload', req.body)
   - `error` -- failures that need investigation
   - `debug` -- detailed diagnostic output for development
 - Additional arguments are serialized and appended to the log message. Pass objects, arrays, or error instances as extra args for structured context.
-- Avoid logging sensitive data (API keys, tokens, user credentials). Plugin logs may be visible through AMC's debug tools.
+- Avoid logging sensitive data (API keys, tokens, user credentials). Plugin logs may be visible through Omniscio's debug tools.

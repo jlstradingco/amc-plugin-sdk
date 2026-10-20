@@ -1,8 +1,8 @@
 <div align="center">
 
-# AMC Plugin SDK
+# Omniscio Plugin SDK
 
-**TypeScript-first SDK for building plugins for Agent Mission Control**
+**TypeScript-first SDK for building plugins for Omniscio**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Zod](https://img.shields.io/badge/Zod-3.23-3E67B1?logo=zod&logoColor=white)](https://zod.dev/)
@@ -17,11 +17,11 @@
 
 ## Overview
 
-AMC Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Agent Mission Control](https://github.com/jlstradingco/agent-mission-control) (AMC) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
+Omniscio Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Omniscio](https://github.com/jlstradingco/agent-mission-control) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
 
 The SDK gives plugin authors a sandboxed `PluginContext` with 20 capability interfaces, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
 
-> **Where this lives.** The SDK is developed inside the Omniscio (Agent Mission Control) repository, in the `plugin-sdk/` folder. [github.com/jlstradingco/amc-plugin-sdk](https://github.com/jlstradingco/amc-plugin-sdk) is a read-only mirror that the app syncs from this folder so the public docs site keeps building — never commit there. The development commands below run inside `plugin-sdk/`.
+> **Where this lives.** The SDK is developed inside the Omniscio repository, in the `plugin-sdk/` folder. [github.com/jlstradingco/amc-plugin-sdk](https://github.com/jlstradingco/amc-plugin-sdk) is a read-only mirror that the app syncs from this folder — never commit there. The documentation is built from this folder and served at [docs.omniscio.com/sdk](https://docs.omniscio.com/sdk/). The development commands below run inside `plugin-sdk/`.
 
 ## Features
 
@@ -109,12 +109,12 @@ Every plugin receives a `PluginContext` object with these sandboxed capabilities
 | `settings` | `PluginSettings` | Read plugin settings defined in the manifest (`getAll`, `get`) |
 | `log` | `PluginLogger` | Scoped logging (`info`, `warn`, `error`, `debug`) |
 | `events` | `PluginEvents` | Pub/sub event system (`emit`, `on`) |
-| `sessions` | `PluginSessions` | Create and manage AMC sessions (`create`, `sendMessage`, `getStatus`, `stop`) |
+| `sessions` | `PluginSessions` | Create and manage Omniscio sessions (`create`, `sendMessage`, `getStatus`, `stop`) |
 | `ai` | `PluginAi` | Send messages to Claude API (`generateMessage`, `generateTitle`) |
 | `fs` | `PluginFs` | Scoped filesystem access (`readFile`, `writeFile`, `exists`, `listDir`, `deleteFile`) |
 | `http` | `PluginHttp` | HTTP client (`fetch` wrapper) |
 | `cron` | `PluginCron` | Schedule recurring tasks (`register`, `unregister`, `isRegistered`) |
-| `cli` | `PluginCli` | Register HTTP endpoints on AMC's CLI server (`handle`, `removeHandler`) |
+| `cli` | `PluginCli` | Register HTTP endpoints on Omniscio's CLI server (`handle`, `removeHandler`) |
 | `sidebar` | `PluginSidebar` | Control sidebar badge and navigation items (`setBadge`, `setItems`) |
 | `toast` | `PluginToast` | Show toast notifications and OS-level alerts (`show`, `notify`) |
 
@@ -132,7 +132,7 @@ const activate: PluginActivate = (ctx) => {
     onEnable()  { ctx.log.info('Plugin enabled') },
     onDisable() { ctx.log.info('Plugin disabled') },
     onSettingsChanged(settings) { /* react to config changes */ },
-    onAppReady()  { /* AMC finished booting */ },
+    onAppReady()  { /* Omniscio finished booting */ },
     onShutdown()  { /* cleanup before exit */ },
   }
 }
@@ -192,9 +192,9 @@ Validated at build time by Zod schemas — see `manifestSchema` in `@agent-mc/pl
 
 ## Automations
 
-The same package ships a second binary, `amc-automation`, for publishing AMC
-**automations** — multi-step recipes AMC runs for you, as opposed to plugins,
-which extend AMC itself. Both publish to the same marketplace and share one
+The same package ships a second binary, `amc-automation`, for publishing Omniscio
+**automations** — multi-step recipes Omniscio runs for you, as opposed to plugins,
+which extend Omniscio itself. Both publish to the same marketplace and share one
 sign-in.
 
 | Command | Description |
@@ -322,7 +322,7 @@ import { validateManifest } from '@agent-mc/plugin-sdk/validators'
 
 ## Permissions
 
-Plugins declare required permissions in `manifest.json`. AMC enforces these at runtime:
+Plugins declare required permissions in `manifest.json`. Omniscio enforces these at runtime:
 
 | Permission | Grants access to |
 |---|---|
@@ -333,16 +333,16 @@ Plugins declare required permissions in `manifest.json`. AMC enforces these at r
 | `cron` | `ctx.cron` |
 | `cli` | `ctx.cli` |
 | `notifications` | `ctx.toast.notify()` (OS-level notifications) |
-| `rss` | AMC's built-in RSS feed data |
+| `rss` | Omniscio's built-in RSS feed data |
 
 ## Documentation
 
-The docs source is `plugin-sdk/docs/` here — VitePress, published at the
-[AMC Plugin SDK docs site](https://docs.omniscio.com/sdk/), covering:
+The docs source is `plugin-sdk/docs/` here — VitePress, built into the Omniscio help site and
+published at **[docs.omniscio.com/sdk/](https://docs.omniscio.com/sdk/)**, covering:
 
 - **[Getting Started](https://docs.omniscio.com/sdk/guide/getting-started)** — scaffold, build, and install your first plugin
 - **[API Reference](https://docs.omniscio.com/sdk/api/)** — all 20 capability interfaces documented
-- **[Publishing](https://docs.omniscio.com/sdk/guide/publishing)** — submit to the AMC Marketplace
+- **[Publishing](https://docs.omniscio.com/sdk/guide/publishing)** — submit to the Omniscio Marketplace
 - **[Examples](https://docs.omniscio.com/sdk/examples/)** — four reference plugins with full source
 
 ## License

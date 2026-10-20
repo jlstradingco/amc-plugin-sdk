@@ -9,13 +9,13 @@ Register and manage scheduled background tasks. Cron jobs run on a recurring sch
 
 ### `register(id: string, schedule: string, handler: () => Promise<void>): void`
 
-Register a handler for a scheduled job. The `id` must match a job declared in your `manifest.json`.
+Register a handler for a scheduled job. The `id` is yours to choose and must be unique within your plugin.
 
 **Parameters:**
 
 | Name | Type | Description |
 |---|---|---|
-| `id` | `string` | Job ID (must match a declared job in `manifest.json`) |
+| `id` | `string` | Job ID, unique within your plugin |
 | `schedule` | `string` | Cron expression (e.g. `*/30 * * * *` for every 30 minutes) |
 | `handler` | `() => Promise<void>` | Async function to run on each tick |
 
@@ -50,7 +50,7 @@ await ctx.cron.register('cleanup', '0 3 * * *', async () => {
 
 ### `unregister(id: string): void`
 
-Remove a registered cron handler. The job stops running but remains declared in the manifest.
+Remove a registered cron handler. The job stops running and the id is forgotten; register it again from `activate()` on the next plugin start.
 
 **Parameters:**
 
@@ -129,7 +129,7 @@ Cron expressions use the standard 5-field format:
 
 ## Notes
 
-- Every cron job must be declared in the `cron.jobs` array in `manifest.json` before it can be registered. The `id` you pass to `register()` must match a declared job ID. See [Manifest > Cron Block](../guide/manifest#cron-block).
-- If your handler throws an error, AMC logs the failure and the job will run again at the next scheduled tick. Errors do not disable the job.
+- A cron job is registered at RUNTIME, from your plugin's `activate()`. There is no manifest block for jobs: the `id` you pass to `register()` is yours to choose and must be unique within your plugin.
+- If your handler throws an error, Omniscio logs the failure and the job will run again at the next scheduled tick. Errors do not disable the job.
 - Cron schedules use the system's local timezone.
 - Register your cron handlers in your plugin's `activate()` function so they start running as soon as the plugin loads.

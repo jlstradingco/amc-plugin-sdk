@@ -1,6 +1,6 @@
 # Session History
 
-Read the user's **past** AMC sessions and projects.
+Read the user's **past** Omniscio sessions and projects.
 
 **Availability:** Webview only (`AgentMC.sessionHistory`)
 **Required Permission:** `sessions.readHistory`

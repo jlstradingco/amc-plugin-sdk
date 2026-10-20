@@ -9,7 +9,7 @@ Display in-app toast messages and OS-level desktop notifications.
 
 ### `show(opts: { message: string; type?: 'info' | 'success' | 'warning' | 'error'; durationMs?: number }): void`
 
-Display an in-app toast message. These appear briefly in AMC's toast area and dismiss automatically.
+Display an in-app toast message. These appear briefly in Omniscio's toast area and dismiss automatically.
 
 **No permission required.**
 
@@ -40,7 +40,7 @@ ctx.toast.show({ type: 'error', message: 'Connection lost' })
 
 ### `notify(opts: { title: string; body?: string }): void`
 
-Send an OS-level desktop notification (system tray notification). These appear outside AMC's window and can reach the user even when AMC is minimized.
+Send an OS-level desktop notification (system tray notification). These appear outside Omniscio's window and can reach the user even when Omniscio is minimized.
 
 **Requires the `notifications` permission.**
 
@@ -72,6 +72,6 @@ ctx.toast.notify({
 ## Notes
 
 - `show()` does not require any permission and is available to all plugins. Use it for routine feedback (success confirmations, transient errors, progress updates).
-- `notify()` requires the `notifications` permission declared in `manifest.json`. Use it sparingly for important events the user needs to see even when AMC is not focused.
+- `notify()` requires the `notifications` permission declared in `manifest.json`. Use it sparingly for important events the user needs to see even when Omniscio is not focused.
 - Toast messages from `show()` auto-dismiss after a few seconds. The user does not need to interact with them.
 - OS notifications from `notify()` follow the operating system's notification behavior (sound, banner, action center, etc.).

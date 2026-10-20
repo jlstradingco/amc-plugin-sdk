@@ -147,7 +147,7 @@ never delivered no matter what emits it.
 
 ### `host.activeProjectChanged`
 
-Fires when the user switches the active project in AMC. Delivered to **every** plugin, on both
+Fires when the user switches the active project in Omniscio. Delivered to **every** plugin, on both
 surfaces.
 
 ```typescript

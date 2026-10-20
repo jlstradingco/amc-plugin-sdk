@@ -1,6 +1,6 @@
 # `amc-automation` CLI Reference
 
-Publishes AMC automations. Ships from `@agent-mc/plugin-cli` alongside
+Publishes Omniscio automations. Ships from `@agent-mc/plugin-cli` alongside
 `amc-plugin`, sharing its marketplace sign-in.
 
 ```bash
@@ -64,7 +64,7 @@ $ amc-automation validate
 Local checks
 
 ✗ Step 2 has no prompt, so this automation cannot run. (step "summarize")
-  → Add a non-empty "prompt". AMC blocks the run on an empty one.
+  → Add a non-empty "prompt". Omniscio blocks the run on an empty one.
 ⚠ description looks like a GitHub token.
   → Remove it before publishing — a published automation is public.
 ```

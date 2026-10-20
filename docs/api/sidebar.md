@@ -1,6 +1,6 @@
 # Sidebar
 
-Control your plugin's sidebar appearance -- update the badge count and manage the list of items shown beneath your plugin in AMC's sidebar.
+Control your plugin's sidebar appearance -- update the badge count and manage the list of items shown beneath your plugin in Omniscio's sidebar.
 
 **Availability:** Both (backend `ctx.sidebar` / frontend `AgentMC.sidebar`)
 **Required Permission:** None
@@ -94,7 +94,7 @@ AgentMC.sidebar.setItems([])
 
 - The badge count and item list are independent. Setting items does not affect the badge count, and vice versa.
 - Calling `setItems()` replaces the entire list. To update a single item, re-send the full array with the updated item included.
-- The `needsYou` flag shows an attention indicator (amber dot) on the item, consistent with AMC's "Needs You" pattern for sessions.
+- The `needsYou` flag shows an attention indicator (amber dot) on the item, consistent with Omniscio's "Needs You" pattern for sessions.
 - The `progress` field renders a progress bar when provided (0--100 range).
 - `currentStep` and `totalSteps` display as "Step 2/5" text when both are provided.
 - No permission is required. Every plugin can update its sidebar appearance.

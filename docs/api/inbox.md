@@ -1,6 +1,6 @@
 # Inbox
 
-Surface items in AMC's inbox -- the unified list where the user reviews things that need their attention.
+Surface items in Omniscio's inbox -- the unified list where the user reviews things that need their attention.
 
 **Availability:** Both (backend `ctx.inbox` / frontend `AgentMC.inbox`)
 **Required Permission:** `inbox`

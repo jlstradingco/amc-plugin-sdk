@@ -55,5 +55,5 @@ await ctx.fs.writeFile('imports/data.csv', csv)
 
 - The `options` parameter accepts all standard Fetch API options: `method`, `headers`, `body`, `signal`, etc.
 - Responses follow the standard [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) interface with `.json()`, `.text()`, `.blob()`, `.ok`, `.status`, and other standard properties.
-- API keys and secrets should be stored in plugin settings (configured by the user in AMC's Settings > Plugins panel) and read via the [Settings](./settings) API. Never hardcode credentials.
+- API keys and secrets should be stored in plugin settings (configured by the user in Omniscio's Settings > Plugins panel) and read via the [Settings](./settings) API. Never hardcode credentials.
 - There are no restrictions on which URLs you can fetch, but users see that your plugin has the `network` permission during installation.

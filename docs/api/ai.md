@@ -68,6 +68,6 @@ await ctx.db.update('reports', reportId, { title })
 
 ## Notes
 
-- These calls go through AMC's AI service, which requires an API key account. OAuth/login accounts cannot make direct AI calls. If no API key account is available, the call will fail with a descriptive error.
+- These calls go through Omniscio's AI service, which requires an API key account. OAuth/login accounts cannot make direct AI calls. If no API key account is available, the call will fail with a descriptive error.
 - `generateMessage` is best for short, targeted tasks. For complex multi-turn interactions, use the [Sessions](./sessions) API instead.
 - `generateTitle` is optimized for producing concise titles (typically under 10 words).

@@ -1,6 +1,6 @@
 # Permissions
 
-Plugins declare the permissions they need in `manifest.json`. AMC shows these to the user during installation and enforces them at runtime -- if your plugin calls an API it has not been granted permission for, the call is rejected.
+Plugins declare the permissions they need in `manifest.json`. Omniscio shows these to the user during installation and enforces them at runtime -- if your plugin calls an API it has not been granted permission for, the call is rejected.
 
 ## Permission Model
 
@@ -13,13 +13,13 @@ These APIs are available to all plugins, regardless of permissions:
 | API | Interface | What it does |
 |---|---|---|
 | **Settings** | `PluginSettings` | Read the plugin's own settings (`getAll()`, `get(key)`) |
-| **Logging** | `PluginLogger` | Write to AMC's log (`info()`, `warn()`, `error()`, `debug()`) |
+| **Logging** | `PluginLogger` | Write to Omniscio's log (`info()`, `warn()`, `error()`, `debug()`) |
 | **Events** | `PluginEvents` | Emit and listen for plugin-scoped events (`emit()`, `on()`) |
 | **Sidebar** | `PluginSidebar` | Update the sidebar badge and item list (`setBadge()`, `setItems()`) |
 | **Toast (show)** | `PluginToast.show()` | Display in-app toast messages (success, error, info) |
 
 ::: tip
-Settings are read-only from the plugin's perspective. The user configures them through AMC's Settings > Plugins panel. Your plugin defines the available settings in `manifest.json` and reads their current values at runtime.
+Settings are read-only from the plugin's perspective. The user configures them through Omniscio's Settings > Plugins panel. Your plugin defines the available settings in `manifest.json` and reads their current values at runtime.
 :::
 
 ## Permission Reference
@@ -198,7 +198,7 @@ ctx.cron.unregister('heartbeat')
 ```
 
 ::: tip
-Cron jobs must also be declared in the `cron.jobs` array in `manifest.json`. The `id` you pass to `register()` must match a declared job ID. See [Manifest > Cron Block](./manifest#cron-block).
+Cron jobs are registered at runtime from your plugin's `activate()` — there is no manifest block for them. The `id` you pass to `register()` is yours to choose and must be unique within your plugin. The `cron` PERMISSION, though, must be in `manifest.json`'s `permissions` array.
 :::
 
 ---
@@ -207,7 +207,7 @@ Cron jobs must also be declared in the `cron.jobs` array in `manifest.json`. The
 
 **Grants access to:** `PluginCli`
 
-Register HTTP endpoint handlers accessible through AMC's CLI control server:
+Register HTTP endpoint handlers accessible through Omniscio's CLI control server:
 
 ```typescript
 ctx.cli.handle('status', async (req) => {
@@ -252,9 +252,9 @@ Note that `ctx.toast.show()` (in-app toasts) is available without this permissio
 
 ### `rss`
 
-**Grants access to:** AMC's built-in RSS feed data
+**Grants access to:** Omniscio's built-in RSS feed data
 
-Allows the plugin to read RSS feeds and articles managed by AMC's Channels system:
+Allows the plugin to read RSS feeds and articles managed by Omniscio's Channels system:
 
 ```typescript
 // Fetch articles from a specific feed
@@ -280,7 +280,7 @@ Covers privileged desktop actions surfaced to a plugin's webview UI — opening 
 
 **Grants access to:** host chrome / navigation surfaces exposed through the UI bridge (toolbar items, context menus, in-app navigation)
 
-Lets a plugin's UI integrate with AMC's own chrome — contributing toolbar/context-menu entries and navigating within the app shell.
+Lets a plugin's UI integrate with Omniscio's own chrome — contributing toolbar/context-menu entries and navigating within the app shell.
 
 ---
 
@@ -288,7 +288,7 @@ Lets a plugin's UI integrate with AMC's own chrome — contributing toolbar/cont
 
 **Grants access to:** `PluginInbox`
 
-Surface items in AMC's inbox -- the unified list where the user reviews things that need their attention:
+Surface items in Omniscio's inbox -- the unified list where the user reviews things that need their attention:
 
 ```typescript
 await ctx.inbox.setItems([
@@ -304,7 +304,7 @@ See the [Inbox API](../api/inbox) for the full `InboxItem` shape.
 
 **Grants access to:** `PluginAuth` identity methods
 
-See who is signed in to AMC (name and email) and react to sign-in state:
+See who is signed in to Omniscio (name and email) and react to sign-in state:
 
 ```typescript
 const user = await ctx.auth.getUser()
@@ -333,9 +333,9 @@ This is a distinct, higher-trust permission from `auth`. Declare it only if you 
 
 ### `navigation`
 
-**Grants:** the ability to navigate AMC to your sessions, projects, and views
+**Grants:** the ability to navigate Omniscio to your sessions, projects, and views
 
-The `navigation` permission lets a plugin ask AMC to move the user to a session, project, or view. There is no `ctx.navigation` API in the current SDK surface -- navigation is host-gated and requested through the host bridge. Declare `navigation` so a plugin that drives AMC's navigation installs cleanly and is recognized at runtime.
+The `navigation` permission lets a plugin ask Omniscio to move the user to a session, project, or view. There is no `ctx.navigation` API in the current SDK surface -- navigation is host-gated and requested through the host bridge. Declare `navigation` so a plugin that drives Omniscio's navigation installs cleanly and is recognized at runtime.
 
 ---
 
@@ -355,10 +355,10 @@ Start and stop screen recordings and manage the resulting files.
 
 **Grants access to:** `PluginTts` (text-to-speech)
 
-Read text aloud using whichever voice the user configured in AMC. `isAvailable()` reports false when the user has TTS turned off or has set up no voice provider — check it before offering a read-aloud control.
+Read text aloud using whichever voice the user configured in Omniscio. `isAvailable()` reports false when the user has TTS turned off or has set up no voice provider — check it before offering a read-aloud control.
 
 ::: warning Metered spend
-Synthesis costs real money and is billed to the user. AMC enforces its own per-plugin daily cap (shared with the `ai` capability) and `synthesize()` **rejects** once that cap is hit. Treat the rejection as an expected runtime state, not a bug — surface it to the user rather than retrying.
+Synthesis costs real money and is billed to the user. Omniscio enforces its own per-plugin daily cap (shared with the `ai` capability) and `synthesize()` **rejects** once that cap is hit. Treat the rejection as an expected runtime state, not a bug — surface it to the user rather than retrying.
 :::
 
 See the [Text to Speech API](../api/tts).
@@ -369,7 +369,7 @@ See the [Text to Speech API](../api/tts).
 
 **Grants access to:** `PluginSessionHistory` (read past sessions and projects)
 
-Read the user's **existing** AMC sessions and projects — distinct from `sessions`, which creates and drives new ones. Intended for plugins that turn prior work into a summary, a deck, or a report.
+Read the user's **existing** Omniscio sessions and projects — distinct from `sessions`, which creates and drives new ones. Intended for plugins that turn prior work into a summary, a deck, or a report.
 
 This is the most privacy-sensitive permission in the SDK, and it is default-deny at runtime:
 
@@ -449,17 +449,17 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `tts` | `PluginTts` (**webview**, `AgentMC.tts`) | Read text aloud with the user's configured voice (metered) |
 | `network` | `PluginHttp` | Outbound HTTP requests |
 | `cron` | `PluginCron` | Scheduled background tasks |
-| `cli` | `PluginCli` | HTTP endpoints on AMC's control server |
+| `cli` | `PluginCli` | HTTP endpoints on Omniscio's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
 | `system` | Shell / clipboard / process (**webview** UI bridge) | Open paths, read clipboard, launch host processes *from your plugin's UI* — never a licence for the backend to import `child_process` |
-| `rss` | `PluginRss` | Read RSS feeds and articles from AMC's Channels |
+| `rss` | `PluginRss` | Read RSS feeds and articles from Omniscio's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
 | `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
-| `inbox` | `PluginInbox.setItems()` | Contribute rows to the AMC inbox |
-| `navigation` | *(host-gated; no `ctx` API)* | Navigate AMC to sessions, projects, and views |
+| `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
+| `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
 | `boards.read` | `AgentMC.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |

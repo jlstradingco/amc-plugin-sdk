@@ -1,6 +1,6 @@
 # CLI Reference
 
-The `amc-plugin` CLI is a Commander.js-based tool for building, validating, packaging, and publishing AMC plugins.
+The `amc-plugin` CLI is a Commander.js-based tool for building, validating, packaging, and publishing Omniscio plugins.
 
 ## Install
 
@@ -272,7 +272,7 @@ amc-plugin preflight --changelog "Added dark mode support"
 
 ### `publish`
 
-Upload a `.amcplugin` archive to the AMC Marketplace for review. Authenticates via GitHub OAuth on first use.
+Upload a `.amcplugin` archive to the Omniscio Marketplace for review. Authenticates via GitHub OAuth on first use.
 
 **Usage:**
 
@@ -535,7 +535,7 @@ amc-plugin test [patterns...] [options]
 The SDK ships a test harness at `@agent-mc/plugin-sdk/testing` that gives you a
 faithful in-memory `PluginContext` — real storage and db (query / where / orderBy /
 limit, paged like Omniscio: 100 rows unless you pass a `limit`), plus capture surfaces for toasts, notifications, logs, events, sidebar,
-and inbox, and triggers for cron jobs and CLI handlers. No AMC or Electron needed.
+and inbox, and triggers for cron jobs and CLI handlers. No Omniscio or Electron needed.
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -613,8 +613,8 @@ amc-plugin doctor [options]
 | Node.js | Node version is supported (>= 18, 20+ recommended) |
 | Plugin SDK | `@agent-mc/plugin-sdk` is installed and up to date with npm |
 | Manifest | `manifest.json` (if present) is valid against the SDK schema |
-| AMC host | A running AMC is reachable on `127.0.0.1:19519` (for local install / hot-reload) |
-| AMC CLI token | A control-server token is available (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`) |
+| Omniscio host | A running Omniscio is reachable on `127.0.0.1:19519` (for local install / hot-reload) |
+| Omniscio CLI token | A control-server token is available (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`) |
 | Marketplace API | The marketplace backend is reachable (needed to publish) |
 
 Warnings never fail the command -- only a hard failure (unsupported Node, or an
@@ -627,13 +627,13 @@ Override the host port with the `AMC_CLI_PORT` environment variable.
 
 ```bash
 amc-plugin doctor
-# AMC Plugin Doctor
+# Omniscio Plugin Doctor
 # ✓ Node.js: Node v22.11.0
 # ✓ Plugin SDK: @agent-mc/plugin-sdk 1.1.0
 # ✓ Manifest: manifest.json is valid
-# ⚠ AMC host: No running AMC on 127.0.0.1:19519
-#     → Start Agent Mission Control to enable local install and hot-reload.
-# ✓ AMC CLI token: AMC CLI token available
+# ⚠ Omniscio host: No running Omniscio on 127.0.0.1:19519
+#     → Start Omniscio to enable local install and hot-reload.
+# ✓ Omniscio CLI token: Omniscio CLI token available
 # ✓ Marketplace API: Reachable
 #
 # ⚠ 5 passed, 1 warning, 0 failed

@@ -1,6 +1,6 @@
 # Project Structure
 
-Every AMC plugin follows the same directory layout. Some files are always required; others depend on whether your plugin has a backend, cron jobs, or CLI endpoints.
+Every Omniscio plugin follows the same directory layout. Some files are always required; others depend on whether your plugin has a backend, scheduled automations, or CLI endpoints.
 
 ## Directory Layout
 
@@ -14,7 +14,7 @@ my-plugin/
   .gitignore           # Ignores node_modules/, dist/, *.amcplugin
   src/
     ui/                # Frontend source (optional if backend-only)
-      index.html       # UI entry point loaded in AMC's webview
+      index.html       # UI entry point loaded in Omniscio's webview
       plugin.ts        # UI logic, accesses window.AgentMC bridge
     backend/           # Backend source (optional)
       index.ts         # Exports an activate function
@@ -32,7 +32,7 @@ my-plugin/
 
 ### `manifest.json` (required)
 
-The central configuration file. Declares your plugin's identity, settings, permissions, storage collections, UI entry point, backend entry point, CLI endpoints, and cron jobs.
+The central configuration file. Declares your plugin's identity, settings, permissions, storage collections, UI entry point, backend entry point and CLI endpoints. Every field it accepts is listed in the [Manifest Reference](./manifest).
 
 ```json
 {
@@ -41,14 +41,13 @@ The central configuration file. Declares your plugin's identity, settings, permi
     "name": "My Plugin",
     "version": "1.0.0",
     "author": "Your Name",
-    "description": "An AMC plugin",
+    "description": "An Omniscio plugin",
     "icon": "puzzle",
     "category": "other",
     "license": { "type": "free" }
   },
   "settings": [],
   "storage": { "collections": {} },
-  "migrations": [],
   "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
@@ -111,7 +110,7 @@ Source files under `src/` compile into `dist/` with the same directory structure
 
 ### `src/ui/index.html` (optional)
 
-The HTML file loaded in AMC's plugin webview. This is the entry point declared in `manifest.json` under `ui.entryPoint`.
+The HTML file loaded in Omniscio's plugin webview. This is the entry point declared in `manifest.json` under `ui.entryPoint`.
 
 ```html
 <!DOCTYPE html>
@@ -136,11 +135,11 @@ The HTML file loaded in AMC's plugin webview. This is the entry point declared i
 </html>
 ```
 
-AMC injects CSS custom properties (`--surface-50`, `--surface-900`, etc.) into the webview so your plugin automatically adapts to the user's light/dark theme. Use `var(--surface-*)` values instead of hardcoded colors.
+Omniscio injects CSS custom properties (`--surface-50`, `--surface-900`, etc.) into the webview so your plugin automatically adapts to the user's light/dark theme. Use `var(--surface-*)` values instead of hardcoded colors.
 
 ### `src/ui/plugin.ts` (optional)
 
-TypeScript for your UI logic. Access AMC APIs through `window.AgentMC`:
+TypeScript for your UI logic. Access Omniscio APIs through `window.AgentMC`:
 
 ```typescript
 import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
@@ -155,11 +154,11 @@ async function init() {
 init()
 ```
 
-The `AgentMC` bridge is injected into the webview by AMC before your script runs. It provides access to storage, database, settings, events, theme, toasts, sessions, AI, export, project management, sidebar control, static assets, inbox, authentication, and screen recording.
+The `AgentMC` bridge is injected into the webview by Omniscio before your script runs. It provides access to storage, database, settings, events, theme, toasts, sessions, AI, export, project management, sidebar control, static assets, inbox, authentication, and screen recording.
 
 ### `src/backend/index.ts` (optional)
 
-The backend module runs in a sandboxed Node.js worker inside AMC's main process. It exports an `activate` function that receives a `PluginContext` and returns a `PluginBackend` with lifecycle hooks:
+The backend module runs in a sandboxed Node.js worker inside Omniscio's main process. It exports an `activate` function that receives a `PluginContext` and returns a `PluginBackend` with lifecycle hooks:
 
 ```typescript
 import type { PluginActivate } from '@agent-mc/plugin-sdk'
@@ -211,6 +210,6 @@ dist/
 |---|---|---|
 | **UI only** | `src/ui/index.html`, `src/ui/plugin.ts` | `ui` |
 | **Backend only** | `src/backend/index.ts` | `backend` |
-| **Full** | Both `src/ui/` and `src/backend/` | `ui`, `backend`, and optionally `cli`, `cron` |
+| **Full** | Both `src/ui/` and `src/backend/` | `ui`, `backend`, and optionally `cli` |
 
 A plugin must have at least one of `ui` or `backend` declared in the manifest.

@@ -1,6 +1,6 @@
 # CLI Endpoints
 
-Register HTTP endpoint handlers on AMC's CLI control server. This lets external tools, scripts, and automations interact with your plugin over HTTP.
+Register HTTP endpoint handlers on Omniscio's CLI control server. This lets external tools, scripts, and automations interact with your plugin over HTTP.
 
 **Availability:** Backend only (`ctx.cli`)
 **Required Permission:** `cli`
@@ -130,7 +130,7 @@ curl -X POST http://127.0.0.1:19519/plugins/my-plugin/tasks/create \
 ```
 
 ::: warning
-AMC's CLI control server uses bearer-token authentication on certain endpoints. Requests to plugin endpoints go through AMC's standard auth. See AMC's CLI Control documentation for details.
+Omniscio's CLI control server uses bearer-token authentication on certain endpoints. Requests to plugin endpoints go through Omniscio's standard auth. See Omniscio's CLI Control documentation for details.
 :::
 
 ## Notes

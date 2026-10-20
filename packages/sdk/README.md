@@ -136,7 +136,7 @@ interface PluginBackend {
 
 ## Documentation
 
-Full guides, API reference, and examples: **[AMC Plugin SDK Docs](https://docs.omniscio.com/sdk/)**
+Full guides, API reference, and examples: **[Omniscio Plugin SDK Docs](https://docs.omniscio.com/sdk/)**
 
 - [Getting Started](https://docs.omniscio.com/sdk/guide/getting-started) — scaffold your first plugin
 - [Manifest Reference](https://docs.omniscio.com/sdk/guide/manifest) — full manifest.json spec

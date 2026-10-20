@@ -1,6 +1,6 @@
 # Dev Shell
 
-The dev shell is an Electron-based development environment that loads your plugin UI in a standalone window with mock backend APIs and hot-reload. It lets you develop and test your plugin without running the full Agent Mission Control application.
+The dev shell is an Electron-based development environment that loads your plugin UI in a standalone window with mock backend APIs and hot-reload. It lets you develop and test your plugin without running the full Omniscio application.
 
 ## Launching the Dev Shell
 
@@ -14,7 +14,7 @@ This runs `amc-plugin dev`, which:
 
 1. Reads your `manifest.json` to determine the plugin name, version, and entry points
 2. Runs an initial TypeScript build
-3. Opens an Electron window titled **"AMC Plugin Dev Shell - My Plugin v1.0.0"**
+3. Opens an Electron dev-shell window for your plugin, with the plugin name and version in its title
 4. Loads your UI entry point (`dist/ui/index.html`) in a webview
 5. If your plugin has a backend, activates it with a mock `PluginContext`
 6. Starts watching `src/` and `manifest.json` for changes
@@ -53,7 +53,7 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | **db** | Faithful in-memory store -- `insert` assigns `id`/`created_at`/`updated_at`; `query` honors `where`, `orderBy` (`{ col: 'asc' | 'desc' }`), `limit`/`offset`, and returns one page of 100 rows when you give no `limit`, like Omniscio; `getById`/`update`/`delete`/`deleteWhere` operate on real rows. Reads return copies |
 | **settings** | Seeded from an `amc-dev-settings.json` dev config file next to your plugin; `getAll()`/`get(key)` read from it (empty when the file is absent) |
 | **log** | Prints to the terminal with a `[plugin:your-id]` prefix |
-| **events** | In-memory `EventEmitter`, backend-only. Backend-to-backend delivery matches AMC, but an emit does NOT reach the dev shell's webview -- in AMC it reaches both surfaces. Exercise UI-facing events in AMC itself |
+| **events** | In-memory `EventEmitter`, backend-only. Backend-to-backend delivery matches Omniscio, but an emit does NOT reach the dev shell's webview -- in Omniscio it reaches both surfaces. Exercise UI-facing events in Omniscio itself |
 | **sessions** | `create` returns a mock session ID; `getStatus` always returns `"running"`; `getMessages` replays what you sent via `sendMessage`, in the real backend row shape (`{ id, role, text, timestamp }`) |
 | **ai** | Returns `"[AI mock] Response to: ..."` and `"[AI mock] Title: ..."` |
 | **fs** | Rejects read/write/delete with an error; `exists` returns `false`; `listDir` returns `[]` |
@@ -81,7 +81,7 @@ The dev shell reads two conventional locations next to your plugin so you can ex
   }
   ```
 
-- **`.amc-dev/`** — a working directory the shell uses as the plugin `dataDir`. The KV `storage` API is flushed to `.amc-dev/amc-dev-storage.json`, so anything your plugin writes with `ctx.storage.set()` survives a dev-shell restart, just like the real SQLite-backed store in AMC.
+- **`.amc-dev/`** — a working directory the shell uses as the plugin `dataDir`. The KV `storage` API is flushed to `.amc-dev/amc-dev-storage.json`, so anything your plugin writes with `ctx.storage.set()` survives a dev-shell restart, just like the real SQLite-backed store in Omniscio.
 
 ::: tip
 Add `amc-dev-settings.json` and `.amc-dev/` to your plugin's `.gitignore` — they hold local-only dev state and secrets.
@@ -127,15 +127,15 @@ The webview is not reloaded on build failure -- the previous working version sta
 
 ## Limitations
 
-The dev shell is designed for rapid UI development and basic backend testing. It does not replicate the full AMC runtime:
+The dev shell is designed for rapid UI development and basic backend testing. It does not replicate the full Omniscio runtime:
 
-| Feature | Dev shell | Real AMC |
+| Feature | Dev shell | Real Omniscio |
 |---|---|---|
 | UI rendering | Full (Electron webview) | Full (Electron webview) |
-| Theme CSS variables | Injected by shell HTML | Injected by AMC |
+| Theme CSS variables | Injected by shell HTML | Injected by Omniscio |
 | Storage | Persisted to `.amc-dev/` (JSON file) | SQLite `plugin_kv` (persistent) |
 | DB | Faithful in-memory store (where/orderBy/limit, 100-row default page) -- lost on restart | SQLite tables (persistent) |
-| Settings | Seeded from `amc-dev-settings.json` | Configured in AMC settings UI |
+| Settings | Seeded from `amc-dev-settings.json` | Configured in Omniscio settings UI |
 | Sessions | Mock IDs, no real Claude process | Real Claude Code sessions |
 | AI generation | Returns placeholder strings | Calls Anthropic API |
 | Filesystem | Sandboxed to `ctx.dataDir` (real files; in-memory when no `dataDir`) | Sandboxed to `ctx.dataDir` — the same per-plugin root, also enforced by the worker's OS-level permission allow-set |
@@ -143,10 +143,10 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | CLI endpoints | Logs only, not reachable | Reachable via control server |
 | Notifications | Logs to console | Real OS notifications |
 | Plugin permissions | Not enforced | Enforced at runtime |
-| Sidebar badge/items | Logs to console | Updates AMC sidebar |
+| Sidebar badge/items | Logs to console | Updates Omniscio sidebar |
 
 ::: tip
-For integration testing with real AMC APIs, install your built plugin into AMC directly. Use `npm run package` to create the `.amcplugin` file, then install it through Settings > Plugins > Install from file.
+For integration testing with real Omniscio APIs, install your built plugin into Omniscio directly. Use `npm run package` to create the `.amcplugin` file, then install it through Settings > Plugins > Install from file.
 :::
 
 ## Window Configuration
@@ -157,4 +157,4 @@ The dev shell opens at **1200 x 800 pixels** with the title set to your plugin n
 - `nodeIntegration: false`
 - `webviewTag: true`
 
-This matches the security configuration used by AMC's own plugin webview host, ensuring your plugin behaves the same in both environments.
+This matches the security configuration used by Omniscio's own plugin webview host, ensuring your plugin behaves the same in both environments.

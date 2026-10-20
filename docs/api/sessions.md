@@ -25,7 +25,7 @@ Create a new Claude Code session on your plugin's own virtual project.
 | Name | Type | Description |
 |---|---|---|
 | `opts.prompt` | `string` (optional) | Initial prompt to send to the session |
-| `opts.userInitiated` | `boolean` (optional) | Mark the session as user-provoked rather than plugin-background. This is what decides whether AMC surfaces it in the sidebar or hides it as plugin chatter |
+| `opts.userInitiated` | `boolean` (optional) | Mark the session as user-provoked rather than plugin-background. This is what decides whether Omniscio surfaces it in the sidebar or hides it as plugin chatter |
 
 **Returns:** `Promise<{ sessionId: string }>` -- the ID of the newly created session.
 
@@ -34,7 +34,7 @@ It can only answer in text unless your manifest declares [`sessionTools: true`](
 :::
 
 ::: warning There is no `projectId` option
-Earlier SDK versions declared one. AMC has **always** derived the project from your plugin ID
+Earlier SDK versions declared one. Omniscio has **always** derived the project from your plugin ID
 (`__plugin_<id>__`) and has never read a caller-supplied project, so code passing `projectId`
 appeared to target a project and silently did not. It has been removed rather than left to mislead.
 :::
@@ -256,7 +256,7 @@ await AgentMC.session.stop(sessionId)
 
 ### `launchWithDraft(opts: { projectId: string; draftText: string; autoSend?: boolean }): Promise<void>`
 
-Open a new session in AMC's main UI with pre-filled draft text. Frontend only.
+Open a new session in Omniscio's main UI with pre-filled draft text. Frontend only.
 
 Unlike `create()`, this one **does** take a real `projectId` — it launches into one of the user's
 own projects rather than your plugin's virtual one. `autoSend` submits the draft immediately
@@ -277,7 +277,7 @@ await AgentMC.session.launchWithDraft({
   `AgentMC.session.launchWithDraft()` when you need to launch into one of the user's projects.
 - Status values are `'running'`, `'needs_you'`, `'error'`, `'stalled'`, `'starting'`, `'ready'`,
   `'terminating'`, `'ended'`, `'archived'`, `'paused'` and `'waiting'`. (`'needs_input'` appeared in
-  earlier versions of this page and is not a status AMC reports.) The `SessionStatus` type keeps
-  these as autocomplete suggestions while still accepting a status a future AMC release adds.
+  earlier versions of this page and is not a status Omniscio reports.) The `SessionStatus` type keeps
+  these as autocomplete suggestions while still accepting a status a future Omniscio release adds.
 - Concurrent `AgentMC.session.create()` calls with an identical prompt are de-duplicated and resolve
   to the same `sessionId`.

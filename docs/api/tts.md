@@ -1,6 +1,6 @@
 # Text to Speech
 
-Turn text into spoken audio using whichever voice the user has configured in AMC.
+Turn text into spoken audio using whichever voice the user has configured in Omniscio.
 
 **Availability:** Webview only (`AgentMC.tts`)
 **Required Permission:** `tts`
@@ -53,7 +53,7 @@ interface SynthesizedSpeech {
 export function activate(ctx: PluginContext) {
   ctx.cli.handle('/speak', async (req) => {
     if (!(await AgentMC.tts.isAvailable())) {
-      return { status: 503, body: { error: 'No voice configured in AMC settings' } }
+      return { status: 503, body: { error: 'No voice configured in Omniscio settings' } }
     }
 
     try {
@@ -78,7 +78,7 @@ await audio.play()
 
 ## Notes
 
-- There is no voice-selection API. The voice is the user's choice, made once in AMC's settings, and applies to every plugin.
+- There is no voice-selection API. The voice is the user's choice, made once in Omniscio's settings, and applies to every plugin.
 - The base64 payload is a full MP3 file, not a stream. Long text means a large string held in memory -- synthesize in paragraphs rather than whole documents.
 - `isAvailable()` is a snapshot. A user can turn TTS off between your check and your call, so keep the `try/catch` even when the check passed.
 

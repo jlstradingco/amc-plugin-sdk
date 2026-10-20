@@ -1,16 +1,16 @@
 # Getting Started
 
-Build and install your first AMC plugin in under five minutes.
+Build and install your first Omniscio plugin in under five minutes.
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) v18 or later
-- [Agent Mission Control](https://github.com/jlstradingco/agent-mission-control) installed and running
+- [Omniscio](https://github.com/jlstradingco/agent-mission-control) installed and running
 - A terminal (PowerShell, bash, zsh)
 
 ## Install the CLI
 
-Install the AMC Plugin CLI globally:
+Install the Omniscio Plugin CLI globally:
 
 ```bash
 npm install -g @agent-mc/plugin-cli
@@ -35,7 +35,7 @@ The CLI walks you through an interactive prompt:
 
 ```
 ? Display name: My Plugin
-? Description: An AMC plugin
+? Description: An Omniscio plugin
 ? Author: Your Name
 ? Category: other
 ? Icon — a path to your logo in the package (assets/icon.svg), or a Lucide name for a generic glyph: assets/icon.svg
@@ -184,20 +184,20 @@ The archive contains:
 The marketplace enforces a **50 MB** package size limit. The CLI warns you if your archive exceeds this.
 :::
 
-## Install in AMC
+## Install in Omniscio
 
-1. Open **Agent Mission Control**
+1. Open **Omniscio**
 2. Go to **Settings > Plugins**
 3. Click **Install from file**
 4. Select your `.amcplugin` file
 5. The plugin appears in the sidebar
 
-Your plugin is now running inside AMC. Open it from the sidebar to see your UI.
+Your plugin is now running inside Omniscio. Open it from the sidebar to see your UI.
 
 ## Next Steps
 
 - [Project Structure](./project-structure) -- understand every file in your plugin
 - [Manifest](./manifest) -- configure settings, permissions, storage, cron, and CLI endpoints
 - [Permissions](./permissions) -- learn what each permission grants
-- [Dev Shell](./dev-shell) -- develop with hot-reload outside AMC
-- [Publishing](./publishing) -- submit your plugin to the AMC Marketplace
+- [Dev Shell](./dev-shell) -- develop with hot-reload outside Omniscio
+- [Publishing](./publishing) -- submit your plugin to the Omniscio Marketplace

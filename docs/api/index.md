@@ -1,6 +1,6 @@
 # API Reference
 
-The AMC Plugin SDK exposes 24 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The Omniscio Plugin SDK exposes 24 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -20,7 +20,7 @@ The AMC Plugin SDK exposes 24 APIs to plugins. Some are available on both the fr
 | [Settings](./settings) | Read plugin settings | Both | None |
 | [Events](./events) | Messaging between your UI and backend | Both | None |
 | [Logging](./logging) | Structured log output | Backend only | None |
-| [Inbox](./inbox) | Surface items in AMC's inbox | Both | `inbox` |
+| [Inbox](./inbox) | Surface items in Omniscio's inbox | Both | `inbox` |
 | [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
 | [Recording](./recording) | Screen recording, host-mediated | Backend only | `recording` |
 | [Text to Speech](./tts) | Speak text with the user's configured voice | Webview only | `tts` |
@@ -93,7 +93,7 @@ The following APIs are available **only on the frontend** through the `AgentMC` 
 
 ### Theme
 
-Read and react to AMC's current theme.
+Read and react to Omniscio's current theme.
 
 ```typescript
 // Get the current theme — this is a PROMISE
@@ -166,7 +166,7 @@ await AgentMC.export.openFolder({ path: folder })
 
 ### Project
 
-Query and create AMC projects.
+Query and create Omniscio projects.
 
 ```typescript
 // List all projects
@@ -181,7 +181,7 @@ const newProject = await AgentMC.project.create({
   folderPath: '/path/to/my-app',
 })
 
-// Open AMC's Add Project dialog with a folder pre-selected
+// Open Omniscio's Add Project dialog with a folder pre-selected
 await AgentMC.project.openAddDialog({
   preselectedFolder: '/path/to/repo',
 })
@@ -189,7 +189,7 @@ await AgentMC.project.openAddDialog({
 
 | Method | Description |
 |---|---|
-| `listAll()` | List all projects in AMC |
+| `listAll()` | List all projects in Omniscio |
 | `findByFolder(folderPath)` | Find a project by its folder path |
 | `create(opts)` | Create a new project |
 | `openAddDialog(opts)` | Open the native Add Project dialog |
@@ -259,5 +259,5 @@ The SDK ships no mock for `documents`. Both its mocks — `createTestContext()` 
 :::
 
 ::: warning Gating is in flux
-`documents` is live and ungated on AMC `master`, but an in-flight host change puts it behind an in-development `plugin-documents-io` flag that defaults **off**. On a build with that flag, every call rejects with `This capability is not available.` — a passing typecheck here is not evidence the host will answer.
+`documents` is live and ungated on Omniscio `master`, but an in-flight host change puts it behind an in-development `plugin-documents-io` flag that defaults **off**. On a build with that flag, every call rejects with `This capability is not available.` — a passing typecheck here is not evidence the host will answer.
 :::

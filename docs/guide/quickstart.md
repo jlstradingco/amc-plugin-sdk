@@ -1,6 +1,6 @@
 # Quickstart: Hello World in 5 Minutes
 
-Go from nothing to a running AMC plugin — with a live UI and a working toast — in five minutes. No prior plugin experience needed.
+Go from nothing to a running Omniscio plugin — with a live UI and a working toast — in five minutes. No prior plugin experience needed.
 
 ::: tip What you'll build
 A tiny "Hello World" plugin: a sidebar panel that greets you and pops a toast when you click a button. You'll see it running in the dev shell with hot-reload.
@@ -11,7 +11,7 @@ A tiny "Hello World" plugin: a sidebar panel that greets you and pops a toast wh
 You need two things:
 
 - **[Node.js](https://nodejs.org/) v18+** — check with `node --version`
-- **[Agent Mission Control](https://github.com/jlstradingco/agent-mission-control)** — only required for the final "install for real" step; the dev shell runs without it
+- **[Omniscio](https://github.com/jlstradingco/agent-mission-control)** — only required for the final "install for real" step; the dev shell runs without it
 
 That's it. No accounts, no config.
 
@@ -34,7 +34,7 @@ Skip the interactive prompts — generate everything in one line:
 ```bash
 amc-plugin create hello-world \
   --display-name "Hello World" \
-  --description "My first AMC plugin" \
+  --description "My first Omniscio plugin" \
   --author "Your Name" \
   --icon smile
 ```
@@ -69,12 +69,12 @@ Open `src/ui/index.html` and replace the `<body>` with a heading and a button:
 </body>
 ```
 
-Now open `src/ui/plugin.ts` and make it talk to AMC through the `AgentMC` bridge:
+Now open `src/ui/plugin.ts` and make it talk to Omniscio through the `AgentMC` bridge:
 
 ```typescript
 import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
 
-// The bridge is injected on `window` by AMC (and by the dev shell).
+// The bridge is injected on `window` by Omniscio (and by the dev shell).
 const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
 
 const greeting = document.getElementById('greeting') as HTMLHeadingElement
@@ -100,10 +100,10 @@ npm run dev
 Click **Say hello** — a success toast appears. Edit the greeting text, save, and watch the window refresh instantly.
 
 ::: tip The dev shell mocks the APIs
-`npm run dev` doesn't need AMC installed — it stubs the `AgentMC` bridge so you can iterate fast. See [Dev Shell](./dev-shell) for what's mocked.
+`npm run dev` doesn't need Omniscio installed — it stubs the `AgentMC` bridge so you can iterate fast. See [Dev Shell](./dev-shell) for what's mocked.
 :::
 
-## 5. Install it in AMC for real (optional, 1 min)
+## 5. Install it in Omniscio for real (optional, 1 min)
 
 When you're happy, bundle and install it:
 
@@ -111,13 +111,13 @@ When you're happy, bundle and install it:
 npm run package        # → hello-world-1.0.0.amcplugin
 ```
 
-Then in **Agent Mission Control**: **Settings → Plugins → Install from file**, pick the `.amcplugin`, and your panel shows up in the sidebar.
+Then in **Omniscio**: **Settings → Plugins → Install from file**, pick the `.amcplugin`, and your panel shows up in the sidebar.
 
 ## What just happened
 
-- **`manifest.json`** declared your plugin to AMC (id, name, permissions, UI entry).
+- **`manifest.json`** declared your plugin to Omniscio (id, name, permissions, UI entry).
 - **`src/ui/`** is your panel — plain HTML + TypeScript, no framework required.
-- **`window.AgentMC`** is the bridge: the typed gateway to every AMC API. `toast` is free; other APIs are unlocked by [permissions](./permissions).
+- **`window.AgentMC`** is the bridge: the typed gateway to every Omniscio API. `toast` is free; other APIs are unlocked by [permissions](./permissions).
 - **`amc-plugin dev`** gave you a mock-backed, hot-reloading loop; **`package`** produced the installable artifact.
 
 ## Next steps

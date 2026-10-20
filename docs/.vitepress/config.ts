@@ -1,11 +1,12 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'AMC Plugin SDK',
-  description: 'Build plugins for Agent Mission Control',
-  base: '/amc-plugin-sdk/',
+  title: 'Omniscio Plugin SDK',
+  description: 'Build plugins for Omniscio',
+  base: '/sdk/',
+  outDir: '../../docs/help-site/public/sdk',
   appearance: false,
-  head: [['link', { rel: 'icon', href: '/amc-plugin-sdk/logo.svg' }]],
+  head: [['link', { rel: 'icon', href: '/sdk/logo.svg' }]],
   themeConfig: {
     logo: '/logo.svg',
     nav: [
@@ -75,7 +76,7 @@ export default defineConfig({
     socialLinks: [{ icon: 'github', link: 'https://github.com/jlstradingco/amc-plugin-sdk' }],
     search: { provider: 'local' },
     footer: {
-      message: 'AMC Plugin SDK'
+      message: 'Omniscio Plugin SDK'
     }
   }
 })

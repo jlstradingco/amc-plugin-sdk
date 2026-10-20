@@ -19,7 +19,7 @@ green test against a fake would predict nothing. This SDK has been burned by exa
 before, when `ctx.events` was mocked as a live event emitter while the production path was dead
 in both directions.
 
-Inject your own double for the methods your test needs, and verify against a real AMC build.
+Inject your own double for the methods your test needs, and verify against a real Omniscio build.
 :::
 
 ::: danger There is no manifest surface

@@ -34,7 +34,7 @@ Spawn Claude sessions, stream status updates, display conversation messages, and
 
 **APIs:** `auth.getUser`, `auth.isAuthenticated`, `auth.requestSignIn`, `auth.onAuthStateChange`, `auth.getSession`
 
-Read the signed-in AMC identity and request scoped Google / GitHub access tokens. Masks the returned token before rendering. Needs the `auth` and `auth.session` permissions.
+Read the signed-in Omniscio identity and request scoped Google / GitHub access tokens. Masks the returned token before rendering. Needs the `auth` and `auth.session` permissions.
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/auth-demo)
 
@@ -42,7 +42,7 @@ Read the signed-in AMC identity and request scoped Google / GitHub access tokens
 
 **APIs:** `inbox.setItems`, `storage.set/get`
 
-Add and remove items in the AMC inbox. Demonstrates the full-replace semantics of `setItems()` by keeping the working list in storage and re-publishing on every change.
+Add and remove items in the Omniscio inbox. Demonstrates the full-replace semantics of `setItems()` by keeping the working list in storage and re-publishing on every change.
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/inbox-demo)
 

@@ -1,15 +1,15 @@
 # Automations
 
-An **automation** is a multi-step job AMC runs for you — a nightly digest, a
-release checklist, a repo sweep. Where a plugin adds a *surface* to AMC (a
+An **automation** is a multi-step job Omniscio runs for you — a nightly digest, a
+release checklist, a repo sweep. Where a plugin adds a *surface* to Omniscio (a
 sidebar view, a backend, a webview), an automation is a *recipe*: an ordered list
-of prompts AMC executes as agent sessions.
+of prompts Omniscio executes as agent sessions.
 
 You publish both to the same marketplace, with two different tools:
 
 | | Plugin | Automation |
 |---|---|---|
-| What it is | Code that extends AMC | A recipe AMC runs |
+| What it is | Code that extends Omniscio | A recipe Omniscio runs |
 | Written in | TypeScript | JSON (`.recipe.json`) |
 | Tool | `amc-plugin` | `amc-automation` |
 | Ships as | A `.amcplugin` archive | The recipe definition itself |
@@ -32,7 +32,7 @@ working two-step automation, not a stub — `init` followed by `validate` passes
 with nothing to fix. Edit the `steps` array to make it yours.
 
 For the full recipe format — control flow, parameters, run memory, scheduling,
-approval gates — see AMC's own
+approval gates — see Omniscio's own
 [Recipe Authoring Guide](https://github.com/jlstradingco/Agent-Orchestrator/blob/master/docs/RECIPE_AUTHORING_GUIDE.md).
 This page covers only what is specific to *publishing* one.
 
@@ -46,7 +46,7 @@ Six groups of checks run locally:
 
 - **Structure** — a name, at least one step, a known `executionMode`.
 - **Steps** — every step has a name and a non-empty prompt, and every entry in a
-  steps array is actually a step. AMC's own pre-flight blocks a run on an empty
+  steps array is actually a step. Omniscio's own pre-flight blocks a run on an empty
   prompt, so a published automation with one can never actually run.
 - **Portability** — nothing the person installing it will not have. See below.
 - **Secrets** — anything key-shaped or a path pointing into your home directory,
@@ -127,9 +127,9 @@ That is a safety property, but a silent one, so `validate` names what it dropped
   → Remove the field, or check the spelling if you meant a step field that does travel.
 ```
 
-Informational only — it never blocks a publish. Fields AMC itself always strips
+Informational only — it never blocks a publish. Fields Omniscio itself always strips
 (`id`, `createdAt`, `scope` and friends) stay quiet, because every recipe exported
-from AMC carries them and an advisory that always fires is one nobody reads.
+from Omniscio carries them and an advisory that always fires is one nobody reads.
 
 ## Publish it
 

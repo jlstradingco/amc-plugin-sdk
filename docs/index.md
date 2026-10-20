@@ -1,6 +1,6 @@
 ---
 layout: page
-title: AMC Plugin SDK
+title: Omniscio Plugin SDK
 ---
 
 <HomePage />

@@ -1,6 +1,6 @@
 # Publishing
 
-Publish your plugin to the AMC Marketplace so other Agent Mission Control users can discover and install it.
+Publish your plugin to the Omniscio Marketplace so other Omniscio users can discover and install it.
 
 ## Overview
 
@@ -10,7 +10,7 @@ The publish workflow is:
 2. **Authenticate** with GitHub (automatic on first publish)
 3. **Upload** the `.amcplugin` archive to the marketplace
 4. **Wait for review** (manual review by the marketplace team)
-5. **Published** -- your plugin appears in AMC's marketplace browser
+5. **Published** -- your plugin appears in Omniscio's marketplace browser
 
 ## Prerequisites
 
@@ -77,7 +77,7 @@ npx amc-plugin publish
 
 ### First-Time Authentication
 
-On first publish, the CLI opens your browser to the AMC Marketplace sign-in page for GitHub OAuth authentication:
+On first publish, the CLI opens your browser to the Omniscio Marketplace sign-in page for GitHub OAuth authentication:
 
 ```
 Opening browser for GitHub sign-in...

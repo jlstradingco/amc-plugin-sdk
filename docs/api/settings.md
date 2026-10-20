@@ -1,6 +1,6 @@
 # Settings
 
-Read your plugin's settings as configured by the user through AMC's Settings > Plugins panel.
+Read your plugin's settings as configured by the user through Omniscio's Settings > Plugins panel.
 
 **Availability:** Both (backend `ctx.settings` / frontend `AgentMC.settings`)
 **Required Permission:** None
@@ -94,13 +94,13 @@ Settings are declared in `manifest.json` using the `settings` array. Each entry 
 }
 ```
 
-AMC renders these as a settings form in the Settings > Plugins panel. Users configure the values there, and your plugin reads them at runtime.
+Omniscio renders these as a settings form in the Settings > Plugins panel. Users configure the values there, and your plugin reads them at runtime.
 
 See [Manifest > Settings](../guide/manifest#settings) for the full settings schema.
 
 ## Notes
 
-- Settings are read-only from the plugin's perspective. Plugins cannot write settings programmatically -- only the user can change them through AMC's UI.
+- Settings are read-only from the plugin's perspective. Plugins cannot write settings programmatically -- only the user can change them through Omniscio's UI.
 - No permission is required. Every plugin can read its own settings.
 - Use `getAll()` when you need multiple settings at once to avoid multiple round-trips. Use `get(key)` when you only need a single value.
 - Settings values may be `undefined` if the user has not configured them and no default is set in the manifest. Always handle the `undefined` case.

@@ -1,6 +1,6 @@
 # Auth
 
-Read the identity of the signed-in AMC user, and request scoped access tokens for Google and GitHub on their behalf.
+Read the identity of the signed-in Omniscio user, and request scoped access tokens for Google and GitHub on their behalf.
 
 **Availability:** Backend only (`ctx.auth`)
 
@@ -8,7 +8,7 @@ Read the identity of the signed-in AMC user, and request scoped access tokens fo
 This page previously said "Both". None of the six methods below exists on the webview
 bridge -- calling `AgentMC.auth.getUser()` is a `TypeError`, not a permission error.
 
-`AgentMC.auth` has exactly one method, `getWebAuth()`, which returns AMC's Firebase config
+`AgentMC.auth` has exactly one method, `getWebAuth()`, which returns Omniscio's Firebase config
 plus a custom token so your webview can sign into the same identity via the Firebase Web
 SDK. Everything on this page is the **backend** surface. If your UI needs any of it, call it
 from your backend and forward the result over `ctx.events` -> `AgentMC.events`.
@@ -42,7 +42,7 @@ Subscribe to sign-in state changes. The handler is called with the user (or `nul
 
 ### `requestSignIn(): Promise<{ success: boolean }>`
 
-Prompt the user to sign in to AMC. Resolves with `{ success }` reflecting the outcome.
+Prompt the user to sign in to Omniscio. Resolves with `{ success }` reflecting the outcome.
 
 ### The `PluginAuthUser` type
 

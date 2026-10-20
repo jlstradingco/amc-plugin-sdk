@@ -1,6 +1,6 @@
 # Manifest Reference
 
-The `manifest.json` file is the central configuration for your plugin. It declares everything AMC needs to load, display, sandbox, and manage your plugin.
+The `manifest.json` file is the central configuration for your plugin. It declares everything Omniscio needs to load, display, sandbox, and manage your plugin.
 
 ## Top-Level Structure
 
@@ -9,13 +9,14 @@ The `manifest.json` file is the central configuration for your plugin. It declar
   "plugin": { ... },
   "settings": [ ... ],
   "storage": { "collections": { ... } },
-  "migrations": [ ... ],
   "sdkVersion": "2.0.0",
   "ui": { ... },
+  "keybindings": [ ... ],
+  "process": { "allowedCommands": [ ... ] },
   "backend": { ... },
+  "sessionTools": true,
   "permissions": [ ... ],
-  "cli": { "endpoints": [ ... ] },
-  "cron": { "jobs": [ ... ] }
+  "cli": { "endpoints": [ ... ] }
 }
 ```
 
@@ -24,14 +25,20 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `plugin` | object | Yes | Plugin identity and metadata |
 | `settings` | array | Yes | User-configurable settings (can be empty `[]`) |
 | `storage` | object | Yes | Database collection schemas (can be `{ "collections": {} }`) |
-| `migrations` | array | Yes | Schema migration operations (can be empty `[]`) |
 | `sdkVersion` | string | Yes | Omniscio plugin-SDK contract the plugin needs, as a bare minimum (e.g. `"2.0.0"`) |
 | `ui` | object | No | UI entry point and sidebar config |
+| `keybindings` | array | No | Shortcuts your plugin registers, up to 20 — see [`keybindings`](#keybindings) |
+| `process` | object | No | Commands your backend may spawn — see [`process`](#process) |
 | `backend` | object | No | Backend entry point and resource limits |
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
 | `permissions` | array | No | Requested API permissions |
 | `cli` | object | No | CLI endpoint declarations |
-| `cron` | object | No | Cron job declarations |
+
+This is the WHOLE accepted surface: every key in the table is a key of the host's manifest schema (`src/shared/plugin-manifest-schema.ts:182-453`), and a key that is not there is silently stripped at parse time rather than rejected — so a typo or a field you remember from an older guide fails by doing nothing.
+
+::: warning No `migrations`, no `cron` block
+Earlier versions of this guide documented both. Neither is a host manifest key (`src/shared/plugin-manifest-schema.ts:182-453`); zod strips them, so a manifest that carries one validates and then behaves as if it were absent. Schema changes come from the automatic `ADD COLUMN` sweep described under [`storage`](#storage-block), and scheduled work is an automation with a schedule, not a manifest block. The `cron` PERMISSION is real and stays in the `permissions` array.
+:::
 
 ## `plugin` Block
 
@@ -64,7 +71,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `icon` | string | Yes | **Path to an image in your package** (e.g. `"assets/icon.svg"`) — your real logo — **or** a [Lucide](https://lucide.dev/icons) icon name for a generic stock glyph. See [Plugin Icon](#plugin-icon). |
 | `category` | string | Yes | One of: `planning`, `development`, `testing`, `devops`, `productivity`, `other` |
 | `license` | object | Yes | `{ "type": "free" }`, `{ "type": "paid" }`, or `{ "type": "trial" }` |
-| `minAppVersion` | string | No | Minimum AMC version required to run this plugin |
+| `minAppVersion` | string | No | Minimum Omniscio version required to run this plugin |
 | `tags` | string[] | No | Discoverability keywords surfaced in marketplace search and shown as chips on the plugin card (up to 10 tags, 30 characters each) |
 | `screenshots` | string[] | No | Gallery images for the marketplace detail page: up to 8 `http(s)` URLs you host, 2048 characters each. Any other value (a `data:` or `javascript:` URL, a 9th entry) fails validation |
 | `links` | object | No | Support links for the detail page's Support tab: any of `homepage`, `support`, `privacy`, `contact`, `repository`, each an `http(s)` URL of at most 2048 characters |
@@ -150,7 +157,7 @@ so `create` and `validate` always agree.
 
 ## `settings` Array
 
-Declare user-configurable settings that appear in AMC's Settings > Plugins > Your Plugin panel. Each setting maps to a key that your plugin reads via `ctx.settings.get(key)` (backend) or `amc.settings.get(key)` (frontend).
+Declare user-configurable settings that appear in Omniscio's Settings > Plugins > Your Plugin panel. Each setting maps to a key that your plugin reads via `ctx.settings.get(key)` (backend) or `amc.settings.get(key)` (frontend).
 
 ### Setting Types
 
@@ -236,7 +243,7 @@ Declare user-configurable settings that appear in AMC's Settings > Plugins > You
 
 ## `storage` Block
 
-Declare database collections your plugin uses. Each collection has named columns with types. AMC creates SQLite tables for each collection, namespaced to your plugin.
+Declare database collections your plugin uses. Each collection has named columns with types. Omniscio creates SQLite tables for each collection, namespaced to your plugin.
 
 ```json
 {
@@ -287,13 +294,13 @@ of columns that together must be unique:
 }
 ```
 
-AMC emits a real `CREATE UNIQUE INDEX` per tuple, de-duplicating existing rows (keep-latest) the
+Omniscio emits a real `CREATE UNIQUE INDEX` per tuple, de-duplicating existing rows (keep-latest) the
 first time it creates one. This is not decoration: [`ctx.db.upsert()`](../api/db) performs an
 `INSERT ... ON CONFLICT (<tuple>) DO UPDATE`, so a tuple declared here is what makes that call
 atomic. An upsert against an undeclared tuple raises a SQLite error rather than silently inserting
 a duplicate.
 
-`id`, `created_at` and `updated_at` are managed by AMC and may not be declared as columns.
+`id`, `created_at` and `updated_at` are managed by Omniscio and may not be declared as columns.
 
 ::: tip
 Every collection automatically gets an `id` column (TEXT, primary key), a `created_at` column, and an `updated_at` column. You do not need to declare these.
@@ -346,65 +353,20 @@ reads back — say why in the table itself:
 The waiver must be 20 to 500 characters. Marketplace review sees it; Omniscio ignores it. A waiver
 never covers a table that is also `agentWritable`.
 
-## `migrations` Array
+### Changing a schema
 
-::: danger Declared migrations are never executed
-AMC parses and validates this block, keeps it in memory, and then **nothing reads it**. There is no
-migration runner, no applied-migrations ledger, and no code path that can drop a plugin column or
-index. Do not plan a schema change around it.
+There is no migration runner and no applied-migrations ledger. When your plugin's `version`
+increases, Omniscio diffs `storage.collections` against the live table and **adds any column that
+is missing**. So a new column appears if you declare it here and bump `plugin.version`. Renames and
+drops are not possible through any Omniscio path; migrate the data yourself in `onEnable` if you
+need one.
 
-**What actually evolves your schema is an automatic ADD COLUMN sweep.** When your plugin's version
-increases, AMC diffs `storage.collections` against the live table and adds any column that is
-missing. So a new column appears if you declare it in `storage.collections` and bump
-`plugin.version` — whether or not you write a migration here. Renames and drops are not possible
-through any AMC path; migrate the data yourself in `onEnable` if you need one.
-
-Declaring migrations stays harmless and still validates, so existing manifests keep working.
-:::
-
-```json
-{
-  "migrations": [
-    {
-      "version": "1.1.0",
-      "operations": [
-        {
-          "type": "add_column",
-          "collection": "tasks",
-          "column": "dueDate",
-          "columnType": "text"
-        },
-        {
-          "type": "add_index",
-          "collection": "tasks",
-          "column": "dueDate"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Migration Operations
-
-| Operation | Required Fields | Description |
-|---|---|---|
-| `add_column` | `collection`, `column`, `columnType` | Add a new column to an existing collection |
-| `add_index` | `collection`, `column` | Create an index on a column |
-| `drop_index` | `collection`, `column` | Drop the index on a column |
-
-`collection` and `column` are required on **every** operation, including the index ones — an index
-operation identifies its index by a single column, and there is no `index` field.
-
-::: warning Ops this SDK used to document
-`remove_column` and `remove_index` appeared in earlier versions of this guide. AMC has never
-accepted either, and `amc-plugin validate` now rejects them. The real drop operation is
-`drop_index`. `column` may not be `id`, `created_at` or `updated_at` — AMC manages those itself.
-:::
+A `migrations` array is NOT a host manifest key (`src/shared/plugin-manifest-schema.ts:182-453`):
+zod strips it, so a manifest carrying one validates and the block does nothing.
 
 ## `ui` Block
 
-Declares the frontend entry point, sidebar appearance, and how AMC frames your plugin.
+Declares the frontend entry point, sidebar appearance, and how Omniscio frames your plugin.
 
 ```json
 {
@@ -431,21 +393,21 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
 | Field | Type | Required | Max | Description |
 |---|---|---|---|---|
 | `entryPoint` | string | No | 500 | Path to the HTML file (relative to plugin root) |
-| `sidebar.title` | string | No | 50 | Label shown in AMC's sidebar |
+| `sidebar.title` | string | No | 50 | Label shown in Omniscio's sidebar |
 | `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
-| `overlay.entryPoint` | string | No | 500 | A separate always-on-top window AMC opens on enable |
+| `overlay.entryPoint` | string | No | 500 | A separate always-on-top window Omniscio opens on enable |
 | `settingsPanel.entryPoint` | string | No | 500 | Your own settings screen, opened from a "Settings" button on your plugin's card. The `settings` fields still render |
-| `widget.entryPoint` | string | No | 500 | The popover AMC opens when your app-header widget is clicked |
+| `widget.entryPoint` | string | No | 500 | The popover Omniscio opens when your app-header widget is clicked |
 | `windows.<key>.entryPoint` | string | No | 500 | A pop-out surface you open with `window.open(key)`. Up to 4; keys are lowercase letters, digits and hyphens (≤ 40); optional `title` (≤ 120), `width` and `height` (200–10000 px) |
-| `hideProjectPanel` | boolean | No | — | Suppress AMC's project panel while your view is open. **Half of "full width" — see below** |
+| `hideProjectPanel` | boolean | No | — | Suppress Omniscio's project panel while your view is open. **Half of "full width" — see below** |
 | `hideSessionsPane` | boolean | No | — | Suppress the plugin sessions pane. **The other half — set it alongside `hideProjectPanel`** |
 | `sessions.label` | string | No | 100 | Heading above your plugin's session list. Defaults to the plugin name |
-| `sessions.contextTemplate` | string | No | 5000 | Extra context appended to AMC's built-in primer for every session on your plugin's project |
+| `sessions.contextTemplate` | string | No | 5000 | Extra context appended to Omniscio's built-in primer for every session on your plugin's project |
 | `sessions.showDivider` | boolean | No | — | Defaults to `true` |
 | `sessions.suggestedPrompts` | array | No | 4 items | Tappable prompts under the session list (`label` ≤ 60, `prompt` ≤ 2000) |
 
 ::: warning Every entry point must stay inside your package
-`amc-plugin validate` applies AMC's own entry-path rule to `ui.entryPoint` and the
+`amc-plugin validate` applies Omniscio's own entry-path rule to `ui.entryPoint` and the
 `overlay`, `settingsPanel`, `widget`, `windows` and `backend` entry points. A path fails if it:
 
 - is blank, longer than 500 characters, or contains a tab or line break;
@@ -453,15 +415,15 @@ Declares the frontend entry point, sidebar appearance, and how AMC frames your p
 - has a `..` segment, with either separator.
 
 `%2e`, `%2f` and `%5c` count as `.`, `/` and `\`, so `%2e%2e/x.html` fails too. A filename with
-two dots, such as `my..page.html`, is fine. AMC refuses to load a plugin that breaks this rule.
+two dots, such as `my..page.html`, is fine. Omniscio refuses to load a plugin that breaks this rule.
 :::
 
 `entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
-alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest AMC
+alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest Omniscio
 installed happily could fail `amc-plugin validate`.)
 
 ::: warning "Full width" is two flags, not one
-The column AMC clears for you has **two** owners, and each has its own opt-out. Hiding one
+The column Omniscio clears for you has **two** owners, and each has its own opt-out. Hiding one
 alone just hands the column to the other, so a plugin that wants the full width must set both:
 
 ```json
@@ -479,44 +441,53 @@ giving up on full width, you can stop.
 `date`, `projectName`, `sessionName`, `workDir` and `pluginName`. A whitespace-only template is
 treated as absent rather than rejected.
 
-`entryPoint` and `sidebar` are both **optional**, matching AMC. A `ui` block carrying only
+`entryPoint` and `sidebar` are both **optional**, matching Omniscio. A `ui` block carrying only
 `hideProjectPanel` or `sessions` is valid -- those are useful without a webview. Omit the whole
 block if you need none of them.
 
-`contextTemplate` is folded *after* AMC's built-in plugin context, so your text adds to the
+`contextTemplate` is folded *after* Omniscio's built-in plugin context, so your text adds to the
 system context rather than replacing it.
 
-## `workspace` Block
+## `keybindings` Array
 
-Declares the [Workspace capability](../api/workspace)'s command slots and binding granularity.
-Requires one or more `workspace.*` permissions.
+Registers keyboard shortcuts your plugin owns (`src/shared/plugin-manifest-schema.ts:360-373`).
 
 ```json
 {
-  "workspace": {
-    "binding": { "granularity": "package" },
-    "commandSlots": [
-      { "name": "vitest.run",  "args": ["--config", "{reporterConfig}", "{files}"] },
-      { "name": "generic.run", "args": [] }
-    ]
+  "keybindings": [
+    { "shortcut": "CommandOrControl+Shift+K", "commandId": "open-panel", "label": "Open my panel" }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `shortcut` | string | Yes | The accelerator, 1–100 characters (`CommandOrControl+Shift+K`) |
+| `commandId` | string | Yes | Letters, digits and hyphens only (1–100) — the command your plugin handles |
+| `label` | string | Yes | Human-readable name shown in the shortcut UI (1–200) |
+
+At most **20** entries; a longer list fails validation.
+
+## `process` Block
+
+Declares the bare command names your backend may spawn (`src/shared/plugin-manifest-schema.ts:374-393`).
+
+```json
+{
+  "process": {
+    "allowedCommands": ["ffmpeg", "ffprobe"]
   }
 }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `binding.granularity` | `"package"` | No | How command bindings are keyed. `"package"` is the only value. |
-| `commandSlots[].name` | string | Yes | Slot name you pass to `exec()` |
-| `commandSlots[].args` | string[] | Yes | Static argument template. May be empty. |
+| `allowedCommands` | string[] | Yes | 1–20 bare command names — letters, digits, `.`, `_`, `+`, `-` only; no path separators, wildcards, whitespace or shell characters |
 
-`args` is **manifest-static by design** -- there is no runtime placeholder -- so every flag your
-plugin can pass is visible at marketplace review. The user supplies the base command; AMC
-appends these arguments and spawns without a shell.
-
-::: danger No host runtime yet
-AMC does not implement the `workspace` namespace. This block validates and packages, but every
-`ctx.workspace.*` call rejects at runtime. See the [Workspace API](../api/workspace).
-:::
+General-purpose interpreters and shells (`node`, `python`, `bash`, `powershell`, `cmd`) and
+command launchers (`git`, `ssh`, `make`, `env`, `xargs`) are refused by name: allowing one would
+let the plugin run arbitrary code, so the host rejects the manifest rather than trusting the plugin.
+The full list is `INTERPRETER_DENYLIST` in `src/shared/plugin-manifest-schema.ts:44-103`.
 
 ## `backend` Block
 
@@ -542,7 +513,7 @@ Omit the entire `backend` block if your plugin is UI-only.
 
 ## `permissions` Array
 
-List the permissions your plugin needs. AMC shows these to the user during installation.
+List the permissions your plugin needs. Omniscio shows these to the user during installation.
 
 ```json
 {
@@ -554,7 +525,7 @@ See [Permissions](./permissions) for a detailed breakdown of what each permissio
 
 ## `cli` Block
 
-Declare CLI endpoints that external tools can call through AMC's control server.
+Declare CLI endpoints that external tools can call through Omniscio's control server.
 
 ```json
 {
@@ -585,36 +556,6 @@ Declare CLI endpoints that external tools can call through AMC's control server.
 | `auth` | boolean | Whether the endpoint requires bearer-token authentication |
 
 Requires the `cli` permission.
-
-## `cron` Block
-
-Declare scheduled jobs that AMC runs on a cron schedule.
-
-```json
-{
-  "cron": {
-    "jobs": [
-      {
-        "id": "heartbeat",
-        "label": "Heartbeat Check",
-        "schedule": "*/30 * * * *",
-        "description": "Periodic health check",
-        "approvalRequired": true
-      }
-    ]
-  }
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | string | Unique job identifier |
-| `label` | string | Human-readable label shown in the AMC UI |
-| `schedule` | string | Cron expression (standard 5-field format) |
-| `description` | string | Description of what the job does |
-| `approvalRequired` | boolean | If `true`, the user must approve each run in the inbox |
-
-Requires the `cron` permission.
 
 ## `sdkVersion`
 
@@ -665,7 +606,6 @@ built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
   },
   "settings": [],
   "storage": { "collections": {} },
-  "migrations": [],
   "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
@@ -710,7 +650,6 @@ built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
       }
     }
   },
-  "migrations": [],
   "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
@@ -775,7 +714,6 @@ built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
       }
     }
   },
-  "migrations": [],
   "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
@@ -788,17 +726,6 @@ built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
   "cli": {
     "endpoints": [
       { "method": "GET", "path": "status", "description": "Get plugin status", "auth": true }
-    ]
-  },
-  "cron": {
-    "jobs": [
-      {
-        "id": "heartbeat",
-        "label": "Heartbeat Check",
-        "schedule": "*/30 * * * *",
-        "description": "Periodic health check",
-        "approvalRequired": true
-      }
     ]
   }
 }

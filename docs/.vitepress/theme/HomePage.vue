@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useData } from 'vitepress'
 import {
   Blocks,
   Terminal,
@@ -10,6 +11,7 @@ import {
   Check
 } from 'lucide-vue-next'
 
+const { site } = useData()
 const copied = ref(false)
 const typedLength = ref(0)
 const isTypingDone = ref(false)
@@ -244,17 +246,17 @@ const features = [
   {
     icon: FileCode,
     title: 'Manifest v2',
-    description: 'Type-safe plugin manifest with Zod validation, permissions, migrations, and backend lifecycle.'
+    description: 'Type-safe plugin manifest with Zod validation, permissions, and backend lifecycle.'
   },
   {
     icon: Store,
     title: 'Marketplace',
-    description: 'Publish plugins to the AMC Marketplace with GitHub authentication and automated review.'
+    description: 'Publish plugins to the Omniscio Marketplace with GitHub authentication and automated review.'
   },
   {
     icon: LayoutTemplate,
     title: 'Three Templates',
-    description: 'Start from basic (UI only), with-backend, or full (UI + backend + cron + CLI).'
+    description: 'Start from basic (UI only), with-backend, or full (UI + backend + CLI).'
   }
 ]
 </script>
@@ -265,18 +267,18 @@ const features = [
     <section class="hero">
       <div class="hero-content">
         <div class="hero-text">
-          <span class="hero-brand">AMC PLUGIN SDK</span>
+          <span class="hero-brand">OMNISCIO PLUGIN SDK</span>
           <h1 class="hero-headline">
-            Build plugins for<br />Agent Mission Control
+            Build plugins for<br />Omniscio
           </h1>
           <p class="hero-tagline">
             Type-safe APIs, CLI toolchain, dev shell with hot-reload
           </p>
           <div class="hero-actions">
-            <a href="/amc-plugin-sdk/guide/quickstart.html" class="btn-primary">
+            <a :href="`${site.base}guide/quickstart.html`" class="btn-primary">
               Get Started
             </a>
-            <a href="/amc-plugin-sdk/api/" class="btn-ghost">
+            <a :href="`${site.base}api/`" class="btn-ghost">
               API Reference
             </a>
           </div>
