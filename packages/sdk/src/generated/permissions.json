@@ -179,7 +179,7 @@
   {
     "name": "sessions.launchAny",
     "label": "Launch Any Session",
-    "description": "Start sessions in any of your projects, with any model or engine. Granted only to built-in plugins.",
+    "description": "Start sessions in any of your projects, with any model or engine. Granted only to built-in plugins and to first-party plugins the Marketplace has classified.",
     "tier": "standard",
     "namespaces": [
       "session",
