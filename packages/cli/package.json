@@ -2,6 +2,15 @@
   "name": "@agent-mc/plugin-cli",
   "version": "3.2.0",
   "description": "CLI tool for building AMC plugins",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlstradingco/amc-plugin-sdk.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://docs.omniscio.com/sdk/",
+  "bugs": {
+    "url": "https://github.com/jlstradingco/amc-plugin-sdk/issues"
+  },
   "type": "module",
   "bin": {
     "amc-plugin": "./dist/index.js",

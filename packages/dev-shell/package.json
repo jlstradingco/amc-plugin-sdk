@@ -1,6 +1,15 @@
 {
   "name": "@agent-mc/plugin-dev-shell",
   "version": "3.2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlstradingco/amc-plugin-sdk.git",
+    "directory": "packages/dev-shell"
+  },
+  "homepage": "https://docs.omniscio.com/sdk/",
+  "bugs": {
+    "url": "https://github.com/jlstradingco/amc-plugin-sdk/issues"
+  },
   "type": "module",
   "main": "./dist/shell-window.js",
   "files": [
