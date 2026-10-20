@@ -149,7 +149,10 @@ describe('SDK <-> host permission parity', () => {
     //
     // Still 37 on 2026-10-12 (GitHub host master 0369c057eb): the 3.2.0 change
     // moved `boards.read` from HOST_AHEAD into the SDK enum, not into the host.
-    expect(HOST_PERMISSIONS.length).toBe(37)
+    //
+    // 37 -> 38 on 2026-10-20: the host declared `members.read` (declaration
+    // only, no capability gated on it yet), so the mirror gained it too.
+    expect(HOST_PERMISSIONS.length).toBe(38)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
@@ -218,6 +221,10 @@ describe('SDK <-> host permission parity', () => {
       'auth.sharedSignIn': { surface: CTX, key: 'auth' },
       'documents.read': { surface: BRIDGE, key: 'documents' },
       'documents.write': { surface: BRIDGE, key: 'documents' },
+      // Accepted so a plugin may declare it; the host gates no method on it yet,
+      // so there is no ctx or bridge namespace to point at — the `boards.read`
+      // classification. Change it the day `ctx.members` or `AgentMC.members` lands.
+      'members.read': null,
       launch: null,
       coreRead: null,
       oauth: null,

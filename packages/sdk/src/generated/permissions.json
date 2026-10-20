@@ -339,5 +339,12 @@
     "namespaces": [
       "writer"
     ]
+  },
+  {
+    "name": "members.read",
+    "label": "See your workspace's people",
+    "description": "Read the names, pictures and roles of the people in the workspace you are using. Never their email addresses.",
+    "tier": "standard",
+    "namespaces": []
   }
 ]

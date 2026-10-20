@@ -110,7 +110,7 @@
  */
 export const HOST_MIRROR_PROVENANCE = {
   /** ISO date this mirror was last reconciled against the host source file. */
-  reconciledAt: '2026-10-12',
+  reconciledAt: '2026-10-20',
   /** Full SHA of the host commit the strings below were read from. */
   sourceCommit: '0369c057eb1ef756f9cab0f40b04789290a7209c',
   sourceBranch: 'master',
@@ -164,6 +164,7 @@ export const HOST_PERMISSIONS = [
   'workspace.exec',
   'documents.read',
   'documents.write',
+  'members.read',
 ] as const
 
 // --- Documented known-deltas (intentional, tracked drift) -------------------

@@ -624,7 +624,8 @@
           "workspace.write",
           "workspace.exec",
           "documents.read",
-          "documents.write"
+          "documents.write",
+          "members.read"
         ]
       },
       "maxItems": 50
