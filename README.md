@@ -257,6 +257,19 @@ plugin-sdk/                       # inside the Omniscio repository
 └── package.json                  # Root scripts (build, test, clean)
 ```
 
+### Adding a capability namespace
+
+Every namespace the Omniscio webview exposes must be typed on `AgentMC` in
+`packages/sdk/src/types/bridge.ts`. `namespace-coverage.test.ts` compares that interface against
+the host's generated surface and fails when an exposed namespace is neither typed nor listed.
+
+If you cannot type one yet, add it to `packages/sdk/src/__tests__/namespace-coverage-register.ts`
+with a one-line reason. The register only shrinks: typing a registered namespace without deleting
+its entry fails the same test, so a fixed gap cannot leave a stale row behind.
+
+The comparison runs both ways. Typing a namespace the webview never receives fails too, because an
+author can only call what the host answers.
+
 ## Getting Started
 
 ### Prerequisites
