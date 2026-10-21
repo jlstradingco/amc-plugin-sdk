@@ -4,7 +4,7 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest, classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, resolveBannedScanDirs, collectPackageEntries } from '../lib/project.js'
+import { isTypeScriptProject, resolveBannedScanDirs, collectPackageEntries, entryPointShips } from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 import { reportCommandTables } from '../lib/command-tables.js'
 
@@ -79,14 +79,32 @@ export const validateCommand = new Command('validate')
       hasErrors = true
     }
 
-    if (manifest.ui?.entryPoint) {
-      const srcPath = path.join(cwd, 'src', manifest.ui.entryPoint.replace('dist/', ''))
-      const distPath = path.join(cwd, manifest.ui.entryPoint)
+    const uiPages: Array<{ label: string; entryPoint: string | undefined }> = [
+      { label: 'UI entry point', entryPoint: manifest.ui?.entryPoint },
+      // The titlebar widget's popover page. Without it on disk the popover opens blank.
+      { label: 'Widget entry point', entryPoint: manifest.ui?.widget?.entryPoint },
+    ]
+    for (const { label, entryPoint } of uiPages) {
+      if (!entryPoint) continue
+      const srcPath = path.join(cwd, 'src', entryPoint.replace('dist/', ''))
+      const distPath = path.join(cwd, entryPoint)
       if (!fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-        fail(`UI entry point not found: ${manifest.ui.entryPoint}`)
+        fail(`${label} not found: ${entryPoint}`)
+        hasErrors = true
+        continue
+      }
+      // A TypeScript plugin ships only `dist/` (plus `assets/`), so a page that exists in the
+      // project folder can still be absent from the archive and open blank. Same rule as the
+      // icon check above: the declared path's top segment has to be something `package` ships.
+      const { ships, entries: shipped } = entryPointShips(cwd, manifest, entryPoint)
+      if (!ships) {
+        fail(
+          `${label} ${entryPoint} will not be shipped: the package contains only ` +
+            `${shipped.join(', ')}.`
+        )
         hasErrors = true
       } else {
-        ok('UI entry point exists')
+        ok(`${label} exists`)
       }
     }
 

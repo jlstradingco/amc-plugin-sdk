@@ -1,0 +1,22 @@
+{
+  "plugin": {
+    "id": "widget-demo",
+    "name": "Widget Demo",
+    "version": "1.0.0",
+    "author": "AMC Team",
+    "description": "Draws a live status widget in the Omniscio titlebar",
+    "icon": "sparkles",
+    "category": "other",
+    "license": { "type": "free" }
+  },
+  "sdkVersion": "2.0.0",
+  "permissions": ["chrome", "chrome.widget"],
+  "settings": [],
+  "storage": { "collections": {} },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": { "title": "Widget Demo", "icon": "sparkles" },
+    "widget": { "entryPoint": "dist/ui/widget.html" }
+  }
+}

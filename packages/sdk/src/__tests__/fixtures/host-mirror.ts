@@ -39,6 +39,14 @@ export const HOST_UI_BOUNDS = {
   /** `sidebar.title` / `sidebar.icon`: `min(1).max(50)` — validator:222-227 */
   sidebarTitleMax: 50,
   sidebarIconMax: 50,
+  /** `overlay.entryPoint`: `min(1).max(500)`, REQUIRED when `overlay` present — validator:228-232 */
+  overlayEntryPointMax: 500,
+  /**
+   * `widget.entryPoint`: `pluginRelativeEntryPath` — `min(1).max(500)` plus the
+   * blank / scheme / absolute / drive-qualified / `..` refinements — validator:53-90 and :420.
+   * (Read from the Omniscio master snapshot 9e916d64f390, 2026-10-12.)
+   */
+  widgetEntryPointMax: 500,
   /** `sessions.contextTemplate`: `z.string().max(5000).optional()` — NOTE: no `.min(1)` — validator:246 */
   contextTemplateMax: 5000,
   /** `sessions.label`: `min(1).max(100)` — validator:247 */

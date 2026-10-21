@@ -510,3 +510,41 @@ describe('ctx.workspace refuses to fake a capability it cannot model', () => {
     expect(Object.keys(shell).sort()).toEqual(Object.keys(harness).sort())
   })
 })
+
+describe('createMockContext — core (coreRead)', () => {
+  const core = () =>
+    createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false }).core
+
+  it('lists sample sessions and projects, filtering sessions by project', async () => {
+    const all = await core().sessions.list()
+    expect(all.length).toBeGreaterThan(1)
+    const projectId = all[0]!.projectId
+    const one = await core().sessions.list({ projectId })
+    expect(one.length).toBeGreaterThan(0)
+    expect(one.every((s) => s.projectId === projectId)).toBe(true)
+    expect((await core().projects.list()).length).toBeGreaterThan(0)
+  })
+
+  it('gets one session and project by id, and answers null for an unknown id', async () => {
+    const [first] = await core().sessions.list()
+    expect((await core().sessions.get(first!.id))?.id).toBe(first!.id)
+    expect(await core().sessions.get('nope')).toBeNull()
+    expect(await core().projects.get('nope')).toBeNull()
+  })
+
+  it('returns messages for a sample session, honours window, and [] for an unknown id', async () => {
+    const sessions = await core().sessions.list()
+    const withMessages = await Promise.all(
+      sessions.map(async (s) => ({ id: s.id, messages: await core().messages.list(s.id) }))
+    ).then((rows) => rows.find((r) => r.messages.length > 1))
+    expect(withMessages, 'at least one sample session carries 2+ messages').toBeDefined()
+    expect(await core().messages.list(withMessages!.id, 1)).toHaveLength(1)
+    expect(await core().messages.list('nope')).toEqual([])
+  })
+
+  it('hands back copies, so a plugin cannot corrupt the sample data', async () => {
+    const [first] = await core().sessions.list()
+    first!.name = 'mutated'
+    expect((await core().sessions.list())[0]!.name).not.toBe('mutated')
+  })
+})

@@ -80,6 +80,8 @@
 //     the SDK enum, so a plugin declaring it passes `validate` and preflight.
 //     Its webview namespace (`AgentMC.boards`) is still untyped — a named
 //     follow-up, not an oversight.
+//     The same reconciliation also moves `chrome.widget` and `coreRead` OUT of
+//     HOST_AHEAD_PERMISSIONS: the SDK gained both (AgentMC.widget, ctx.core).
 //
 //
 // RECURRENCE #4 HAS A SECOND LESSON, and it is the more expensive one. The

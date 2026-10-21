@@ -1,6 +1,6 @@
 # Examples
 
-Seven example plugins ship with the SDK, demonstrating progressively more complex patterns.
+Eight example plugins ship with the SDK, demonstrating progressively more complex patterns.
 
 ## Minimal Examples
 
@@ -53,6 +53,14 @@ Add and remove items in the Omniscio inbox. Demonstrates the full-replace semant
 A working recorder. Screen recording is a **backend** capability (`ctx.recording`) with no webview equivalent, so this demo's backend owns it and the webview drives it over the shared event bus — which also makes it the reference example for crossing the two surfaces.
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/recording-demo)
+
+### Widget Demo
+
+**APIs:** `widget.set`, `widget.clear`
+
+Draws a live widget in the Omniscio titlebar. Pick a shape and a tone and watch the header change. Needs the `chrome` and `chrome.widget` permissions, and declares `ui.widget.entryPoint` for the click popover. The dev shell has no titlebar, so try it inside Omniscio.
+
+[View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/widget-demo)
 
 ## Full Example
 

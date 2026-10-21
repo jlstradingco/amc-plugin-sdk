@@ -294,8 +294,11 @@ export interface PluginManifest {
      */
     settingsPanel?: { entryPoint: string }
     /**
-     * The popover the host opens when its app-header widget is clicked. Without
-     * it, clicking the widget opens the plugin's sidebar panel instead.
+     * The page shown in the popover that opens when the user clicks the plugin's
+     * titlebar widget (a 320x256 frame). Requires the `chrome.widget` permission
+     * to have any effect; without it, clicking the widget opens the plugin's own
+     * sidebar panel instead. Must be a plugin-relative path — no URL, no leading
+     * `/`, no drive letter, no `..` segment.
      */
     widget?: { entryPoint: string }
     /**

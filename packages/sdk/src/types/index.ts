@@ -30,6 +30,11 @@ export type {
   WorkspaceExecJobState, WorkspaceExecStartRequest, WorkspaceExecStartResult,
   WorkspaceExecJobStatus, WorkspaceExecPollRequest, WorkspaceExecPollResponse,
   WorkspaceApi,
+  // Core read (`coreRead`)
+  CoreSession, CoreProject, CoreMessage, PluginCore,
 } from './context.js'
+
+// Titlebar widget (`chrome.widget`) — webview-only, declared with the bridge types
+export type { WidgetShape, WidgetTone, WidgetSpec, BridgeWidget } from './bridge.js'
 
 export type { PluginBackend, PluginActivate } from './backend.js'

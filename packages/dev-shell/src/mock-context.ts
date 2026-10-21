@@ -1,11 +1,24 @@
 import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import type { PluginContext, PluginDbRow, QueryOptions, SessionMessage } from '@agent-mc/plugin-sdk'
+import type {
+  PluginContext,
+  PluginDbRow,
+  QueryOptions,
+  SessionMessage,
+  CoreSession,
+  CoreProject,
+  CoreMessage,
+} from '@agent-mc/plugin-sdk'
 // The dev shell is itself a development tool, so depending on the SDK's testing
 // entry is in-band: it keeps ONE definition of the backend message row rather
 // than a second copy that can drift from the host.
-import { createMockSessionMessage, estimatePayloadBytes, hostQueryPage } from '@agent-mc/plugin-sdk/testing'
+import {
+  coreMessagesPage,
+  createMockSessionMessage,
+  estimatePayloadBytes,
+  hostQueryPage,
+} from '@agent-mc/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -25,6 +38,57 @@ function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
 }
 
+
+// Fixed sample data for `ctx.core` (the `coreRead` permission), so a plugin that
+// lists sessions and projects has something to render. These are made-up rows,
+// not the developer's real Omniscio data. Timestamps are fixed for the same
+// reason the spend mock uses the epoch: a wall-clock value makes a plugin's
+// own snapshot tests non-deterministic.
+const SAMPLE_PROJECTS: CoreProject[] = [
+  { id: 'sample-project-1', name: 'Sample Web App', folderPath: '/home/dev/sample-web-app' },
+  { id: 'sample-project-2', name: 'Sample CLI Tool', folderPath: '/home/dev/sample-cli-tool' },
+]
+
+const SAMPLE_SESSIONS: CoreSession[] = [
+  {
+    id: 'sample-session-1',
+    projectId: 'sample-project-1',
+    name: 'Fix the login redirect',
+    status: 'running',
+    lastActiveAt: '2026-01-01T12:00:00.000Z',
+  },
+  {
+    id: 'sample-session-2',
+    projectId: 'sample-project-1',
+    name: 'Add dark mode',
+    status: 'idle',
+    lastActiveAt: '2026-01-01T09:30:00.000Z',
+  },
+  {
+    id: 'sample-session-3',
+    projectId: 'sample-project-2',
+    name: 'Write the README',
+    status: 'idle',
+    lastActiveAt: '2025-12-31T17:15:00.000Z',
+  },
+]
+
+const SAMPLE_MESSAGES: Record<string, CoreMessage[]> = {
+  'sample-session-1': [
+    {
+      id: 'sample-message-1',
+      role: 'user',
+      content: 'The login page redirects to the wrong place after sign in.',
+      timestamp: '2026-01-01T11:58:00.000Z',
+    },
+    {
+      id: 'sample-message-2',
+      role: 'assistant',
+      content: 'The redirect target is read before the session is created. I will move it.',
+      timestamp: '2026-01-01T12:00:00.000Z',
+    },
+  ],
+}
 
 /**
  * `ctx.workspace` rejects here rather than pretending to work.
@@ -553,6 +617,27 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           backgroundFeatures: [],
           notableCharges: [],
         })
+      },
+    },
+
+    // Read-only sample data. Like the host, an unknown id is `null` / `[]`, not an error.
+    core: {
+      sessions: {
+        list: (filter) =>
+          Promise.resolve(
+            clone(SAMPLE_SESSIONS.filter((s) => !filter?.projectId || s.projectId === filter.projectId))
+          ),
+        get: (sessionId) =>
+          Promise.resolve(clone(SAMPLE_SESSIONS.find((s) => s.id === sessionId) ?? null)),
+      },
+      projects: {
+        list: () => Promise.resolve(clone(SAMPLE_PROJECTS)),
+        get: (projectId) =>
+          Promise.resolve(clone(SAMPLE_PROJECTS.find((p) => p.id === projectId) ?? null)),
+      },
+      messages: {
+        list: (sessionId, window) =>
+          Promise.resolve(clone(coreMessagesPage(SAMPLE_MESSAGES[sessionId] ?? [], window))),
       },
     },
 

@@ -386,6 +386,18 @@ export const manifestSchema = z.object({
     // Without this rule `permissions: ["workspace.write"]` passed
     // `amc-plugin validate`, then failed BOTH the publish gate and the install.
     const permissions = manifest.permissions ?? []
+    // `chrome.widget` draws in the titlebar, the highest-trust surface in the
+    // app. The host requires an explicit `chrome` sibling for the same reason it
+    // requires `workspace.read`: the consent card the user reads must match the
+    // permissions array the plugin actually holds, so nothing is implied.
+    if (permissions.includes('chrome.widget') && !permissions.includes('chrome')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['permissions'],
+        message:
+          '"chrome.widget" requires an explicit "chrome" permission in the same manifest: add chrome to permissions',
+      })
+    }
     if (permissions.includes('workspace.read')) return
     for (const perm of ['workspace.write', 'workspace.exec'] as const) {
       if (permissions.includes(perm)) {

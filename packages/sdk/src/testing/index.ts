@@ -31,7 +31,10 @@ import type {
   SessionMessage,
   SpendReportBreakdown,
   PluginRpc,
-  PluginHost
+  PluginHost,
+  CoreSession,
+  CoreProject,
+  CoreMessage
 } from '../types/index.js'
 
 export { createRpcDouble } from './rpc-double.js'
@@ -98,6 +101,17 @@ export interface TestContextOptions {
   rpc?: PluginRpc
   /** Install `ctx.host`. Without it `ctx.host` is absent, as on every released Omniscio so far. */
   host?: PluginHost
+  /**
+   * Seed `ctx.core` (the `coreRead` permission). Empty by default, like a brand-new
+   * install. `messages` is keyed by session id; the mock applies the host's
+   * 200-message cap and `window` rule, and answers `null` / `[]` for ids it was
+   * not given, as the host does for an unknown session.
+   */
+  core?: {
+    sessions?: CoreSession[]
+    projects?: CoreProject[]
+    messages?: Record<string, CoreMessage[]>
+  }
   db?: {
     /**
      * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
@@ -235,6 +249,25 @@ export function hostQueryPage(options?: Pick<QueryOptions, 'limit' | 'offset'>):
   const limit = clamp(wholeNumberOr(options?.limit ?? defaultLimit, defaultLimit), 1, maxLimit)
   const offset = options?.offset ? clamp(wholeNumberOr(options.offset, 0), 0, maxOffset) : 0
   return { offset, limit }
+}
+
+/** The host's per-call ceiling on `ctx.core.messages.list`. */
+const CORE_MESSAGES_CAP = 200
+
+/**
+ * The messages Omniscio returns for `ctx.core.messages.list`: the first N in transcript order,
+ * where `window` can lower the 200-message cap but never raise it. A value that is not a positive
+ * number below the cap means the cap.
+ *
+ * Exported so the dev shell reads them the same way — one definition of the host's rule, like
+ * `hostQueryPage` above.
+ */
+export function coreMessagesPage(messages: CoreMessage[], window?: number): CoreMessage[] {
+  const cap =
+    typeof window === 'number' && window > 0 && window < CORE_MESSAGES_CAP
+      ? window
+      : CORE_MESSAGES_CAP
+  return messages.slice(0, cap)
 }
 
 function wholeNumberOr(value: unknown, fallback: number): number {
@@ -663,6 +696,33 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     // `undefined` in production. See the note on PluginContext in ../types/context.ts.
     spend: {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
+    },
+
+    // Mirrors the host's read rules: a missing id is `null` / `[]` rather than an
+    // error, and `messages.list` caps at 200, where `window` can only lower it.
+    core: {
+      sessions: {
+        list: (filter) =>
+          Promise.resolve(
+            (opts.core?.sessions ?? []).filter(
+              (s) => !filter?.projectId || s.projectId === filter.projectId
+            )
+          ),
+        get: (sessionId) =>
+          Promise.resolve((opts.core?.sessions ?? []).find((s) => s.id === sessionId) ?? null)
+      },
+      projects: {
+        list: () => Promise.resolve([...(opts.core?.projects ?? [])]),
+        get: (projectId) =>
+          Promise.resolve((opts.core?.projects ?? []).find((p) => p.id === projectId) ?? null)
+      },
+      messages: {
+        list: (sessionId, window) => {
+          const known = (opts.core?.sessions ?? []).some((s) => s.id === sessionId)
+          if (!known) return Promise.resolve([])
+          return Promise.resolve(coreMessagesPage(opts.core?.messages?.[sessionId] ?? [], window))
+        }
+      }
     },
 
     workspace: workspaceNotFakeable(),

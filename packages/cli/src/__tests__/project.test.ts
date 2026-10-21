@@ -6,6 +6,7 @@ import {
   isTypeScriptProject,
   collectFlatPackageEntries,
   collectPackageEntries,
+  entryPointShips,
   findRootReadme,
   resolveBannedScanDirs,
 } from '../lib/project.js'
@@ -38,6 +39,13 @@ describe('collectFlatPackageEntries', () => {
     fs.mkdirSync(path.join(tmp, 'ui'))
     const manifest = { ui: { entryPoint: 'ui/index.html' } }
     expect(collectFlatPackageEntries(tmp, manifest)).toEqual(['ui'])
+  })
+
+  it('includes the top-level dir of the titlebar widget page when it lives elsewhere', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    fs.mkdirSync(path.join(tmp, 'widget'))
+    const manifest = { ui: { entryPoint: 'ui/index.html', widget: { entryPoint: 'widget/popover.html' } } }
+    expect(new Set(collectFlatPackageEntries(tmp, manifest))).toEqual(new Set(['ui', 'widget']))
   })
 
   it('includes backend, assets and prompts dirs when present', () => {
@@ -203,5 +211,34 @@ describe('resolveBannedScanDirs', () => {
     fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
     fs.mkdirSync(path.join(tmp, 'dist'))
     for (const d of resolveBannedScanDirs(tmp, {})) expect(path.isAbsolute(d)).toBe(true)
+  })
+})
+
+describe('entryPointShips', () => {
+  it('ships a page named by a flat plugin, wherever the manifest puts it', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    fs.mkdirSync(path.join(tmp, 'widget'))
+    const manifest = { ui: { entryPoint: 'ui/index.html', widget: { entryPoint: 'widget/popover.html' } } }
+    expect(entryPointShips(tmp, manifest, 'widget/popover.html')).toEqual({
+      ships: true,
+      entries: expect.arrayContaining(['ui', 'widget']),
+    })
+  })
+
+  it('refuses a page a TypeScript plugin would not ship, and names what it does ship', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    const manifest = { ui: { entryPoint: 'ui/index.html', widget: { entryPoint: 'ui/widget.html' } } }
+    const result = entryPointShips(tmp, manifest, 'ui/widget.html')
+    expect(result.ships).toBe(false)
+    expect(result.entries).toContain('dist')
+    expect(result.entries).not.toContain('ui')
+  })
+
+  it('accepts a page under dist/ in a TypeScript plugin', () => {
+    fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    expect(entryPointShips(tmp, { ui: { widget: { entryPoint: 'dist/ui/widget.html' } } }, 'dist/ui/widget.html').ships).toBe(true)
   })
 })

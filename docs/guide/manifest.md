@@ -397,7 +397,7 @@ Declares the frontend entry point, sidebar appearance, and how Omniscio frames y
 | `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
 | `overlay.entryPoint` | string | No | 500 | A separate always-on-top window Omniscio opens on enable |
 | `settingsPanel.entryPoint` | string | No | 500 | Your own settings screen, opened from a "Settings" button on your plugin's card. The `settings` fields still render |
-| `widget.entryPoint` | string | No | 500 | The popover Omniscio opens when your app-header widget is clicked |
+| `widget.entryPoint` | string | No | 500 | The 320 x 256 popover Omniscio opens when your titlebar widget is clicked. Needs `chrome` and `chrome.widget`. **Plugin-relative only**, see below |
 | `windows.<key>.entryPoint` | string | No | 500 | A pop-out surface you open with `window.open(key)`. Up to 4; keys are lowercase letters, digits and hyphens (≤ 40); optional `title` (≤ 120), `width` and `height` (200–10000 px) |
 | `hideProjectPanel` | boolean | No | — | Suppress Omniscio's project panel while your view is open. **Half of "full width" — see below** |
 | `hideSessionsPane` | boolean | No | — | Suppress the plugin sessions pane. **The other half — set it alongside `hideProjectPanel`** |
@@ -417,6 +417,14 @@ Declares the frontend entry point, sidebar appearance, and how Omniscio frames y
 `%2e`, `%2f` and `%5c` count as `.`, `/` and `\`, so `%2e%2e/x.html` fails too. A filename with
 two dots, such as `my..page.html`, is fine. Omniscio refuses to load a plugin that breaks this rule.
 :::
+
+`widget.entryPoint` is the 320 x 256 popover behind a [titlebar widget](../api/widget). It must be a
+plugin-relative path: not blank, no URL or scheme, no leading `/` or `\`, no drive letter and no
+`..` segment — the same rule as every other entry point above, and it is what Omniscio
+checks at install, so a bad path fails `amc-plugin validate` rather than showing a blank frame.
+Without it, clicking the widget opens your plugin's own panel. `chrome.widget` is only valid beside
+an explicit `chrome` permission. `amc-plugin validate` also checks that the file exists and that
+`package` will ship it.
 
 `entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
 alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest Omniscio

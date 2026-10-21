@@ -68,7 +68,9 @@ export default defineConfig({
             { text: 'Session History', link: '/api/session-history' },
             { text: 'Firebase', link: '/api/firebase' },
             { text: 'Spend', link: '/api/spend' },
-            { text: 'Workspace', link: '/api/workspace' }
+            { text: 'Workspace', link: '/api/workspace' },
+            { text: 'Core', link: '/api/core' },
+            { text: 'Widget', link: '/api/widget' }
           ]
         }
       ]

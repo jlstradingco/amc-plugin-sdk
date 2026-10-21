@@ -13,7 +13,7 @@ export function isTypeScriptProject(cwd: string): boolean {
 }
 
 interface FlatManifestLike {
-  ui?: { entryPoint?: string }
+  ui?: { entryPoint?: string; widget?: { entryPoint?: string } }
   backend?: { entryPoint?: string }
 }
 
@@ -49,6 +49,8 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   }
 
   addTopSegment(manifest.ui?.entryPoint)
+  // The titlebar widget's popover page ships too, wherever the author put it.
+  addTopSegment(manifest.ui?.widget?.entryPoint)
   addTopSegment(manifest.backend?.entryPoint)
   for (const dir of CONVENTIONAL_DIRS) names.add(dir)
 
@@ -72,6 +74,21 @@ export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): 
   const readme = findRootReadme(cwd)
   if (readme) entries.push(readme)
   return entries
+}
+
+/**
+ * Whether `package` would actually ship the file a manifest entry point names. A TypeScript
+ * plugin ships only `dist/` (plus `assets/`), so a page that exists in the project folder can
+ * still be absent from the archive and open blank at runtime.
+ */
+export function entryPointShips(
+  cwd: string,
+  manifest: FlatManifestLike,
+  entryPoint: string
+): { ships: boolean; entries: string[] } {
+  const entries = collectPackageEntries(cwd, manifest)
+  const top = entryPoint.split(/[/\\]/)[0] ?? ''
+  return { ships: entries.includes(top), entries }
 }
 
 /**

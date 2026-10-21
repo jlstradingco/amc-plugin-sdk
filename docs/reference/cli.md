@@ -32,7 +32,7 @@ amc-plugin create <name> [options]
 
 | Flag | Description | Default |
 |---|---|---|
-| `-t, --template <template>` | Template variant: `basic`, `with-backend`, `full` | `basic` |
+| `-t, --template <template>` | Template variant: `basic`, `with-backend`, `full`, `webview` (flat JS, no build step), `widget` (a `webview` plugin with a titlebar widget and its popover page) | `basic` |
 | `--display-name <name>` | Display name (skips interactive prompt) | &mdash; |
 | `--description <desc>` | Plugin description | &mdash; |
 | `--author <author>` | Plugin author | &mdash; |
@@ -112,6 +112,7 @@ amc-plugin validate
 | Command tables | Fails on a table that can hold a runnable command; warns on fuzzier shapes — see [Command tables](#command-tables) |
 | SDK version | Ensures `sdkVersion` field is present |
 | UI entry point | Verifies the declared UI entry file exists |
+| Widget entry point | Verifies the file declared as `ui.widget.entryPoint` exists (only when declared) |
 | Backend entry point | Verifies the declared backend entry file exists |
 | TypeScript | Runs `tsc --noEmit` to check for type errors |
 | Banned imports | Scans `dist/` for disallowed Node/Electron imports — see below |

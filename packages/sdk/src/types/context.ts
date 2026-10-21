@@ -1044,6 +1044,72 @@ export interface WorkspaceExecPollResponse {
   consoleSkippedBytes: number
 }
 
+/** A session as `ctx.core` reports it: five metadata fields, no transcript. */
+export interface CoreSession {
+  id: string
+  projectId: string
+  name: string
+  /** The session's status as Omniscio reports it. Typed as a plain string; do not rely on a fixed set of values. */
+  status: string
+  /** ISO 8601 timestamp of the session's last activity. */
+  lastActiveAt: string
+}
+
+/** A project as `ctx.core` reports it. */
+export interface CoreProject {
+  id: string
+  name: string
+  /** Absolute path of the project's folder on the user's machine. */
+  folderPath: string
+}
+
+/** One message of a session transcript, as text. */
+export interface CoreMessage {
+  id: string
+  /** `'user'` for what the person typed; `'assistant'` for everything the agent sent back. */
+  role: 'user' | 'assistant'
+  /** The message text. */
+  content: string
+  /** ISO 8601 timestamp. */
+  timestamp: string
+}
+
+/**
+ * `ctx.core` — a read-only view of the user's sessions, projects and message
+ * text. Backend only. Requires the `coreRead` permission, which is ELEVATED
+ * (the consent screen's higher-risk tier). Omniscio describes it to the user as
+ * "Read your sessions, projects, and the text of their messages (never their
+ * secrets)".
+ *
+ * This is a BLANKET read across everything the user has, not a per-session
+ * grant. Prefer the narrower `sessions.readHistory` grant when you need only
+ * one session's history. Deleted sessions and sessions the app keeps hidden
+ * (silent recipe runs) are never returned. Omniscio records each read in an
+ * audit table.
+ */
+export interface PluginCore {
+  sessions: {
+    /** All visible sessions, or only one project's when `projectId` is given. */
+    list(filter?: { projectId?: string }): Promise<CoreSession[]>
+    /** `null` for an unknown, deleted or hidden session. */
+    get(sessionId: string): Promise<CoreSession | null>
+  }
+  projects: {
+    list(): Promise<CoreProject[]>
+    /** `null` for an unknown or deleted project. */
+    get(projectId: string): Promise<CoreProject | null>
+  }
+  messages: {
+    /**
+     * A session's messages as text, at most 200 (the first N in transcript order
+     * when `window` is given). `window` can
+     * lower that cap but never raise it; a value that is not a positive number
+     * below 200 means 200. Returns `[]` for an unknown, deleted or hidden session.
+     */
+    list(sessionId: string, window?: number): Promise<CoreMessage[]>
+  }
+}
+
 /**
  * Read, write, and run commands against the user's real project checkouts and
  * worktrees, scoped per project by a runtime grant the user makes (and can
@@ -1316,6 +1382,12 @@ export interface PluginContext {
    * webview's `AgentMC.host` has existed since v0.1.89). Read it as `ctx.host?.getCapabilities()`.
    */
   host?: PluginHost
+  /**
+   * Backend only. Requires `coreRead`. See {@link PluginCore}. Optional, like `rpc` and `host`,
+   * so a `PluginContext` double written before the SDK typed it still compiles: check for it
+   * (`if (!ctx.core) …`) rather than assuming it.
+   */
+  core?: PluginCore
   // NOTE: `tts`, `sessionHistory` and `firebase` are deliberately ABSENT.
   //
   // All three are real capabilities, but they live on the WEBVIEW bridge only —

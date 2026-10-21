@@ -425,6 +425,43 @@ preflight. The `boards` namespace itself is not typed by this SDK yet: call it t
 
 ---
 
+### `chrome.widget`
+
+**Grants access to:** `AgentMC.widget` (a live status widget in the Omniscio titlebar -- **webview** only)
+
+Draw one small widget in the app's titlebar: a number, a short label and a status tone that your plugin can update at any time. You describe it with data and Omniscio draws it, so a plugin cannot paint its own pixels in the highest-trust part of the app. The text caps (8 and 16 characters) exist so a plugin cannot imitate a system message there, and you pick a tone's **meaning** rather than a colour.
+
+`chrome.widget` **requires an explicit `chrome`** in the same manifest. A manifest with `chrome.widget` alone is rejected by Omniscio and by `amc-plugin validate`; the host will not infer one permission from the other, so the consent card the user reads matches what the plugin holds.
+
+```json
+{
+  "permissions": ["chrome", "chrome.widget"],
+  "ui": { "entryPoint": "ui/index.html", "widget": { "entryPoint": "ui/widget.html" } }
+}
+```
+
+There is no `ctx.widget`: the host builds none for backends. See the [Widget API](../api/widget).
+
+---
+
+### `coreRead`
+
+**Grants access to:** `PluginCore` (`ctx.core`, **backend** only)
+
+Read the user's sessions, projects and the text of their messages. This is an **elevated** permission and a **blanket** read: it covers everything the user has, not a session or project they picked. Omniscio describes it to the user as "Read your sessions, projects, and the text of their messages (never their secrets)".
+
+```typescript
+const core = ctx.core // optional, like ctx.rpc and ctx.host: check before use
+if (!core) throw new Error('This plugin needs ctx.core (the coreRead permission).')
+const projects = await core.projects.list()
+const sessions = await core.sessions.list({ projectId: projects[0].id })
+const messages = await core.messages.list(sessions[0].id, 20) // at most 200
+```
+
+Prefer [`sessions.readHistory`](#sessions-readhistory) when you only need history the user chose to hand over: that one is opt-in per session, and `coreRead` is not. See the [Core API](../api/core).
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -456,12 +493,14 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
+| `chrome.widget` | `AgentMC.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
 | `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
 | `boards.read` | `AgentMC.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
+| `coreRead` | `PluginCore` (`ctx.core`, backend only) | Elevated, blanket read of sessions, projects and message text |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
 | `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |
 | `workspace.exec` | `WorkspaceApi.run` | Run one bounded command in a granted project, behind a native confirm |
@@ -478,9 +517,9 @@ A manifest asking for `workspace.write` or `workspace.exec` **without an explici
 what the plugin actually holds. See the [Workspace API](../api/workspace).
 :::
 
-::: danger Three permissions grant a WEBVIEW namespace, not a backend one
-`tts`, `sessions.readHistory` and `firebase` gate `AgentMC.tts` / `AgentMC.sessionHistory` /
-`AgentMC.firebase`. The host builds no backend entry for any of them, so `ctx.tts` and friends
+::: danger Four permissions grant a WEBVIEW namespace, not a backend one
+`tts`, `sessions.readHistory`, `firebase` and `chrome.widget` gate `AgentMC.tts` / `AgentMC.sessionHistory` /
+`AgentMC.firebase` / `AgentMC.widget`. The host builds no backend entry for any of them, so `ctx.tts` and friends
 are `undefined` — a `TypeError` at activation, not a permission error. The table above lists
 the type each grants; the surface is the webview.
 :::

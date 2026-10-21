@@ -43,7 +43,7 @@ function expectAcceptedByHost(sdkVersion: unknown): void {
   ).toBe(true)
 }
 
-const TEMPLATES = ['basic', 'with-backend', 'full', 'webview'] as const
+const TEMPLATES = ['basic', 'with-backend', 'full', 'webview', 'widget'] as const
 
 describe('scaffolded manifest sdkVersion', () => {
   it.each(TEMPLATES)('%s template declares a contract the host accepts', (template) => {

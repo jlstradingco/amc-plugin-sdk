@@ -33,6 +33,74 @@ import {
 } from './fixtures/host-permission-mirror.js'
 
 describe('SDK <-> host permission parity', () => {
+  const CTX = 'ctx' as const
+  const BRIDGE = 'bridge' as const
+  const namespaceForPermission: Record<
+    string,
+    { surface: typeof CTX | typeof BRIDGE; key: string } | null
+  > = {
+    storage: { surface: CTX, key: 'storage' },
+    secrets: { surface: CTX, key: 'secrets' },
+    sessions: { surface: CTX, key: 'sessions' },
+    // Webview-only — no ctx.sessionHistory exists.
+    'sessions.readHistory': { surface: BRIDGE, key: 'sessionHistory' },
+    ai: { surface: CTX, key: 'ai' },
+    // Webview-only — no ctx.tts exists.
+    tts: { surface: BRIDGE, key: 'tts' },
+    // Webview-only, no ctx.stt exists, same as tts above.
+    stt: { surface: BRIDGE, key: 'stt' },
+    // Raw webview getUserMedia, gated by the host's per-webview permission
+    // handler rather than any RPC method, so there is no ctx or bridge
+    // namespace to point at.
+    microphone: null,
+    network: { surface: CTX, key: 'http' },
+    cron: { surface: CTX, key: 'cron' },
+    cli: { surface: CTX, key: 'cli' },
+    notifications: { surface: CTX, key: 'toast' },
+    // Ungated-at-the-namespace-level host capabilities reached through other
+    // surfaces (shell/clipboard/process for `system`, RSS reads, the webview
+    // chrome APIs, deep-link navigation) — no single backend ctx key owns them.
+    system: null,
+    rss: null,
+    chrome: null,
+    navigation: null,
+    auth: { surface: CTX, key: 'auth' },
+    'auth.session': { surface: CTX, key: 'auth' },
+    // Webview-only — no ctx.firebase exists.
+    firebase: { surface: BRIDGE, key: 'firebase' },
+    recording: { surface: CTX, key: 'recording' },
+    inbox: { surface: CTX, key: 'inbox' },
+    spend: { surface: CTX, key: 'spend' },
+    // Accepted since 3.2.0 so a plugin may declare it; the host's webview
+    // `boards` namespace (`list`, `requestAccess`) is real but not typed by this
+    // SDK yet. That typing is a named follow-up — classify it here the day
+    // `AgentMC.boards` lands in types/bridge.ts.
+    'boards.read': null,
+    // Backend-only — the host puts `core` on the worker ctx, not the webview.
+    coreRead: { surface: CTX, key: 'core' },
+    // Webview-only — the host builds no ctx.widget; `AgentMC.widget` carries it.
+    'chrome.widget': { surface: BRIDGE, key: 'widget' },
+    // All three tiers of the workspace capability are carried by the single
+    // `ctx.workspace` namespace; the host splits read/write/exec per METHOD
+    // rather than per namespace. Backend-only — the webview case throws.
+    'workspace.read': { surface: CTX, key: 'workspace' },
+    'workspace.write': { surface: CTX, key: 'workspace' },
+    'workspace.exec': { surface: CTX, key: 'workspace' },
+    'sessions.launchAny': { surface: CTX, key: 'sessions' },
+    'sessions.observeStatus': { surface: CTX, key: 'sessions' },
+    'auth.sharedSignIn': { surface: CTX, key: 'auth' },
+    'documents.read': { surface: BRIDGE, key: 'documents' },
+    'documents.write': { surface: BRIDGE, key: 'documents' },
+    // Accepted so a plugin may declare it; the host gates no method on it yet,
+    // so there is no ctx or bridge namespace to point at — the `boards.read`
+    // classification. Change it the day `ctx.members` or `AgentMC.members` lands.
+    'members.read': null,
+    launch: null,
+    oauth: null,
+    channel: null,
+    'boards.link': null,
+  }
+
   const sdk = new Set<string>(PLUGIN_PERMISSIONS)
   const host = new Set<string>(HOST_PERMISSIONS)
   const sdkAhead = new Set<string>(SDK_AHEAD_PERMISSIONS)
@@ -167,72 +235,6 @@ describe('SDK <-> host permission parity', () => {
     // the WEBVIEW bridge only, leaving `ctx.tts` undefined and a call to it a
     // TypeError at activation. Each permission now names the surface that
     // actually carries it.
-    const CTX = 'ctx' as const
-    const BRIDGE = 'bridge' as const
-    const namespaceForPermission: Record<
-      string,
-      { surface: typeof CTX | typeof BRIDGE; key: string } | null
-    > = {
-      storage: { surface: CTX, key: 'storage' },
-      secrets: { surface: CTX, key: 'secrets' },
-      sessions: { surface: CTX, key: 'sessions' },
-      // Webview-only — no ctx.sessionHistory exists.
-      'sessions.readHistory': { surface: BRIDGE, key: 'sessionHistory' },
-      ai: { surface: CTX, key: 'ai' },
-      // Webview-only — no ctx.tts exists.
-      tts: { surface: BRIDGE, key: 'tts' },
-      // Webview-only, no ctx.stt exists, same as tts above.
-      stt: { surface: BRIDGE, key: 'stt' },
-      // Raw webview getUserMedia, gated by the host's per-webview permission
-      // handler rather than any RPC method, so there is no ctx or bridge
-      // namespace to point at.
-      microphone: null,
-      network: { surface: CTX, key: 'http' },
-      cron: { surface: CTX, key: 'cron' },
-      cli: { surface: CTX, key: 'cli' },
-      notifications: { surface: CTX, key: 'toast' },
-      // Ungated-at-the-namespace-level host capabilities reached through other
-      // surfaces (shell/clipboard/process for `system`, RSS reads, the webview
-      // chrome APIs, deep-link navigation) — no single backend ctx key owns them.
-      system: null,
-      rss: null,
-      chrome: null,
-      navigation: null,
-      auth: { surface: CTX, key: 'auth' },
-      'auth.session': { surface: CTX, key: 'auth' },
-      // Webview-only — no ctx.firebase exists.
-      firebase: { surface: BRIDGE, key: 'firebase' },
-      recording: { surface: CTX, key: 'recording' },
-      inbox: { surface: CTX, key: 'inbox' },
-      spend: { surface: CTX, key: 'spend' },
-      // Accepted since 3.2.0 so a plugin may declare it; the host's webview
-      // `boards` namespace (`list`, `requestAccess`) is real but not typed by this
-      // SDK yet. That typing is a named follow-up — classify it here the day
-      // `AgentMC.boards` lands in types/bridge.ts.
-      'boards.read': null,
-      // All three tiers of the workspace capability are carried by the single
-      // `ctx.workspace` namespace; the host splits read/write/exec per METHOD
-      // rather than per namespace. Backend-only — the webview case throws.
-      'workspace.read': { surface: CTX, key: 'workspace' },
-      'workspace.write': { surface: CTX, key: 'workspace' },
-      'workspace.exec': { surface: CTX, key: 'workspace' },
-      'sessions.launchAny': { surface: CTX, key: 'sessions' },
-      'sessions.observeStatus': { surface: CTX, key: 'sessions' },
-      'auth.sharedSignIn': { surface: CTX, key: 'auth' },
-      'documents.read': { surface: BRIDGE, key: 'documents' },
-      'documents.write': { surface: BRIDGE, key: 'documents' },
-      // Accepted so a plugin may declare it; the host gates no method on it yet,
-      // so there is no ctx or bridge namespace to point at — the `boards.read`
-      // classification. Change it the day `ctx.members` or `AgentMC.members` lands.
-      'members.read': null,
-      launch: null,
-      coreRead: null,
-      oauth: null,
-      channel: null,
-      'boards.link': null,
-      'chrome.widget': null,
-    }
-
     // Every permission the SDK exposes must be classified above — no silent omissions.
     const unclassified = [...sdk].filter(
       (p) => !Object.prototype.hasOwnProperty.call(namespaceForPermission, p)
@@ -257,6 +259,15 @@ describe('SDK <-> host permission parity', () => {
     const bridgeEntries = entries.filter((n) => n.surface === BRIDGE)
     expect(bridgeEntries.filter((n) => !bridgeKeys.has(n.key)).map((n) => n.key)).toEqual([])
     expect(bridgeEntries.filter((n) => ctxKeys.has(n.key)).map((n) => n.key)).toEqual([])
+  })
+
+  it('classifies coreRead and chrome.widget as REAL namespaces, not nulls', () => {
+    // A permission mapped to null is skipped by every assertion above, so a
+    // duplicate key slipping back into the literal (a real `{surface, key}`
+    // entry shadowed by a stale `null` further down — the last key wins) would
+    // quietly stop ctx.core and AgentMC.widget from being checked at all.
+    expect(namespaceForPermission.coreRead).toEqual({ surface: CTX, key: 'core' })
+    expect(namespaceForPermission['chrome.widget']).toEqual({ surface: BRIDGE, key: 'widget' })
   })
 
   it('has no outstanding type-shape deltas (both historical ones resolved)', () => {
