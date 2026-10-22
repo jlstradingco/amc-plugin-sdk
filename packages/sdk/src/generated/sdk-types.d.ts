@@ -251,8 +251,8 @@ export interface AgentMC {
     "stat": (...args: unknown[]) => Promise<unknown>
   }
   "events": {
-    "emit": (...args: unknown[]) => void
-    "on": (handler: (...args: unknown[]) => void) => () => void
+    "emit": (...args: unknown[]) => Promise<unknown>
+    "on": (handler: (...args: unknown[]) => void) => (() => void) & { readonly ready: Promise<void> }
     "onSessionStatus": (handler: (...args: unknown[]) => void) => () => void
   }
   "export": {

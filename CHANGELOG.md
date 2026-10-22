@@ -11,6 +11,13 @@ together.
 
 ## [Unreleased]
 
+### Fixed — webview event readiness and bridge failures
+
+`AgentMC.events.on()` now returns a callable unsubscribe with a `ready: Promise<void>` property.
+Await `ready` before sending an event a new listener must receive. `AgentMC.events.emit()` now returns
+`Promise<void>` and rejects with the bridge's stable error `code`, so webviews can handle host failures
+without waiting for their own timeout.
+
 ### Fixed — a `settings[]` entry declares exactly the host's keys
 
 `PluginSettingDefinition` and `validateManifest` accepted `testAction`, a field no Omniscio

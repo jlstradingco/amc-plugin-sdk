@@ -13,7 +13,7 @@ The flip side: re-emitting from inside your own handler for that channel will lo
 
 ## Backend Methods
 
-### `emit(channel: string, data: unknown): void`
+### `emit(channel: string, data: unknown): Promise<void>`
 
 Emit an event on a named channel. It reaches every subscriber of your plugin on both surfaces, including the backend itself.
 
@@ -24,20 +24,20 @@ Emit an event on a named channel. It reaches every subscriber of your plugin on 
 | `channel` | `string` | The event channel name |
 | `data` | `unknown` | The event payload (must be JSON-serializable) |
 
-**Returns:** `void`
+**Returns:** `Promise<void>`
 
 **Example:**
 
 ```typescript
 // Tell the UI a task finished, so it can update without polling
-ctx.events.emit('task:complete', {
+await ctx.events.emit('task:complete', {
   taskId: 'abc-123',
   result: 'success',
   duration: 4500,
 })
 
 // A bare progress signal
-ctx.events.emit('sync:started', { source: 'cron' })
+await ctx.events.emit('sync:started', { source: 'cron' })
 ```
 
 ---
@@ -83,22 +83,22 @@ early. Do not build teardown into `onDisable` expecting it to work.
 
 ## Frontend Methods
 
-`AgentMC.events` is the same bus as the backend half, typed as `BridgeEvents`. `emit` and `on` are identical to `ctx.events`, so a channel means the same thing on either side; the UI adds one member the backend has no use for.
+`AgentMC.events` is the same bus as the backend half, typed as `BridgeEvents`. A channel means the same thing on either side, while the UI adds subscription teardown and readiness that the backend has no use for.
 
-### `emit(channel: string, data: unknown): void`
+### `emit(channel: string, data: unknown): Promise<void>`
 
 Emit on a channel. It reaches your backend worker's `ctx.events.on` handlers and your own webview subscribers.
 
-Fire-and-forget: it returns nothing and tells you nothing about whether anyone was listening. A failure -- an oversized payload, or a bridge error -- is logged to your plugin's devtools console rather than thrown, so you cannot catch it.
+It resolves once Omniscio accepts the bridge call. It does not tell you whether anyone was listening. A rejected call carries the bridge's stable error `code`, so you can handle an oversized payload or permission failure directly.
 
 ```typescript
-AgentMC.events.emit('sync:request', null)
-AgentMC.events.emit('task:cancel', { taskId: 'abc-123' })
+await AgentMC.events.emit('sync:request', null)
+await AgentMC.events.emit('task:cancel', { taskId: 'abc-123' })
 ```
 
-### `on(channel: string, handler: (data: unknown) => void): () => void`
+### `on(channel: string, handler: (data: unknown) => void): BridgeEventSubscription`
 
-Subscribe to a channel. Call the returned function to stop. Unlike the backend half, the UI's `on` does return a working unsubscribe.
+Subscribe to a channel. Call the returned function to stop. Unlike the backend half, the UI's `on` does return a working unsubscribe. Its `ready` promise resolves only after Omniscio has acknowledged the subscription, so await it before emitting an event that the new listener must receive.
 
 ```typescript
 const unsubscribe = AgentMC.events.on('sync:complete', (data) => {
@@ -106,7 +106,7 @@ const unsubscribe = AgentMC.events.on('sync:complete', (data) => {
   showToast(`Synced ${count} records`)
 })
 
-// Later, unsubscribe
+await unsubscribe.ready
 unsubscribe()
 ```
 

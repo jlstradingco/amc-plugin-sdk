@@ -312,14 +312,19 @@ export interface BridgeSessionStatusEvent {
   lastAgentMessageContent?: string | null
 }
 
-export interface BridgeEvents extends Omit<PluginEvents, 'emit'> {
-  emit(channel: string, data: unknown): void
+export interface BridgeEventSubscription {
+  (): void
+  readonly ready: Promise<void>
+}
+
+export interface BridgeEvents extends Omit<PluginEvents, 'emit' | 'on'> {
+  emit(channel: string, data: unknown): Promise<void>
   /**
    * Unlike the backend's `ctx.events.on`, THIS surface really does hand back a
    * working unsubscribe — the preload wraps the host's `events.subscribe` /
    * `events.unsubscribe` pair. Call it to stop listening.
    */
-  on(channel: string, handler: (data: unknown) => void): () => void
+  on(channel: string, handler: (data: unknown) => void): BridgeEventSubscription
   /**
    * Subscribe to session status changes. Call the returned function to stop.
    *
