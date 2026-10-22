@@ -18,6 +18,14 @@ Await `ready` before sending an event a new listener must receive. `AgentMC.even
 `Promise<void>` and rejects with the bridge's stable error `code`, so webviews can handle host failures
 without waiting for their own timeout.
 
+### Changed — `export.saveFile` and `export.savePdf` no longer say where the file went
+
+Both now resolve `{ saved: true }` or `{ saved: false }`. They used to add the path the person
+picked in the Save dialog — a path under their user folder that a plugin never needs (neither
+method grants access to it) and must not learn. **Breaking for a plugin that read `result.path`:**
+it is now `undefined`, and Omniscio strips it even from an older host. The return types are now
+`Promise<{ saved: boolean }>`.
+
 ### Fixed — a `settings[]` entry declares exactly the host's keys
 
 `PluginSettingDefinition` and `validateManifest` accepted `testAction`, a field no Omniscio

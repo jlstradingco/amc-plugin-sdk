@@ -348,5 +348,14 @@
     "namespaces": [
       "members"
     ]
+  },
+  {
+    "name": "email.send",
+    "label": "Send Email",
+    "description": "Send email from your Omniscio agent address to people it chooses, up to 500 a day. Every email has a one-click unsubscribe, and anyone who unsubscribed is never emailed again.",
+    "tier": "elevated",
+    "namespaces": [
+      "email"
+    ]
   }
 ]

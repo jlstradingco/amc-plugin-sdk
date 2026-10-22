@@ -41,7 +41,8 @@ export const PLUGIN_PERMISSIONS = [
   "workspace.exec",
   "documents.read",
   "documents.write",
-  "members.read"
+  "members.read",
+  "email.send"
 ] as const
 
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]

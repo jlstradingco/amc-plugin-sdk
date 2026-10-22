@@ -34,7 +34,10 @@ import type {
   PluginHost,
   CoreSession,
   CoreProject,
-  CoreMessage
+  CoreMessage,
+  PluginEmailMessage,
+  PluginEmailSendResult,
+  PluginEmailSchedule
 } from '../types/index.js'
 
 export { createRpcDouble } from './rpc-double.js'
@@ -112,6 +115,7 @@ export interface TestContextOptions {
     projects?: CoreProject[]
     messages?: Record<string, CoreMessage[]>
   }
+  email?: (message: PluginEmailMessage) => PluginEmailSendResult | Promise<PluginEmailSendResult>
   db?: {
     /**
      * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
@@ -146,6 +150,8 @@ export interface TestHarness {
   sidebarItems: SidebarItem[]
   /** Latest ctx.inbox.setItems value. */
   inboxItems: InboxItem[]
+  sentEmails: PluginEmailMessage[]
+  scheduledEmails: PluginEmailSchedule[]
   /** Trigger a registered cron handler by id. */
   runCron(id: string): Promise<void>
   /** Invoke a registered CLI handler; returns 404 if unregistered. */
@@ -365,6 +371,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     sidebarItems: [],
     inboxItems: [],
     inboxAlerts: [],
+    sentEmails: [],
+    scheduledEmails: [],
     async runCron(id: string) {
       const handler = cronHandlers.get(id)
       if (!handler) throw new Error(`No cron job registered with id "${id}"`)
@@ -694,6 +702,59 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     // webview-only capabilities that the host does NOT put on a backend ctx, so
     // mocking them made a plugin test go green against namespaces that are
     // `undefined` in production. See the note on PluginContext in ../types/context.ts.
+    email: {
+      send: (message) => {
+        harness.sentEmails.push(message)
+        if (opts.email) return Promise.resolve(opts.email(message))
+        return Promise.resolve({
+          ok: true as const,
+          id: `test-email-${harness.sentEmails.length}`,
+          deduped: false
+        })
+      },
+      schedule: (issue) => {
+        const schedule: PluginEmailSchedule = {
+          scheduleId: `test-schedule-${harness.scheduledEmails.length + 1}`,
+          state: 'scheduled',
+          sendAt: issue.sendAt,
+          total: issue.to.length,
+          sent: 0,
+          remaining: issue.to.length,
+          unsubscribed: [],
+          rejected: [],
+          failed: 0,
+          nextAttemptAt: null
+        }
+        harness.scheduledEmails.push(schedule)
+        return Promise.resolve({
+          ok: true as const,
+          scheduleId: schedule.scheduleId,
+          sendAt: schedule.sendAt,
+          recipients: schedule.total
+        })
+      },
+      cancel: (scheduleId) => {
+        const index = harness.scheduledEmails.findIndex((s) => s.scheduleId === scheduleId)
+        if (index < 0) return Promise.resolve({ ok: false as const, reason: 'not-found' as const })
+        const state = harness.scheduledEmails[index]?.state
+        if (state === 'sent' || state === 'failed') {
+          return Promise.resolve({ ok: false as const, reason: 'already-sent' as const })
+        }
+        harness.scheduledEmails.splice(index, 1)
+        return Promise.resolve({ ok: true as const })
+      },
+      status: (scheduleId) => {
+        const schedule = harness.scheduledEmails.find((s) => s.scheduleId === scheduleId)
+        return Promise.resolve(
+          schedule
+            ? { ok: true as const, schedule: { ...schedule } }
+            : { ok: false as const, reason: 'not-found' as const }
+        )
+      },
+      list: () =>
+        Promise.resolve({ ok: true as const, schedules: harness.scheduledEmails.map((s) => ({ ...s })) })
+    },
+
     spend: {
       getBreakdown: () => Promise.resolve({ ...emptySpendBreakdown(), ...(opts.spend ?? {}) })
     },

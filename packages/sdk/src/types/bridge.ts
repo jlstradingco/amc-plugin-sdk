@@ -200,12 +200,12 @@ export interface BridgeSession {
  * exists purely for its result.
  */
 export interface BridgeExport {
-  /** `type` is optional host-side. Resolves `{ saved: false }` if the user cancels. */
+  /** `type` is optional host-side. Resolves `{ saved: false }` if the user cancels; never says where the file went. */
   saveFile(opts: {
     filename: string
     content: string
     type?: string
-  }): Promise<{ saved: true; path: string } | { saved: false }>
+  }): Promise<{ saved: boolean }>
   /**
    * NOTE THE CASING — `savePdf`, not `savePDF`. The mis-cased spelling this SDK
    * shipped resolved to nothing on `window.AgentMC`, so it was a `TypeError`.
@@ -219,7 +219,7 @@ export interface BridgeExport {
     html: string
     preferCSSPageSize?: boolean
     landscape?: boolean
-  }): Promise<{ saved: true; path: string } | { saved: false }>
+  }): Promise<{ saved: boolean }>
   /** Resolves an OBJECT, not a bare path string. */
   pickFolder(opts?: {
     defaultPath?: string

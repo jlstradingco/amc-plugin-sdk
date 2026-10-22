@@ -43,6 +43,7 @@ export type PluginPermission =
   | "documents.read"
   | "documents.write"
   | "members.read"
+  | "email.send"
 
 export interface PluginManifest {
   "plugin": {
@@ -164,7 +165,7 @@ export interface PluginManifest {
       "safe"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "tts" | "stt" | "microphone" | "network" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "sessions.readHistory" | "boards.read" | "boards.link" | "sessions.launchAny" | "sessions.observeStatus" | "inbox" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "tts" | "stt" | "microphone" | "network" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "sessions.readHistory" | "boards.read" | "boards.link" | "sessions.launchAny" | "sessions.observeStatus" | "inbox" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "email.send">
 }
 
 export interface AgentMC {
@@ -653,6 +654,13 @@ export interface PluginContext {
     "stats": (...args: unknown[]) => Promise<unknown>
     "update": (...args: unknown[]) => Promise<unknown>
     "upsert": (...args: unknown[]) => Promise<unknown>
+  }
+  "email": {
+    "cancel": (...args: unknown[]) => Promise<unknown>
+    "list": (...args: unknown[]) => Promise<unknown>
+    "schedule": (...args: unknown[]) => Promise<unknown>
+    "send": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
   }
   "events": {
     "emit": (...args: unknown[]) => Promise<unknown>

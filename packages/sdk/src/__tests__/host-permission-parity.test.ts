@@ -95,6 +95,7 @@ describe('SDK <-> host permission parity', () => {
     // so there is no ctx or bridge namespace to point at — the `boards.read`
     // classification. Change it the day `ctx.members` or `AgentMC.members` lands.
     'members.read': null,
+    'email.send': { surface: CTX, key: 'email' },
     launch: null,
     oauth: null,
     channel: null,
@@ -220,7 +221,7 @@ describe('SDK <-> host permission parity', () => {
     //
     // 37 -> 38 on 2026-10-20: the host declared `members.read` (declaration
     // only, no capability gated on it yet), so the mirror gained it too.
-    expect(HOST_PERMISSIONS.length).toBe(38)
+    expect(HOST_PERMISSIONS.length).toBe(39)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

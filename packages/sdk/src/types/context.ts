@@ -329,6 +329,7 @@ export interface PluginEngineCatalog {
     ready: boolean
     writing: boolean
     writingReady: boolean
+    canRunNoTools?: boolean
     defaultModel: string | null
     models: Array<{ id: string; label: string }>
     data: {
@@ -338,6 +339,7 @@ export interface PluginEngineCatalog {
       dependsOnModel: boolean
     }
   }>
+  agentsLocked?: boolean
 }
 
 export interface PluginAi {
@@ -583,6 +585,79 @@ export interface PluginRecording {
   list(): Promise<Recording[]>
   /** `null` — never a throw — for an unknown or non-owned id. */
   get(recordingId: string): Promise<Recording | null>
+}
+
+export interface PluginEmailMessage {
+  to: string
+  subject: string
+  html: string
+  idempotencyKey?: string
+}
+
+export type PluginEmailFailureReason =
+  | 'invalid-input'
+  | 'not-set-up'
+  | 'rate-limited'
+  | 'plugin-daily-cap'
+  | 'duplicate'
+  | 'recipient-unsubscribed'
+  | 'recipient-rejected'
+  | 'daily-send-cap'
+  | 'recipient-limit'
+  | 'plugin-daily-cap'
+  | 'address-unavailable'
+  | 'account-suspended'
+  | 'server-error'
+
+export type PluginEmailSendResult =
+  | { ok: true; id: string; deduped: boolean }
+  | { ok: false; reason: PluginEmailFailureReason }
+
+export interface PluginEmailIssue {
+  to: string[]
+  subject: string
+  html: string
+  sendAt: string
+  idempotencyKey?: string
+}
+
+export type PluginEmailScheduleReason =
+  | 'invalid-input'
+  | 'not-set-up'
+  | 'not-available'
+  | 'server-error'
+  | 'send-at-passed'
+  | 'send-at-too-far'
+  | 'too-many-recipients'
+  | 'schedule-limit'
+  | 'not-found'
+  | 'already-sent'
+
+export interface PluginEmailSchedule {
+  scheduleId: string
+  state: 'scheduled' | 'sending' | 'continuing' | 'sent' | 'cancelled' | 'failed'
+  sendAt: string
+  total: number
+  sent: number
+  remaining: number
+  unsubscribed: string[]
+  rejected: string[]
+  failed: number
+  nextAttemptAt: string | null
+}
+
+export type PluginEmailScheduleRefusal = { ok: false; reason: PluginEmailScheduleReason }
+
+export type PluginEmailScheduleResult =
+  | { ok: true; scheduleId: string; sendAt: string; recipients: number }
+  | PluginEmailScheduleRefusal
+
+export interface PluginEmail {
+  send(message: PluginEmailMessage): Promise<PluginEmailSendResult>
+  schedule(issue: PluginEmailIssue): Promise<PluginEmailScheduleResult>
+  cancel(scheduleId: string): Promise<{ ok: true } | PluginEmailScheduleRefusal>
+  status(scheduleId: string): Promise<{ ok: true; schedule: PluginEmailSchedule } | PluginEmailScheduleRefusal>
+  list(): Promise<{ ok: true; schedules: PluginEmailSchedule[] } | PluginEmailScheduleRefusal>
 }
 
 /** Base64 MP3 returned by `ctx.tts.synthesize()`. Play it in the webview via a data: URL. */
@@ -1371,6 +1446,7 @@ export interface PluginContext {
   auth: PluginAuth
   recording: PluginRecording
   spend: PluginSpend
+  email?: PluginEmail
   /**
    * Your panel's request channel to this backend — see {@link PluginRpc}. Optional because
    * Omniscio before v0.1.92 has none: check for it rather than assuming it.

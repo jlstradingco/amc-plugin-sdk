@@ -1,6 +1,6 @@
 # API Reference
 
-The Omniscio Plugin SDK exposes 26 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The Omniscio Plugin SDK exposes 27 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -23,6 +23,7 @@ The Omniscio Plugin SDK exposes 26 APIs to plugins. Some are available on both t
 | [Inbox](./inbox) | Surface items in Omniscio's inbox | Both | `inbox` |
 | [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
 | [Recording](./recording) | Screen recording, host-mediated | Backend only | `recording` |
+| [Email](./email) | Send one email from the user's agent address | Backend only | `email.send` |
 | [Text to Speech](./tts) | Speak text with the user's configured voice | Webview only | `tts` |
 | [Session History](./session-history) | Read past sessions the user has granted | Webview only | `sessions.readHistory` |
 | [Firebase](./firebase) | The user's Firebase accounts and projects | Webview only | `firebase` |
@@ -159,8 +160,8 @@ await AgentMC.export.openFolder({ path: folder })
 
 | Method | Description |
 |---|---|
-| `saveFile(opts)` | Show a Save As dialog and write a file |
-| `savePdf(opts)` | Render **HTML** to PDF and save. (`savePDF` with that casing does not exist) |
+| `saveFile(opts)` | Show a Save As dialog and write a file. Resolves `{ saved }` — never the file's path |
+| `savePdf(opts)` | Render **HTML** to PDF and save. Resolves `{ saved }` — never the file's path. (`savePDF` with that casing does not exist) |
 | `pickFolder(opts?)` | Show a folder picker dialog, returns the selected path |
 | `writeFiles(opts)` | Write multiple files to a directory |
 | `verifyFiles(opts)` | Check that files exist in a directory |

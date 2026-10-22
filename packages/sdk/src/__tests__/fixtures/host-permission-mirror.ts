@@ -167,6 +167,7 @@ export const HOST_PERMISSIONS = [
   'documents.read',
   'documents.write',
   'members.read',
+  'email.send',
 ] as const
 
 // --- Documented known-deltas (intentional, tracked drift) -------------------
