@@ -3,6 +3,7 @@
 // and passes them in; everything here is unit-testable without fs/network.
 
 import { PLUGIN_PERMISSIONS } from '@agent-mc/plugin-sdk'
+import { DEVELOPMENT_DOC, MAX_README_CHARS, describeReadmeProblems, findReadmeProblems } from './readme-guard.js'
 
 export type PreflightStatus = 'pass' | 'warn' | 'fail'
 
@@ -165,6 +166,21 @@ export function checkListingCompleteness(input: {
     status: 'warn',
     message: `Listing will be bare — missing: ${missing.join(', ')}`,
     suggestion: 'Add a README.md next to manifest.json, hosted http(s) image URLs under plugin.screenshots, and support/homepage URLs under plugin.links — the marketplace detail page renders all three.'
+  }
+}
+
+export function checkReadmeIsStoreText(readme: string | null | undefined): PreflightResult {
+  const name = 'README'
+  if (readme == null) return { name, status: 'pass', message: 'No README.md to check' }
+  const problems = findReadmeProblems(readme)
+  if (problems.length === 0) {
+    return { name, status: 'pass', message: 'README.md reads as plain store text' }
+  }
+  return {
+    name,
+    status: 'fail',
+    message: `README.md is the text customers read on the store page, but it has ${problems.length} problem(s): ${describeReadmeProblems(problems)}`,
+    suggestion: `Move developer content, badges and raw HTML to ${DEVELOPMENT_DOC} and keep README.md to plain markdown under ${MAX_README_CHARS} characters. A one-line "Developer notes: \`${DEVELOPMENT_DOC}\`." pointer is fine.`
   }
 }
 

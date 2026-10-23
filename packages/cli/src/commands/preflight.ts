@@ -12,6 +12,7 @@ import {
   checkPackageSize,
   checkDeclaredPermissions,
   checkListingCompleteness,
+  checkReadmeIsStoreText,
   checkBannedImports,
   summarizePreflight,
   type PreflightResult
@@ -43,6 +44,11 @@ export function bannedImportsResult(cwd: string, manifest: unknown): PreflightRe
   // hit on its own line and can afford the full path; this cannot.
   const hits = scanDirs.flatMap(scanBannedImports).map(hit => hit.split(cwd + path.sep).join(''))
   return checkBannedImports(hits, scanDirs.length)
+}
+
+export function readmeStoreTextResult(cwd: string): PreflightResult {
+  const readme = findRootReadme(cwd)
+  return checkReadmeIsStoreText(readme ? fs.readFileSync(path.join(cwd, readme), 'utf-8') : null)
 }
 
 // Gathers all raw inputs (manifest, published version, package size, README
@@ -94,6 +100,7 @@ export async function runPreflight(
     links: manifest.plugin.links
   }))
 
+  results.push(readmeStoreTextResult(cwd))
   results.push(bannedImportsResult(cwd, manifest))
 
   const packagePath = opts.packagePath ?? findPackage(cwd)

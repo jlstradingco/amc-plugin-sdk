@@ -63,6 +63,8 @@ There is no listing form. Everything the marketplace page shows comes from the p
 
 `amc-plugin preflight` (and the preflight that runs inside `publish`) prints one `Listing` line: `pass` when the README, screenshots and support links are all present, otherwise a **warning** that names what is missing. It never blocks a publish, so a plugin with nothing to show can still ship.
 
+It also prints one `README` line, and this one **does block**: the README is the text customers read on the store page, so `preflight` and `publish` refuse a root `README.md` that contains raw HTML tags, a badge image (shields.io and similar), a `Developer notes` heading or a line of developer notes, or more than 3,000 characters. The message names each offending line (up to five). Move developer content, badges and HTML to `docs/DEVELOPMENT.md`; a one-line pointer such as "Developer notes: docs/DEVELOPMENT.md" is fine, and tags inside code fences or inline code are not counted.
+
 ::: warning Older CLIs drop the README
 Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a flat plugin's entry-point folders), so a README in your repository never reached the marketplace. Upgrade with `npm install -D @agent-mc/plugin-cli@^3.1.0`, or publish with `npx @agent-mc/plugin-cli@latest publish`, then publish a new version — the listing updates when that version is approved.
 :::

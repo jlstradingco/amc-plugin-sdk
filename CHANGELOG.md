@@ -11,6 +11,10 @@ together.
 
 ## [Unreleased]
 
+### Added — preflight refuses a developer README
+
+`amc-plugin preflight` and `publish` now fail when the root `README.md` (the text shown on the store page) has raw HTML tags, a badge image, a `Developer notes` section or more than 3,000 characters. The message names the offending lines and points to `docs/DEVELOPMENT.md`.
+
 ### Fixed — webview event readiness and bridge failures
 
 `AgentMC.events.on()` now returns a callable unsubscribe with a `ready: Promise<void>` property.
