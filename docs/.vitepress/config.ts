@@ -1,12 +1,19 @@
 import { defineConfig } from 'vitepress'
+import { SDK_SITE_DESCRIPTION, SDK_SITE_TITLE, sdkHeadTags } from './site-head.mjs'
 
 export default defineConfig({
-  title: 'Omniscio Plugin SDK',
-  description: 'Build plugins for Omniscio',
+  title: SDK_SITE_TITLE,
+  description: SDK_SITE_DESCRIPTION,
   base: '/sdk/',
   outDir: '../../docs/help-site/public/sdk',
   appearance: false,
-  head: [['link', { rel: 'icon', href: '/sdk/logo.svg' }]],
+  transformHead({ pageData, title, description }) {
+    return sdkHeadTags({
+      relativePath: pageData.relativePath,
+      title: title || pageData.title,
+      description: description || pageData.description
+    })
+  },
   themeConfig: {
     logo: '/logo.svg',
     nav: [

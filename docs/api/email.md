@@ -129,7 +129,7 @@ deleted automatically.
 ```typescript
 interface PluginEmailSchedule {
   scheduleId: string
-  state: 'scheduled' | 'sending' | 'continuing' | 'sent' | 'cancelled' | 'failed'
+  state: 'scheduled' | 'sending' | 'continuing' | 'held' | 'sent' | 'cancelled' | 'failed'
   sendAt: string
   total: number
   sent: number
@@ -138,8 +138,20 @@ interface PluginEmailSchedule {
   rejected: string[]
   failed: number
   nextAttemptAt: string | null
+  subject?: string | null
 }
 ```
+
+`subject` is the issue's subject while it is waiting; it is `null` once the issue has finished and
+its content was deleted.
+
+### When your plugin goes away
+
+- If the user uninstalls or disables your plugin, or an update removes `email.send`, every issue it
+  has waiting is cancelled. If the plugin store removes it, its waiting issues are `held`: nothing
+  is sent until the user chooses Send or Cancel in Settings > Plugins.
+- The user can also cancel any waiting issue from your plugin's card, so read `status` or `list`
+  when your plugin starts and treat a missing issue as cancelled.
 
 ### Daily limits and the notices you show
 

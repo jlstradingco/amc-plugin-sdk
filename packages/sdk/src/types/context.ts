@@ -635,7 +635,7 @@ export type PluginEmailScheduleReason =
 
 export interface PluginEmailSchedule {
   scheduleId: string
-  state: 'scheduled' | 'sending' | 'continuing' | 'sent' | 'cancelled' | 'failed'
+  state: 'scheduled' | 'sending' | 'continuing' | 'held' | 'sent' | 'cancelled' | 'failed'
   sendAt: string
   total: number
   sent: number
@@ -644,6 +644,7 @@ export interface PluginEmailSchedule {
   rejected: string[]
   failed: number
   nextAttemptAt: string | null
+  subject?: string | null
 }
 
 export type PluginEmailScheduleRefusal = { ok: false; reason: PluginEmailScheduleReason }

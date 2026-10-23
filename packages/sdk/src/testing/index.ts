@@ -723,7 +723,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           unsubscribed: [],
           rejected: [],
           failed: 0,
-          nextAttemptAt: null
+          nextAttemptAt: null,
+          subject: issue.subject
         }
         harness.scheduledEmails.push(schedule)
         return Promise.resolve({
