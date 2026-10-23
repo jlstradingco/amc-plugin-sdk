@@ -463,5 +463,50 @@ describe('host-parity rules', () => {
       expect(result.valid).toBe(true)
       expect(result.manifest?.cli?.endpoints[0]?.requiresConfirmation).toBe(true)
     })
+
+    it('preserves a declared preview on a gated endpoint', () => {
+      const result = validateManifest({
+        ...validManifest,
+        cli: {
+          endpoints: [
+            { method: 'POST', path: '/merge', requiresConfirmation: true, preview: 'two-step', previewPath: '/merge-preview' },
+            { method: 'POST', path: '/merge-preview', safe: true },
+          ],
+        },
+      })
+      expect(result.valid).toBe(true)
+      expect(result.manifest?.cli?.endpoints[0]?.preview).toBe('two-step')
+      expect(result.manifest?.cli?.endpoints[0]?.previewPath).toBe('/merge-preview')
+    })
+
+    const gated = { method: 'POST', path: '/merge', requiresConfirmation: true, preview: 'card' }
+
+    it.each([
+      ['a preview with no previewPath', [gated]],
+      ['a previewPath with no preview', [{ method: 'POST', path: '/merge', requiresConfirmation: true, previewPath: '/p' }]],
+      ['a previewPath nobody declared', [{ ...gated, previewPath: '/p' }]],
+      ['a previewPath that is not safe', [{ ...gated, previewPath: '/p' }, { method: 'POST', path: '/p' }]],
+      ['a previewPath equal to the action', [{ ...gated, previewPath: '/merge' }]],
+      ['a previewPath with another method', [{ ...gated, previewPath: '/p' }, { method: 'GET', path: '/p', safe: true }]],
+    ])('rejects %s', (_label, endpoints) => {
+      const result = validateManifest({ ...validManifest, cli: { endpoints } })
+      expect(result.valid).toBe(false)
+    })
+
+    it('rejects an endpoint that is both safe and gated', () => {
+      const result = validateManifest({
+        ...validManifest,
+        cli: { endpoints: [{ method: 'POST', path: '/x', safe: true, requiresConfirmation: true }] },
+      })
+      expect(result.valid).toBe(false)
+    })
+
+    it('rejects a preview on an endpoint that is not gated', () => {
+      const result = validateManifest({
+        ...validManifest,
+        cli: { endpoints: [{ method: 'POST', path: '/merge', preview: 'card' }] },
+      })
+      expect(result.valid).toBe(false)
+    })
   })
 })

@@ -41,6 +41,18 @@ failure keeps its existing code, so a plugin written before these codes existed 
 code as a generic failure. The new `BridgeHostFailureCode` type names the five values; the codes are
 raised by the host, so nothing in your manifest changes.
 
+### Added — `cli.endpoints[].preview` and `previewPath`
+
+An endpoint marked `requiresConfirmation` may declare `preview: "two-step"` or `"card"` so the approval card can show what the action will do, written by the plugin. It must also declare `previewPath`, naming another endpoint of the plugin with the same method that is marked `safe`: that read-only endpoint is the only one Omniscio calls before the person approves, and it answers `{ "card": { ... } }`. The manifest validator and the published manifest reference accept the pair and reject a `preview` without a valid `previewPath`. `PluginCliEndpoint` now also types `safe`. See Manifest > Previews on the approval card.
+
+### Changed — the approval card separates what Omniscio writes from what the plugin writes
+
+The card now leads with request facts written by Omniscio (plugin name and id, the exact request Approve runs, who asked, query arguments and body) and puts the plugin's title, `verb`, rows and risk note in a box labelled "From the plugin". `verb` is shown as "Plugin says: ...", no longer as the Approve label, and `risk: "danger"` no longer recolours the button (Omniscio does that for a `DELETE` request). A field cut to its limit shows "… cut, N more characters". See Manifest > Previews on the approval card.
+
+### Added — `details.oneLine`, `details.personal` and `details.marks` on the approval card
+
+The card's `details` fold-out can carry a one-line summary of what the AI will be told, shown above it, and can flag personal data so Omniscio opens the fold-out for the person and highlights the listed names. Omniscio also opens it when it finds an email address in the text. See Manifest > Previews on the approval card.
+
 ### Fixed — a `settings[]` entry declares exactly the host's keys
 
 `PluginSettingDefinition` and `validateManifest` accepted `testAction`, a field no Omniscio

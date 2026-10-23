@@ -208,6 +208,9 @@ export interface PluginCliEndpoint {
    * could not mark an endpoint destructive even though the host honours it.
    */
   requiresConfirmation?: boolean
+  safe?: boolean
+  preview?: 'two-step' | 'card'
+  previewPath?: string
 }
 
 /**

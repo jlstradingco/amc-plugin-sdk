@@ -318,7 +318,50 @@ const cliEndpointSchema = z.object({
    * the host would have honoured it.
    */
   requiresConfirmation: z.boolean().optional(),
+  safe: z.boolean().optional(),
+  preview: z.enum(['two-step', 'card']).optional(),
+  previewPath: z.string().min(1).max(200).optional(),
+}).refine((e) => !(e.safe === true && e.requiresConfirmation === true), {
+  message: 'an endpoint cannot be both "safe" and "requiresConfirmation"',
+}).refine((e) => e.preview === undefined || e.requiresConfirmation === true, {
+  message: 'an endpoint can only declare a "preview" together with "requiresConfirmation"',
 })
+
+type CliEndpointInput = z.infer<typeof cliEndpointSchema>
+
+function previewPathProblem(
+  endpoints: readonly CliEndpointInput[],
+  endpoint: CliEndpointInput,
+): string | undefined {
+  if (endpoint.preview === undefined) {
+    return endpoint.previewPath === undefined
+      ? undefined
+      : 'an endpoint can only declare a "previewPath" together with a "preview"'
+  }
+  if (endpoint.previewPath === undefined) {
+    return 'an endpoint that declares a "preview" must also declare a "previewPath"'
+  }
+  if (endpoint.previewPath === endpoint.path) {
+    return 'the "previewPath" cannot be the same as the endpoint path'
+  }
+  const target = endpoints.find((e) => e.method === endpoint.method && e.path === endpoint.previewPath)
+  if (!target) {
+    return `the "previewPath" must name another endpoint of this plugin with the same method (${endpoint.method} ${endpoint.previewPath} is not declared)`
+  }
+  return target.safe === true && target.requiresConfirmation !== true
+    ? undefined
+    : 'the "previewPath" endpoint must be declared "safe": true and must not require confirmation'
+}
+
+const cliEndpointsSchema = z
+  .array(cliEndpointSchema)
+  .max(200)
+  .superRefine((endpoints, ctx) => {
+    endpoints.forEach((endpoint, index) => {
+      const message = previewPathProblem(endpoints, endpoint)
+      if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [index, 'previewPath'], message })
+    })
+  })
 
 const cronJobSchema = z.object({
   id: z.string().min(1),
@@ -368,7 +411,7 @@ export const manifestSchema = z.object({
   }).optional(),
   // `.max(50)` mirrors the host's cap on the array length.
   permissions: z.array(permissionSchema).max(50).optional(),
-  cli: z.object({ endpoints: z.array(cliEndpointSchema).max(200) }).optional(),
+  cli: z.object({ endpoints: cliEndpointsSchema }).optional(),
   cron: z.object({ jobs: z.array(cronJobSchema) }).optional(),
   // Host-real (plugin-manifest-schema.ts): without it zod strips the one switch that gives a
   // plugin's sessions their built-in tools.

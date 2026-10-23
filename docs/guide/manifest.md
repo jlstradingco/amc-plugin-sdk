@@ -562,8 +562,41 @@ Declare CLI endpoints that external tools can call through Omniscio's control se
 | `path` | string | Endpoint path (appended to `/plugins/<plugin-id>/`) |
 | `description` | string | Human-readable description |
 | `auth` | boolean | Whether the endpoint requires bearer-token authentication |
+| `requiresConfirmation` | boolean | A person must approve the call before it reaches your handler |
+| `safe` | boolean | A write that may run without asking; cannot be combined with `requiresConfirmation` |
+| `preview` | `"two-step"` or `"card"` | Lets the approval card show what the action will do; only with `requiresConfirmation`, and only together with `previewPath` |
+| `previewPath` | string | The read-only endpoint Omniscio asks for the preview: another endpoint of this plugin with the same method, marked `safe`, not `requiresConfirmation` |
 
 Requires the `cli` permission.
+
+### Previews on the approval card
+
+An action marked `requiresConfirmation` waits for a person. By default the approval card shows only the request. Add `"preview"` and a `"previewPath"` to show what the action will really do, written by your plugin. Both are only valid together with `requiresConfirmation`, and `previewPath` must name a second endpoint of your plugin with the same method, marked `"safe": true`. Omniscio refuses a manifest where it does not. Before the person approves, Omniscio calls that second endpoint and never the action itself, with the same query and body the action was asked with and the query key `amcPreview=card`; it must change nothing and answer `200` with `{ "card": { ... } }`. Omniscio never asks for a preview of an action that did not declare one.
+
+| `preview` | What your handler must do |
+|---|---|
+| `"two-step"` | The first call to the action itself (no `confirm` field), made only after the person approves, changes nothing and answers `200` with `{ "requiresConfirmation": true, "confirmToken": "<token>", "card": { ... } }`. If that `card` is the same as the one the person saw, Omniscio repeats the request with `"confirm": "<token>"` added to the body. Answer that call as the real action. |
+| `"card"` | When the person approves, Omniscio asks the preview endpoint once more and, if the card is the same, sends the original request with the query key `amcApproved=1`; run the action once and record it as confirmed. The query key `amcSessionName` carries the asking session's name, when there is one. |
+
+Omniscio removes every query key that starts with `amc` from a caller's request before your handler sees it, so only Omniscio can set these keys. A plugin that declares `preview` must keep the preview endpoint free of side effects and safe to run twice. A standing "Always allow" never runs an action that declared a preview: it always waits for a person, so Omniscio offers no "Always allow" control on that action's card.
+
+The `card` object (every string is shown as plain text, capped, and stripped of control characters; unknown fields are dropped):
+
+| Field | Meaning |
+|---|---|
+| `title` | Required, 120 characters. What will happen, as a short sentence. |
+| `verb` | 40 characters. What the plugin says it will do, for example `Merge PR #10823`. Omniscio shows it as "Plugin says: Merge PR #10823" inside the plugin's own box; it is never the label of the Approve button. |
+| `risk` | `"danger"` or `"normal"`. `danger` adds the line "The plugin marks this action as risky." inside the plugin's box. It does not change the button: Omniscio colours Approve red only when the request is a `DELETE`. |
+| `consequence` | 300 characters, shown above the button. |
+| `rows` | Up to 12 of `{ label, value, mono?, volatile? }`. Set `volatile: true` on a row that changes by itself (a running-check count); it is left out of the "has this changed" comparison. |
+| `body`, `quote`, `item`, `details` | The card-kind layout: bold text only in `body`, a verbatim `quote`, an `item` block (`state`, `title`, `number`, `meta`, `excerpt`) and a fold-out `details` (`summary`, `note`, `text`, and the optional `oneLine`, `personal` and `marks` below). |
+| `done` | Returned with the answer to the real call: `{ rows, link? }` where `link` is `{ label, url }` and `url` must be `https`. The card shows it as what actually ran. |
+
+What the person sees around your card is written by Omniscio, not by your plugin. Above everything you supply, the card shows your plugin's name and id, the exact request that Approve will run (`METHOD /plugins/<id>/cli/<path>`), who asked, and the query arguments and request body that will be sent. Your `title`, `verb`, `rows`, `consequence` and the rest sit below that, in a box labelled "From the plugin". The Approve button always says "Approve" ("Approve with these changes" when the card changed), and the pane title is Omniscio's own words. A field longer than its limit is cut, and the card says so in place with "… cut, N more characters", so write to the limits.
+
+The `details` fold-out says what the AI will be told. Add `oneLine` (160 characters) and Omniscio shows it above the fold-out as "The AI will be told: ...", readable without opening anything. The fold-out stays closed unless it includes personal data: set `personal: true` and list the names to highlight in `marks` (up to 10 short strings, matched exactly), and Omniscio shows a badge, opens the fold-out for the person and highlights those parts. Omniscio also checks the text itself for email addresses and treats them the same way, so a plugin that forgets the flag still gets the box opened. Names are only highlighted when you list them.
+
+If the action is refused, answer with a failure status and `{ "error": "<one plain sentence>" }`; Omniscio shows that sentence (300 characters, plain text) as the plugin's reason.
 
 ## `sdkVersion`
 

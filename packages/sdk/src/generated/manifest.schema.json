@@ -569,6 +569,18 @@
               },
               "safe": {
                 "type": "boolean"
+              },
+              "preview": {
+                "type": "string",
+                "enum": [
+                  "two-step",
+                  "card"
+                ]
+              },
+              "previewPath": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
               }
             },
             "required": [

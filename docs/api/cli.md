@@ -136,6 +136,7 @@ Omniscio's CLI control server uses bearer-token authentication on certain endpoi
 ## Notes
 
 - Every endpoint must be declared in the `cli.endpoints` array in `manifest.json` before it can be handled. The `path` you pass to `handle()` must match a declared endpoint path. See [Manifest > CLI Block](../guide/manifest#cli-block).
+- An endpoint that declares `preview` also declares a `previewPath`; before it is approved only that read-only endpoint is called, never the action, and the action is repeated with a host marker once it is approved. The rules are in [Manifest > Previews on the approval card](../guide/manifest#previews-on-the-approval-card); the `amc*` query keys are set by Omniscio only.
 - The handler receives a parsed `CliRequest` and must return a `CliResponse` with a numeric `status` code. The `body` is JSON-serialized automatically.
 - Register your CLI handlers in your plugin's `activate()` function so they are ready as soon as the plugin loads.
 - The CLI control server port defaults to `19519` but can be overridden by the `AMC_CLI_PORT` environment variable.
