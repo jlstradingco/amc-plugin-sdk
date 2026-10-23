@@ -9,6 +9,20 @@ import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSideb
 export type { SessionStatus, SessionPendingAction } from './context.js'
 
 /**
+ * The `err.code` a bridge call rejects with when the computer or the share service refuses it.
+ * Branch on it instead of matching the message, which never carries a path or an OS error name.
+ * `NO_PERMISSION` is the operating system saying no (on Windows also a file another program has
+ * locked); a host-policy refusal is `FORBIDDEN`. Any other failure keeps its existing code, so a
+ * plugin must treat an unfamiliar code as a generic failure.
+ */
+export type BridgeHostFailureCode =
+  | 'DISK_FULL'
+  | 'NO_PERMISSION'
+  | 'READ_ONLY'
+  | 'SHARE_SIGN_IN_REQUIRED'
+  | 'SHARE_TOO_LARGE'
+
+/**
  * What `AgentMC.theme.get()` resolves to.
  *
  * `visualTheme` was declared here and has never existed. The real payload is

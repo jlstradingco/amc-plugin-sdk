@@ -26,6 +26,17 @@ method grants access to it) and must not learn. **Breaking for a plugin that rea
 it is now `undefined`, and Omniscio strips it even from an older host. The return types are now
 `Promise<{ saved: boolean }>`.
 
+### Added — stable `err.code` values for a full disk, a refused folder, a read-only drive and a share refusal
+
+A bridge call that fails because the computer or the share service refused it now rejects with a
+code a plugin can branch on, instead of the generic failure: `DISK_FULL`, `NO_PERMISSION` (the
+operating system said no; on Windows also a file another program has locked), `READ_ONLY`,
+`SHARE_SIGN_IN_REQUIRED` and `SHARE_TOO_LARGE`. The messages never carry a file path, a user name
+or an operating-system error name. A refusal by Omniscio itself is still `FORBIDDEN`, and every other
+failure keeps its existing code, so a plugin written before these codes existed treats an unfamiliar
+code as a generic failure. The new `BridgeHostFailureCode` type names the five values; the codes are
+raised by the host, so nothing in your manifest changes.
+
 ### Fixed — a `settings[]` entry declares exactly the host's keys
 
 `PluginSettingDefinition` and `validateManifest` accepted `testAction`, a field no Omniscio
