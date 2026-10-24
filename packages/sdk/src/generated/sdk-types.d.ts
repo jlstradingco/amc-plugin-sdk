@@ -236,12 +236,15 @@ export interface AgentMC {
     "assembleBoardContext": (...args: unknown[]) => Promise<unknown>
     "assembleContext": (...args: unknown[]) => Promise<unknown>
     "assembleFile": (...args: unknown[]) => Promise<unknown>
+    "cancelVideoExport": (...args: unknown[]) => Promise<unknown>
     "deleteHostCopy": (...args: unknown[]) => Promise<unknown>
     "discardDesignerFiles": (...args: unknown[]) => Promise<unknown>
     "exportPptx": (...args: unknown[]) => Promise<unknown>
+    "exportVideo": (...args: unknown[]) => Promise<unknown>
     "measureArtifact": (...args: unknown[]) => Promise<unknown>
     "renderHtml": (...args: unknown[]) => Promise<unknown>
     "researchTopic": (...args: unknown[]) => Promise<unknown>
+    "videoExportStatus": (...args: unknown[]) => Promise<unknown>
   }
   "documents": {
     "append": (...args: unknown[]) => Promise<unknown>
