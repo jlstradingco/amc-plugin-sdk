@@ -1,10 +1,33 @@
 import { Command } from 'commander'
-import { clearToken, getStoredTokenIgnoringExpiry, getTokenPath } from '../lib/auth.js'
+import {
+  clearToken,
+  getStoredTokenIgnoringExpiry,
+  getTokenPath,
+  resolveBaseUrl,
+  tryRefreshStoredToken
+} from '../lib/auth.js'
+import type { StoredToken } from '../lib/auth.js'
 import { ok, info, actionableError } from '../lib/output.js'
+
+const REVOKE_TIMEOUT_MS = 5000
+
+async function revokeSessions(stored: StoredToken): Promise<boolean> {
+  const fresh = Date.parse(stored.expiresAt) > Date.now() ? null : await tryRefreshStoredToken()
+  try {
+    const res = await fetch(`${resolveBaseUrl()}/revokeSessions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${fresh?.token ?? stored.token}` },
+      signal: AbortSignal.timeout(REVOKE_TIMEOUT_MS)
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
 
 export const logoutCommand = new Command('logout')
   .description('Clear stored marketplace authentication token')
-  .action(() => {
+  .action(async () => {
     // Deliberately ignores expiry. Reading through the expiry check meant an
     // expired token made logout print "Not signed in" and return WITHOUT
     // deleting the file — leaving the long-lived refresh token on disk, which
@@ -19,6 +42,7 @@ export const logoutCommand = new Command('logout')
     // AMC process, a read-only home) used to throw a stack trace; claiming "Signed
     // out" instead would be worse still, because the credential is the whole point of
     // the command and it would still be sitting on disk.
+    const revoked = await revokeSessions(token)
     if (!clearToken()) {
       actionableError(
         `Could not remove the stored credential for ${token.github}`,
@@ -28,4 +52,7 @@ export const logoutCommand = new Command('logout')
       return
     }
     ok(`Signed out (was: ${token.github})`)
+    if (!revoked) {
+      info('The marketplace session could not be revoked — sign in and sign out again once you are online.')
+    }
   })
