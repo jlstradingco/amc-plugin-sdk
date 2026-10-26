@@ -394,6 +394,7 @@ export interface AgentMC {
     "getReport": (...args: unknown[]) => Promise<unknown>
     "getRunFindings": (...args: unknown[]) => Promise<unknown>
     "getRunReport": (...args: unknown[]) => Promise<unknown>
+    "getRunReportView": (...args: unknown[]) => Promise<unknown>
     "getShowAlternateProviders": (...args: unknown[]) => Promise<unknown>
     "launchFixes": (...args: unknown[]) => Promise<unknown>
     "listAudits": (...args: unknown[]) => Promise<unknown>
