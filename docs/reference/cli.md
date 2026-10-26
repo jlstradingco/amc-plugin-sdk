@@ -230,6 +230,7 @@ amc-plugin preflight [options]
 | Flag | Description | Default |
 |---|---|---|
 | `--changelog <text>` | Changelog for this version (checked for presence) | &mdash; |
+| `--package <path>` | The `.amcplugin` to check; required when the folder holds more than one ([how a package is chosen](#choosing-the-package)) | the only package in the folder |
 
 **Checks performed:**
 
@@ -240,6 +241,7 @@ amc-plugin preflight [options]
 | Permissions | An unknown permission is declared | Duplicate permissions |
 | Command tables | A table can hold a runnable command ([the rule](#command-tables)) and carries no valid waiver | A fuzzier command-like shape |
 | Banned imports | The shipped files import a banned module ([details](#validate)) | There is no built output to scan |
+| Package | The folder holds more than one `.amcplugin` and no `--package` was given, or the chosen archive is not named `<id>-<version>.amcplugin` for the manifest version, or its own `manifest.json` says another version or a `-test.N` label | &mdash; |
 | Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
 | Listing | &mdash; | No `README.md` at the plugin root, an absent or empty `plugin.screenshots`, or an absent or empty `plugin.links` — the marketplace detail page would be bare (see [Publishing → What your listing shows](../guide/publishing.md#what-your-listing-shows)) |
 
@@ -288,15 +290,16 @@ amc-plugin publish [options]
 | `--changelog <text>` | Changelog text for this version | &mdash; |
 | `--watch` | Poll until the submission is approved or rejected (up to 3 hours) | `false` |
 | `--skip-preflight` | Skip the pre-upload readiness checks | `false` |
+| `--package <path>` | The `.amcplugin` to upload; required when the folder holds more than one | the only package in the folder |
 | `--as <github-user>` | Assert the expected GitHub account; aborts before upload on mismatch | &mdash; |
 | `--switch-account` | Sign out first and re-authenticate as a different account | `false` |
 | `-y, --yes` | Skip the upload-identity confirmation prompt (for CI) | `false` |
 
 **What it does:**
 
-1. Checks for a stored auth token; prompts GitHub OAuth if missing.
-2. **Confirms the uploading identity** before upload (see the account trap below).
-3. Locates a `.amcplugin` file (runs `amc-plugin package` if none found).
+1. Chooses the package to upload ([how](#choosing-the-package)); refuses before anything is sent if it cannot pick exactly one right one.
+2. Checks for a stored auth token; prompts GitHub OAuth if missing.
+3. **Confirms the uploading identity** before upload (see the account trap below).
 4. Runs [`preflight`](#preflight) readiness checks (unless `--skip-preflight`); aborts on any failure.
 5. Uploads the archive to the marketplace.
 6. With `--watch`, polls every 30 seconds for the review decision.
@@ -317,6 +320,19 @@ signed into the correct GitHub account first, or sign out at
 `https://github.com/logout`.
 :::
 
+#### Choosing the package
+
+`publish` and `preflight` never pick "the first `.amcplugin` they find". They look in the plugin folder and in `dist/`, and:
+
+- **No package at all:** `amc-plugin package` runs first, then the result is checked like any other.
+- **More than one package, no `--package`:** refused. The message lists every file; name the one to upload with `--package <path>`.
+- **Exactly one package, or the one named by `--package`:** it must be called `<plugin id>-<manifest version>.amcplugin`, and the `manifest.json` inside it must carry that same version. Anything else is refused.
+- **A `-test.N` label** in `manifest.json`, in the file name or in the version inside the archive is refused. Store releases carry a plain version, so a test build is never uploaded by accident.
+
+::: tip Older CLIs
+A CLI released before this check still uploads the first `.amcplugin` it finds. Before every publish, `ls *.amcplugin` in the plugin folder and make sure there is exactly one, named for the store version.
+:::
+
 **Example:**
 
 ```bash
@@ -328,9 +344,12 @@ amc-plugin publish --switch-account
 
 # CI — assert the account and skip the prompt
 amc-plugin publish --as my-org-bot --yes
+
+# The folder holds more than one package — name the one to upload
+amc-plugin publish --package releases/my-plugin-1.3.2.amcplugin
 ```
 
-**Exit codes:** `0` success (or approved with `--watch`), `1` preflight failed, upload failed, rejected, or `--as` mismatch.
+**Exit codes:** `0` success (or approved with `--watch`), `1` package refused, preflight failed, upload failed, rejected, or `--as` mismatch.
 
 ---
 

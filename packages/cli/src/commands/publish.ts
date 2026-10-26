@@ -7,7 +7,7 @@ import { authenticate, getStoredToken, clearToken } from '../lib/auth.js'
 import { uploadPackage, getMyPlugins, MarketplaceApiError } from '../lib/marketplace-api.js'
 import type { SecurityFinding, UploadResult } from '../lib/marketplace-api.js'
 import { ok, fail, info, warn, heading, label, actionableError } from '../lib/output.js'
-import { runPreflight, renderPreflight } from './preflight.js'
+import { runPreflight, renderPreflight, locatePackage } from './preflight.js'
 import { evaluatePublishAccount, SWITCH_ACCOUNT_GUIDANCE } from '../lib/publish-account.js'
 
 export const publishCommand = new Command('publish')
@@ -15,6 +15,7 @@ export const publishCommand = new Command('publish')
   .option('--changelog <text>', 'Changelog for this version')
   .option('--watch', 'Poll until submission is approved or rejected')
   .option('--skip-preflight', 'Skip the pre-upload readiness checks')
+  .option('--package <path>', 'The .amcplugin to upload; required when the folder holds more than one')
   .option('--as <github-user>', 'Assert the expected GitHub account; aborts on mismatch')
   .option('--switch-account', 'Sign out first and re-authenticate as a different account')
   .option('-y, --yes', 'Skip the upload-identity confirmation prompt (for CI)')
@@ -22,13 +23,17 @@ export const publishCommand = new Command('publish')
     changelog?: string
     watch?: boolean
     skipPreflight?: boolean
+    package?: string
     as?: string
     switchAccount?: boolean
     yes?: boolean
   }) => {
     const cwd = process.cwd()
 
-    // 1. Check auth. --switch-account forces a fresh sign-in.
+    // 1. Choose the one package this release uploads, before anything is signed in or sent.
+    const packagePath = locatePackage(cwd, opts.package)
+
+    // 2. Check auth. --switch-account forces a fresh sign-in.
     if (opts.switchAccount) {
       const prev = getStoredToken()
       clearToken()
@@ -49,7 +54,7 @@ export const publishCommand = new Command('publish')
       token = await authenticate()
     }
 
-    // 2. Confirm the uploading identity (the silent-account trap guard).
+    // 3. Confirm the uploading identity (the silent-account trap guard).
     const gate = evaluatePublishAccount(token.github, { as: opts.as, yes: opts.yes })
     if (gate.action === 'abort') {
       actionableError(gate.message, gate.suggestion)
@@ -70,21 +75,7 @@ export const publishCommand = new Command('publish')
       }
     }
 
-    // 2. Locate .amcplugin package
-    let packagePath = findPackage(cwd)
-    if (!packagePath) {
-      info('No .amcplugin found. Running `amc-plugin package` first...')
-      const { execSync } = await import('node:child_process')
-      execSync('npx amc-plugin package', { cwd, stdio: 'inherit' })
-      packagePath = findPackage(cwd)
-    }
-
-    if (!packagePath) {
-      fail('Could not find or create .amcplugin package')
-      process.exit(1)
-    }
-
-    // 3. Preflight readiness checks (skippable)
+    // 4. Preflight readiness checks (skippable)
     if (!opts.skipPreflight) {
       const { results, hasFailure } = await runPreflight(cwd, {
         changelog: opts.changelog,
@@ -100,7 +91,7 @@ export const publishCommand = new Command('publish')
     const sizeMB = (fs.statSync(packagePath).size / 1024 / 1024).toFixed(2)
     info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB) as ${token.github}...`)
 
-    // 4. Upload
+    // 5. Upload
     try {
       const result = await uploadPackage(token, packagePath, opts.changelog ?? '')
       ok(`Submitted for review (submission ID: ${result.submissionId})`)
@@ -114,7 +105,7 @@ export const publishCommand = new Command('publish')
         return
       }
 
-      // 5. Poll for status
+      // 6. Poll for status
       info('Watching for review decision...')
       for (let i = 0; i < 360; i++) { // 3 hours max
         await sleep(30_000) // 30 seconds
@@ -157,23 +148,6 @@ export const publishCommand = new Command('publish')
       throw err
     }
   })
-
-function findPackage(dir: string): string | null {
-  // Look for .amcplugin in current dir
-  const files = fs.readdirSync(dir)
-  const amcFile = files.find(f => f.endsWith('.amcplugin'))
-  if (amcFile) return path.join(dir, amcFile)
-
-  // Check dist/
-  const distDir = path.join(dir, 'dist')
-  if (fs.existsSync(distDir)) {
-    const distFiles = fs.readdirSync(distDir)
-    const distAmcFile = distFiles.find(f => f.endsWith('.amcplugin'))
-    if (distAmcFile) return path.join(distDir, distAmcFile)
-  }
-
-  return null
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))

@@ -94,7 +94,9 @@ After signing in, the CLI stores your token locally at `~/.amc/marketplace-token
 
 ### Upload
 
-After authentication, the CLI locates (or creates) the `.amcplugin` file and uploads it:
+Before it signs in, the CLI chooses the package: the one `<id>-<version>.amcplugin` in your plugin folder (it runs `amc-plugin package` if there is none). If the folder holds more than one package it stops and lists them; name the one to upload with `--package <path>`. A package whose name or inside-version is not the `manifest.json` version, or that carries a `-test.N` label, is refused. See [Choosing the package](/reference/cli#choosing-the-package).
+
+After authentication, the CLI uploads that file:
 
 ```
 Uploading my-plugin-1.0.0.amcplugin (0.01 MB)...

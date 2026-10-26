@@ -11,6 +11,16 @@ together.
 
 ## [Unreleased]
 
+### Fixed — `publish` and `preflight` no longer upload "the first `.amcplugin` they find"
+
+Both commands took the first `.amcplugin` in the plugin folder, whatever its version. On 2026-10-26 a Decks 1.3.2 submission nearly uploaded a leftover `decks-1.3.2-test.1.amcplugin` that was the only package in the folder. They now choose through one shared check, before anything is signed in or sent:
+
+- More than one package and no `--package <path>`: refused, with every file listed.
+- The chosen package must be named `<id>-<manifest version>.amcplugin`, and the `manifest.json` inside it must carry that version.
+- A `-test.N` label in `manifest.json`, the file name or the archive's own manifest is refused.
+
+`--package <path>` is new on both commands. No package at all still runs `amc-plugin package` first.
+
 ### Added — preflight refuses a developer README
 
 `amc-plugin preflight` and `publish` now fail when the root `README.md` (the text shown on the store page) has raw HTML tags, a badge image, a `Developer notes` section or more than 3,000 characters. The message names the offending lines and points to `docs/DEVELOPMENT.md`.

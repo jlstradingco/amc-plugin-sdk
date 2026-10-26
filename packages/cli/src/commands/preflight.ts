@@ -18,8 +18,9 @@ import {
   type PreflightResult
 } from '../lib/publish-preflight.js'
 import { findRootReadme, resolveBannedScanDirs } from '../lib/project.js'
+import { readPluginIdentity, selectPackage } from '../lib/package-selection.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
-import { ok, fail, warn, info, heading, manifestNotFound } from '../lib/output.js'
+import { ok, fail, warn, info, heading, actionableError, manifestNotFound } from '../lib/output.js'
 
 export interface PreflightRunResult {
   results: PreflightResult[]
@@ -103,7 +104,14 @@ export async function runPreflight(
   results.push(readmeStoreTextResult(cwd))
   results.push(bannedImportsResult(cwd, manifest))
 
-  const packagePath = opts.packagePath ?? findPackage(cwd)
+  let packagePath = opts.packagePath
+  if (!packagePath) {
+    const selection = selectPackage(cwd, { id: pluginId, version: manifestVersion })
+    if (selection.kind === 'refused') {
+      results.push({ name: 'Package', status: 'fail', message: selection.message, suggestion: selection.suggestion })
+    }
+    if (selection.kind === 'selected') packagePath = selection.path
+  }
   if (packagePath && fs.existsSync(packagePath)) {
     results.push(checkPackageSize(fs.statSync(packagePath).size))
   }
@@ -123,33 +131,27 @@ export function renderPreflight(results: PreflightResult[]): void {
   console.log()
 }
 
-function findPackage(dir: string): string | null {
-  const files = fs.readdirSync(dir)
-  const amcFile = files.find(f => f.endsWith('.amcplugin'))
-  if (amcFile) return path.join(dir, amcFile)
-
-  const distDir = path.join(dir, 'dist')
-  if (fs.existsSync(distDir)) {
-    const distFiles = fs.readdirSync(distDir)
-    const distAmcFile = distFiles.find(f => f.endsWith('.amcplugin'))
-    if (distAmcFile) return path.join(distDir, distAmcFile)
+export function locatePackage(cwd: string, explicit?: string): string {
+  const identity = readPluginIdentity(cwd)
+  let selection = selectPackage(cwd, identity, explicit)
+  if (selection.kind === 'none') {
+    info('No .amcplugin found. Running `amc-plugin package` first...')
+    execSync('npx amc-plugin package', { cwd, stdio: 'inherit' })
+    selection = selectPackage(cwd, identity)
   }
-  return null
+  if (selection.kind === 'selected') return selection.path
+  if (selection.kind === 'refused') actionableError(selection.message, selection.suggestion)
+  else fail('Could not find or create .amcplugin package')
+  process.exit(1)
 }
 
 export const preflightCommand = new Command('preflight')
   .description('Run publish readiness checks without uploading')
   .option('--changelog <text>', 'Changelog for this version (checked for presence)')
-  .action(async (opts: { changelog?: string }) => {
+  .option('--package <path>', 'The .amcplugin to check; required when the folder holds more than one')
+  .action(async (opts: { changelog?: string; package?: string }) => {
     const cwd = process.cwd()
-
-    // Build a package if one is not present so the size check has something to measure.
-    let packagePath: string | undefined = findPackage(cwd) ?? undefined
-    if (!packagePath) {
-      info('No .amcplugin found. Running `amc-plugin package` first...')
-      execSync('npx amc-plugin package', { cwd, stdio: 'inherit' })
-      packagePath = findPackage(cwd) ?? undefined
-    }
+    const packagePath = locatePackage(cwd, opts.package)
 
     const { results, hasFailure } = await runPreflight(cwd, { changelog: opts.changelog, packagePath })
     renderPreflight(results)
