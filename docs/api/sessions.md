@@ -270,6 +270,46 @@ await AgentMC.session.launchWithDraft({
 })
 ```
 
+## Per-context chats (`AgentMC.sessionsPane`)
+
+A plugin whose Sessions pane should show one set of chats per open item (a document, a board, a
+file) opts in with two manifest keys and one webview call.
+
+```json
+{
+  "ui": {
+    "sessions": {
+      "perContext": true,
+      "noContextText": "Open a document to start a Chat.",
+      "contextTemplate": "Work only on document {{contextKey}} ({{contextLabel}})."
+    }
+  }
+}
+```
+
+### `sessionsPane.setContext(context: { key: string; label: string } | null): Promise<void>`
+
+Tell Omniscio what is open right now. Webview only; needs no permission. Call it whenever the open
+item changes, and with `null` when nothing is open.
+
+- `key` is your stable id for the item: 1-128 characters from `A-Z a-z 0-9 . _ -`. Use an id that
+  survives a restart, so the item's chats come back when it is reopened.
+- `label` is what the person sees above the list ("Chats for report.pdf"): 1-200 characters, no
+  line breaks or other control characters.
+
+With `perContext` on, the pane lists only the chats started for the active key, and its suggested
+prompts, "New session" button and header "+" start chats for that key. With no active key the pane
+shows `noContextText` (or a short host sentence) and offers no way to start a chat. A launch for a
+key your plugin has not declared since the app started is refused.
+
+`{{contextKey}}` and `{{contextLabel}}` in `contextTemplate` are filled from the chat's own item;
+both are empty for a chat that belongs to no item. Without `perContext` nothing changes.
+
+```typescript
+await AgentMC.sessionsPane.setContext({ key: doc.id, label: doc.fileName })
+await AgentMC.sessionsPane.setContext(null)
+```
+
 ## Notes
 
 - Creating a session spawns a real Claude Code process. Each session consumes API credits.

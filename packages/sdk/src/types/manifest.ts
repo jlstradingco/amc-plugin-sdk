@@ -361,6 +361,8 @@ export interface PluginManifest {
        * characters, or one slower than 1.5 seconds, is dropped.
        */
       realProjectContext?: boolean
+      perContext?: boolean
+      noContextText?: string
       suggestedPrompts?: PluginSuggestedPrompt[]
     }
   }
@@ -372,6 +374,7 @@ export interface PluginManifest {
   process?: {
     allowedCommands: string[]
   }
+  linkClaims?: { host: string; path: string }[]
   /**
    * The Omniscio plugin-SDK contract this plugin needs — not the version of
    * this package. Write it bare (`"2.0.0"`): the host reads a bare version as a

@@ -124,6 +124,8 @@ export interface PluginManifest {
       "label"?: string
       "showDivider"?: boolean
       "realProjectContext"?: boolean
+      "perContext"?: boolean
+      "noContextText"?: string
       "suggestedPrompts"?: Array<{
         "label": string
         "prompt": string
@@ -155,6 +157,10 @@ export interface PluginManifest {
     }
   }
   "sessionTools"?: boolean
+  "linkClaims"?: Array<{
+    "host": string
+    "path": string
+  }>
   "cli"?: {
     "endpoints": Array<{
       "method": "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
@@ -499,6 +505,9 @@ export interface AgentMC {
     "listProjects": (...args: unknown[]) => Promise<unknown>
     "listSessions": (...args: unknown[]) => Promise<unknown>
     "requestAccess": (...args: unknown[]) => Promise<unknown>
+  }
+  "sessionsPane": {
+    "setContext": (...args: unknown[]) => Promise<unknown>
   }
   "settings": {
     "get": (...args: unknown[]) => Promise<unknown>

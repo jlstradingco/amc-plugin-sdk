@@ -200,6 +200,10 @@ export interface BridgeSession {
   getCost(sessionId: string): Promise<{ costUsd: number }>
 }
 
+export interface BridgeSessionsPane {
+  setContext(context: { key: string; label: string } | null): Promise<void>
+}
+
 /**
  * Save files and pick folders through the OS dialogs, on `AgentMC.export`.
  *
@@ -686,6 +690,7 @@ export interface AgentMC {
   theme: BridgeTheme
   toast: PluginToast
   session: BridgeSession
+  sessionsPane: BridgeSessionsPane
   ai: BridgeAi
   export: BridgeExport
   project: BridgeProject
