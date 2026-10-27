@@ -203,6 +203,17 @@ export interface PluginSettingDefinition {
   agentWritable?: boolean
 }
 
+export interface PluginLinkClaim {
+  /** The site's domain, at least two labels (`example.com`), at most 253 characters. */
+  host: string
+  /**
+   * The path on that site this plugin claims, always starting with `/` and carrying at least
+   * one literal segment, so a claim can never cover a whole site. `{placeholder}` segments
+   * stand for values the host fills in (`/mail/{threadId}`).
+   */
+  path: string
+}
+
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   path: string
@@ -416,6 +427,11 @@ export interface PluginManifest {
    * sees it at install as "Agent Sessions", and an update that turns it on asks them again.
    */
   sessionTools?: boolean
+  /**
+   * Web URLs this plugin wants to handle, so the host can offer it to the user when they are
+   * looking at one of them. Between 1 and 20 claims; each names a `host` and a `path`.
+   */
+  linkClaims?: PluginLinkClaim[]
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]
