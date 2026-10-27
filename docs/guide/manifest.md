@@ -75,6 +75,7 @@ Earlier versions of this guide documented both. Neither is a host manifest key (
 | `tags` | string[] | No | Discoverability keywords surfaced in marketplace search and shown as chips on the plugin card (up to 10 tags, 30 characters each) |
 | `screenshots` | string[] | No | Gallery images for the marketplace detail page: up to 8 `http(s)` URLs you host, 2048 characters each. Any other value (a `data:` or `javascript:` URL, a 9th entry) fails validation |
 | `links` | object | No | Support links for the detail page's Support tab: any of `homepage`, `support`, `privacy`, `contact`, `repository`, each an `http(s)` URL of at most 2048 characters |
+| `requiresOrganization` | string | No | Show and enable the plugin only while the signed-in user's active Omniscio workspace is this organization id: letters, digits, `_` and `-`, up to 128 characters. A visibility gate, not a security boundary — lock any data the plugin reads on your own server (`src/main/services/plugin/plugin-org-gate.ts`) |
 
 ::: warning
 The `id` field is permanent. It is used as the storage namespace, database prefix, and marketplace identifier. Changing it after publishing creates a new, separate plugin.
@@ -331,6 +332,34 @@ The same key on a setting (`settings[].agentWritable`) lets an outside settings 
 once. Without it the change waits for the person's approval card, and a `password` setting can never
 be changed from outside.
 
+### Read-only columns: `cliReadOnlyColumns`
+
+On a table that is `agentWritable`, list the columns an outside write must never set:
+
+```json
+"rules": {
+  "columns": { "title": "text", "enabled": "integer", "spend_cap": "integer" },
+  "agentWritable": true,
+  "cliReadOnlyColumns": ["enabled", "spend_cap"]
+}
+```
+
+- **An outside `POST` or `PATCH` that sets a listed column is refused** (HTTP 403). The other
+  columns stay writable, and your own backend and panel write every column as before.
+- **List every column and the table is append-only from outside** — `DELETE` is refused too, so an
+  audit trail cannot be erased through the control server.
+- Up to 64 entries, and each must be a column declared in `columns`. `amc-plugin validate` refuses an
+  undeclared name with the same message Omniscio gives.
+
+### The key-value store: `storage.kv`
+
+`ctx.storage` keys are refused to outside writes (`PUT` and `DELETE /plugins/:id/kv/...`, HTTP 403)
+unless the store opts in. Reads stay open.
+
+```json
+"storage": { "collections": {}, "kv": { "agentWritable": true } }
+```
+
 ### Command tables: `commandTableWaiver`
 
 `amc-plugin validate`, `preflight` and `publish` fail when a table can hold a runnable command — an
@@ -405,6 +434,7 @@ Declares the frontend entry point, sidebar appearance, and how Omniscio frames y
 | `sessions.contextTemplate` | string | No | 5000 | Extra context appended to Omniscio's built-in primer for every session on your plugin's project |
 | `sessions.showDivider` | boolean | No | — | Defaults to `true` |
 | `sessions.suggestedPrompts` | array | No | 4 items | Tappable prompts under the session list (`label` ≤ 60, `prompt` ≤ 2000) |
+| `sessions.realProjectContext` | boolean | No | — | Add your plugin's standing context to sessions in the user's REAL projects that your plugin holds a workspace grant for. See below |
 
 ::: warning Every entry point must stay inside your package
 `amc-plugin validate` applies Omniscio's own entry-path rule to `ui.entryPoint` and the
@@ -456,6 +486,12 @@ block if you need none of them.
 `contextTemplate` is folded *after* Omniscio's built-in plugin context, so your text adds to the
 system context rather than replacing it.
 
+`sessions.realProjectContext: true` reaches further: when a session starts in one of the user's real
+projects, and your plugin holds a workspace grant on that project, Omniscio calls your plugin's
+`GET context` CLI action and adds the text it returns. Declare that endpoint as a plain read (or
+`"safe": true`) — an action that needs the person's approval is never called here. A block over
+5,000 characters, or one that takes longer than 1.5 seconds, is left out rather than cut short.
+
 ## `keybindings` Array
 
 Registers keyboard shortcuts your plugin owns (`src/shared/plugin-manifest-schema.ts:360-373`).
@@ -474,7 +510,9 @@ Registers keyboard shortcuts your plugin owns (`src/shared/plugin-manifest-schem
 | `commandId` | string | Yes | Letters, digits and hyphens only (1–100) — the command your plugin handles |
 | `label` | string | Yes | Human-readable name shown in the shortcut UI (1–200) |
 
-At most **20** entries; a longer list fails validation.
+At most **20** entries; a longer list fails validation. `amc-plugin validate` checks every one of
+these rules (SDK 3.2 and earlier dropped the block unchecked, so a bad `commandId` only failed at
+install).
 
 ## `process` Block
 
@@ -495,7 +533,11 @@ Declares the bare command names your backend may spawn (`src/shared/plugin-manif
 General-purpose interpreters and shells (`node`, `python`, `bash`, `powershell`, `cmd`) and
 command launchers (`git`, `ssh`, `make`, `env`, `xargs`) are refused by name: allowing one would
 let the plugin run arbitrary code, so the host rejects the manifest rather than trusting the plugin.
-The full list is `INTERPRETER_DENYLIST` in `src/shared/plugin-manifest-schema.ts:44-103`.
+The full list is `INTERPRETER_DENYLIST` in `src/shared/plugin-manifest-schema.ts:44-103`. The SDK
+ships the same list, generated from that file, as `PROCESS_INTERPRETER_DENYLIST`, and
+`amc-plugin validate` applies it the way Omniscio does: case does not matter, and a `.exe` or
+`.cmd` suffix is ignored, so `NODE.EXE` and `bash.cmd` are refused too. SDK 3.2 and earlier
+dropped the `process` block unchecked.
 
 ## `backend` Block
 
@@ -516,8 +558,37 @@ Declares the backend entry point and optional resource limits.
 |---|---|---|---|
 | `entryPoint` | string | Yes | Path to the compiled JS file exporting `activate`. Must stay inside your package — see the entry-path rule under the `ui` block |
 | `resourceLimits.memoryMb` | number | No | Memory limit for the backend worker (in MB) |
+| `timeouts` | object | No | Deadlines for your backend's hooks, in milliseconds — see below |
 
 Omit the entire `backend` block if your plugin is UI-only.
+
+### Hook deadlines: `timeouts`
+
+A backend with a slow cold start, or a CLI action that legitimately runs long, can raise its own
+deadlines:
+
+```json
+{
+  "backend": {
+    "entryPoint": "dist/backend/index.js",
+    "timeouts": { "activateMs": 45000, "cliDispatchMs": 60000 }
+  }
+}
+```
+
+| Key | Default | What it bounds |
+|---|---|---|
+| `activateMs` | 20,000 | Loading your backend and its `ready` signal. Missing it stops the worker |
+| `onEnableMs` | 10,000 | `onEnable` |
+| `onDisableMs` | 5,000 | `onDisable` |
+| `onShutdownMs` | 5,000 | `onShutdown` |
+| `onSettingsChangedMs` | 5,000 | `onSettingsChanged` |
+| `onAppReadyMs` | 10,000 | `onAppReady` |
+| `cliDispatchMs` | 30,000 | One CLI endpoint call, before the caller gets a 504 |
+
+Each value must be a positive whole number — `amc-plugin validate` refuses `0`, a negative, a
+fraction or a string, as Omniscio does. Omniscio then clamps every value to 1,000–60,000, and a key
+you leave out keeps its default.
 
 ## `permissions` Array
 

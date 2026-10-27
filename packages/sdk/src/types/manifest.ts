@@ -35,6 +35,13 @@ export interface PluginCollectionSchema {
    */
   uniqueIndexes?: string[][]
   /**
+   * Declared columns the control-server write routes refuse with a 403, even on an
+   * `agentWritable` table, so only your own backend and panel can set them. Up to 64,
+   * each one a column declared in `columns`. A table whose every column is listed is
+   * append-only from outside: DELETE is refused too.
+   */
+  cliReadOnlyColumns?: string[]
+  /**
    * Opt this table IN to writes from Omniscio's local control server — the
    * `POST` / `PATCH` / `DELETE /plugins/:id/db/:collection` routes every AI agent
    * session on the computer can reach. Absent or `false` (the default), the host
@@ -274,10 +281,22 @@ export interface PluginManifest {
      * tab. Every value must be an `http:`/`https:` URL — see {@link PluginSupportLinks}.
      */
     links?: PluginSupportLinks
+    /**
+     * Show and enable this plugin only while the signed-in user's active Omniscio
+     * workspace is this organization id: letters, digits, `_` and `-`, up to 128
+     * characters. A visibility gate, not a security boundary, so lock any data the
+     * plugin reads on your own server.
+     */
+    requiresOrganization?: string
   }
   settings: PluginSettingDefinition[]
   storage: {
     collections: Record<string, PluginCollectionSchema>
+    /**
+     * Opt the plugin's key-value store IN to control-server writes. Absent or `false`,
+     * every outside PUT or DELETE is refused with a 403; reads stay open.
+     */
+    kv?: { agentWritable?: boolean }
   }
   /**
    * Kept optional here even though the host requires the block, so this SDK
@@ -335,6 +354,13 @@ export interface PluginManifest {
       label?: string
       /** Defaults to true host-side. */
       showDivider?: boolean
+      /**
+       * Add this plugin's standing context to sessions in the user's REAL projects that
+       * it holds a workspace grant for. The host calls the plugin's `GET context` CLI
+       * action, which must be declared as a plain read or `safe`; a block over 5000
+       * characters, or one slower than 1.5 seconds, is dropped.
+       */
+      realProjectContext?: boolean
       suggestedPrompts?: PluginSuggestedPrompt[]
     }
   }
@@ -362,6 +388,20 @@ export interface PluginManifest {
     entryPoint: string
     resourceLimits?: {
       memoryMb?: number
+    }
+    /**
+     * Deadlines, in milliseconds, for each backend hook and for one CLI dispatch. Each
+     * must be a positive integer; the host clamps it to 1,000-60,000, and a key you
+     * leave out keeps the host default.
+     */
+    timeouts?: {
+      activateMs?: number
+      onEnableMs?: number
+      onDisableMs?: number
+      onShutdownMs?: number
+      onSettingsChangedMs?: number
+      onAppReadyMs?: number
+      cliDispatchMs?: number
     }
   }
   /**

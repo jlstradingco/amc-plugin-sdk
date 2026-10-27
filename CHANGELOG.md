@@ -11,6 +11,24 @@ together.
 
 ## [Unreleased]
 
+### Fixed — `amc-plugin validate` checks every manifest field Omniscio accepts
+
+`validateManifest` silently dropped seven field groups that Omniscio reads, so a bad value passed `validate` and the plugin was only refused at install. It now checks each with Omniscio's own limits and messages:
+
+- `plugin.requiresOrganization` — letters, digits, `_` and `-`, up to 128 characters.
+- `storage.collections.<table>.cliReadOnlyColumns` — up to 64 columns, each one declared in `columns`.
+- `storage.kv.agentWritable` — a boolean.
+- `ui.sessions.realProjectContext` — a boolean.
+- `keybindings` — up to 20; `commandId` is letters, digits and hyphens.
+- `process.allowedCommands` — 1 to 20 bare command names, and no interpreter or shell (`node`, `bash`, `python`, `git`, …). The interpreter list is generated from Omniscio's own and exported as `PROCESS_INTERPRETER_DENYLIST`.
+- `backend.timeouts` — seven optional deadlines, each a positive whole number of milliseconds.
+
+`validate` also refuses `boards.link` without `boards.read`, as Omniscio does. A manifest that relied on one of these being skipped now fails `validate` with the reason it would have failed at install.
+
+`PluginManifest` gains `plugin.requiresOrganization`, `cliReadOnlyColumns`, `storage.kv`, `ui.sessions.realProjectContext` and `backend.timeouts`, so editors autocomplete them and flag a misspelling. None of these fields is reserved for Omniscio's own plugins: Omniscio honours each one for any plugin it loads.
+
+A new test compares every nested key of the generated manifest schema with the validator and the type, in both directions, so the next field Omniscio adds fails the SDK's tests instead of drifting silently.
+
 ### Fixed — `publish` and `preflight` no longer upload "the first `.amcplugin` they find"
 
 Both commands took the first `.amcplugin` in the plugin folder, whatever its version. On 2026-10-26 a Decks 1.3.2 submission nearly uploaded a leftover `decks-1.3.2-test.1.amcplugin` that was the only package in the folder. They now choose through one shared check, before anything is signed in or sent:

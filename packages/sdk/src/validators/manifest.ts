@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { PLUGIN_PERMISSIONS } from '../generated/sdk-facts.js'
+import { PLUGIN_PERMISSIONS, PROCESS_INTERPRETER_DENYLIST } from '../generated/sdk-facts.js'
 import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
 import {
   manifestEntryPathProblems,
@@ -96,6 +96,12 @@ const pluginInfoSchema = z.object({
       repository: listingUrl.optional(),
     })
     .optional(),
+  requiresOrganization: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Za-z0-9_-]+$/)
+    .optional(),
 })
 
 const settingOptionSchema = z.object({
@@ -154,6 +160,7 @@ const collectionSchema = z
     // real CREATE UNIQUE INDEX per tuple, and `collectionUpsert`'s atomicity
     // depends on the tuple existing (plugin-storage.ts:511-513, :528-538).
     uniqueIndexes: z.array(z.array(sqlIdent()).min(1)).optional(),
+    cliReadOnlyColumns: z.array(sqlIdent()).max(64).optional(),
     // Host `z.boolean().optional()` (plugin-manifest-validator.ts, storage.collections):
     // opts the table IN to control-server writes. See PluginCollectionSchema.agentWritable.
     agentWritable: z.boolean().optional(),
@@ -173,6 +180,15 @@ const collectionSchema = z
           code: z.ZodIssueCode.custom,
           path: ['columns', column],
           message: reservedColumnMessage,
+        })
+      }
+    }
+    for (const name of collection.cliReadOnlyColumns ?? []) {
+      if (!(name in collection.columns)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['cliReadOnlyColumns'],
+          message: `cliReadOnlyColumns names "${name}", which is not a declared column of this collection`,
         })
       }
     }
@@ -271,6 +287,7 @@ const uiSchema = z.object({
       contextTemplate: z.string().max(5000).optional(),
       label: z.string().min(1).max(100).optional(),
       showDivider: z.boolean().optional(),
+      realProjectContext: z.boolean().optional(),
       suggestedPrompts: z
         .array(
           z.object({
@@ -363,6 +380,37 @@ const cliEndpointsSchema = z
     })
   })
 
+const keybindingSchema = z.object({
+  shortcut: z.string().min(1).max(100),
+  commandId: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[a-zA-Z0-9-]+$/),
+  label: z.string().min(1).max(200),
+})
+
+const SAFE_COMMAND_NAME = /^[a-zA-Z0-9._+-]+$/
+const SAFE_COMMAND_MESSAGE =
+  'allowedCommands entries must be a bare command name (letters, digits, . _ + -) with no path separators, wildcards, whitespace, or shell characters'
+
+const interpreterDenylist: ReadonlySet<string> = new Set(PROCESS_INTERPRETER_DENYLIST)
+
+const normalizeCommandName = (raw: string): string =>
+  (raw.split(/[\\/]/).pop() ?? raw).toLowerCase().replace(/\.exe$/i, '').replace(/\.cmd$/i, '')
+
+const allowedCommandSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(SAFE_COMMAND_NAME, SAFE_COMMAND_MESSAGE)
+  .refine(
+    (entry) => !interpreterDenylist.has(normalizeCommandName(entry)),
+    (entry) => ({
+      message: `process.allowedCommands may not include the general-purpose interpreter "${normalizeCommandName(entry)}" — it would let the plugin run arbitrary code`,
+    })
+  )
+
 const cronJobSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -375,6 +423,18 @@ const cronJobSchema = z.object({
 // policy that rejected a host-legal `memoryMb: 1024`.
 const resourceLimitsSchema = z.object({
   memoryMb: z.number().int().positive().optional(),
+})
+
+const backendTimeoutMs = z.number().int().positive().optional()
+
+const backendTimeoutsSchema = z.object({
+  activateMs: backendTimeoutMs,
+  onEnableMs: backendTimeoutMs,
+  onDisableMs: backendTimeoutMs,
+  onShutdownMs: backendTimeoutMs,
+  onSettingsChangedMs: backendTimeoutMs,
+  onAppReadyMs: backendTimeoutMs,
+  cliDispatchMs: backendTimeoutMs,
 })
 
 export { PLUGIN_PERMISSIONS } from '../generated/sdk-facts.js'
@@ -400,14 +460,18 @@ export const manifestSchema = z.object({
   storage: z
     .object({
       collections: z.record(sqlIdent(), collectionSchema),
+      kv: z.object({ agentWritable: z.boolean().optional() }).optional(),
     })
     .default({ collections: {} }),
   migrations: z.array(migrationSchema).default([]),
   ui: uiSchema.optional(),
+  keybindings: z.array(keybindingSchema).max(20).optional(),
+  process: z.object({ allowedCommands: z.array(allowedCommandSchema).min(1).max(20) }).optional(),
   sdkVersion: z.string().min(1).max(50).optional(),
   backend: z.object({
     entryPoint: pluginRelativeEntryPath,
     resourceLimits: resourceLimitsSchema.optional(),
+    timeouts: backendTimeoutsSchema.optional(),
   }).optional(),
   // `.max(50)` mirrors the host's cap on the array length.
   permissions: z.array(permissionSchema).max(50).optional(),
@@ -439,6 +503,14 @@ export const manifestSchema = z.object({
         path: ['permissions'],
         message:
           '"chrome.widget" requires an explicit "chrome" permission in the same manifest: add chrome to permissions',
+      })
+    }
+    if (permissions.includes('boards.link') && !permissions.includes('boards.read')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['permissions'],
+        message:
+          '"boards.link" requires an explicit "boards.read" permission in the same manifest: add boards.read to permissions',
       })
     }
     if (permissions.includes('workspace.read')) return

@@ -187,6 +187,7 @@ export interface AgentMC {
   }
   "autohotkey": {
     "regenerateManagedFile": (...args: unknown[]) => Promise<unknown>
+    "saveScriptFile": (...args: unknown[]) => Promise<unknown>
   }
   "backend": {
     "invoke": (...args: unknown[]) => Promise<unknown>
