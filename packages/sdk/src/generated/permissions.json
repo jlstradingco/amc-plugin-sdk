@@ -105,8 +105,8 @@
   {
     "name": "system",
     "label": "System",
-    "description": "Access system features like clipboard reading, opening files, and running processes",
-    "tier": "standard",
+    "description": "Read and replace everything on your clipboard at any time, open files inside folders you grant, and run the helper programs its manifest declares. Nothing asks you again each time.",
+    "tier": "elevated",
     "namespaces": [
       "clipboard",
       "process",
