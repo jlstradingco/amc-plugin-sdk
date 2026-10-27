@@ -44,6 +44,7 @@ describe(`sessions.create parity (${HOST_SOURCES.sessionBridge}:95-110)`, () => 
     expectTypeOf<Parameters<PluginSessions['create']>[0]>().toEqualTypeOf<{
       prompt?: string
       userInitiated?: boolean
+      clientRequestId?: string
     }>()
   })
 

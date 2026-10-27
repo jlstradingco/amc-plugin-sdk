@@ -11,6 +11,10 @@ together.
 
 ## [Unreleased]
 
+### Added — `ctx.sessions.create` takes `clientRequestId`
+
+The backend `PluginSessions.create` options gain an optional `clientRequestId` (1 to 128 characters). A create that repeats it within 10 minutes returns the first session's id instead of starting another one, matching the webview `session.create`. Older Omniscio builds ignore the field.
+
 ### Fixed — `amc-plugin validate` checks every manifest field Omniscio accepts
 
 `validateManifest` silently dropped seven field groups that Omniscio reads, so a bad value passed `validate` and the plugin was only refused at install. It now checks each with Omniscio's own limits and messages:

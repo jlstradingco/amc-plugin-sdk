@@ -271,8 +271,16 @@ export interface PluginSessions {
    *
    * The session has NO built-in tools (Read, Bash, Edit…) unless the manifest
    * declares `sessionTools: true` (see `PluginManifest.sessionTools`).
+   *
+   * Pass a stable `clientRequestId` (1 to 128 characters) when you may retry:
+   * a create that repeats it within 10 minutes returns the first session's id
+   * instead of starting another one.
    */
-  create(opts: { prompt?: string; userInitiated?: boolean }): Promise<{ sessionId: string }>
+  create(opts: {
+    prompt?: string
+    userInitiated?: boolean
+    clientRequestId?: string
+  }): Promise<{ sessionId: string }>
   sendMessage(sessionId: string, text: string): Promise<void>
   /**
    * Resolves a bare status string.
