@@ -186,6 +186,7 @@ export interface AgentMC {
     "getWebAuth": (...args: unknown[]) => Promise<unknown>
   }
   "autohotkey": {
+    "generateIndex": (...args: unknown[]) => Promise<unknown>
     "regenerateManagedFile": (...args: unknown[]) => Promise<unknown>
     "saveScriptFile": (...args: unknown[]) => Promise<unknown>
   }
