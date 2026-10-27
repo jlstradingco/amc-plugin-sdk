@@ -287,6 +287,16 @@ file) opts in with two manifest keys and one webview call.
 }
 ```
 
+### Locking down pane chats (`ui.sessions.lockDown`)
+
+Set `"lockDown": true` under `ui.sessions` to give every chat the person starts from your pane the
+plugin safety floor: its own folder, none of the person's setup, a short tool list, and a prompt for
+every command and web request. Two things are easier than for other floored sessions: one plain
+`curl` to your own actions at `http://127.0.0.1:<port>/plugins/<your id>/cli/<path>` runs without a
+prompt (keep it to one command, headers, one inline JSON body with no `$` variables), and file tools
+reach only the chat's folder and the projects the person granted your plugin. Actions you did not
+mark `safe` still ask the person through the inbox.
+
 ### `sessionsPane.setContext(context: { key: string; label: string } | null): Promise<void>`
 
 Tell Omniscio what is open right now. Webview only; needs no permission. Call it whenever the open

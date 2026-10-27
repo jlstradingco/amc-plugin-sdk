@@ -125,6 +125,7 @@ export interface PluginManifest {
       "showDivider"?: boolean
       "realProjectContext"?: boolean
       "perContext"?: boolean
+      "lockDown"?: boolean
       "noContextText"?: string
       "suggestedPrompts"?: Array<{
         "label": string

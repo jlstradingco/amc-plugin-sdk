@@ -362,6 +362,7 @@ export interface PluginManifest {
        */
       realProjectContext?: boolean
       perContext?: boolean
+      lockDown?: boolean
       noContextText?: string
       suggestedPrompts?: PluginSuggestedPrompt[]
     }

@@ -400,6 +400,9 @@
             "perContext": {
               "type": "boolean"
             },
+            "lockDown": {
+              "type": "boolean"
+            },
             "noContextText": {
               "type": "string",
               "minLength": 1,
