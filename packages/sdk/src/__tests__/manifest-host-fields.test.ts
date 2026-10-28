@@ -107,6 +107,70 @@ describe('ui.sessions.realProjectContext (host: boolean)', () => {
   })
 })
 
+describe('ui.sessions per-context chat fields (host: perContext, lockDown, chatPlacement, noContextText)', () => {
+  const sessionsWith = (sessions: Record<string, unknown>) => ({ ...baseManifest, ui: { sessions } })
+
+  it('accepts and keeps all four', () => {
+    const sessions = { perContext: true, lockDown: false, chatPlacement: 'beside', noContextText: 'Open a record first' }
+    const result = validateManifest(sessionsWith(sessions))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.sessions).toMatchObject(sessions)
+  })
+
+  it.each(['replace', 'beside'])('accepts chatPlacement %s', (chatPlacement) => {
+    expect(validateManifest(sessionsWith({ chatPlacement })).errors).toEqual([])
+  })
+
+  it.each([
+    ['perContext', 'yes'],
+    ['lockDown', 1],
+    ['chatPlacement', 'floating'],
+    ['noContextText', ''],
+    ['noContextText', 'a'.repeat(201)],
+  ])('refuses %s: %j', (key, value) => {
+    expect(errorsOf(sessionsWith({ [key]: value }))).toMatch(new RegExp(`^ui\\.sessions\\.${key}: `, 'm'))
+  })
+
+  it('accepts noContextText at the 200-character cap', () => {
+    expect(validateManifest(sessionsWith({ noContextText: 'a'.repeat(200) })).errors).toEqual([])
+  })
+})
+
+describe('linkClaims (host: 1-20 claims of an exact host and a templated path)', () => {
+  const claimsWith = (linkClaims: unknown) => ({ ...baseManifest, linkClaims })
+
+  it('accepts and keeps a claim with a literal and a placeholder segment', () => {
+    const linkClaims = [{ host: 'github.com', path: '/{owner}/{repo}/pull/{number}' }]
+    const result = validateManifest(claimsWith(linkClaims))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.linkClaims).toEqual(linkClaims)
+  })
+
+  it('accepts 20 claims and refuses 21 or none', () => {
+    const claims = Array.from({ length: 21 }, (_, i) => ({ host: 'example.com', path: `/item${i}` }))
+    expect(validateManifest(claimsWith(claims.slice(0, 20))).errors).toEqual([])
+    expect(errorsOf(claimsWith(claims))).toMatch(/^linkClaims: /m)
+    expect(errorsOf(claimsWith([]))).toMatch(/^linkClaims: /m)
+  })
+
+  it.each([
+    [{ host: '*.example.com', path: '/a' }, 'host must be an exact lowercase domain name'],
+    [{ host: 'Example.com', path: '/a' }, 'host must be an exact lowercase domain name'],
+    [{ host: 'example.com:8080', path: '/a' }, 'host must be an exact lowercase domain name'],
+    [{ host: 'localhost', path: '/a' }, 'host must be an exact lowercase domain name'],
+    [{ host: 'example.com', path: 'a' }, 'path must start with "/"'],
+    [{ host: 'example.com', path: '/{id}' }, 'path needs at least one literal segment'],
+    [{ host: 'example.com', path: '/a/{Id}' }, 'path segment "{Id}" must be a literal or a {placeholder}'],
+    [{ host: 'example.com', path: `/${'a'.repeat(200)}` }, 'path is too long'],
+  ])('refuses %j with the host reason', (claim, reason) => {
+    expect(errorsOf(claimsWith([claim]))).toContain(`linkClaims: ${reason}`)
+  })
+
+  it('refuses a claim carrying a key the host does not read', () => {
+    expect(validateManifest(claimsWith([{ host: 'example.com', path: '/a', query: 'x' }])).valid).toBe(false)
+  })
+})
+
 describe('backend.timeouts (host: each key a positive integer of milliseconds)', () => {
   const keys = ['activateMs', 'onEnableMs', 'onDisableMs', 'onShutdownMs', 'onSettingsChangedMs', 'onAppReadyMs', 'cliDispatchMs'] as const
   const timeoutsWith = (timeouts: unknown) => ({

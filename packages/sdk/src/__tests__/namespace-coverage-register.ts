@@ -14,7 +14,6 @@ export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
   { namespace: 'decks', reason: 'Deck and slide assembly — no AgentMC type yet' },
   { namespace: 'flashcards', reason: 'Card packs and review sessions — no AgentMC type yet' },
   { namespace: 'fs', reason: 'File reads and writes from the webview — no AgentMC type yet' },
-  { namespace: 'http', reason: 'Outbound HTTP from the webview — no AgentMC type yet' },
   { namespace: 'keybindings', reason: 'Shortcut registration — no AgentMC type yet' },
   { namespace: 'lms', reason: 'Course and lesson administration — no AgentMC type yet' },
   { namespace: 'members', reason: 'Workspace member reads (declaration only) — no AgentMC type yet' },

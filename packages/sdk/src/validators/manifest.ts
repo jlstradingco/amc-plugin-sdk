@@ -225,6 +225,7 @@ const PLUGIN_WINDOW_KEY_MAX = 40
 const PLUGIN_WINDOW_TITLE_MAX = 120
 const PLUGIN_WINDOW_SIZE_MIN = 200
 const PLUGIN_WINDOW_SIZE_MAX = 10000
+const NO_CONTEXT_TEXT_MAX = 200
 const pluginWindowKeyRegex = /^[a-z0-9][a-z0-9-]*$/
 
 // Every bound below is copied from the host validator
@@ -288,6 +289,10 @@ const uiSchema = z.object({
       label: z.string().min(1).max(100).optional(),
       showDivider: z.boolean().optional(),
       realProjectContext: z.boolean().optional(),
+      perContext: z.boolean().optional(),
+      lockDown: z.boolean().optional(),
+      chatPlacement: z.enum(['replace', 'beside']).optional(),
+      noContextText: z.string().min(1).max(NO_CONTEXT_TEXT_MAX).optional(),
       suggestedPrompts: z
         .array(
           z.object({
@@ -453,6 +458,43 @@ const uploadHostSchema = z
   )
   .refine((host) => !host.endsWith('.localhost'), { message: UPLOAD_HOST_MESSAGE })
 
+const LINK_CLAIMS_MAX = 20
+const LINK_CLAIM_HOST_MAX = 253
+const LINK_CLAIM_PATH_MAX = 200
+const LINK_CLAIM_HOST_LABEL = '[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?'
+const LINK_CLAIM_HOST_RE = new RegExp(`^${LINK_CLAIM_HOST_LABEL}(?:\\.${LINK_CLAIM_HOST_LABEL})+$`)
+const LINK_CLAIM_LITERAL_SEGMENT_RE = /^[A-Za-z0-9._~-]+$/
+const LINK_CLAIM_PLACEHOLDER_SEGMENT_RE = /^\{[a-z][A-Za-z0-9]*\}$/
+
+function linkClaimPathProblem(path: string): string | null {
+  if (!path.startsWith('/')) return 'path must start with "/"'
+  const segments = path.slice(1).split('/')
+  const bad = segments.find(
+    (s) => !LINK_CLAIM_LITERAL_SEGMENT_RE.test(s) && !LINK_CLAIM_PLACEHOLDER_SEGMENT_RE.test(s),
+  )
+  if (bad !== undefined) return `path segment "${bad}" must be a literal or a {placeholder}`
+  if (!segments.some((s) => LINK_CLAIM_LITERAL_SEGMENT_RE.test(s))) {
+    return 'path needs at least one literal segment, so a claim can never cover a whole site'
+  }
+  return null
+}
+
+function linkClaimProblem(claim: { host: string; path: string }): string | null {
+  if (claim.host.length > LINK_CLAIM_HOST_MAX || !LINK_CLAIM_HOST_RE.test(claim.host)) {
+    return 'host must be an exact lowercase domain name, with no wildcard, port or user name'
+  }
+  if (claim.path.length > LINK_CLAIM_PATH_MAX) return 'path is too long'
+  return linkClaimPathProblem(claim.path)
+}
+
+const linkClaimSchema = z
+  .object({ host: z.string(), path: z.string() })
+  .strict()
+  .superRefine((claim, ctx) => {
+    const problem = linkClaimProblem(claim)
+    if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `linkClaims: ${problem}` })
+  })
+
 /**
  * Four keys below (`settings`, `storage`, `migrations`, `sdkVersion`) were
  * REQUIRED here while the host defaults or omits every one of them. That is the
@@ -493,6 +535,7 @@ export const manifestSchema = z.object({
   // plugin's sessions their built-in tools.
   sessionTools: z.boolean().optional(),
   workspace: workspaceSchema.optional(),
+  linkClaims: z.array(linkClaimSchema).min(1).max(LINK_CLAIMS_MAX).optional(),
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
 })
   .superRefine((manifest, ctx) => {

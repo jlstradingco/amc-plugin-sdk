@@ -11,13 +11,26 @@ together.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-10-28
+
+### Upgrading from 3.1.0 — read this first
+
+- **This is the first published 3.2.0.** A 3.2.0 section was stamped here on 2026-10-12 but never
+  published; npm goes from `3.1.0` straight to this release. Everything below ships for the first
+  time now, including the CLI change under "Upgrading to CLI 3.2.0".
+- **One breaking change, kept in a minor on purpose:** `export.saveFile` and `export.savePdf` no
+  longer return the saved file's path. They resolve `{ saved: true }` or `{ saved: false }`, the
+  return types are now `Promise<{ saved: boolean }>`, and a plugin that read `result.path` gets
+  `undefined` (Omniscio strips it even on an older host). Code that used `.path` stops compiling
+  — see "Changed — `export.saveFile` and `export.savePdf` no longer say where the file went" below.
+
 ### Added — `ctx.sessions.create` takes `clientRequestId`
 
 The backend `PluginSessions.create` options gain an optional `clientRequestId` (1 to 128 characters). A create that repeats it within 10 minutes returns the first session's id instead of starting another one, matching the webview `session.create`. Older Omniscio builds ignore the field.
 
 ### Fixed — `amc-plugin validate` checks every manifest field Omniscio accepts
 
-`validateManifest` silently dropped seven field groups that Omniscio reads, so a bad value passed `validate` and the plugin was only refused at install. It now checks each with Omniscio's own limits and messages:
+`validateManifest` silently dropped nine field groups that Omniscio reads, so a bad value passed `validate` and the plugin was only refused at install. It now checks each with Omniscio's own limits and messages:
 
 - `plugin.requiresOrganization` — letters, digits, `_` and `-`, up to 128 characters.
 - `storage.collections.<table>.cliReadOnlyColumns` — up to 64 columns, each one declared in `columns`.
@@ -26,6 +39,8 @@ The backend `PluginSessions.create` options gain an optional `clientRequestId` (
 - `keybindings` — up to 20; `commandId` is letters, digits and hyphens.
 - `process.allowedCommands` — 1 to 20 bare command names, and no interpreter or shell (`node`, `bash`, `python`, `git`, …). The interpreter list is generated from Omniscio's own and exported as `PROCESS_INTERPRETER_DENYLIST`.
 - `backend.timeouts` — seven optional deadlines, each a positive whole number of milliseconds.
+- `ui.sessions.perContext` and `lockDown` — booleans; `chatPlacement` — `replace` or `beside`; `noContextText` — 1 to 200 characters.
+- `linkClaims` — 1 to 20 `{ host, path }` claims: an exact lowercase domain name, and a path of literal or `{placeholder}` segments with at least one literal.
 
 `validate` also refuses `boards.link` without `boards.read`, as Omniscio does. A manifest that relied on one of these being skipped now fails `validate` with the reason it would have failed at install.
 
@@ -136,8 +151,6 @@ You can now build a widget in the Omniscio titlebar end to end.
 - New elevated permission **`coreRead`** and the backend namespace **`ctx.core`**: `core.sessions.list/get`, `core.projects.list/get` and `core.messages.list` (capped at 200 messages per call). Types: `CoreSession`, `CoreProject`, `CoreMessage`, `PluginCore`. See [the Core API](docs/api/core.md).
 - `createTestContext({ core })` seeds it, and the dev shell serves a small set of sample sessions, projects and messages.
 - `PluginContext` gains an optional `core` member, like `rpc` and `host`, so a `PluginContext` double you build yourself keeps compiling. Check for it (`if (!ctx.core) …`) before use.
-
-## [3.2.0] - 2026-10-12
 
 ### Upgrading to CLI 3.2.0 — read this before you bump
 

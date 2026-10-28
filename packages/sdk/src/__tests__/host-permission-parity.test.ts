@@ -261,7 +261,14 @@ describe('SDK <-> host permission parity', () => {
     const bridgeKeys = new Set(bridgeNamespaceNames())
     const bridgeEntries = entries.filter((n) => n.surface === BRIDGE)
     expect(bridgeEntries.filter((n) => !bridgeKeys.has(n.key)).map((n) => n.key)).toEqual([])
-    expect(bridgeEntries.filter((n) => ctxKeys.has(n.key)).map((n) => n.key)).toEqual([])
+    const ctxEntryKeys = new Set(entries.filter((n) => n.surface === CTX).map((n) => n.key))
+    expect(
+      bridgeEntries.filter((n) => ctxKeys.has(n.key) && !ctxEntryKeys.has(n.key)).map((n) => n.key)
+    ).toEqual([])
+  })
+
+  it('keeps the webview-only uploadFile off the backend http namespace', () => {
+    expect('uploadFile' in createTestContext().ctx.http).toBe(false)
   })
 
   it('classifies coreRead and chrome.widget as REAL namespaces, not nulls', () => {

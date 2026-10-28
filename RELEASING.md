@@ -76,14 +76,20 @@ breaks.
 
 ## Publishing
 
-Run every publish from the `plugin-sdk/` folder. Publish the SDK **first** — the
-other two depend on it.
+Run every publish from the `plugin-sdk/` folder, in this order: the SDK, then
+the dev shell, then the CLI. The dev shell depends on the SDK, and the CLI
+depends on both, so publishing the CLI earlier ships a version that cannot
+install until its dependencies exist.
 
 ```sh
 pnpm --filter @agent-mc/plugin-sdk publish --access public
-pnpm --filter @agent-mc/plugin-cli publish --access public
 pnpm --filter @agent-mc/plugin-dev-shell publish --access public
+pnpm --filter @agent-mc/plugin-cli publish --access public
 ```
+
+`pnpm publish` refuses to run off `master`/`main` or with a dirty working tree.
+Publishing a release commit from its own branch before it lands needs
+`--no-git-checks` on each command — use it only for that.
 
 Only `plugin-sdk` has a `prepublishOnly` hook, so it rebuilds itself. **Build the
 other two yourself first** (`pnpm -r build` above covers it) or you will publish

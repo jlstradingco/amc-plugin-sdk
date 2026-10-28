@@ -513,7 +513,7 @@ describe('ctx.workspace refuses to fake a capability it cannot model', () => {
 
 describe('createMockContext — core (coreRead)', () => {
   const core = () =>
-    createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false }).core
+    createMockContext({ pluginId: 'test', pluginVersion: '1.0.0', logToConsole: false }).core!
 
   it('lists sample sessions and projects, filtering sessions by project', async () => {
     const all = await core().sessions.list()

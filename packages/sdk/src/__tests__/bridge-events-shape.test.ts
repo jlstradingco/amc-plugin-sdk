@@ -10,8 +10,8 @@ import { createTestContext } from '../testing/index.js'
 //
 // `HostBridgeEvents` below is a DELIBERATE second declaration of the shape the
 // AMC host actually exposes on `window.AgentMC.events` — the `events:` namespace
-// in src/preload/plugin-bridge-preload.ts, as of AMC master commit 7df2653742
-// ("complete the events bus so a plugin panel can reach its own backend").
+// in src/preload/plugin-bridge-preload.ts (with BridgeEventSubscription from
+// src/preload/bridge-event-subscription.ts), as of AMC master commit 8168ba1402.
 // If `BridgeEvents` drifts from it the assertion fails and `pnpm run typecheck`
 // breaks — NOT the build; see the LOAD-BEARING note below — forcing a conscious
 // update instead of a silent divergence between what the SDK promises and what a
@@ -46,8 +46,8 @@ import { createTestContext } from '../testing/index.js'
 // tsconfig.typecheck.json's own header.
 type HostBridgeEvents = {
   onSessionStatus(callback: (event: unknown) => void): () => void
-  emit(channel: string, data: unknown): void
-  on(channel: string, handler: (data: unknown) => void): () => void
+  emit(channel: string, data: unknown): Promise<void>
+  on(channel: string, handler: (data: unknown) => void): { (): void; readonly ready: Promise<void> }
 }
 
 // INVARIANCE, not `extends`. A bidirectional `extends` pair looks strict but is not:
