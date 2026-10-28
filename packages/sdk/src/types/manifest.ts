@@ -387,7 +387,6 @@ export interface PluginManifest {
   process?: {
     allowedCommands: string[]
   }
-  linkClaims?: { host: string; path: string }[]
   /**
    * The Omniscio plugin-SDK contract this plugin needs — not the version of
    * this package. Write it bare (`"2.0.0"`): the host reads a bare version as a
