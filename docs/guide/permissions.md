@@ -272,9 +272,9 @@ Plugins that source content from RSS feeds (e.g. newsletter builders, digest gen
 
 **Grants access to:** the host's checked launcher, plus clipboard and file-opening through the UI bridge (`window.AgentMC`)
 
-Covers privileged desktop actions surfaced to a plugin's webview UI: opening a path or revealing an item in the OS file manager, reading text and images from the clipboard, and asking Omniscio to run a program through `ctx.process.spawn`. Only declare it if your plugin's UI genuinely drives the host desktop.
+Covers privileged desktop actions surfaced to a plugin's webview UI: opening a path or revealing an item in the OS file manager, reading text and images from the clipboard, and asking Omniscio to run a program through `window.AgentMC.process.spawn`. Only declare it if your plugin's UI genuinely drives the host desktop.
 
-**Your backend cannot start a program by itself.** A plugin's worker is forked under Node's `--permission` model without `--allow-child-process`, so `child_process` does not work there — a `spawn` / `exec` / `execSync` / `fork` call is refused with "A plugin cannot start programs by itself. Ask Omniscio to run the program with ctx.process.spawn, which checks the command first, or run it through ctx.workspace.exec." That is deliberate: a process your backend starts inherits nothing of the sandbox, so it could read the user's own credentials. Route it through `ctx.process.spawn` instead, which resolves the command against the plugin's allow-list, refuses interpreters, and filters the child's environment.
+**Your backend cannot start a program by itself.** A plugin's worker is forked under Node's `--permission` model without `--allow-child-process`, so `child_process` does not work there — a `spawn` / `exec` / `execSync` / `fork` call is refused with "A plugin cannot start programs by itself. Ask Omniscio to run the program through ctx.workspace.exec, which checks the command first." That is deliberate: a process your backend starts inherits nothing of the sandbox, so it could read the user's own credentials. From a backend, route it through `ctx.workspace.exec` — the one road a worker can call, inside a workspace the user granted and under that plugin's own command blocks. `window.AgentMC.process.spawn` is the **webview** launcher and does not exist inside a backend: the worker's namespaces are enumerated in `src/shared/plugin-worker-ctx-surface.ts` and none of them is `process`.
 
 ---
 
@@ -510,7 +510,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on Omniscio's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
-| `system` | Host launcher / clipboard / file-open (**webview** UI bridge) | Open paths, read clipboard, and run an approved program through `ctx.process.spawn` *from your plugin's UI* — the backend's own `child_process` is refused by the sandbox |
+| `system` | Host launcher / clipboard / file-open (**webview** UI bridge) | Open paths, read clipboard, and run a program through `window.AgentMC.process.spawn` *from your plugin's UI*; a backend's road is `ctx.workspace.exec`, and its own `child_process` is refused by the sandbox |
 | `rss` | `PluginRss` | Read RSS feeds and articles from Omniscio's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
