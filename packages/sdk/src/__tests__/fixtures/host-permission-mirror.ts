@@ -112,19 +112,18 @@
  */
 export const HOST_MIRROR_PROVENANCE = {
   /** ISO date this mirror was last reconciled against the host source file. */
-  reconciledAt: '2026-10-20',
+  reconciledAt: '2026-10-27',
   /** Full SHA of the host commit the strings below were read from. */
-  sourceCommit: '0369c057eb1ef756f9cab0f40b04789290a7209c',
-  sourceBranch: 'master',
+  sourceCommit: 'b80aacf6e9f6ce0ecbb36d3d6dad75a15c6ff14a',
+  sourceBranch: 'feat/plugin-http-uploadfile-declared-hosts-20261027-220746',
   /**
    * False means sourceBranch had not merged to origin/master as of
    * reconciledAt, so the strings below are ahead of what a plain
    * origin/master checkout would show. Re-verify before assuming this is
-   * still the case. True here: sourceCommit IS the host's GitHub master on
-   * the reconciliation day, and its plugin-permissions.ts blob (7dd10118a2) was
-   * identical to the host's local master.
+   * still the case. False here: sourceCommit is the branch that added
+   * `network.upload`, which also carries `email.send` from the host's master.
    */
-  onOriginMaster: true,
+  onOriginMaster: false,
 } as const
 
 /** The exact permission strings the host recognizes and gates. */
@@ -137,6 +136,7 @@ export const HOST_PERMISSIONS = [
   'stt',
   'microphone',
   'network',
+  'network.upload',
   'cron',
   'cli',
   'notifications',

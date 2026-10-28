@@ -96,6 +96,7 @@ describe('SDK <-> host permission parity', () => {
     // classification. Change it the day `ctx.members` or `AgentMC.members` lands.
     'members.read': null,
     'email.send': { surface: CTX, key: 'email' },
+    'network.upload': { surface: BRIDGE, key: 'http' },
     launch: null,
     oauth: null,
     channel: null,
@@ -167,6 +168,7 @@ describe('SDK <-> host permission parity', () => {
       storage: { collections: {} },
       migrations: [],
       sdkVersion: '1.0.0',
+      uploadHosts: ['upload.example.com'],
     }
     const ok = manifestSchema.safeParse({ ...base, permissions: [...PLUGIN_PERMISSIONS] })
     expect(ok.success).toBe(true)
@@ -221,7 +223,7 @@ describe('SDK <-> host permission parity', () => {
     //
     // 37 -> 38 on 2026-10-20: the host declared `members.read` (declaration
     // only, no capability gated on it yet), so the mirror gained it too.
-    expect(HOST_PERMISSIONS.length).toBe(39)
+    expect(HOST_PERMISSIONS.length).toBe(40)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

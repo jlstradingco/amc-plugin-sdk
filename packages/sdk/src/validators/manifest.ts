@@ -441,6 +441,18 @@ export { PLUGIN_PERMISSIONS } from '../generated/sdk-facts.js'
 
 const permissionSchema = z.enum(PLUGIN_PERMISSIONS)
 
+const UPLOAD_HOST_MESSAGE =
+  'uploadHosts entries must be one exact lowercase website name such as upload.example.com, with no scheme, port, path, wildcard or IP address'
+
+const uploadHostSchema = z
+  .string()
+  .max(253)
+  .regex(
+    /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$/,
+    UPLOAD_HOST_MESSAGE,
+  )
+  .refine((host) => !host.endsWith('.localhost'), { message: UPLOAD_HOST_MESSAGE })
+
 /**
  * Four keys below (`settings`, `storage`, `migrations`, `sdkVersion`) were
  * REQUIRED here while the host defaults or omits every one of them. That is the
@@ -481,8 +493,17 @@ export const manifestSchema = z.object({
   // plugin's sessions their built-in tools.
   sessionTools: z.boolean().optional(),
   workspace: workspaceSchema.optional(),
+  uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
 })
   .superRefine((manifest, ctx) => {
+    if ((manifest.permissions ?? []).includes('network.upload') !== (manifest.uploadHosts?.length ?? 0) > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['uploadHosts'],
+        message:
+          '"network.upload" and "uploadHosts" go together: a plugin that uploads files must list the websites it uploads to, and a plugin that lists them must ask for network.upload',
+      })
+    }
     // The host REJECTS a manifest asking for workspace.write or workspace.exec
     // without an explicit workspace.read alongside it, and so does the
     // marketplace publish gate (`workspace_permission_pairing`). It deliberately

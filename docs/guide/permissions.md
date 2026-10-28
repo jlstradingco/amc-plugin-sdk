@@ -270,9 +270,11 @@ Plugins that source content from RSS feeds (e.g. newsletter builders, digest gen
 
 ### `system`
 
-**Grants access to:** host shell / clipboard / process capabilities exposed through the UI bridge (`window.AgentMC`)
+**Grants access to:** the host's checked launcher, plus clipboard and file-opening through the UI bridge (`window.AgentMC`)
 
-Covers privileged desktop actions surfaced to a plugin's webview UI — opening a path or revealing an item in the OS file manager, reading text/images from the clipboard, and launching or signalling child processes. Only declare it if your plugin's UI genuinely drives the host desktop.
+Covers privileged desktop actions surfaced to a plugin's webview UI: opening a path or revealing an item in the OS file manager, reading text and images from the clipboard, and asking Omniscio to run a program through `ctx.process.spawn`. Only declare it if your plugin's UI genuinely drives the host desktop.
+
+**Your backend cannot start a program by itself.** A plugin's worker is forked under Node's `--permission` model without `--allow-child-process`, so `child_process` does not work there — a `spawn` / `exec` / `execSync` / `fork` call is refused with "A plugin cannot start programs by itself. Ask Omniscio to run the program with ctx.process.spawn, which checks the command first, or run it through ctx.workspace.exec." That is deliberate: a process your backend starts inherits nothing of the sandbox, so it could read the user's own credentials. Route it through `ctx.process.spawn` instead, which resolves the command against the plugin's allow-list, refuses interpreters, and filters the child's environment.
 
 ---
 
@@ -348,6 +350,14 @@ Start and stop screen recordings and manage the resulting files.
 ::: warning Bridge pending
 `ctx.recording` is fully wired and Tier-1 **elevated**: `start()` / `stop()` / `list()` / `get()` are real, every `start` raises a native confirm the plugin cannot bypass, and the host redacts file paths and share tokens from everything the plugin can see. (This section previously said the bridge was "not yet wired" and that calls were inert — that stopped being true before 2026-08-11.) There is no webview equivalent: `AgentMC.recording` does not exist. See the [Recording API](../api/recording).
 :::
+
+---
+
+### `network.upload`
+
+**Grants access to:** `AgentMC.http.uploadFile` (plugin panel only)
+
+Upload a file the person shared with your plugin to a website your manifest lists in `uploadHosts`. Tier-1 **elevated**, and it must be declared together with `uploadHosts` (either one alone is refused at install). Omniscio sends the file itself over https, asks the person to approve your list of sites once, follows no redirect, and forgets the approval when your plugin is turned off. See the [HTTP API](../api/http#uploading-a-file-the-person-shared-agentmc-http-uploadfile).
 
 ---
 
@@ -496,10 +506,11 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `ai` | `PluginAi` | Direct AI text generation |
 | `tts` | `PluginTts` (**webview**, `AgentMC.tts`) | Read text aloud with the user's configured voice (metered) |
 | `network` | `PluginHttp` | Outbound HTTP requests |
+| `network.upload` | `AgentMC.http.uploadFile` (**webview**) | Upload a picked-folder file to the sites listed in `uploadHosts` (**requires `uploadHosts`**) |
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on Omniscio's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
-| `system` | Shell / clipboard / process (**webview** UI bridge) | Open paths, read clipboard, launch host processes *from your plugin's UI* — never a licence for the backend to import `child_process` |
+| `system` | Host launcher / clipboard / file-open (**webview** UI bridge) | Open paths, read clipboard, and run an approved program through `ctx.process.spawn` *from your plugin's UI* — the backend's own `child_process` is refused by the sandbox |
 | `rss` | `PluginRss` | Read RSS feeds and articles from Omniscio's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |

@@ -572,6 +572,16 @@
       "minItems": 1,
       "maxItems": 20
     },
+    "uploadHosts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 253,
+        "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+      },
+      "minItems": 1,
+      "maxItems": 10
+    },
     "cli": {
       "type": "object",
       "properties": {
@@ -646,6 +656,7 @@
           "stt",
           "microphone",
           "network",
+          "network.upload",
           "cron",
           "cli",
           "notifications",
@@ -686,7 +697,7 @@
     "plugin",
     "ui"
   ],
-  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.windows, ui.windows.*.entryPoint, process.allowedCommands, backend.entryPoint, linkClaims, cli.endpoints, cli.endpoints.auth",
+  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.windows, ui.windows.*.entryPoint, process.allowedCommands, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth",
   "allOf": [
     {
       "if": {
@@ -775,6 +786,44 @@
           "permissions": {
             "contains": {
               "const": "workspace.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "network.upload"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "uploadHosts"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "uploadHosts"
+        ]
+      },
+      "then": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "network.upload"
             }
           }
         }

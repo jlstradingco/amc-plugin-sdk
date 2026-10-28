@@ -668,13 +668,57 @@ export interface BridgeHost {
   getCapabilities(): Promise<string[]>
 }
 
+/** A site's answer to {@link BridgeHttp.uploadFile}, as plain data. */
+export interface BridgeHttpResponse {
+  ok: boolean
+  status: number
+  statusText: string
+  headers: Record<string, string>
+  bodyText: string
+}
+
+/** One upload — see {@link BridgeHttp.uploadFile}. */
+export interface BridgeUploadFileRequest {
+  /** An `https://` address on a site listed in the manifest's `uploadHosts`. No port, no credentials. */
+  url: string
+  /** An absolute path to a file inside a folder the person picked with `export.pickFolder`. */
+  filePath: string
+  /** Defaults to `POST`. */
+  method?: 'POST' | 'PUT'
+  /** Your own headers. `Host`, `Content-Length` and other connection headers are dropped. */
+  headers?: Record<string, string>
+  /** A header name the host fills with the file's size in bytes, such as `file_size`. */
+  sizeHeader?: string
+}
+
+/**
+ * `AgentMC.http`. `fetch` needs the `network` permission. `uploadFile` needs
+ * `network.upload` and a manifest `uploadHosts` list: the host reads the file
+ * and streams it to the site itself, asks the person to approve the listed
+ * sites once, and never follows a redirect (a 3xx answer comes back as is).
+ */
+export interface BridgeHttp {
+  fetch(
+    url: string,
+    init?: RequestInit,
+  ): Promise<{
+    ok: boolean
+    status: number
+    statusText: string
+    headers: Record<string, string>
+    text(): Promise<string>
+    json(): Promise<unknown>
+  }>
+  uploadFile(request: BridgeUploadFileRequest): Promise<BridgeHttpResponse>
+}
+
 /**
  * `window.AgentMC` — the surface a plugin WEBVIEW gets.
  *
  * This is a subset of what the host exposes, not the whole of it. The host's
  * preload carries roughly forty namespaces; the ones typed below are those with
  * a stable, documented contract. Notable untyped ones you can still reach at
- * runtime include `secrets`, `http`, `fs`, `shell`, `clipboard`, `process`,
+ * runtime include `secrets`, `fs`, `shell`, `clipboard`, `process`,
  * `notifications`, `navigation`, `runtime`, `keybindings`, `tray`, `cron`,
  * `overlay`, `share` and `boards`.
  *
@@ -714,6 +758,8 @@ export interface AgentMC {
   host?: BridgeHost
   /** Webview-only. See {@link BridgeWidget}. */
   widget: BridgeWidget
+  /** See {@link BridgeHttp}. */
+  http: BridgeHttp
 }
 
 declare global {

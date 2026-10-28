@@ -13,6 +13,7 @@ export const PLUGIN_PERMISSIONS = [
   "stt",
   "microphone",
   "network",
+  "network.upload",
   "cron",
   "cli",
   "notifications",

@@ -432,6 +432,12 @@ export interface PluginManifest {
    * looking at one of them. Between 1 and 20 claims; each names a `host` and a `path`.
    */
   linkClaims?: PluginLinkClaim[]
+  /**
+   * The exact websites `AgentMC.http.uploadFile` may send files to, such as
+   * `rupload.facebook.com`. Required with the `network.upload` permission, and
+   * refused without it. The person approves this list once, on the first upload.
+   */
+  uploadHosts?: string[]
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]
