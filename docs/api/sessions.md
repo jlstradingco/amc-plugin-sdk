@@ -287,6 +287,12 @@ file) opts in with two manifest keys and one webview call.
 }
 ```
 
+### Chat beside your plugin (`ui.sessions.chatPlacement`)
+
+`"chatPlacement": "beside"` keeps your page loaded and on screen while one of its chats is open: your
+page keeps the left of the panel and the chat takes a strip on the right (360-560 px). The default,
+`"replace"`, shows the chat over your page as before. Desktop only.
+
 ### Locking down pane chats (`ui.sessions.lockDown`)
 
 Set `"lockDown": true` under `ui.sessions` to give every chat the person starts from your pane the

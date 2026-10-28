@@ -403,6 +403,13 @@
             "lockDown": {
               "type": "boolean"
             },
+            "chatPlacement": {
+              "type": "string",
+              "enum": [
+                "replace",
+                "beside"
+              ]
+            },
             "noContextText": {
               "type": "string",
               "minLength": 1,

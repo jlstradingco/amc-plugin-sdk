@@ -126,6 +126,7 @@ export interface PluginManifest {
       "realProjectContext"?: boolean
       "perContext"?: boolean
       "lockDown"?: boolean
+      "chatPlacement"?: "replace" | "beside"
       "noContextText"?: string
       "suggestedPrompts"?: Array<{
         "label": string
