@@ -402,6 +402,7 @@ export interface AgentMC {
     "getCostPreview": (...args: unknown[]) => Promise<unknown>
     "getCycleSummary": (...args: unknown[]) => Promise<unknown>
     "getDeck": (...args: unknown[]) => Promise<unknown>
+    "getLaunchRisk": (...args: unknown[]) => Promise<unknown>
     "getNextRun": (...args: unknown[]) => Promise<unknown>
     "getNightyTidyLimits": (...args: unknown[]) => Promise<unknown>
     "getReport": (...args: unknown[]) => Promise<unknown>
