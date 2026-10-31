@@ -1,0 +1,68 @@
+{
+  "name": "@agent-mc/plugin-sdk",
+  "version": "3.2.0",
+  "description": "SDK for building Agent Mission Control plugins",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jlstradingco/amc-plugin-sdk.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://docs.omniscio.com/sdk/",
+  "bugs": {
+    "url": "https://github.com/jlstradingco/amc-plugin-sdk/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/cjs/index.js",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/types/bridge.d.ts",
+      "import": "./dist/types/bridge.js",
+      "require": "./dist/cjs/types/bridge.js",
+      "default": "./dist/types/bridge.js"
+    },
+    "./validators": {
+      "types": "./dist/validators/manifest.d.ts",
+      "import": "./dist/validators/manifest.js",
+      "require": "./dist/cjs/validators/manifest.js",
+      "default": "./dist/validators/manifest.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "require": "./dist/cjs/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "import": "./dist/commands/index.js",
+      "require": "./dist/cjs/commands/index.js",
+      "default": "./dist/commands/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node ../../../scripts/run-work-entry.mjs scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.2.6"
+  },
+  "license": "MIT"
+}
