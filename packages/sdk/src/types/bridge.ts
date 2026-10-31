@@ -460,12 +460,15 @@ export interface DocumentHandle {
  * What a plugin gains is NARROWER than the ungated `fs` reach it already had,
  * not wider — one file, in one fixed mode, per user gesture.
  *
- * The whole namespace is a read path plus exactly ONE write, {@link append}.
+ * The namespace is a read path, exactly ONE write to a file you were handed
+ * ({@link append}), and two ways to place a NEW file the person chooses
+ * ({@link saveCopy}, {@link saveCopies}) that never touch the one you opened.
  *
  * Refusals arrive as `documents.<method> [code]: prose`, and the code set is
  * wider than the few named below — `unknown-handle`, `protected-path`,
  * `not-a-file`, `file-too-large`, `too-many-handles`, `too-many-requests`,
- * `could-not-read`, `could-not-open`, `could-not-write`, `nothing-to-append`.
+ * `could-not-read`, `could-not-open`, `could-not-write`, `nothing-to-append`,
+ * `bad-name`, `copy-too-large`, `name-exhausted`.
  */
 export interface BridgeDocuments {
   /**
@@ -544,6 +547,46 @@ export interface BridgeDocuments {
   ): Promise<{ length: number }>
   /** Drop the Handle and its capability. The file itself is untouched. */
   close(handleId: string): Promise<void>
+  /**
+   * Save ONE new file wherever the person chooses in a native Save window.
+   *
+   * The window is opened for this call alone and is the consent: the method takes
+   * no path, adds no folder grant and leaves no Handle behind, so the next copy
+   * asks again. Answering the window with an existing file REPLACES it — but only
+   * once the whole new copy is ready, so a failed write never leaves a half file.
+   *
+   * Resolves `{ saved: false }` when the person cancels. Otherwise
+   * `{ saved: true, names }`, where each name is a bare file name and never a
+   * path — the host withholds where anything lives.
+   *
+   * `name` is a SUGGESTION for the window and must be a plain file name: no
+   * folder separator, no `..`, no control characters (checked again by the host).
+   * `base64` shares {@link append}'s cap and encoding. Answers `documents.saveCopy
+   * [code]: prose` when refused; the codes include `bad-name`, `copy-too-large`,
+   * `could-not-write`, `protected-path` and `too-many-requests`.
+   */
+  saveCopy(options: {
+    name: string
+    base64: string
+    filters?: { name: string; extensions: string[] }[]
+  }): Promise<{ saved: false } | { saved: true; names: string[] }>
+  /**
+   * Save several new files into a folder the person chooses in a native window.
+   *
+   * NEVER REPLACES anything: each name is reserved with an exclusive create, and a
+   * clash gets a number added (`report (2).pdf`). The window is the consent, so no
+   * folder grant and no path reach the plugin. A failure part-way removes the
+   * copies this call had already written, so the call is whole or absent.
+   *
+   * Resolves `{ saved: false }` on cancel. The `names` in a successful reply are
+   * the names ACTUALLY used, which is how you learn what a clash was renamed to.
+   *
+   * `files` is capped at 256 entries, and every name must be a plain file name.
+   */
+  saveCopies(options: {
+    files: { name: string; base64: string }[]
+    title?: string
+  }): Promise<{ saved: false } | { saved: true; names: string[] }>
 }
 
 /**

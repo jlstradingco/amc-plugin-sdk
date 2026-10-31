@@ -11,6 +11,24 @@ together.
 
 ## [Unreleased]
 
+### Added — `documents.saveCopy` and `documents.saveCopies`
+
+A plugin can now hand the user a NEW file, not only append to one they already opened. `saveCopy`
+opens a native Save window for that one call and writes one file there — replacing an existing file
+atomically, so an interrupted save leaves the original intact. `saveCopies` opens a folder window
+and writes several, reserving each name exclusively and adding a number on a clash
+(`report (2).pdf`) so nothing already in the folder is ever replaced. A call that fails part-way
+removes the copies it had already written.
+
+Neither method takes a path or a folder, neither leaves a folder grant or a Handle behind, and both
+answer `{ saved: false }` when the user cancels — a cancel is not an error. The successful reply is
+`{ saved: true, names }`, where each name is a bare file name and never a location. Names must be
+bare file names (no separators, no `..`, no control characters), and one call carries about 24 MiB
+of decoded bytes across all its files.
+
+A host older than this release does not have the two methods: probe `AgentMC.documents.saveCopy`
+before offering a save row.
+
 ## [3.2.0] - 2026-10-28
 
 ### Upgrading from 3.1.0 — read this first

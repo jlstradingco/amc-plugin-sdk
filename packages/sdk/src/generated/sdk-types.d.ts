@@ -266,6 +266,8 @@ export interface AgentMC {
     "list": (...args: unknown[]) => Promise<unknown>
     "open": (...args: unknown[]) => Promise<unknown>
     "reopen": (...args: unknown[]) => Promise<unknown>
+    "saveCopies": (...args: unknown[]) => Promise<unknown>
+    "saveCopy": (...args: unknown[]) => Promise<unknown>
     "stat": (...args: unknown[]) => Promise<unknown>
   }
   "events": {

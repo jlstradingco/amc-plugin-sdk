@@ -216,7 +216,7 @@ const files = await AgentMC.assets.listFiles('templates')
 
 ### Documents
 
-Read and append to files the user picked from the OS file picker. Webview-only — there is no `ctx.documents` — and it needs **no permission**, because the picker itself is the consent.
+Read and append to files the user picked from the OS file picker, and hand the user **new** files they choose a place for. Webview-only — there is no `ctx.documents` — and it needs **no permission**, because the native window itself is the consent.
 
 ```typescript
 // Ask for a file. Resolves [] if the user cancels.
@@ -238,6 +238,16 @@ await AgentMC.documents.append(doc.id, base64Delta, { expectedLength: length })
 // Recover Handles after a webview reload, and release when done.
 console.log(`${(await AgentMC.documents.list()).length} still open`)
 await AgentMC.documents.close(doc.id)
+
+// Hand the user a NEW file. The Save window is the consent; nothing else is created.
+const one = await AgentMC.documents.saveCopy({ name: 'summary.pdf', base64 })
+if (one.saved) console.log(one.names) // ['summary.pdf'] — a bare name, never a path
+
+// Several at once, into a folder they pick. Never replaces an existing file.
+const many = await AgentMC.documents.saveCopies({
+  title: 'Where should the parts go?',
+  files: [{ name: 'part 1.pdf', base64 }, { name: 'part 2.pdf', base64 }]
+})
 ```
 
 | Method | Returns | Description |
@@ -245,8 +255,12 @@ await AgentMC.documents.close(doc.id)
 | `open(options)` | `Promise<DocumentHandle[]>` | Show the file picker and mint a Handle per chosen file; `[]` if cancelled |
 | `list()` | `Promise<DocumentHandle[]>` | The Handles this plugin still holds, with freshly re-stat'd sizes |
 | `stat(handleId)` | `Promise<{ length: number }>` | The Document's current length — the value to pass as `expectedLength` |
-| `append(handleId, base64, options)` | `Promise<{ length: number }>` | The namespace's only write; resolves the new length |
+| `append(handleId, base64, options)` | `Promise<{ length: number }>` | The only write to a picked file; resolves the new length |
 | `close(handleId)` | `Promise<void>` | Drop the Handle; the file itself is untouched |
+| `saveCopy(options)` | `Promise<{ saved: false } \| { saved: true, names: string[] }>` | Save one NEW file where the user chooses; may replace, atomically |
+| `saveCopies(options)` | `Promise<{ saved: false } \| { saved: true, names: string[] }>` | Save several NEW files into a folder the user chooses; never replaces |
+
+`saveCopy` and `saveCopies` are the copy half of the namespace. Neither takes a path or a folder, neither leaves a folder grant or a Handle behind, and neither touches the document you opened — so a helper that saves three files asks the user three times, and should be designed to do so. `saveCopy` may replace a file the user picked in the Save window, but only once the whole new copy is ready, so an interrupted save leaves the old file intact. `saveCopies` reserves every name exclusively and adds a number on a clash (`report (2).pdf`); the `names` in the reply are what was actually written. A call that fails part-way removes the copies it had already written. Names must be bare file names, and one call carries about 24 MiB of decoded bytes.
 
 A `DocumentHandle` is `{ id, name, size, mode, url }` and carries no path. Two of those fields mislead if you skim them:
 
