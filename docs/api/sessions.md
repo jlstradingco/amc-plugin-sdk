@@ -90,6 +90,22 @@ Get the current status of a session.
 The frontend's `AgentMC.session.getStatus` resolves `{ status, pendingAction }` instead. Same
 method name, two shapes.
 
+### `getStatus(sessionId: string, opts: { detail: true }): Promise<SessionStatusDetail>`
+
+Pass `{ detail: true }` to get an object instead: `{ status, pendingAction, recoveryTerminal }`.
+
+`recoveryTerminal` is `true` once Omniscio's auto-recovery has given up on the session for good. A
+session that shows `needs_you` or `error` while recovery is still retrying reads `false`. Free any
+work you were holding for the session only when it is `true`.
+
+Any other option, or none, keeps the bare string. An older Omniscio ignores the option and resolves
+the bare string, so check `typeof result === 'string'` if you support older hosts.
+
+```typescript
+const s = await ctx.sessions.getStatus(sessionId, { detail: true })
+if (typeof s !== 'string' && s.recoveryTerminal) releaseItem(sessionId)
+```
+
 **Example:**
 
 ```typescript
@@ -145,7 +161,7 @@ await ctx.sessions.stop(sessionId)
 
 ---
 
-### `onStatusChange(sessionId: string, handler: (status: string) => void): () => void`
+### `onStatusChange(sessionId: string, handler: (status: string, info: SessionStatusInfo) => void): () => void`
 
 Subscribe to status changes for a session.
 
@@ -154,7 +170,7 @@ Subscribe to status changes for a session.
 | Name | Type | Description |
 |---|---|---|
 | `sessionId` | `string` | The session ID to monitor |
-| `handler` | `(status: string) => void` | Callback invoked when the status changes |
+| `handler` | `(status: string, info: SessionStatusInfo) => void` | Callback invoked when the status changes. `info` is `{ pendingAction, recoveryTerminal }`; an older Omniscio passes the status only |
 
 **Returns:** `() => void` -- call this function to unsubscribe.
 
@@ -166,6 +182,15 @@ const unsubscribe = ctx.sessions.onStatusChange(sessionId, (status) => {
   if (status === 'ended') {
     unsubscribe()
   }
+})
+```
+
+The handler also fires, with the status unchanged, at the moment auto-recovery gives up on a session,
+so `info.recoveryTerminal` turning `true` reaches you without polling:
+
+```typescript
+ctx.sessions.onStatusChange(sessionId, (_status, info) => {
+  if (info?.recoveryTerminal) releaseItem(sessionId)
 })
 ```
 
@@ -181,8 +206,9 @@ The frontend `BridgeSession` interface is available as `AgentMC.session`.
 - `sendMessage()` takes an options object instead of a plain string.
 - `create()` accepts only `prompt` -- the bridge's schema strips `userInitiated`, so passing it
   here has no effect. (Neither surface accepts `projectId`.)
-- `getStatus()` resolves to `{ status, pendingAction }` here, but to a bare `string` on the
-  backend. Check which surface you are on before destructuring.
+- `getStatus()` resolves to `{ status, pendingAction, recoveryTerminal }` here, but to a bare
+  `string` on the backend unless you pass `{ detail: true }`. Check which surface you are on before
+  destructuring. `recoveryTerminal` is absent on an older Omniscio.
 - `getMessages()` puts the message body on `content` here; the backend puts it on `text`. This
   split is deliberate on the host's side, so do not write `m.text ?? m.content ?? ''` -- pick
   the surface you are on.

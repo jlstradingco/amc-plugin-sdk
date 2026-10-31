@@ -475,7 +475,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         messages.push(createMockSessionMessage('mock-message', messages.length + 1, text))
         return Promise.resolve()
       },
-      getStatus: (sid) => Promise.resolve(sessionStatus.get(sid) ?? 'running'),
+      getStatus: ((sid: string, opts?: { detail?: boolean }) => {
+        const status = sessionStatus.get(sid) ?? 'running'
+        return Promise.resolve(opts?.detail === true ? { status, pendingAction: null, recoveryTerminal: false } : status)
+      }) as PluginContext['sessions']['getStatus'],
       getMessages: (sid) => Promise.resolve([...(sessionMessages.get(sid) ?? [])]),
       stop: (sid) => {
         if (shouldLog) console.log(`${prefix} [sessions] stop(${sid})`)

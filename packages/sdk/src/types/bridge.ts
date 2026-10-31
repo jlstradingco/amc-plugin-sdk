@@ -118,6 +118,8 @@ export interface BridgeSessionStatus {
   status: SessionStatus
   /** `null` unless the session is waiting on something. */
   pendingAction: SessionPendingAction | null
+  /** `true` once auto-recovery has given up on the session. Absent on an older host. */
+  recoveryTerminal?: boolean
 }
 
 export interface BridgeSession {

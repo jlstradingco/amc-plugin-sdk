@@ -41,6 +41,8 @@ export type {
   PluginSessions,
   SessionStatus,
   SessionPendingAction,
+  SessionStatusInfo,
+  SessionStatusDetail,
   SessionMessage,
   PluginAi,
   PluginAiStructuredRequest,

@@ -255,6 +255,21 @@ export interface SessionMessage {
   timestamp: string
 }
 
+/**
+ * What a session status carries beside the status itself. `recoveryTerminal`
+ * is `true` once auto-recovery has given up on the session for good, and
+ * `false` while it is still retrying or was never in recovery.
+ */
+export interface SessionStatusInfo {
+  pendingAction: SessionPendingAction | null
+  recoveryTerminal: boolean
+}
+
+/** What `getStatus(sessionId, { detail: true })` resolves to. */
+export interface SessionStatusDetail extends SessionStatusInfo {
+  status: SessionStatus
+}
+
 export interface PluginSessions {
   /**
    * Create a session on your plugin's own virtual project.
@@ -291,6 +306,11 @@ export interface PluginSessions {
    */
   getStatus(sessionId: string): Promise<SessionStatus>
   /**
+   * Opt-in object form: `{ status, pendingAction, recoveryTerminal }`. An older
+   * host ignores the option and resolves the bare string.
+   */
+  getStatus(sessionId: string, opts: { detail: true }): Promise<SessionStatusDetail>
+  /**
    * The full transcript, unfiltered.
    *
    * Of the three message-read surfaces this is the only genuinely raw one:
@@ -300,7 +320,14 @@ export interface PluginSessions {
    */
   getMessages(sessionId: string): Promise<SessionMessage[]>
   stop(sessionId: string): Promise<void>
-  onStatusChange(sessionId: string, handler: (status: SessionStatus) => void): () => void
+  /**
+   * The handler's second argument carries `pendingAction` and
+   * `recoveryTerminal`. An older host calls it with the status only.
+   */
+  onStatusChange(
+    sessionId: string,
+    handler: (status: SessionStatus, info: SessionStatusInfo) => void
+  ): () => void
 }
 
 /**

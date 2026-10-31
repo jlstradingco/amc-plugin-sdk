@@ -572,7 +572,10 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         messages.push(createMockSessionMessage('test-message', messages.length + 1, text))
         return Promise.resolve()
       },
-      getStatus: (sessionId) => Promise.resolve(sessionStatus.get(sessionId) ?? 'running'),
+      getStatus: ((sessionId: string, opts?: { detail?: boolean }) => {
+        const status = sessionStatus.get(sessionId) ?? 'running'
+        return Promise.resolve(opts?.detail === true ? { status, pendingAction: null, recoveryTerminal: false } : status)
+      }) as PluginContext['sessions']['getStatus'],
       getMessages: (sessionId) => Promise.resolve([...(sessionMessages.get(sessionId) ?? [])]),
       // 'ended' is a real AMC status; 'stopped' — which this mock used to
       // invent — is not one of the eleven the host can report.

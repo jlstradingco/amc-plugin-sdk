@@ -29,6 +29,18 @@ of decoded bytes across all its files.
 A host older than this release does not have the two methods: probe `AgentMC.documents.saveCopy`
 before offering a save row.
 
+### Added — plugins can tell a session recovery gave up on from one still being retried
+
+- `ctx.sessions.getStatus(sessionId, { detail: true })` resolves `{ status, pendingAction,
+  recoveryTerminal }`. Without the option it still resolves the bare status string.
+- `ctx.sessions.onStatusChange` handlers receive a second argument, `{ pendingAction,
+  recoveryTerminal }`. A one-argument handler keeps working.
+- `AgentMC.session.getStatus()` adds an optional `recoveryTerminal` to its reply.
+- New exported types `SessionStatusInfo` and `SessionStatusDetail`. The testing and dev-shell mocks
+  honour `{ detail: true }`.
+- `recoveryTerminal` is `true` once auto-recovery has given up on the session for good. An older
+  Omniscio ignores the option, passes no second handler argument and omits the field.
+
 ## [3.2.0] - 2026-10-28
 
 ### Upgrading from 3.1.0 — read this first
