@@ -688,12 +688,18 @@ export type PluginEmailScheduleResult =
   | { ok: true; scheduleId: string; sendAt: string; recipients: number }
   | PluginEmailScheduleRefusal
 
+export type PluginEmailSender =
+  | { ok: true; state: 'ready'; address: string }
+  | { ok: true; state: 'not-claimed' }
+  | { ok: true; state: 'signed-out' }
+
 export interface PluginEmail {
   send(message: PluginEmailMessage): Promise<PluginEmailSendResult>
   schedule(issue: PluginEmailIssue): Promise<PluginEmailScheduleResult>
   cancel(scheduleId: string): Promise<{ ok: true } | PluginEmailScheduleRefusal>
   status(scheduleId: string): Promise<{ ok: true; schedule: PluginEmailSchedule } | PluginEmailScheduleRefusal>
   list(): Promise<{ ok: true; schedules: PluginEmailSchedule[] } | PluginEmailScheduleRefusal>
+  sender(): Promise<PluginEmailSender>
 }
 
 /** Base64 MP3 returned by `ctx.tts.synthesize()`. Play it in the webview via a data: URL. */

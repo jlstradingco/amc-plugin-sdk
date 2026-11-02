@@ -77,6 +77,7 @@ export type {
   PluginEmailSchedule,
   PluginEmailScheduleRefusal,
   PluginEmailScheduleResult,
+  PluginEmailSender,
   // Text to speech (`tts`)
   SynthesizedSpeech,
   PluginTts,

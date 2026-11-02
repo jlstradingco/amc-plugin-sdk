@@ -403,3 +403,26 @@ describe('createTestContext — core (coreRead)', () => {
     expect(await coreOf(ctx).messages.list('ghost')).toEqual([])
   })
 })
+
+describe('createTestContext — email.sender', () => {
+  it('answers ready with a placeholder address by default, like the fake send that succeeds', async () => {
+    const { ctx } = createTestContext()
+    expect(await ctx.email!.sender()).toEqual({
+      ok: true,
+      state: 'ready',
+      address: 'agent@test.example'
+    })
+  })
+
+  it('answers whatever state the test seeds, with no address unless ready', async () => {
+    const { ctx } = createTestContext({ emailSender: { ok: true, state: 'not-claimed' } })
+    expect(await ctx.email!.sender()).toEqual({ ok: true, state: 'not-claimed' })
+  })
+
+  it('never records a sent or scheduled email, because reading the sender sends nothing', async () => {
+    const h = createTestContext()
+    await h.ctx.email!.sender()
+    expect(h.sentEmails).toEqual([])
+    expect(h.scheduledEmails).toEqual([])
+  })
+})

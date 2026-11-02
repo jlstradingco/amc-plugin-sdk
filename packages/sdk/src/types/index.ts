@@ -20,7 +20,7 @@ export type {
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
   PluginEmailMessage, PluginEmailFailureReason, PluginEmailSendResult, PluginEmail,
   PluginEmailIssue, PluginEmailScheduleReason, PluginEmailSchedule, PluginEmailScheduleRefusal,
-  PluginEmailScheduleResult,
+  PluginEmailScheduleResult, PluginEmailSender,
   SynthesizedSpeech, PluginTts,
   HistoryProject, HistorySession, HistoryMessage, HistoryGrantResult, PluginSessionHistory,
   FirebaseAccount, FirebaseProject, FirebaseSetupStatus, PluginFirebase,

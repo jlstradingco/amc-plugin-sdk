@@ -37,7 +37,8 @@ import type {
   CoreMessage,
   PluginEmailMessage,
   PluginEmailSendResult,
-  PluginEmailSchedule
+  PluginEmailSchedule,
+  PluginEmailSender
 } from '../types/index.js'
 
 export { createRpcDouble } from './rpc-double.js'
@@ -116,6 +117,7 @@ export interface TestContextOptions {
     messages?: Record<string, CoreMessage[]>
   }
   email?: (message: PluginEmailMessage) => PluginEmailSendResult | Promise<PluginEmailSendResult>
+  emailSender?: PluginEmailSender
   db?: {
     /**
      * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
@@ -756,7 +758,11 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         )
       },
       list: () =>
-        Promise.resolve({ ok: true as const, schedules: harness.scheduledEmails.map((s) => ({ ...s })) })
+        Promise.resolve({ ok: true as const, schedules: harness.scheduledEmails.map((s) => ({ ...s })) }),
+      sender: () =>
+        Promise.resolve(
+          opts.emailSender ?? { ok: true as const, state: 'ready' as const, address: 'agent@test.example' }
+        )
     },
 
     spend: {

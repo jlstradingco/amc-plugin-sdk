@@ -363,7 +363,7 @@ Upload a file the person shared with your plugin to a website your manifest list
 
 ### `email.send`
 
-**Grants access to:** `PluginEmail` (`ctx.email.send`, backend only)
+**Grants access to:** `PluginEmail` (`ctx.email.send`, `ctx.email.sender`, backend only)
 
 Send one email per call from the user's agent address. Tier-1 **elevated**: the host picks the
 sender, always adds a one-click unsubscribe, cleans the HTML, never mails anyone who unsubscribed or
@@ -518,7 +518,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `chrome.widget` | `AgentMC.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
 | `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
-| `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated (backend only) |
+| `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated; `ctx.email.sender()` reads which address that is, and sends nothing (backend only) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
