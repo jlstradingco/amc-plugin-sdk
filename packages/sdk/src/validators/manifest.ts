@@ -1,13 +1,25 @@
 import { z } from 'zod'
 import { PLUGIN_PERMISSIONS, PROCESS_INTERPRETER_DENYLIST } from '../generated/sdk-facts.js'
 import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
+import { classifyPluginIcon } from './plugin-icon-kind.js'
 import {
   manifestEntryPathProblems,
   MANIFEST_ENTRY_PATH_MAX,
   type ManifestEntryPathProblem,
 } from './manifest-entry-path.js'
 
-const pluginIdRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const pluginIdRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/
+const PLUGIN_ID_MAX = 100
+
+const pluginIcon = z
+  .string()
+  .min(1)
+  .max(50)
+  .refine((value) => classifyPluginIcon(value) !== 'unsafe-path', {
+    message:
+      'icon must be a Lucide icon name or a plain relative path inside the package ' +
+      '(such as "assets/icon.svg"): no "..", no leading "/", no drive letter, no URL scheme',
+  })
 
 /**
  * The host's identifier rule for anything it interpolates into SQL DDL/DML —
@@ -71,15 +83,19 @@ const pluginRelativeEntryPath = z.string().superRefine((entryPath, ctx) => {
 })
 
 const pluginInfoSchema = z.object({
-  id: z.string().min(1).regex(pluginIdRegex, 'Plugin ID must be kebab-case (lowercase alphanumeric + hyphens)'),
-  name: z.string().min(1).max(100),
-  version: z.string().min(1),
+  id: z
+    .string()
+    .min(1)
+    .max(PLUGIN_ID_MAX)
+    .regex(pluginIdRegex, 'Plugin ID must be lowercase alphanumeric and hyphens, and must start and end with one'),
+  name: z.string().min(1).max(200),
+  version: z.string().min(1).max(50),
   author: z.string().min(1).max(200),
   description: z.string().min(1).max(500),
-  icon: z.string().min(1),
+  icon: pluginIcon,
   category: z.enum(['planning', 'development', 'testing', 'devops', 'productivity', 'other']),
   license: z.object({ type: z.enum(['free', 'paid', 'trial']) }),
-  minAppVersion: z.string().optional(),
+  minAppVersion: z.string().max(50).optional(),
   // Discoverability keywords surfaced in marketplace search + card chips.
   // Bounded (≤10 tags, ≤30 chars each) so a manifest can't flood search/UI.
   // Kept in sync with PluginManifest.plugin.tags and the AMC host validator.
@@ -110,9 +126,9 @@ const settingOptionSchema = z.object({
 })
 
 const settingSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().min(1),
-  description: z.string().optional(),
+  key: z.string().min(1).max(100),
+  label: z.string().min(1).max(200),
+  description: z.string().max(500).optional(),
   type: z.enum(['toggle', 'select', 'text', 'number', 'password']),
   options: z.array(settingOptionSchema).optional(),
   optionsSource: z.enum(['ai-engines']).optional(),
@@ -195,29 +211,6 @@ const collectionSchema = z
   })
 
 // Mirrors the host's op enum exactly (plugin-manifest-validator.ts:199).
-// `remove_column` / `remove_index` were SDK-only fictions the host has never
-// accepted; they trace to a stale design plan. `drop_index` is the real name.
-//
-// Note this whole block is validated and then ignored — see the `migrations`
-// doc comment in ../types/manifest.ts. The enum is still worth getting right so
-// a manifest that validates here is one the host would also accept.
-const migrationOperationSchema = z.object({
-  type: z.enum(['add_column', 'add_index', 'drop_index']),
-  collection: sqlIdent(),
-  // Required for every op type, index ops included — the host has no
-  // .optional() here (validator:201-212).
-  column: sqlIdent().refine((name) => !isReservedColumn(name), {
-    message: reservedColumnMessage,
-  }),
-  columnType: z.enum(['text', 'integer', 'real', 'json']).optional(),
-  default: z.union([z.string(), z.number()]).optional(),
-})
-
-const migrationSchema = z.object({
-  version: z.string().min(1),
-  operations: z.array(migrationOperationSchema),
-})
-
 // `ui.windows` bounds, from the host's shared/types/plugins.ts (PLUGIN_WINDOWS_MAX,
 // PLUGIN_WINDOW_KEY_MAX) and its validator's window schema.
 const PLUGIN_WINDOWS_MAX = 4
@@ -245,7 +238,7 @@ const uiSchema = z.object({
   sidebar: z
     .object({
       title: z.string().min(1).max(50),
-      icon: z.string().min(1).max(50),
+      icon: pluginIcon,
     })
     .optional(),
   overlay: z
@@ -310,16 +303,6 @@ const uiSchema = z.object({
 // spec's own `generic.run` slot declares `"args": []` — so no `.min(1)` here.
 // Duplicate slot names are not rejected: the host has no such rule to mirror,
 // and inventing one is how this SDK's host mirror went wrong before.
-const workspaceCommandSlotSchema = z.object({
-  name: z.string().min(1),
-  args: z.array(z.string()),
-})
-
-const workspaceSchema = z.object({
-  binding: z.object({ granularity: z.literal('package') }).optional(),
-  commandSlots: z.array(workspaceCommandSlotSchema).optional(),
-})
-
 // Every field mirrors the host (`plugin-manifest-validator.ts`, cli.endpoints).
 // This block had drifted in three directions at once: it rejected PATCH, which
 // the host and the marketplace both accept; it REQUIRED `description` and `auth`,
@@ -329,7 +312,13 @@ const cliEndpointSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
   path: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
-  auth: z.boolean().optional(),
+  auth: z
+    .boolean()
+    .optional()
+    .refine((value) => value !== false, {
+      message:
+        'cli.endpoints[].auth: false is not honoured: every plugin CLI endpoint is bearer-authenticated by the host. Omit the field or set it to true',
+    }),
   /**
    * Marks a destructive endpoint the HOST must gate behind a human inbox
    * approval before dispatching it.
@@ -415,14 +404,6 @@ const allowedCommandSchema = z
       message: `process.allowedCommands may not include the general-purpose interpreter "${normalizeCommandName(entry)}" — it would let the plugin run arbitrary code`,
     })
   )
-
-const cronJobSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  schedule: z.string().min(1),
-  description: z.string().min(1),
-  approvalRequired: z.boolean(),
-})
 
 // No upper bound: the host has none, so the SDK's old `.max(512)` was invented
 // policy that rejected a host-legal `memoryMb: 1024`.
@@ -517,7 +498,7 @@ export const manifestSchema = z.object({
       kv: z.object({ agentWritable: z.boolean().optional() }).optional(),
     })
     .default({ collections: {} }),
-  migrations: z.array(migrationSchema).default([]),
+  migrations: z.unknown().optional(),
   ui: uiSchema.optional(),
   keybindings: z.array(keybindingSchema).max(20).optional(),
   process: z.object({ allowedCommands: z.array(allowedCommandSchema).min(1).max(20) }).optional(),
@@ -530,11 +511,11 @@ export const manifestSchema = z.object({
   // `.max(50)` mirrors the host's cap on the array length.
   permissions: z.array(permissionSchema).max(50).optional(),
   cli: z.object({ endpoints: cliEndpointsSchema }).optional(),
-  cron: z.object({ jobs: z.array(cronJobSchema) }).optional(),
+  cron: z.unknown().optional(),
   // Host-real (plugin-manifest-schema.ts): without it zod strips the one switch that gives a
   // plugin's sessions their built-in tools.
   sessionTools: z.boolean().optional(),
-  workspace: workspaceSchema.optional(),
+  workspace: z.unknown().optional(),
   linkClaims: z.array(linkClaimSchema).min(1).max(LINK_CLAIMS_MAX).optional(),
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
 })
