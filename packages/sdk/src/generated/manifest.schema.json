@@ -485,11 +485,51 @@
           },
           "minItems": 1,
           "maxItems": 20
+        },
+        "pinnedPrograms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-zA-Z0-9._+-]+$"
+              },
+              "path": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "folder": {
+                "type": "string",
+                "enum": [
+                  "data",
+                  "install"
+                ]
+              },
+              "platform": {
+                "type": "string",
+                "enum": [
+                  "win32",
+                  "darwin",
+                  "linux"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "path",
+              "sha256"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 10
         }
-      },
-      "required": [
-        "allowedCommands"
-      ]
+      }
     },
     "sdkVersion": {
       "type": "string",
@@ -697,7 +737,7 @@
     "plugin",
     "ui"
   ],
-  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.windows, ui.windows.*.entryPoint, process.allowedCommands, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth",
+  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth",
   "allOf": [
     {
       "if": {

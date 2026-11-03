@@ -28,7 +28,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `sdkVersion` | string | Yes | Omniscio plugin-SDK contract the plugin needs, as a bare minimum (e.g. `"2.0.0"`) |
 | `ui` | object | No | UI entry point and sidebar config |
 | `keybindings` | array | No | Shortcuts your plugin registers, up to 20 — see [`keybindings`](#keybindings) |
-| `process` | object | No | Commands your backend may spawn — see [`process`](#process) |
+| `process` | object | No | Programs your plugin may run through the host launcher — see [`process`](#process) |
 | `backend` | object | No | Backend entry point and resource limits |
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
 | `permissions` | array | No | Requested API permissions |
@@ -516,19 +516,43 @@ install).
 
 ## `process` Block
 
-Declares the bare command names your backend may spawn (`src/shared/plugin-manifest-schema.ts:374-393`).
+Declares what your plugin may run through the host launcher (`ctx.process` from a backend,
+`window.AgentMC.process` from your UI). Declare at least one of the two lists; a name may not be
+in both.
 
 ```json
 {
   "process": {
-    "allowedCommands": ["ffmpeg", "ffprobe"]
+    "allowedCommands": ["git-lfs"],
+    "pinnedPrograms": [
+      { "name": "ffmpeg", "path": "bin/ffmpeg.exe", "sha256": "<64 hex>", "folder": "data", "platform": "win32" },
+      { "name": "ffmpeg", "path": "bin/ffmpeg", "sha256": "<64 hex>", "folder": "data", "platform": "linux" }
+    ]
   }
 }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `allowedCommands` | string[] | Yes | 1–20 bare command names — letters, digits, `.`, `_`, `+`, `-` only; no path separators, wildcards, whitespace or shell characters |
+| `allowedCommands` | string[] | One of the two | 1–20 bare command names found on the user's PATH — letters, digits, `.`, `_`, `+`, `-` only; no path separators, wildcards, whitespace or shell characters |
+| `pinnedPrograms` | object[] | One of the two | 1–10 programs shipped in, or downloaded into, your own folder; each runs only while its bytes match the pin |
+
+Each `pinnedPrograms` entry:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | The bare name you pass to `exec`/`spawn` (same rules as `allowedCommands`) |
+| `path` | string | Yes | Path relative to the chosen folder; it may not climb out, and a link or junction pointing out is refused |
+| `sha256` | string | Yes | 64 lowercase hex characters: the SHA-256 of the exact file |
+| `folder` | `"data"` or `"install"` | No | `data` (default) is your plugin's data folder, where a backend can download a binary; `install` is your installed package |
+| `platform` | `"win32"`, `"darwin"` or `"linux"` | No | Pin a different build per platform under one name; leave it out to pin one file everywhere |
+
+Omniscio never runs your file in place. Before the first start it copies the file to a folder
+your plugin cannot write, checks the copy's fingerprint, makes it read-only, and runs that copy.
+The copy is checked in full again on its first start after each app restart. A missing file, a
+changed file, a path outside your folder, and a name pinned only for another platform are each
+refused with a plain sentence before anything starts. To update a binary, ship the new hash in
+your manifest; the old copy is removed. The consent card lists every pinned program by name.
 
 General-purpose interpreters and shells (`node`, `python`, `bash`, `powershell`, `cmd`) and
 command launchers (`git`, `ssh`, `make`, `env`, `xargs`) are refused by name: allowing one would

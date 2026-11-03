@@ -385,7 +385,14 @@ export interface PluginManifest {
     label: string
   }[]
   process?: {
-    allowedCommands: string[]
+    allowedCommands?: string[]
+    pinnedPrograms?: {
+      name: string
+      path: string
+      sha256: string
+      folder?: 'data' | 'install'
+      platform?: 'win32' | 'darwin' | 'linux'
+    }[]
   }
   /**
    * The Omniscio plugin-SDK contract this plugin needs — not the version of

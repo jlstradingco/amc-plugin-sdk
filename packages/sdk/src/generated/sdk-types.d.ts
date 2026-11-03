@@ -141,7 +141,14 @@ export interface PluginManifest {
     "label": string
   }>
   "process"?: {
-    "allowedCommands": Array<string>
+    "allowedCommands"?: Array<string>
+    "pinnedPrograms"?: Array<{
+      "name": string
+      "path": string
+      "sha256": string
+      "folder"?: "data" | "install"
+      "platform"?: "win32" | "darwin" | "linux"
+    }>
   }
   "sdkVersion"?: string
   "backend"?: {
@@ -734,6 +741,13 @@ export interface PluginContext {
   }
   "pluginId": string
   "pluginVersion": string
+  "process": {
+    "exec": (...args: unknown[]) => Promise<unknown>
+    "kill": (...args: unknown[]) => Promise<unknown>
+    "onExit": (...args: unknown[]) => unknown
+    "onOutput": (...args: unknown[]) => unknown
+    "spawn": (...args: unknown[]) => Promise<unknown>
+  }
   "recording": {
     "get": (...args: unknown[]) => Promise<unknown>
     "list": (...args: unknown[]) => Promise<unknown>

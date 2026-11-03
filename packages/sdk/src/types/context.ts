@@ -1459,6 +1459,39 @@ export interface WorkspaceApi {
   execCancel(jobId: string): Promise<WorkspaceExecJobStatus>
 }
 
+export interface PluginProcessOptions {
+  env?: Record<string, string>
+}
+
+export interface PluginProcessExecOptions extends PluginProcessOptions {
+  timeout?: number
+  maxBuffer?: number
+}
+
+export interface PluginProcessOutput {
+  processId: string
+  stream: 'stdout' | 'stderr'
+  text: string
+}
+
+export interface PluginProcessExit {
+  processId: string
+  exitCode: number
+  signal?: string
+}
+
+export interface PluginProcess {
+  exec(
+    command: string,
+    args: string[],
+    options?: PluginProcessExecOptions
+  ): Promise<{ stdout: string; stderr: string; exitCode: number }>
+  spawn(command: string, args: string[], options?: PluginProcessOptions): Promise<{ processId: string }>
+  kill(processId: string): Promise<void>
+  onOutput(handler: (event: PluginProcessOutput) => void): () => void
+  onExit(handler: (event: PluginProcessExit) => void): () => void
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -1549,4 +1582,5 @@ export interface PluginContext {
    * sends people to build a workaround they do not need.)
    */
   workspace: WorkspaceApi
+  process: PluginProcess
 }

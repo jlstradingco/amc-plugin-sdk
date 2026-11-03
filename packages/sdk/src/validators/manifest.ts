@@ -405,6 +405,44 @@ const allowedCommandSchema = z
     })
   )
 
+const pinnedProgramSchema = z
+  .object({
+    name: allowedCommandSchema,
+    path: pluginRelativeEntryPath,
+    sha256: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/, "sha256 must be the file's SHA-256 written as 64 lowercase hex characters"),
+    folder: z.enum(['data', 'install']).optional(),
+    platform: z.enum(['win32', 'darwin', 'linux']).optional(),
+  })
+  .strict()
+
+const processSchema = z
+  .object({
+    allowedCommands: z.array(allowedCommandSchema).min(1).max(20).optional(),
+    pinnedPrograms: z.array(pinnedProgramSchema).min(1).max(10).optional(),
+  })
+  .superRefine((block, ctx) => {
+    const allowed = new Set((block.allowedCommands ?? []).map(normalizeCommandName))
+    const pinned = block.pinnedPrograms ?? []
+    if (allowed.size === 0 && pinned.length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'process must list allowedCommands, pinnedPrograms, or both' })
+    }
+    const seen = new Set<string>()
+    pinned.forEach((program, index) => {
+      const name = normalizeCommandName(program.name)
+      const path = ['pinnedPrograms', index, 'name']
+      if (allowed.has(name)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: `"${program.name}" is both an allowed command and a pinned program — list it in one place only` })
+      }
+      const key = `${name}|${program.platform ?? '*'}`
+      if (seen.has(key)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: `"${program.name}" is pinned twice for the same platform` })
+      }
+      seen.add(key)
+    })
+  })
+
 // No upper bound: the host has none, so the SDK's old `.max(512)` was invented
 // policy that rejected a host-legal `memoryMb: 1024`.
 const resourceLimitsSchema = z.object({
@@ -501,7 +539,7 @@ export const manifestSchema = z.object({
   migrations: z.unknown().optional(),
   ui: uiSchema.optional(),
   keybindings: z.array(keybindingSchema).max(20).optional(),
-  process: z.object({ allowedCommands: z.array(allowedCommandSchema).min(1).max(20) }).optional(),
+  process: processSchema.optional(),
   sdkVersion: z.string().min(1).max(50).optional(),
   backend: z.object({
     entryPoint: pluginRelativeEntryPath,
