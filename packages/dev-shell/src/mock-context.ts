@@ -488,6 +488,11 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         sessionStatus.set(sid, 'ended')
         return Promise.resolve()
       },
+      archive: (sid) => {
+        if (shouldLog) console.log(`${prefix} [sessions] archive(${sid})`)
+        sessionStatus.set(sid, 'archived')
+        return Promise.resolve()
+      },
       onStatusChange: () => () => {},
     },
 
@@ -570,6 +575,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [inbox] setItems(${items.length} items)`)
         return Promise.resolve()
       },
+      onDismiss: () => () => {},
     },
 
     auth: {

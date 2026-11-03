@@ -14,7 +14,7 @@ npm install --save-dev @agent-mc/plugin-dev-shell
 
 ```bash
 cd my-plugin
-npx amc-plugin dev
+npx -p @agent-mc/plugin-cli amc-plugin dev
 ```
 
 ## Documentation

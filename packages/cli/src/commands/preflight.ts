@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import chalk from 'chalk'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { getRegistry } from '../lib/marketplace-api.js'
@@ -136,7 +136,7 @@ export function locatePackage(cwd: string, explicit?: string): string {
   let selection = selectPackage(cwd, identity, explicit)
   if (selection.kind === 'none') {
     info('No .amcplugin found. Running `amc-plugin package` first...')
-    execSync('npx amc-plugin package', { cwd, stdio: 'inherit' })
+    execFileSync(process.execPath, [process.argv[1], 'package'], { cwd, stdio: 'inherit' })
     selection = selectPackage(cwd, identity)
   }
   if (selection.kind === 'selected') return selection.path

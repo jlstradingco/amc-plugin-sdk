@@ -21,6 +21,7 @@ import type {
   CliResponse,
   SidebarItem,
   InboxItem,
+  InboxDismissal,
   PluginAuthUser,
   PluginAuthSession,
   PluginAiStructuredRequest,
@@ -154,6 +155,7 @@ export interface TestHarness {
   inboxItems: InboxItem[]
   sentEmails: PluginEmailMessage[]
   scheduledEmails: PluginEmailSchedule[]
+  dismissInboxItem(itemId: string, dismissed?: boolean): void
   /** Trigger a registered cron handler by id. */
   runCron(id: string): Promise<void>
   /** Invoke a registered CLI handler; returns 404 if unregistered. */
@@ -357,6 +359,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const eventBus = new EventEmitter()
   const cronHandlers = new Map<string, () => void | Promise<void>>()
   const cliHandlers = new Map<string, CliHandler>()
+  const inboxDismissHandlers = new Set<(dismissal: InboxDismissal) => void>()
   const sessionStatus = new Map<string, string>()
   const sessionMessages = new Map<string, SessionMessage[]>()
   const recordings: Recording[] = []
@@ -375,6 +378,9 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     inboxAlerts: [],
     sentEmails: [],
     scheduledEmails: [],
+    dismissInboxItem(itemId: string, dismissed = true) {
+      for (const handler of inboxDismissHandlers) handler({ itemId, dismissed })
+    },
     async runCron(id: string) {
       const handler = cronHandlers.get(id)
       if (!handler) throw new Error(`No cron job registered with id "${id}"`)
@@ -582,6 +588,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       // 'ended' is a real AMC status; 'stopped' — which this mock used to
       // invent — is not one of the eleven the host can report.
       stop: (sessionId) => { sessionStatus.set(sessionId, 'ended'); return Promise.resolve() },
+      archive: (sessionId) => { sessionStatus.set(sessionId, 'archived'); return Promise.resolve() },
       onStatusChange: () => () => {}
     },
 
@@ -674,7 +681,11 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
 
     inbox: {
       setItems: (items) => { harness.inboxItems = items; return Promise.resolve() },
-      postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve() }
+      postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve() },
+      onDismiss: (handler) => {
+        inboxDismissHandlers.add(handler)
+        return () => { inboxDismissHandlers.delete(handler) }
+      }
     },
 
     auth: {

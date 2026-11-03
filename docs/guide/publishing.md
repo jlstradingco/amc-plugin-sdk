@@ -15,7 +15,7 @@ The publish workflow is:
 ## Prerequisites
 
 - A [GitHub](https://github.com) account
-- A built and validated plugin (run `npx amc-plugin validate` first)
+- A built and validated plugin (run `npx -p @agent-mc/plugin-cli amc-plugin validate` first)
 
 ## Step 1: Build and Package
 
@@ -23,8 +23,8 @@ Make sure your plugin builds cleanly and passes validation:
 
 ```bash
 npm run build
-npx amc-plugin validate
-npx amc-plugin package
+npx -p @agent-mc/plugin-cli amc-plugin validate
+npx -p @agent-mc/plugin-cli amc-plugin package
 ```
 
 Expected output:
@@ -66,7 +66,7 @@ There is no listing form. Everything the marketplace page shows comes from the p
 It also prints one `README` line, and this one **does block**: the README is the text customers read on the store page, so `preflight` and `publish` refuse a root `README.md` that contains raw HTML tags, a badge image (shields.io and similar), a `Developer notes` heading or a line of developer notes, or more than 3,000 characters. The message names each offending line (up to five). Move developer content, badges and HTML to `docs/DEVELOPMENT.md`; a one-line pointer such as "Developer notes: docs/DEVELOPMENT.md" is fine, and tags inside code fences or inline code are not counted.
 
 ::: warning Older CLIs drop the README
-Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a flat plugin's entry-point folders), so a README in your repository never reached the marketplace. Upgrade with `npm install -D @agent-mc/plugin-cli@^3.1.0`, or publish with `npx @agent-mc/plugin-cli@latest publish`, then publish a new version — the listing updates when that version is approved.
+Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a flat plugin's entry-point folders), so a README in your repository never reached the marketplace. Upgrade with `npm install -D @agent-mc/plugin-cli@^3.1.0`, or publish with `npx -p @agent-mc/plugin-cli@latest amc-plugin publish`, then publish a new version — the listing updates when that version is approved.
 :::
 
 ## Step 2: Publish
@@ -74,7 +74,7 @@ Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a fl
 Run the publish command from your plugin directory:
 
 ```bash
-npx amc-plugin publish
+npx -p @agent-mc/plugin-cli amc-plugin publish
 ```
 
 ### First-Time Authentication
@@ -110,7 +110,7 @@ Run `amc-plugin status` to check progress, or use --watch to wait.
 Include a changelog message for the marketplace listing:
 
 ```bash
-npx amc-plugin publish --changelog "Added dark mode support and fixed sidebar badge count"
+npx -p @agent-mc/plugin-cli amc-plugin publish --changelog "Added dark mode support and fixed sidebar badge count"
 ```
 
 ### Watch Mode
@@ -118,7 +118,7 @@ npx amc-plugin publish --changelog "Added dark mode support and fixed sidebar ba
 Use `--watch` to poll for the review decision instead of checking manually:
 
 ```bash
-npx amc-plugin publish --watch
+npx -p @agent-mc/plugin-cli amc-plugin publish --watch
 ```
 
 The CLI polls every 30 seconds for up to 3 hours:
@@ -144,7 +144,7 @@ Rejected: Plugin must handle errors in the onEnable lifecycle hook
 Check the review status of your submissions at any time:
 
 ```bash
-npx amc-plugin status
+npx -p @agent-mc/plugin-cli amc-plugin status
 ```
 
 Output:
@@ -184,8 +184,8 @@ After a rejection or when publishing an update:
 
 ```bash
 npm run build
-npx amc-plugin validate
-npx amc-plugin publish --changelog "Fixed onEnable error handling"
+npx -p @agent-mc/plugin-cli amc-plugin validate
+npx -p @agent-mc/plugin-cli amc-plugin publish --changelog "Fixed onEnable error handling"
 ```
 
 Each submission is tracked independently. You can see the full history with `amc-plugin status`.
@@ -224,7 +224,7 @@ The marketplace enforces a **50 MB** package size limit. The `amc-plugin package
 ### Check Current Identity
 
 ```bash
-npx amc-plugin whoami
+npx -p @agent-mc/plugin-cli amc-plugin whoami
 ```
 
 Output:
@@ -242,7 +242,7 @@ Not signed in. Run `amc-plugin publish` to authenticate.
 ### Sign Out
 
 ```bash
-npx amc-plugin logout
+npx -p @agent-mc/plugin-cli amc-plugin logout
 ```
 
 Output:

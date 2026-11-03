@@ -320,6 +320,7 @@ export interface PluginSessions {
    */
   getMessages(sessionId: string): Promise<SessionMessage[]>
   stop(sessionId: string): Promise<void>
+  archive(sessionId: string): Promise<void>
   /**
    * The handler's second argument carries `pendingAction` and
    * `recoveryTerminal`. An older host calls it with the status only.
@@ -537,6 +538,12 @@ export interface InboxItem {
   subtitle?: string
   /** Overrides the per-source dot colour. */
   dotColor?: string
+  quiet?: boolean
+}
+
+export interface InboxDismissal {
+  itemId: string
+  dismissed: boolean
 }
 
 export interface PluginInbox {
@@ -557,6 +564,7 @@ export interface PluginInbox {
     /** `false` with a kept `chatRouteTag`: post to Team Chat only, not the person's inbox. */
     inboxVisible?: boolean
   }): Promise<void>
+  onDismiss(handler: (dismissal: InboxDismissal) => void): () => void
 }
 
 /**
@@ -646,6 +654,7 @@ export type PluginEmailFailureReason =
   | 'recipient-unsubscribed'
   | 'recipient-rejected'
   | 'daily-send-cap'
+  | 'monthly-send-cap'
   | 'recipient-limit'
   | 'plugin-daily-cap'
   | 'address-unavailable'

@@ -115,6 +115,35 @@ const unsubscribe = AgentMC.theme.onChange((theme) => {
 | `get()` | `Promise<{ mode: string; accent: string; surfaces: Record<string, unknown> }>` | Current theme. `visualTheme` never existed; `get()` is async |
 | `onChange(callback)` | `() => void` | Subscribe to theme changes. Returns an unsubscribe function |
 
+### Locale
+
+Show your text in the language the user picked for Omniscio, and switch when they change it.
+
+```typescript
+// At load: the language Omniscio was in when your panel opened
+const loc = window.__AMC_LOCALE__
+// loc: { uiLanguage: 'zh-TW', formattingLocale: 'zh-TW', dir: 'ltr', timeZone: 'Asia/Taipei' }
+
+// Later changes, without a reload
+const unsubscribe = AgentMC.locale.onChange((loc) => {
+  loadCatalog(loc.uiLanguage)
+  document.documentElement.dir = loc.dir
+})
+```
+
+| Field | Meaning |
+|---|---|
+| `uiLanguage` | The app language code exactly as the user chose it (`zh-TW`, `zh-CN`, `pt-BR`, `tl`, `es`). Pick your catalog with this |
+| `formattingLocale` | The locale for dates, numbers and money (`tl` formats as `fil-PH`). Format with this, never with `uiLanguage` |
+| `dir` | `rtl` for Arabic, Hebrew, Persian, Urdu and the other right-to-left scripts, else `ltr` |
+| `timeZone` | The computer's IANA time zone, when known |
+
+| Method | Returns | Description |
+|---|---|---|
+| `onChange(callback)` | `() => void` | Fires once each time the app language changes, with the object above. Works the same in a panel, an overlay window and on a paired phone. Returns an unsubscribe function |
+
+`window.__AMC_LOCALE__` is fixed at load; `onChange` is the only live source. No permission is needed.
+
 ### Export
 
 Save files, generate PDFs, and interact with the user's filesystem through system dialogs.

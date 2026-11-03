@@ -11,6 +11,16 @@ together.
 
 ## [Unreleased]
 
+### Added — `ctx.sessions.archive`
+
+A worker backend can now archive a session it created: `ctx.sessions.archive(sessionId)`. It needs
+the `sessions` permission you already declare for `create`/`stop`, and it runs the same ownership
+check: a session from another plugin, or one the user started, is refused, and so is an unknown id.
+A running session is ended first. The host may refuse with its own message when the session cannot
+be archived yet (shared, holding unshipped work, or waiting on a final card the user has not read);
+catch the error and retry later. Archiving is reversible and keeps the transcript. Panels have no
+`session.archive`. The SDK test mocks implement it and report the session as `archived`.
+
 ### Added — `documents.saveCopy` and `documents.saveCopies`
 
 A plugin can now hand the user a NEW file, not only append to one they already opened. `saveCopy`
@@ -129,6 +139,19 @@ The card now leads with request facts written by Omniscio (plugin name and id, t
 ### Added — `details.oneLine`, `details.personal` and `details.marks` on the approval card
 
 The card's `details` fold-out can carry a one-line summary of what the AI will be told, shown above it, and can flag personal data so Omniscio opens the fold-out for the person and highlights the listed names. Omniscio also opens it when it finds an email address in the text. See Manifest > Previews on the approval card.
+
+### Added — `quiet` on an inbox item
+
+`InboxItem.quiet` marks a row that stays in the Inbox and on the plugin's own screen but does not add
+to the number on the plugin's sidebar row or appear in that number's popover. A non-boolean value
+makes the host drop the whole batch, like any other wrong shape.
+
+### Added — `ctx.inbox.onDismiss` is in the SDK type
+
+The host has delivered a dismissal of a plugin's own inbox row (and its undo) to plugins that subscribe
+since the inbox dismiss seam shipped, but the `PluginInbox` type did not declare it, so authors could not
+subscribe without a cast. `onDismiss(handler)` and the `InboxDismissal` type are now declared, and
+`createTestContext()` returns `dismissInboxItem(itemId, dismissed = true)` to drive a handler in a test.
 
 ### Fixed — a `settings[]` entry declares exactly the host's keys
 

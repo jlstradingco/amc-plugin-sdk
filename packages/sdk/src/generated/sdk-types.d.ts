@@ -382,6 +382,9 @@ export interface AgentMC {
     "updateLesson": (...args: unknown[]) => Promise<unknown>
     "updateModule": (...args: unknown[]) => Promise<unknown>
   }
+  "locale": {
+    "onChange": (handler: (...args: unknown[]) => void) => () => void
+  }
   "members": {
     "list": (...args: unknown[]) => Promise<unknown>
   }
@@ -433,6 +436,9 @@ export interface AgentMC {
   "notifications": {
     "clear": (...args: unknown[]) => Promise<unknown>
     "fire": (...args: unknown[]) => Promise<unknown>
+  }
+  "ocr": {
+    "recognize": (...args: unknown[]) => Promise<unknown>
   }
   "overlay": {
     "onBoundsChange": (handler: (...args: unknown[]) => void) => () => void
@@ -525,6 +531,7 @@ export interface AgentMC {
   }
   "share": {
     "publishArtifact": (...args: unknown[]) => Promise<unknown>
+    "revokeArtifact": (...args: unknown[]) => Promise<unknown>
   }
   "shell": {
     "openExternal": (...args: unknown[]) => Promise<unknown>
@@ -750,6 +757,7 @@ export interface PluginContext {
     "set": (...args: unknown[]) => Promise<unknown>
   }
   "sessions": {
+    "archive": (...args: unknown[]) => Promise<unknown>
     "create": (...args: unknown[]) => Promise<unknown>
     "fanout": (...args: unknown[]) => Promise<unknown>
     "getMessages": (...args: unknown[]) => Promise<unknown>

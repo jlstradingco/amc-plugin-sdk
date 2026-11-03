@@ -61,6 +61,7 @@ reaches the mail service, so it never appears in a log and never collides with a
 | `recipient-unsubscribed` | The reader used one-click unsubscribe | Remove the reader |
 | `recipient-rejected` | The reader bounced or reported spam | Remove the reader |
 | `daily-send-cap` | The user's agent-email plan hit its daily send limit | Stop until tomorrow |
+| `monthly-send-cap` | The user's plan hit its monthly agent-email limit | Stop until next month |
 | `recipient-limit` | The plan's daily limit of distinct recipients is reached | Stop until tomorrow |
 | `address-unavailable` | The user's agent address cannot send | Ask the user to check agent email |
 | `account-suspended` | Sending is disabled for this account | Stop |

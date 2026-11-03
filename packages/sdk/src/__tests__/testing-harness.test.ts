@@ -242,6 +242,45 @@ describe('capture surfaces', () => {
   })
 })
 
+describe('inbox.onDismiss', () => {
+  it('hands a subscribed plugin the dismissal of its own row', () => {
+    const h = createTestContext()
+    const seen: Array<{ itemId: string; dismissed: boolean }> = []
+    h.ctx.inbox.onDismiss((dismissal) => seen.push(dismissal))
+
+    h.dismissInboxItem('i1')
+
+    expect(seen).toEqual([{ itemId: 'i1', dismissed: true }])
+  })
+
+  it('hands the plugin the undo of a dismissal as dismissed false', () => {
+    const h = createTestContext()
+    const seen: Array<{ itemId: string; dismissed: boolean }> = []
+    h.ctx.inbox.onDismiss((dismissal) => seen.push(dismissal))
+
+    h.dismissInboxItem('i1', false)
+
+    expect(seen).toEqual([{ itemId: 'i1', dismissed: false }])
+  })
+
+  it('stops delivering once the returned unsubscribe is called', () => {
+    const h = createTestContext()
+    const seen: string[] = []
+    const unsubscribe = h.ctx.inbox.onDismiss((dismissal) => seen.push(dismissal.itemId))
+
+    h.dismissInboxItem('first')
+    unsubscribe()
+    h.dismissInboxItem('second')
+
+    expect(seen).toEqual(['first'])
+  })
+
+  it('is a silent no-op for a plugin that never subscribed', () => {
+    const h = createTestContext()
+    expect(() => h.dismissInboxItem('i1')).not.toThrow()
+  })
+})
+
 describe('cron + cli triggers', () => {
   it('runCron invokes the registered handler', async () => {
     const h = createTestContext()

@@ -68,6 +68,8 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage'> {
   generateMessage(systemPrompt: string, userPrompt: string): Promise<string | null>
 }
 
+export type BridgeInbox = Pick<PluginInbox, 'setItems' | 'postAlert'>
+
 /**
  * `AgentMC.auth` — the webview's auth surface, which is ONE method.
  *
@@ -785,7 +787,7 @@ export interface AgentMC {
   project: BridgeProject
   sidebar: PluginSidebar
   assets: BridgeAssets
-  inbox: PluginInbox
+  inbox: BridgeInbox
   /** One method — see {@link BridgeAuth}. NOT the backend's `PluginAuth`. */
   auth: BridgeAuth
   documents: BridgeDocuments

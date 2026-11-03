@@ -41,6 +41,35 @@ await ctx.inbox.postAlert({
 })
 ```
 
+### `onDismiss(handler: (dismissal: InboxDismissal) => void): () => void`
+
+**Availability:** backend only (`ctx.inbox`); the webview `AgentMC.inbox` has no `onDismiss`.
+
+Find out when the user dismisses one of your inbox rows, or undoes that dismissal. Without a handler your plugin is never told, so its own screen can keep showing a row the user already cleared.
+
+**Requires the `inbox` permission.**
+
+| Name | Type | Description |
+|---|---|---|
+| `handler` | `(dismissal: InboxDismissal) => void` | Called once per dismissal or undo of one of YOUR rows |
+
+**Returns:** a function that removes the handler.
+
+```typescript
+interface InboxDismissal {
+  itemId: string      // the `id` you pushed, with no host prefix
+  dismissed: boolean  // true = dismissed, false = the dismissal was undone
+}
+```
+
+```typescript
+ctx.inbox.onDismiss(({ itemId, dismissed }) => {
+  void markRead(itemId, dismissed)
+})
+```
+
+A handler only hears about your own rows, never another plugin's. A timed "remind me later" snooze is not a dismissal and does not call it. In tests, `createTestContext()` returns `dismissInboxItem(itemId, dismissed = true)` to simulate one.
+
 ## The `InboxItem` type
 
 ```typescript
@@ -50,6 +79,7 @@ interface InboxItem {
   timestamp: string   // REQUIRED -- the inbox orders on it
   subtitle?: string
   dotColor?: string
+  quiet?: boolean
 }
 ```
 
@@ -60,6 +90,11 @@ interface InboxItem {
 | `timestamp` | `string` | **Required** ISO timestamp. This is the inbox's sort key -- your plugin owns recency |
 | `subtitle` | `string` | Optional supporting text |
 | `dotColor` | `string` | Optional override of the per-source dot colour |
+| `quiet` | `boolean` | Optional. `true` keeps the row in the Inbox and on your own screen but leaves it out of the number on your sidebar row and out of that number's popover. Use it for reminders that do not need the user |
+
+::: warning `quiet` must be a boolean
+Any other value fails the same silent batch validation below: the host drops the whole batch.
+:::
 
 ::: danger A wrong shape fails SILENTLY
 Until 2026-08-11 this page documented `body`, `icon`, `priority`, `actionLabel` and

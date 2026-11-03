@@ -12,7 +12,7 @@ npm install --save-dev @agent-mc/plugin-cli
 ## Usage
 
 ```bash
-npx amc-plugin create my-plugin
+npx -p @agent-mc/plugin-cli amc-plugin create my-plugin
 ```
 
 ## Documentation

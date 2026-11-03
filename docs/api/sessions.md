@@ -161,6 +161,41 @@ await ctx.sessions.stop(sessionId)
 
 ---
 
+### `archive(sessionId: string): Promise<void>`
+
+Backend only — the frontend `AgentMC.session` has no `archive`.
+
+File away a session your plugin created, so it leaves the user's board. A running session is ended
+first. Archiving is reversible from the Archive view and does not delete the session's messages.
+
+Only a session your plugin owns can be archived: one in your plugin's own sandbox, or one you
+launched into a real project. Any other id is refused (`does not belong to plugin`), and an id that
+does not exist is refused with `Session not found`.
+
+The host can also refuse with its own sentence when the session cannot be archived yet — for
+example while it is shared, while it holds unshipped work, or while it is waiting on a final card
+the user has not read. Catch the error and retry later rather than treating it as a bug.
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `sessionId` | `string` | The session ID |
+
+**Returns:** `Promise<void>`
+
+**Example:**
+
+```typescript
+try {
+  await ctx.sessions.archive(sessionId)
+} catch (err) {
+  ctx.log.warn(`Could not archive ${sessionId}: ${String(err)}`)
+}
+```
+
+---
+
 ### `onStatusChange(sessionId: string, handler: (status: string, info: SessionStatusInfo) => void): () => void`
 
 Subscribe to status changes for a session.

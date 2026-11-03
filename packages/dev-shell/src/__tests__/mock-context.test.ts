@@ -433,6 +433,16 @@ describe('sessions mock does not freeze the status', () => {
     expect(await ctx.sessions.getStatus(a.sessionId)).toBe('ended')
     expect(await ctx.sessions.getStatus(b.sessionId)).toBe('running')
   })
+
+  it('reports archived after archive(), and leaves other sessions alone', async () => {
+    const ctx = createMockContext({ pluginId: 'p', pluginVersion: '1.0.0', logToConsole: false })
+    const a = await ctx.sessions.create({ prompt: 'a' })
+    const b = await ctx.sessions.create({ prompt: 'b' })
+    await ctx.sessions.archive(a.sessionId)
+
+    expect(await ctx.sessions.getStatus(a.sessionId)).toBe('archived')
+    expect(await ctx.sessions.getStatus(b.sessionId)).toBe('running')
+  })
 })
 
 describe('sessions mock issues distinct ids', () => {

@@ -63,6 +63,7 @@ export type {
   PluginAuthSession,
   PluginAuth,
   InboxItem,
+  InboxDismissal,
   PluginInbox,
   RecordingStartResult,
   RecordingStopResult,

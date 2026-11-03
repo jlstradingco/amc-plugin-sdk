@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import * as childProcess from 'node:child_process'
 import {
   listPackageCandidates,
   readPackagedVersion,
@@ -9,6 +10,12 @@ import {
   selectPackage
 } from '../lib/package-selection.js'
 import { locatePackage } from '../commands/preflight.js'
+
+vi.mock('node:child_process', async importOriginal => ({
+  ...(await importOriginal<typeof import('node:child_process')>()),
+  execSync: vi.fn(),
+  execFileSync: vi.fn()
+}))
 
 const IDENTITY = { id: 'decks', version: '1.3.2' }
 
@@ -214,6 +221,22 @@ describe('package selection', () => {
       const file = await writePackage(path.join(dir, 'decks-1.3.2.amcplugin'), '1.3.2')
 
       expect(locatePackage(dir)).toBe(file)
+    })
+
+    it('packages a folder with no package by running this same CLI, never npx', () => {
+      fs.writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ plugin: { id: 'decks', version: '1.3.2' } }))
+      vi.spyOn(console, 'log').mockImplementation(() => undefined)
+      vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit ${code}`)
+      }) as never)
+
+      expect(() => locatePackage(dir)).toThrow('exit 1')
+      expect(childProcess.execSync).not.toHaveBeenCalled()
+      expect(childProcess.execFileSync).toHaveBeenCalledWith(process.execPath, [process.argv[1], 'package'], {
+        cwd: dir,
+        stdio: 'inherit'
+      })
     })
   })
 })

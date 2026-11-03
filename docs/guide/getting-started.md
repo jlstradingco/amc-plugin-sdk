@@ -131,7 +131,7 @@ The `build` command does three things:
 Run validation checks without producing build output. Useful for CI pipelines:
 
 ```bash
-npx amc-plugin validate
+npx -p @agent-mc/plugin-cli amc-plugin validate
 ```
 
 Expected output:
@@ -164,7 +164,7 @@ it rather than shelling out.
 Bundle your plugin into a `.amcplugin` archive:
 
 ```bash
-npx amc-plugin package
+npx -p @agent-mc/plugin-cli amc-plugin package
 ```
 
 Expected output:

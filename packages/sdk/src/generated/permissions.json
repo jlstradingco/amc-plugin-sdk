@@ -22,7 +22,7 @@
   {
     "name": "sessions",
     "label": "Sessions",
-    "description": "Create and manage Claude Code sessions",
+    "description": "Create and manage Claude Code sessions. It can also run them in the background, where they do not show in your session list, up to 20 a day.",
     "tier": "standard",
     "namespaces": [
       "session",

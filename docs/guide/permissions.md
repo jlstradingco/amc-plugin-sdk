@@ -131,6 +131,9 @@ const unsubscribe = ctx.sessions.onStatusChange(sessionId, (status) => {
 
 // Stop the session
 await ctx.sessions.stop(sessionId)
+
+// File it away once you are done with it
+await ctx.sessions.archive(sessionId)
 ```
 
 ---
