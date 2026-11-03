@@ -548,7 +548,15 @@ export interface PluginInbox {
    * `body` is markdown. `dedupKey` suppresses repeats and is namespaced to your
    * plugin host-side, so it cannot collide with another plugin's.
    */
-  postAlert(opts: { title: string; body: string; dedupKey?: string }): Promise<void>
+  postAlert(opts: {
+    title: string
+    body: string
+    dedupKey?: string
+    /** Your own plugin id: also posts the card into the Team Chat channels the person routed it to. */
+    chatRouteTag?: string
+    /** `false` with a kept `chatRouteTag`: post to Team Chat only, not the person's inbox. */
+    inboxVisible?: boolean
+  }): Promise<void>
 }
 
 /**
