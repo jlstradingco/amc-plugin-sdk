@@ -194,6 +194,24 @@ const WORKSPACE_NOT_FAKEABLE =
   'reproduce, so a passing test against a fake would be evidence of nothing. ' +
   'Inject your own double for the methods your test needs.'
 
+const PROCESS_NOT_FAKEABLE =
+  'ctx.process is implemented by the AMC host, but this test harness does not ' +
+  'fake it: running a program is gated by the host and the real operating ' +
+  'system, so a passing test against a fake would be evidence of nothing. ' +
+  'Inject your own double for the methods your test needs.'
+
+function processNotFakeable(): PluginContext['process'] {
+  const reject = (): Promise<never> => Promise.reject(new Error(PROCESS_NOT_FAKEABLE))
+  const unsubscribe = (): void => {}
+  return {
+    exec: reject,
+    spawn: reject,
+    kill: reject,
+    onOutput: () => unsubscribe,
+    onExit: () => unsubscribe
+  }
+}
+
 /** Every method rejects. Kept in sync with the dev-shell's identical stub. */
 function workspaceNotFakeable(): PluginContext['workspace'] {
   // One nullary thunk reused for all 18 methods: it is assignable to every
@@ -808,6 +826,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     },
 
     workspace: workspaceNotFakeable(),
+    process: processNotFakeable(),
     ...(opts.rpc ? { rpc: opts.rpc } : {}),
     ...(opts.host ? { host: opts.host } : {})
   }

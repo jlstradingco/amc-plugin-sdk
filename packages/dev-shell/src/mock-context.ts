@@ -112,6 +112,24 @@ const WORKSPACE_NOT_FAKEABLE =
   'plugin that works here could still fail on install. Test it in a real AMC ' +
   'build.'
 
+const PROCESS_NOT_FAKEABLE =
+  'ctx.process is implemented by the AMC host, but the dev shell does not ' +
+  'fake it: running a program is gated by the host and the real operating ' +
+  'system, so a plugin that works here could still fail on install. Test it ' +
+  'in a real AMC build.'
+
+function processNotFakeable(): PluginContext['process'] {
+  const reject = (): Promise<never> => Promise.reject(new Error(PROCESS_NOT_FAKEABLE))
+  const unsubscribe = (): void => {}
+  return {
+    exec: reject,
+    spawn: reject,
+    kill: reject,
+    onOutput: () => unsubscribe,
+    onExit: () => unsubscribe
+  }
+}
+
 function workspaceNotFakeable(): PluginContext['workspace'] {
   // One nullary thunk for all 18 methods — assignable to every signature, and
   // declares no parameter so `noUnusedParameters` stays satisfied.
@@ -651,5 +669,6 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     },
 
     workspace: workspaceNotFakeable(),
+    process: processNotFakeable(),
   }
 }
