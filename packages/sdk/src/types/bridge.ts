@@ -63,9 +63,14 @@ export interface BridgeTheme {
  * The backend path returns a plain string, which is why this is narrowed here
  * rather than widened for everyone.
  */
-export interface BridgeAi extends Omit<PluginAi, 'generateMessage'> {
+export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTextViaSubscription'> {
   /** `null` when generation failed — check before using it. */
   generateMessage(systemPrompt: string, userPrompt: string): Promise<string | null>
+  generateTextViaSubscription(
+    systemPrompt: string,
+    userPrompt: string,
+    opts?: { model?: string }
+  ): Promise<string | null>
 }
 
 export type BridgeInbox = Pick<PluginInbox, 'setItems' | 'postAlert'>

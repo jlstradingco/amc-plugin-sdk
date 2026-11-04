@@ -191,6 +191,7 @@ export interface AgentMC {
   "ai": {
     "generateMessage": (...args: unknown[]) => Promise<unknown>
     "generateStructured": (...args: unknown[]) => Promise<unknown>
+    "generateTextViaSubscription": (...args: unknown[]) => Promise<unknown>
     "generateTitle": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
@@ -646,6 +647,7 @@ export interface PluginContext {
   "ai": {
     "generateMessage": (...args: unknown[]) => Promise<unknown>
     "generateStructured": (...args: unknown[]) => Promise<unknown>
+    "generateTextViaSubscription": (...args: unknown[]) => Promise<unknown>
     "generateTitle": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>

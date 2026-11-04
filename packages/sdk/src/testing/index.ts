@@ -78,6 +78,7 @@ export interface TestContextOptions {
   /** Override ctx.ai responses. */
   ai?: {
     generateMessage?: (systemPrompt: string, userPrompt: string) => Promise<string> | string
+    generateTextViaSubscription?: (systemPrompt: string, userPrompt: string) => Promise<string> | string
     listEngines?: () => Promise<PluginEngineCatalog> | PluginEngineCatalog
     generateTitle?: (text: string) => Promise<string> | string
     /** Defaults to true, so a plugin gating on it takes the configured path. */
@@ -615,6 +616,12 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         Promise.resolve(
           opts.ai?.generateMessage
             ? opts.ai.generateMessage(systemPrompt, userPrompt)
+            : `[test-ai] ${userPrompt.slice(0, 100)}`
+        ),
+      generateTextViaSubscription: (systemPrompt, userPrompt) =>
+        Promise.resolve(
+          opts.ai?.generateTextViaSubscription
+            ? opts.ai.generateTextViaSubscription(systemPrompt, userPrompt)
             : `[test-ai] ${userPrompt.slice(0, 100)}`
         ),
       generateTitle: (text) =>

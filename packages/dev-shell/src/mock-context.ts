@@ -516,6 +516,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
     ai: {
       generateMessage: (_sys, user) => Promise.resolve(`[AI mock] Response to: ${user.slice(0, 100)}`),
+      generateTextViaSubscription: (_sys, user) =>
+        Promise.resolve(`[AI mock] Plan response to: ${user.slice(0, 100)}`),
       generateTitle: (text) => Promise.resolve(`[AI mock] Title: ${text.slice(0, 50)}`),
       isConfigured: () => Promise.resolve(true),
       listEngines: () =>

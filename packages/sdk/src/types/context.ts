@@ -384,6 +384,11 @@ export interface PluginAi {
     userPrompt: string,
     opts?: { provider?: string; model?: string }
   ): Promise<string>
+  generateTextViaSubscription(
+    systemPrompt: string,
+    userPrompt: string,
+    opts?: { model?: string }
+  ): Promise<string>
   listEngines(): Promise<PluginEngineCatalog>
   generateTitle(text: string): Promise<string>
   /**
