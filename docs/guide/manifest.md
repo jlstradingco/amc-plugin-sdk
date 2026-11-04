@@ -724,6 +724,32 @@ built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
   again.
 - It must be `true` or `false`; anything else fails `amc-plugin validate`.
 
+## `mobile`
+
+Lets your plugin open on the owner's phone (through Omniscio's Mobile Access) and in the desktop
+Phone Simulator.
+
+```json
+{
+  "mobile": true
+}
+```
+
+- **Off unless you declare it.** Without `true`, your plugin shows "only available on the desktop
+  app" on a phone.
+- **It runs walled off.** On the phone your `ui.entryPoint` page loads in a sandboxed frame with its
+  own throwaway origin: it cannot see Omniscio's sign-in, storage or page, and it can reach only its
+  own files under the folder of `ui.entryPoint`. Every `AgentMC` call keeps the permissions you
+  declared, minus the actions a phone always refuses (native dialogs, the file system, spawning).
+- **Browser storage is temporary.** `localStorage` and `sessionStorage` work but are cleared when the
+  page closes, and `indexedDB` is unavailable — keep anything that must last in `AgentMC.storage`.
+- **No outside network.** The page may fetch only its own files; call your backend through the bridge.
+- **Test it without a phone:** load your plugin in Developer Mode, turn it on, then open the Phone
+  Simulator (Settings → Plugins → Developer Mode, or Settings → Mobile Access). Press F12 there to
+  inspect the phone page.
+- The owner can turn all phone plugins off in Settings → Mobile Access → Devices.
+- It must be `true` or `false`.
+
 ## Complete Examples
 
 ### Basic Template (UI Only)

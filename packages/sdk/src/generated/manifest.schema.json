@@ -732,6 +732,9 @@
         ]
       },
       "maxItems": 50
+    },
+    "mobile": {
+      "type": "boolean"
     }
   },
   "required": [
