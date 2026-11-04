@@ -366,5 +366,12 @@
     "namespaces": [
       "email"
     ]
+  },
+  {
+    "name": "webassembly",
+    "label": "WebAssembly",
+    "description": "Run fast compiled code (WebAssembly) inside its own panel, for example to process video on your graphics card. It still cannot turn text into code.",
+    "tier": "elevated",
+    "namespaces": []
   }
 ]

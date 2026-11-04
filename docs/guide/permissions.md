@@ -486,6 +486,28 @@ Prefer [`sessions.readHistory`](#sessions-readhistory) when you only need histor
 
 ---
 
+### `webassembly`
+
+**Grants:** WebAssembly compilation in your plugin's own panel (**webview** only; no `ctx` or `AgentMC` namespace)
+
+By default a plugin panel cannot compile WebAssembly: `WebAssembly.instantiate()` and friends throw a `CompileError`. Declaring `webassembly` lets your panel, and the workers it starts, compile and run WebAssembly, for example an ONNX or WebGPU runtime that processes video on the graphics card. This is an **elevated** permission: Omniscio lists it on the install card as "Run fast compiled code (WebAssembly) inside its own panel, for example to process video on your graphics card. It still cannot turn text into code." and the person approves it once.
+
+What it changes, exactly: the panel's script policy gains `'wasm-unsafe-eval'` and nothing else. It never grants `'unsafe-eval'`, so `eval()`, `new Function()` and string timers stay blocked. Other plugins are unaffected, and so are your plugin's `@data` files and SVG assets, which keep their script-free policies.
+
+```html
+<!-- Only if your panel ships its own CSP meta tag: it must allow wasm too, because policies combine. -->
+<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'wasm-unsafe-eval'">
+```
+
+```typescript
+const module = await WebAssembly.compileStreaming(fetch('./model.wasm'))
+const instance = await WebAssembly.instantiate(module, {})
+```
+
+The grant follows the person's approval, not the manifest alone: until they approve it, or if an update adds `webassembly` and they have not yet re-approved, the panel is served without it.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -530,6 +552,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
 | `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |
 | `workspace.exec` | `WorkspaceApi.run` | Run one bounded command in a granted project, behind a native confirm |
+| `webassembly` | *(no API; the panel's script policy)* | Compile and run WebAssembly in your own panel (`'wasm-unsafe-eval'` only, never `'unsafe-eval'`) |
 | *(none)* | `PluginSettings`, `PluginLogger`, `PluginEvents`, `PluginSidebar`, `PluginToast.show()` | Always available |
 
 ::: warning `workspace.*` is real, and the three do not imply one another

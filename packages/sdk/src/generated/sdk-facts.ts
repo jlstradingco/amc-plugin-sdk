@@ -44,7 +44,8 @@ export const PLUGIN_PERMISSIONS = [
   "documents.read",
   "documents.write",
   "members.read",
-  "email.send"
+  "email.send",
+  "webassembly"
 ] as const
 
 export const PROCESS_INTERPRETER_DENYLIST = [

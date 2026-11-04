@@ -727,7 +727,8 @@
           "documents.read",
           "documents.write",
           "members.read",
-          "email.send"
+          "email.send",
+          "webassembly"
         ]
       },
       "maxItems": 50

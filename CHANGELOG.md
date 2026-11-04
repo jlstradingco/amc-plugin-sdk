@@ -11,6 +11,14 @@ together.
 
 ## [Unreleased]
 
+### Added — the `webassembly` permission
+
+A plugin may now declare `webassembly` so its own panel can compile and run WebAssembly. The person
+approves it once at install (it is marked elevated). The panel's script policy then gains
+`'wasm-unsafe-eval'` and nothing else; `'unsafe-eval'` stays blocked, and other plugins are
+unaffected. `PLUGIN_PERMISSIONS`, the manifest schema and the permission reference list it. See
+[the permissions guide](docs/guide/permissions.md#webassembly).
+
 ### Added — `ctx.sessions.archive`
 
 A worker backend can now archive a session it created: `ctx.sessions.archive(sessionId)`. It needs
