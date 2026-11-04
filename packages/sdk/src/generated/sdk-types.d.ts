@@ -551,6 +551,14 @@ export interface AgentMC {
     "showOpenDialog": (...args: unknown[]) => Promise<unknown>
     "showSaveDialog": (...args: unknown[]) => Promise<unknown>
   }
+  "shotflow": {
+    "imageCopy": (...args: unknown[]) => Promise<unknown>
+    "imageDelete": (...args: unknown[]) => Promise<unknown>
+    "imageGet": (...args: unknown[]) => Promise<unknown>
+    "imagePut": (...args: unknown[]) => Promise<unknown>
+    "parseScript": (...args: unknown[]) => Promise<unknown>
+    "projectMediaDelete": (...args: unknown[]) => Promise<unknown>
+  }
   "sidebar": {
     "setBadge": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>
