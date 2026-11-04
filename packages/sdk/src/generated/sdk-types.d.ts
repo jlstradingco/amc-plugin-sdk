@@ -400,6 +400,7 @@ export interface AgentMC {
   }
   "navigation": {
     "goToSession": (...args: unknown[]) => Promise<unknown>
+    "openTeamChat": (...args: unknown[]) => Promise<unknown>
   }
   "nightytidy2": {
     "askAi": (...args: unknown[]) => Promise<unknown>
@@ -556,8 +557,12 @@ export interface AgentMC {
     "imageDelete": (...args: unknown[]) => Promise<unknown>
     "imageGet": (...args: unknown[]) => Promise<unknown>
     "imagePut": (...args: unknown[]) => Promise<unknown>
+    "importFromWebsite": (...args: unknown[]) => Promise<unknown>
     "parseScript": (...args: unknown[]) => Promise<unknown>
     "projectMediaDelete": (...args: unknown[]) => Promise<unknown>
+    "voiceDelete": (...args: unknown[]) => Promise<unknown>
+    "voiceGet": (...args: unknown[]) => Promise<unknown>
+    "voicePut": (...args: unknown[]) => Promise<unknown>
   }
   "sidebar": {
     "setBadge": (...args: unknown[]) => Promise<unknown>
