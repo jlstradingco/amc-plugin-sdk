@@ -477,6 +477,15 @@ const uploadHostSchema = z
   )
   .refine((host) => !host.endsWith('.localhost'), { message: UPLOAD_HOST_MESSAGE })
 
+const USAGE_ACTION_MESSAGE = 'each usageActions entry must be 1-40 lowercase letters, digits or hyphens'
+
+const usageActionsSchema = z
+  .array(z.string().regex(/^[a-z0-9-]{1,40}$/, USAGE_ACTION_MESSAGE))
+  .max(20)
+  .refine((list) => new Set(list).size === list.length, {
+    message: 'usageActions may not list the same action twice',
+  })
+
 const LINK_CLAIMS_MAX = 20
 const LINK_CLAIM_HOST_MAX = 253
 const LINK_CLAIM_PATH_MAX = 200
@@ -557,6 +566,7 @@ export const manifestSchema = z.object({
   workspace: z.unknown().optional(),
   linkClaims: z.array(linkClaimSchema).min(1).max(LINK_CLAIMS_MAX).optional(),
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
+  usageActions: usageActionsSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
     if ((manifest.permissions ?? []).includes('network.upload') !== (manifest.uploadHosts?.length ?? 0) > 0) {

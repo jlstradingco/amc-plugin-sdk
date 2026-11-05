@@ -446,6 +446,12 @@ export interface PluginManifest {
    * refused without it. The person approves this list once, on the first upload.
    */
   uploadHosts?: string[]
+  /**
+   * The feature actions this plugin counts with `usage.record(action)`: at most
+   * 20 names of 1 to 40 characters from `a-z`, `0-9` and `-`. An action not in
+   * this list is never counted.
+   */
+  usageActions?: string[]
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]

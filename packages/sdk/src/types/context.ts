@@ -166,6 +166,10 @@ export interface PluginHost {
   getCapabilities(): Promise<string[]>
 }
 
+export interface PluginUsage {
+  record(action: string): Promise<void>
+}
+
 export interface PluginLogger {
   info(message: string, ...args: unknown[]): void
   warn(message: string, ...args: unknown[]): void
@@ -1561,6 +1565,7 @@ export interface PluginContext {
    * (`if (!ctx.core) …`) rather than assuming it.
    */
   core?: PluginCore
+  usage?: PluginUsage
   // NOTE: `tts`, `sessionHistory` and `firebase` are deliberately ABSENT.
   //
   // All three are real capabilities, but they live on the WEBVIEW bridge only —

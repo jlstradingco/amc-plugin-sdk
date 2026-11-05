@@ -59,6 +59,7 @@ export type {
   // The panel-to-backend request channel (`ctx.rpc`) and feature detection (`ctx.host`)
   PluginRpc,
   PluginHost,
+  PluginUsage,
   PluginAuthUser,
   PluginAuthSession,
   PluginAuth,

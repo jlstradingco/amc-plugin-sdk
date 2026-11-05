@@ -15,7 +15,7 @@ export type {
   PluginStorage, PluginSecrets, PluginDb, PluginDbRow, PluginDbQueryOptions,
   PluginStorageStats, PluginSettings, PluginLogger, PluginEvents,
   PluginSessions, SessionStatus, SessionStatusInfo, SessionStatusDetail, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginEngineCatalog, PluginFs, PluginHttp, PluginHttpInit, PluginHttpResponse, PluginCron, PluginCli,
-  PluginSidebar, PluginToast, PluginContext, PluginRpc, PluginHost,
+  PluginSidebar, PluginToast, PluginContext, PluginRpc, PluginHost, PluginUsage,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, InboxDismissal, PluginInbox,
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
   PluginEmailMessage, PluginEmailFailureReason, PluginEmailSendResult, PluginEmail,

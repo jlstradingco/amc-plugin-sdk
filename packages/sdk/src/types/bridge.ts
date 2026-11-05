@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, SessionStatus, SessionPendingAction } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -812,6 +812,8 @@ export interface AgentMC {
   widget: BridgeWidget
   /** See {@link BridgeHttp}. */
   http: BridgeHttp
+  /** Optional: absent on hosts that predate plugin usage counts. See {@link PluginUsage}. */
+  usage?: PluginUsage
 }
 
 declare global {
