@@ -16,10 +16,12 @@ export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
   { namespace: 'fs', reason: 'File reads and writes from the webview — no AgentMC type yet' },
   { namespace: 'keybindings', reason: 'Shortcut registration — no AgentMC type yet' },
   { namespace: 'lms', reason: 'Course and lesson administration — no AgentMC type yet' },
+  { namespace: 'locale', reason: 'UI language and formatting locale, read-only — no AgentMC type yet' },
   { namespace: 'members', reason: 'Workspace member reads (declaration only) — no AgentMC type yet' },
   { namespace: 'navigation', reason: 'In-app navigation and deep links — no AgentMC type yet' },
   { namespace: 'nightytidy2', reason: 'Nightly tidy controls — no AgentMC type yet' },
   { namespace: 'notifications', reason: 'Notification delivery — no AgentMC type yet' },
+  { namespace: 'ocr', reason: 'Reads the words out of a picture on this computer — no AgentMC type yet' },
   { namespace: 'overlay', reason: 'Overlay panel surface — no AgentMC type yet' },
   { namespace: 'process', reason: 'Allow-listed process spawning — no AgentMC type yet' },
   { namespace: 'rpc', reason: 'Panel-to-backend request channel — no AgentMC type yet' },
@@ -29,6 +31,7 @@ export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
   { namespace: 'secrets', reason: 'Encrypted credential storage — no AgentMC type yet' },
   { namespace: 'share', reason: 'Publishing artifacts to Shares — no AgentMC type yet' },
   { namespace: 'shell', reason: 'External shell open and reveal — no AgentMC type yet' },
+  { namespace: 'shotflow', reason: 'Owned by the ShotFlow plugin alone — no AgentMC type yet' },
   { namespace: 'tray', reason: 'Tray menu contributions — no AgentMC type yet' },
   { namespace: 'writer', reason: 'Document editing — no AgentMC type yet' }
 ]

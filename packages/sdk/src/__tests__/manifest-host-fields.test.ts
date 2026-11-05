@@ -266,8 +266,10 @@ describe('process.allowedCommands (host: 1-20 bare command names, no interpreter
     expect(errorsOf(processWith(Array.from({ length: 21 }, (_, index) => `tool${index}`)))).toMatch(/^process\.allowedCommands: /m)
   })
 
-  it('refuses a process block with no allowedCommands', () => {
-    expect(errorsOf({ ...baseManifest, process: {} })).toMatch(/^process\.allowedCommands: /m)
+  it('refuses a process block with neither allowedCommands nor pinnedPrograms', () => {
+    expect(errorsOf({ ...baseManifest, process: {} })).toMatch(
+      /^process: process must list allowedCommands, pinnedPrograms, or both$/m
+    )
   })
 
   it.each(['/usr/bin/ffmpeg', 'C:\\tools\\ffmpeg.exe', 'ff*', 'ff mpeg', 'ffmpeg;rm', '$(id)', '', 'a'.repeat(101)])(

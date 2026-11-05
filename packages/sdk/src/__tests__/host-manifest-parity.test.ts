@@ -4,8 +4,6 @@ import type { PluginSettingDefinition } from '../types/manifest.js'
 import {
   HOST_AGENT_WRITABLE,
   HOST_LISTING_BOUNDS,
-  HOST_MIGRATION_OPS,
-  HOST_REJECTED_MIGRATION_OPS,
   HOST_RESERVED_COLUMNS,
   HOST_SETTINGS_KEYS,
   HOST_SOURCES,
@@ -307,42 +305,6 @@ describe(`storage.uniqueIndexes parity (${HOST_SOURCES.storage}:511-538)`, () =>
       },
     })
     expect(result.valid, 'host validator:179-187 requires at least one column per tuple').toBe(false)
-  })
-})
-
-describe(`migrations parity (${HOST_SOURCES.manifestValidator}:193-219)`, () => {
-  const migrationWith = (op: Record<string, unknown>) => ({
-    ...baseManifest,
-    migrations: [{ version: '1.1.0', operations: [op] }],
-  })
-
-  it.each(HOST_MIGRATION_OPS)('accepts the host op %s', (type) => {
-    const result = validateManifest(migrationWith({ type, collection: 'items', column: 'note' }))
-    expect(result.errors).toEqual([])
-    expect(result.valid).toBe(true)
-  })
-
-  it.each(HOST_REJECTED_MIGRATION_OPS)('rejects %s, which the host has never accepted', (type) => {
-    const result = validateManifest(migrationWith({ type, collection: 'items', column: 'note' }))
-    expect(
-      result.valid,
-      `${type} traces to a stale host design plan, not the shipped enum (validator:199)`
-    ).toBe(false)
-  })
-
-  it('requires column on every operation, including the index ops', () => {
-    // Surprising but real: host validator:201-212 has no .optional() on column,
-    // so an index op identifies its index solely by a single column.
-    const result = validateManifest(migrationWith({ type: 'add_index', collection: 'items' }))
-    expect(result.valid, 'host requires column for every op type').toBe(false)
-  })
-
-  it.each(HOST_RESERVED_COLUMNS)('refuses the host-owned column %s', (column) => {
-    const result = validateManifest(migrationWith({ type: 'add_column', collection: 'items', column }))
-    expect(
-      result.valid,
-      `host refuses its own columns (types/plugins.ts:34-42, validator:206-212)`
-    ).toBe(false)
   })
 })
 

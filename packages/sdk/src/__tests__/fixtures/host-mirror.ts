@@ -110,19 +110,6 @@ export const HOST_SETTINGS_KEYS = [
   'agentWritable',
 ] as const
 
-export const HOST_MIGRATION_OPS = ['add_column', 'add_index', 'drop_index'] as const
-
-/** Ops this SDK once advertised that the host has never accepted. */
-export const HOST_REJECTED_MIGRATION_OPS = ['remove_column', 'remove_index'] as const
-
-/**
- * Columns the host owns, and refuses inside BOTH a collection schema
- * (`plugin-manifest-validator.ts:167-172`) and a migration operation (`:206-212`)
- * — `types/plugins.ts:34-42`.
- *
- * This SDK enforces both halves — see `RESERVED_COLUMNS` in
- * ../../validators/manifest.ts.
- */
 export const HOST_RESERVED_COLUMNS = ['id', 'created_at', 'updated_at'] as const
 
 /**

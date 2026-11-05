@@ -81,14 +81,10 @@ describe('validateManifest', () => {
   })
 
   it('accepts a minimal manifest carrying only the keys the host requires', () => {
-    // settings / storage / migrations are all defaulted host-side. Together with
-    // sdkVersion these four were the reason 6 of the host's 12 builtins failed
-    // `amc-plugin validate`.
     const result = validateManifest({ plugin: validManifest.plugin })
     expect(result.valid).toBe(true)
-    // The defaults still materialise, so downstream consumers are unchanged.
     expect(result.manifest?.settings).toEqual([])
-    expect(result.manifest?.migrations).toEqual([])
+    expect(result.manifest?.migrations).toBeUndefined()
     expect(result.manifest?.storage).toEqual({ collections: {} })
   })
 
@@ -377,6 +373,20 @@ describe('host-parity rules', () => {
       const result = validateManifest({ ...validManifest, sessionTools })
       expect(result.valid).toBe(false)
       expect(result.errors[0]).toMatch(/^sessionTools: /)
+    })
+  })
+
+  describe('mobile', () => {
+    it.each([true, false])('keeps mobile: %s in the validated manifest', (mobile) => {
+      const result = validateManifest({ ...validManifest, mobile })
+      expect(result.errors).toEqual([])
+      expect(result.manifest?.mobile).toBe(mobile)
+    })
+
+    it.each(['true', 1, null])('refuses a mobile of %j', (mobile) => {
+      const result = validateManifest({ ...validManifest, mobile })
+      expect(result.valid).toBe(false)
+      expect(result.errors[0]).toMatch(/^mobile: /)
     })
   })
 

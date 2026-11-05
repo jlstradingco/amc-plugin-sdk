@@ -31,6 +31,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `process` | object | No | Programs your plugin may run through the host launcher — see [`process`](#process) |
 | `backend` | object | No | Backend entry point and resource limits |
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
+| `mobile` | boolean | No | Let your plugin open on the owner's phone. Off unless `true` — see [`mobile`](#mobile) |
 | `permissions` | array | No | Requested API permissions |
 | `cli` | object | No | CLI endpoint declarations |
 
@@ -748,7 +749,7 @@ Phone Simulator.
   Simulator (Settings → Plugins → Developer Mode, or Settings → Mobile Access). Press F12 there to
   inspect the phone page.
 - The owner can turn all phone plugins off in Settings → Mobile Access → Devices.
-- It must be `true` or `false`.
+- It must be `true` or `false`; anything else fails `amc-plugin validate`.
 
 ## Complete Examples
 

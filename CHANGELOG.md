@@ -17,6 +17,13 @@ together.
 
 Preflight packaged your plugin by running `npx amc-plugin package`. The npm name `amc-plugin` is not owned by this project, so on a machine without the CLI installed globally, npx could download and run someone else's package. Preflight now runs the CLI that is already running. Upgrade to 3.3.0; 3.2.0 and earlier are affected.
 
+### Fixed — `mobile` on the manifest
+
+Omniscio opens a plugin on the owner's phone only when its manifest declares `"mobile": true`, but
+the SDK did not know the field, so `validateManifest` (and so `validate`, `build` and `package`)
+dropped it. It is now typed on `PluginManifest`, kept by `validateManifest`, and refused when not a
+boolean. See [the manifest guide](docs/guide/manifest.md#mobile).
+
 ### Added — the `webassembly` permission
 
 A plugin may now declare `webassembly` so its own panel can compile and run WebAssembly. The person

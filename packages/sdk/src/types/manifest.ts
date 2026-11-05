@@ -434,6 +434,7 @@ export interface PluginManifest {
    * sees it at install as "Agent Sessions", and an update that turns it on asks them again.
    */
   sessionTools?: boolean
+  mobile?: boolean
   /**
    * Web URLs this plugin wants to handle, so the host can offer it to the user when they are
    * looking at one of them. Between 1 and 20 claims; each names a `host` and a `path`.

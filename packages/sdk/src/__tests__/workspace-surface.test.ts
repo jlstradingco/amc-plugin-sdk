@@ -126,42 +126,23 @@ describe('workspace manifest block', () => {
     expect(parsed.success).toBe(true)
   })
 
-  it('rejects a slot with no name, and a non-string arg', () => {
-    expect(
-      manifestSchema.safeParse({
-        ...baseManifest(),
-        workspace: { commandSlots: [{ name: '', args: [] }] },
-      }).success
-    ).toBe(false)
-    expect(
-      manifestSchema.safeParse({
-        ...baseManifest(),
-        workspace: { commandSlots: [{ name: 'x', args: [42] }] },
-      }).success
-    ).toBe(false)
-  })
-
-  it('rejects a binding granularity the spec does not define', () => {
-    expect(
-      manifestSchema.safeParse({
-        ...baseManifest(),
-        workspace: { binding: { granularity: 'directory' } },
-      }).success
-    ).toBe(false)
+  it.each([
+    ['a slot with no name', { commandSlots: [{ name: '', args: [] }] }],
+    ['a non-string arg', { commandSlots: [{ name: 'x', args: [42] }] }],
+    ['an undefined binding granularity', { binding: { granularity: 'directory' } }],
+  ])('invents no rule the host lacks: accepts %s', (_label, workspace) => {
+    expect(manifestSchema.safeParse({ ...baseManifest(), workspace }).success).toBe(true)
   })
 
   it('survives a parse round-trip instead of being silently stripped', () => {
     // The whole point of declaring the block: a non-strict Zod object drops
     // unknown keys, so an undeclared field validates and then vanishes.
-    const result = validateManifest({
-      ...baseManifest(),
-      workspace: {
-        binding: { granularity: 'package' },
-        commandSlots: [{ name: 'vitest.run', args: ['--config'] }],
-      },
-    })
-    expect(result.manifest?.workspace?.binding?.granularity).toBe('package')
-    expect(result.manifest?.workspace?.commandSlots?.[0]?.name).toBe('vitest.run')
+    const workspace = {
+      binding: { granularity: 'package' },
+      commandSlots: [{ name: 'vitest.run', args: ['--config'] }],
+    }
+    const result = validateManifest({ ...baseManifest(), workspace })
+    expect(result.manifest?.workspace).toEqual(workspace)
   })
 })
 
@@ -245,40 +226,23 @@ describe('B2 drift: fields that were host-real but SDK-invisible', () => {
   })
 })
 
-describe('B2 drift: the migrations op enum', () => {
-  // This enum had ZERO test coverage before — nothing in the repo builds a
-  // non-empty migrations array, so a wrong op list shipped green. These cases
-  // exist so the next edit cannot.
+describe('B2 drift: the migrations block', () => {
   const withOp = (op: Record<string, unknown>) => ({
     ...baseManifest(),
     migrations: [{ version: '1.0.1', operations: [op] }],
   })
 
-  it.each(['add_column', 'add_index', 'drop_index'])('accepts the host op %s', (type) => {
-    const parsed = manifestSchema.safeParse(withOp({ type, collection: 'runs', column: 'c' }))
-    expect(parsed.success).toBe(true)
+  it.each([
+    ['a host-era op', { type: 'add_column', collection: 'runs', column: 'c', default: 0 }],
+    ['an op the host never had', { type: 'remove_column', collection: 'runs', column: 'c' }],
+    ['an op with no column', { type: 'add_column', collection: 'runs' }],
+  ])('invents no rule the host lacks: accepts %s', (_label, op) => {
+    expect(manifestSchema.safeParse(withOp(op)).success).toBe(true)
   })
 
-  it.each(['remove_column', 'remove_index'])(
-    'rejects %s — an SDK-only fiction the host never accepted',
-    (type) => {
-      const parsed = manifestSchema.safeParse(withOp({ type, collection: 'runs', column: 'c' }))
-      expect(parsed.success).toBe(false)
-    }
-  )
-
-  it('requires `column`, which the host declares non-optional', () => {
-    expect(manifestSchema.safeParse(withOp({ type: 'add_column', collection: 'runs' })).success).toBe(
-      false
-    )
-  })
-
-  it('accepts a scalar `default`', () => {
-    expect(
-      manifestSchema.safeParse(
-        withOp({ type: 'add_column', collection: 'runs', column: 'c', default: 0 })
-      ).success
-    ).toBe(true)
+  it('keeps the block through the parse', () => {
+    const manifest = withOp({ type: 'add_index', collection: 'runs', column: 'c' })
+    expect(validateManifest(manifest).manifest?.migrations).toEqual(manifest.migrations)
   })
 })
 

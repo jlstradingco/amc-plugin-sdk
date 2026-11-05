@@ -8,12 +8,12 @@ import { createTestContext } from '../testing/index.js'
 // the shape the AMC host actually exposes on `window.AgentMC.documents`, so a
 // drift fails `pnpm run typecheck` rather than a plugin at runtime.
 //
-// Transcribed from the host at `origin/master` **dc0adf22dc**, from the three
+// Transcribed from the host at `origin/master` **e08e3f46d7**, from the three
 // files that together are the real contract:
-//   - args:    src/main/ipc/bridge-method-schemas.ts:585-606 (`DOCUMENTS_SCHEMAS`)
-//   - returns: src/main/ipc/plugin-bridge/document-handles.ts:71-77 (`DocumentHandle`)
+//   - args:    src/shared/plugin-capabilities/args.ts (`DOCUMENTS_SCHEMAS`)
+//   - returns: src/main/ipc/plugin-bridge/document-handles.ts (`DocumentHandle`)
 //              src/main/ipc/plugin-bridge/documents-handler.ts (the per-`case` returns)
-//   - surface: src/preload/plugin-bridge-preload.ts:1432-1444 (what a webview calls)
+//   - surface: src/preload/plugin-bridge-preload.ts (what a webview calls)
 //
 // Read out of the HOST, never out of this SDK's own types or mocks — that is the
 // inversion fixtures/host-mirror.ts exists to warn about. Three claims in the
@@ -55,6 +55,15 @@ type HostDocuments = {
     options: { expectedLength: number }
   ): Promise<{ length: number }>
   close(handleId: string): Promise<void>
+  saveCopy(options: {
+    name: string
+    base64: string
+    filters?: { name: string; extensions: string[] }[]
+  }): Promise<{ saved: false } | { saved: true; names: string[] }>
+  saveCopies(options: {
+    files: { name: string; base64: string }[]
+    title?: string
+  }): Promise<{ saved: false } | { saved: true; names: string[] }>
 }
 
 // INVARIANCE, not `extends` — a bidirectional `extends` pair looks strict but
