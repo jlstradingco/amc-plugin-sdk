@@ -11,6 +11,12 @@ together.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-11-04
+
+### Fixed — `amc-plugin preflight` no longer runs `npx amc-plugin`
+
+Preflight packaged your plugin by running `npx amc-plugin package`. The npm name `amc-plugin` is not owned by this project, so on a machine without the CLI installed globally, npx could download and run someone else's package. Preflight now runs the CLI that is already running. Upgrade to 3.3.0; 3.2.0 and earlier are affected.
+
 ### Added — the `webassembly` permission
 
 A plugin may now declare `webassembly` so its own panel can compile and run WebAssembly. The person

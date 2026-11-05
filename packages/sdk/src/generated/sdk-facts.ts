@@ -111,4 +111,4 @@ export const PROCESS_INTERPRETER_DENYLIST = [
 
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 
-export const AMC_PLUGIN_SDK_VERSION = "3.2.0"
+export const AMC_PLUGIN_SDK_VERSION = "3.3.0"
