@@ -36,6 +36,7 @@
     "tier": "standard",
     "namespaces": [
       "ai",
+      "lms",
       "writer"
     ]
   },
