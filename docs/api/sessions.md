@@ -16,7 +16,7 @@ you are on before reading a result — this page states the shape for each.
 
 The backend `PluginSessions` interface is available as `ctx.sessions`.
 
-### `create(opts: { prompt?: string; userInitiated?: boolean }): Promise<{ sessionId: string }>`
+### `create(opts: PluginSessionCreateOptions): Promise<PluginSessionCreateResult>`
 
 Create a new Claude Code session on your plugin's own virtual project.
 
@@ -26,8 +26,16 @@ Create a new Claude Code session on your plugin's own virtual project.
 |---|---|---|
 | `opts.prompt` | `string` (optional) | Initial prompt to send to the session |
 | `opts.userInitiated` | `boolean` (optional) | Mark the session as user-provoked rather than plugin-background. This is what decides whether Omniscio surfaces it in the sidebar or hides it as plugin chatter |
+| `opts.clientRequestId` | `string` (optional) | 1 to 128 characters. A create that repeats it within 10 minutes returns the first session's id instead of starting another |
+| `opts.provider` | `string` (optional) | Which AI engine runs the session, such as `'claude'`. Leave it out to use the user's own default |
+| `opts.model` | `string` (optional) | A tier word (`'genius'`, `'smart'`, `'worker'`, `'basic'`), which always means that tier's current model, or a model name the engine offers. A model that does not belong to the engine is refused |
+| `opts.locked` | `boolean` (optional) | `true` locks the session to Omniscio's own tool lock for your plugin. Anything other than a real boolean is refused, never read as unlocked |
+| `opts.access` | `'text' \| 'web'` (optional) | What the session may reach. `'text'` (the default) answers in text only; `'web'` also allows web search and public pages, and needs the `network` permission |
+| `opts.startedBy` | `'me' \| 'agent'` (optional) | `'agent'` marks a session an AI agent asked for, rather than the person |
 
-**Returns:** `Promise<{ sessionId: string }>` -- the ID of the newly created session.
+**Returns:** `Promise<{ sessionId: string; locked?: true; startedBy?: 'agent' }>` -- the ID of the
+newly created session. `locked: true` is present when you created it with `locked: true`, and
+`startedBy: 'agent'` when you passed `startedBy: 'agent'`.
 
 ::: tip The session has no built-in tools by default
 It can only answer in text unless your manifest declares [`sessionTools: true`](../guide/manifest#sessiontools).
@@ -54,7 +62,7 @@ ctx.log.info(`Created session: ${sessionId}`)
 
 ---
 
-### `sendMessage(sessionId: string, text: string): Promise<void>`
+### `sendMessage(sessionId: string, text: string, options?: { images?: PluginSessionImage[] }): Promise<void>`
 
 Send a follow-up message to an existing session.
 
@@ -63,14 +71,23 @@ Send a follow-up message to an existing session.
 | Name | Type | Description |
 |---|---|---|
 | `sessionId` | `string` | The session ID |
-| `text` | `string` | The message text to send |
+| `text` | `string` | The message text to send (still required when you send pictures) |
+| `options.images` | `PluginSessionImage[]` | Optional. Pictures for the AI to look at, each `{ data, mimeType }` with `data` as bare base64 (no `data:` prefix) and `mimeType` one of `image/png`, `image/jpeg`, `image/webp` or `image/gif`. Needs the [`sessions.images`](../guide/permissions#sessions-images) permission and a session with no tools. |
 
 **Returns:** `Promise<void>`
+
+The picture limits (count, size, pixels, the per-session total) and the refusal codes a rejected
+send starts with are listed under [`sessions.images`](../guide/permissions#sessions-images).
 
 **Example:**
 
 ```typescript
 await ctx.sessions.sendMessage(sessionId, 'Focus on SQL injection vulnerabilities')
+
+// With a picture (needs sessions.images)
+await ctx.sessions.sendMessage(sessionId, 'Critique this thumbnail', {
+  images: [{ data: pngBase64, mimeType: 'image/png' }]
+})
 ```
 
 ---
@@ -263,9 +280,10 @@ const { sessionId } = await AgentMC.session.create({
 })
 ```
 
-### `sendMessage(sessionId: string, opts: { text: string }): Promise<void>`
+### `sendMessage(sessionId: string, opts: { text: string; images?: PluginSessionImage[] }): Promise<void>`
 
-Note the options-object signature instead of a plain string.
+Note the options-object signature instead of a plain string. `images` follows the same rules as
+the backend (see [`sessions.images`](../guide/permissions#sessions-images)).
 
 ```typescript
 await AgentMC.session.sendMessage(sessionId, { text: 'Check for memory leaks' })

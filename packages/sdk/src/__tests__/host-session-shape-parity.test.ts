@@ -23,7 +23,7 @@ import {
  */
 
 describe(`sessions.create parity (${HOST_SOURCES.sessionBridge}:95-110)`, () => {
-  it('accepts userInitiated, the only extra key the host reads', async () => {
+  it('accepts userInitiated alongside the prompt', async () => {
     const h = createTestContext({ pluginId: 'p' })
     const { sessionId } = await h.ctx.sessions.create({
       prompt: 'hello',
@@ -41,11 +41,41 @@ describe(`sessions.create parity (${HOST_SOURCES.sessionBridge}:95-110)`, () => 
     void (() => create({ prompt: 'x', projectId: 'proj-1' }))
     // The SDK's own option type, compared to the host's read set — not the
     // mirror compared to itself.
-    expectTypeOf<Parameters<PluginSessions['create']>[0]>().toEqualTypeOf<{
-      prompt?: string
-      userInitiated?: boolean
-      clientRequestId?: string
-    }>()
+    expectTypeOf<keyof Parameters<PluginSessions['create']>[0]>().toEqualTypeOf<
+      | 'prompt'
+      | 'userInitiated'
+      | 'clientRequestId'
+      | 'provider'
+      | 'model'
+      | 'locked'
+      | 'access'
+      | 'startedBy'
+    >()
+  })
+
+  it('types the engine, lock, access and startedBy options the host already honours', () => {
+    const create = createTestContext({ pluginId: 'p' }).ctx.sessions.create
+    void (() =>
+      create({
+        prompt: 'x',
+        provider: 'claude',
+        model: 'smart',
+        locked: true,
+        access: 'text',
+        startedBy: 'agent'
+      }))
+    // @ts-expect-error access only has two values
+    void (() => create({ prompt: 'x', access: 'everything' }))
+    // @ts-expect-error startedBy is 'me' or 'agent'
+    void (() => create({ prompt: 'x', startedBy: 'robot' }))
+  })
+
+  it('types sendMessage pictures with the four allowed image types and nothing else', () => {
+    const send = createTestContext({ pluginId: 'p' }).ctx.sessions.sendMessage
+    void (() => send('s', 'look', { images: [{ data: 'AAAA', mimeType: 'image/png' }] }))
+    // @ts-expect-error bmp is not an allowed picture type
+    void (() => send('s', 'look', { images: [{ data: 'AAAA', mimeType: 'image/bmp' }] }))
+    void (() => send('s', 'look'))
   })
 
   it('keeps userInitiated OFF the webview surface, but carries clientRequestId', () => {

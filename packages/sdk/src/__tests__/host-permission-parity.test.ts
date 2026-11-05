@@ -59,6 +59,7 @@ describe('SDK <-> host permission parity', () => {
     'workspace.read': { surface: CTX, key: 'workspace' },
     'workspace.write': { surface: CTX, key: 'workspace' },
     'workspace.exec': { surface: CTX, key: 'workspace' },
+    'sessions.images': { surface: CTX, key: 'sessions' },
     'sessions.launchAny': { surface: CTX, key: 'sessions' },
     'sessions.observeStatus': { surface: CTX, key: 'sessions' },
     'auth.sharedSignIn': { surface: CTX, key: 'auth' },
@@ -143,7 +144,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(41)
+    expect(HOST_PERMISSIONS.length).toBe(42)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

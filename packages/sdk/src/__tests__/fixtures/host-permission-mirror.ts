@@ -1,7 +1,7 @@
 export const HOST_MIRROR_PROVENANCE = {
-  reconciledAt: '2026-11-03',
-  sourceCommit: '8c9a28e2bb1c7dd3269f3ddd71fccb2c2cddc797',
-  sourceBranch: 'feat/plugin-webassembly-permission-20261103-230035',
+  reconciledAt: '2026-11-05',
+  sourceCommit: 'b43330913baa785894f22ba13a6d278897d67e71',
+  sourceBranch: 'feat/thumbnail-studio-file-01-plugin-session-20261104-153945',
   onOriginMaster: false,
 } as const
 
@@ -24,6 +24,7 @@ export const HOST_PERMISSIONS = [
   'auth.session',
   'auth.sharedSignIn',
   'sessions.readHistory',
+  'sessions.images',
   'boards.read',
   'boards.link',
   'sessions.launchAny',

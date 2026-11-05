@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -163,7 +163,7 @@ export interface BridgeSession {
   /** Resolves the new message id, or `{ resumed: true }` if it woke an idle session. */
   sendMessage(
     sessionId: string,
-    opts: { text: string }
+    opts: { text: string; images?: PluginSessionImage[] }
   ): Promise<{ messageId: string } | { resumed: true }>
   /**
    * The transcript, with still-streaming rows dropped.

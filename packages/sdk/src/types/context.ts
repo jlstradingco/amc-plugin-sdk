@@ -259,6 +259,28 @@ export interface SessionMessage {
   timestamp: string
 }
 
+export interface PluginSessionImage {
+  data: string
+  mimeType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
+}
+
+export interface PluginSessionCreateOptions {
+  prompt?: string
+  userInitiated?: boolean
+  clientRequestId?: string
+  provider?: string
+  model?: 'genius' | 'smart' | 'worker' | 'basic' | (string & {})
+  locked?: boolean
+  access?: 'text' | 'web'
+  startedBy?: 'me' | 'agent'
+}
+
+export interface PluginSessionCreateResult {
+  sessionId: string
+  locked?: true
+  startedBy?: 'agent'
+}
+
 /**
  * What a session status carries beside the status itself. `recoveryTerminal`
  * is `true` once auto-recovery has given up on the session for good, and
@@ -295,12 +317,12 @@ export interface PluginSessions {
    * a create that repeats it within 10 minutes returns the first session's id
    * instead of starting another one.
    */
-  create(opts: {
-    prompt?: string
-    userInitiated?: boolean
-    clientRequestId?: string
-  }): Promise<{ sessionId: string }>
-  sendMessage(sessionId: string, text: string): Promise<void>
+  create(opts: PluginSessionCreateOptions): Promise<PluginSessionCreateResult>
+  sendMessage(
+    sessionId: string,
+    text: string,
+    options?: { images?: PluginSessionImage[] }
+  ): Promise<void>
   /**
    * Resolves a bare status string.
    *

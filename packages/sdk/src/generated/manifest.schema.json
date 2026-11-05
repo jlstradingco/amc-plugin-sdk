@@ -706,6 +706,7 @@
           "auth.session",
           "auth.sharedSignIn",
           "sessions.readHistory",
+          "sessions.images",
           "boards.read",
           "boards.link",
           "sessions.launchAny",
@@ -751,6 +752,29 @@
   ],
   "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth, usageActions",
   "allOf": [
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "sessions.images"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "sessions"
+            }
+          }
+        }
+      }
+    },
     {
       "if": {
         "required": [

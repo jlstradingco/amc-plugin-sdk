@@ -389,6 +389,25 @@ See the [Text to Speech API](../api/tts).
 
 ---
 
+### `sessions.images`
+
+**Grants access to:** `ctx.sessions.sendMessage(sessionId, text, { images })` (backend), and `images` on `AgentMC.session.sendMessage` (panel)
+
+Send pictures to one of your own AI sessions so the AI can look at them. Declare it **together with `sessions`**: a manifest that lists `sessions.images` without `sessions` is refused at install.
+
+Pictures reach **only a session that has no tools**: any session of a plugin that did not declare `sessionTools`, hidden or visible, except a web (`access: 'web'`) session. A session that can use tools refuses them with `IMAGES_REQUIRE_TOOLLESS_SESSION`, so a picture can never carry instructions to something that could act on them.
+
+- Each picture is `{ data, mimeType }`, and the message **text is still required**: pictures with empty text are refused (`INVALID_IMAGES` on the backend, a plain `Message text is required` on the panel).
+- 1 to 4 pictures per message; `image/png`, `image/jpeg`, `image/webp` or `image/gif`, as bare base64 whose bytes really are that type.
+- At most 2 MB per picture and 6 MB per message (measured on the encoded text), and at most 2000 px on each side.
+- One session accepts at most 20 pictures or 16 MB encoded over its whole life; after that, `IMAGES_SESSION_LIMIT` says to start a fresh session. Picture sends to one session are handled one at a time, so two sent together cannot both slip under the limit.
+- The session's model must be able to see pictures, or you get `ENGINE_CANNOT_SEE_IMAGES`.
+- Any other picture that breaks a rule is refused with `INVALID_IMAGES`, and the message names the reason. Each of these codes leads the error message.
+- Sending pictures without the `sessions.images` permission is a plain permission error, with no picture code.
+- Pictures are never stored in the session's transcript: the stored message reads like `[2 images] your text`.
+
+---
+
 ### `sessions.readHistory`
 
 **Grants access to:** `PluginSessionHistory` (read past sessions and projects)
@@ -527,6 +546,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `storage` | `PluginStorage`, `PluginDb`, `PluginFs` | Persist data, query collections, read/write files |
 | `secrets` | `PluginSecrets` | Store credentials encrypted by the OS keychain |
 | `sessions` | `PluginSessions` | Create/manage Claude Code sessions |
+| `sessions.images` | `PluginSessions.sendMessage` `images` option | Send pictures to your own tool-less AI session (needs `sessions` too) |
 | `sessions.readHistory` | `PluginSessionHistory` (**webview**) | Read PAST sessions/projects the user explicitly grants |
 | `ai` | `PluginAi` | Direct AI text generation |
 | `tts` | `PluginTts` (**webview**, `AgentMC.tts`) | Read text aloud with the user's configured voice (metered) |

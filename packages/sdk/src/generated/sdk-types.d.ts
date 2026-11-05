@@ -23,6 +23,7 @@ export type PluginPermission =
   | "auth.session"
   | "auth.sharedSignIn"
   | "sessions.readHistory"
+  | "sessions.images"
   | "boards.read"
   | "boards.link"
   | "sessions.launchAny"
@@ -185,7 +186,7 @@ export interface PluginManifest {
       "previewPath"?: string
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "sessions.readHistory" | "boards.read" | "boards.link" | "sessions.launchAny" | "sessions.observeStatus" | "inbox" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "email.send" | "webassembly">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "sessions.launchAny" | "sessions.observeStatus" | "inbox" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "email.send" | "webassembly">
   "mobile"?: boolean
   "usageActions"?: Array<string>
 }

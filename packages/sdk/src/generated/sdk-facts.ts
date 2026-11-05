@@ -23,6 +23,7 @@ export const PLUGIN_PERMISSIONS = [
   "auth.session",
   "auth.sharedSignIn",
   "sessions.readHistory",
+  "sessions.images",
   "boards.read",
   "boards.link",
   "sessions.launchAny",

@@ -167,6 +167,13 @@
     ]
   },
   {
+    "name": "sessions.images",
+    "label": "Session Images",
+    "description": "Send pictures to its own AI sessions so the AI can look at them. Those sessions cannot use any tools.",
+    "tier": "standard",
+    "namespaces": []
+  },
+  {
     "name": "boards.read",
     "label": "Boards",
     "description": "Read the full contents of boards you grant it, including every item, column value and status",
