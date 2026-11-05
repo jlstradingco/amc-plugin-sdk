@@ -32,6 +32,14 @@ approves it once at install (it is marked elevated). The panel's script policy t
 unaffected. `PLUGIN_PERMISSIONS`, the manifest schema and the permission reference list it. See
 [the permissions guide](docs/guide/permissions.md#webassembly).
 
+### Added — a visible unsubscribe link in plugin email
+
+`PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER` (`{{unsubscribe_url}}`) is exported from the SDK. Put it in
+the `html` of `ctx.email.send` or `ctx.email.schedule`, usually as a link's `href`, and Omniscio's
+cloud replaces it with each reader's own one-click unsubscribe link at send time, the same link the
+email's unsubscribe header carries. Any other spelling is left as plain text, and a body without it
+is sent unchanged.
+
 ### Added — `ctx.sessions.archive`
 
 A worker backend can now archive a session it created: `ctx.sessions.archive(sessionId)`. It needs

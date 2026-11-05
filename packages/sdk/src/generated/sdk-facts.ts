@@ -3,6 +3,7 @@
 // PLUGIN_PERMISSIONS           ← src/shared/plugin-permissions.ts
 // PROCESS_INTERPRETER_DENYLIST ← src/shared/plugin-manifest-schema.ts
 // AMC_PLUGIN_SDK_VERSION       ← plugin-sdk/packages/sdk/package.json
+// PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER ← src/shared/plugin-permissions.ts
 
 export const PLUGIN_PERMISSIONS = [
   "storage",
@@ -113,3 +114,5 @@ export const PROCESS_INTERPRETER_DENYLIST = [
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 
 export const AMC_PLUGIN_SDK_VERSION = "3.3.0"
+
+export const PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER = "{{unsubscribe_url}}"

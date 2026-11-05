@@ -43,6 +43,31 @@ already delivered and named that message.
 
 `subject` is one line (no line breaks), at most 200 characters. `html` is at most 100,000 characters.
 
+#### A visible unsubscribe link in your body
+
+::: v-pre
+
+Put the placeholder `{{unsubscribe_url}}` anywhere in `html`, usually as a link:
+
+```typescript
+import { PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER } from '@agent-mc/plugin-sdk'
+
+const footer = `<a href="${PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER}">Unsubscribe</a>`
+```
+
+At send time the cloud replaces every `{{unsubscribe_url}}` with that reader's own one-click
+unsubscribe link, the same link the email's unsubscribe header carries, so each reader gets their
+own. It works for `send` and for `schedule`.
+
+- Write it exactly: two braces, lower case, no spaces. Any other form (`{{ unsubscribe_url }}`,
+  `{{UNSUBSCRIBE_URL}}`, `{{{unsubscribe_url}}}`, `{{unsubscribe_link}}`) is left as plain text.
+- A body without the placeholder is sent unchanged; the unsubscribe header is always there anyway.
+- The link is inserted HTML-escaped, so it is safe inside an attribute or in text.
+- The cloud does the filling, so until Omniscio's cloud carries this feature the placeholder
+  reaches the reader as plain text.
+
+:::
+
 #### `idempotencyKey`
 
 Pass a stable key per (message, reader) — for a newsletter, `<issueId>:<address>` — and a retry of
