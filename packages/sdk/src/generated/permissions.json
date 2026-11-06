@@ -381,5 +381,12 @@
     "description": "Run fast compiled code (WebAssembly) inside its own panel, for example to process video on your graphics card. It still cannot turn text into code.",
     "tier": "elevated",
     "namespaces": []
+  },
+  {
+    "name": "email.fromName",
+    "label": "Choose the sender name",
+    "description": "Show a name of its choosing next to your Omniscio agent address on the email it sends, like \"Weekly Digest\". The address itself never changes, and the name can never be Omniscio.",
+    "tier": "elevated",
+    "namespaces": []
   }
 ]

@@ -67,6 +67,7 @@ describe('SDK <-> host permission parity', () => {
     'documents.write': { surface: BRIDGE, key: 'documents' },
     'members.read': null,
     'email.send': { surface: CTX, key: 'email' },
+    'email.fromName': null,
     'network.upload': { surface: BRIDGE, key: 'http' },
     launch: null,
     oauth: null,
@@ -144,7 +145,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(42)
+    expect(HOST_PERMISSIONS.length).toBe(43)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

@@ -48,6 +48,7 @@ export const HOST_PERMISSIONS = [
   'members.read',
   'email.send',
   'webassembly',
+  'email.fromName',
 ] as const
 
 export const SDK_AHEAD_PERMISSIONS = [] as const

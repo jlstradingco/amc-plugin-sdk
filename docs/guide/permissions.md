@@ -375,6 +375,18 @@ a parsed message. There is no webview equivalent. See the [Email API](../api/ema
 
 ---
 
+### `email.fromName`
+
+**Grants access to:** the optional `fromName` field of `ctx.email.send` (backend only)
+
+Put a display name beside the user's agent address, like "Weekly Digest". Tier-1 **elevated**, and it
+must be declared together with `email.send` (alone it is refused at install). The address never
+changes; the host strips quotes, angle brackets, `@` and address-like words, caps the name at 64
+characters, and refuses a name that reads as the app's own. See the
+[Email API](../api/email#fromname).
+
+---
+
 ### `tts`
 
 **Grants access to:** `PluginTts` (text-to-speech)
@@ -564,6 +576,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
 | `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
 | `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated; `ctx.email.sender()` reads which address that is, and sends nothing (backend only) |
+| `email.fromName` | `PluginEmail` (`fromName` on `send`) | Put a display name beside the agent address; cleaned, capped at 64 characters, never the app's own name; needs `email.send` (backend only) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |

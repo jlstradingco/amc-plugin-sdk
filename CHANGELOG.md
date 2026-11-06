@@ -50,6 +50,17 @@ be archived yet (shared, holding unshipped work, or waiting on a final card the 
 catch the error and retry later. Archiving is reversible and keeps the transcript. Panels have no
 `session.archive`. The SDK test mocks implement it and report the session as `archived`.
 
+### Added — a sender display name on `ctx.email.send`
+
+`ctx.email.send({ ..., fromName: 'Weekly Digest' })` shows that name beside the user's agent address
+in the reader's inbox. It needs the new elevated `email.fromName` permission, declared together with
+`email.send`. The address never changes. The host removes quotes, angle brackets, `@` and
+address-like words, caps the name at 64 characters, and refuses a name that reads as the app's own
+(`from-name-not-allowed`). Passing a name without the permission is refused
+(`from-name-not-permitted`). Leaving `fromName` out sends exactly as before.
+`ctx.email.schedule` takes the same `fromName` with the same rules; the cloud checks the stored name
+again when the issue is sent.
+
 ### Added — `documents.saveCopy` and `documents.saveCopies`
 
 A plugin can now hand the user a NEW file, not only append to one they already opened. `saveCopy`

@@ -674,10 +674,13 @@ export interface PluginEmailMessage {
   subject: string
   html: string
   idempotencyKey?: string
+  fromName?: string
 }
 
 export type PluginEmailFailureReason =
   | 'invalid-input'
+  | 'from-name-not-permitted'
+  | 'from-name-not-allowed'
   | 'not-set-up'
   | 'rate-limited'
   | 'plugin-daily-cap'
@@ -702,10 +705,13 @@ export interface PluginEmailIssue {
   html: string
   sendAt: string
   idempotencyKey?: string
+  fromName?: string
 }
 
 export type PluginEmailScheduleReason =
   | 'invalid-input'
+  | 'from-name-not-permitted'
+  | 'from-name-not-allowed'
   | 'not-set-up'
   | 'not-available'
   | 'server-error'

@@ -729,7 +729,8 @@
           "documents.write",
           "members.read",
           "email.send",
-          "webassembly"
+          "webassembly",
+          "email.fromName"
         ]
       },
       "maxItems": 50
@@ -862,6 +863,29 @@
           "permissions": {
             "contains": {
               "const": "workspace.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "email.fromName"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "email.send"
             }
           }
         }

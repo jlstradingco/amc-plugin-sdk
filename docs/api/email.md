@@ -8,7 +8,9 @@ Send one email at a time from the user's agent address, sent by the host with no
 ## What the plugin does not control
 
 - **The sender.** Mail always goes out from the user's own claimed agent address. A plugin cannot set
-  From, Reply-To, Cc, Bcc or any header; a call naming one is refused with `invalid-input`.
+  From, Reply-To, Cc, Bcc or any header; a call naming one is refused with `invalid-input`. With the
+  `email.fromName` permission it may put a display name beside that address (see
+  [`fromName`](#fromname)); the address itself never changes.
 - **The recipients.** Exactly one address per call. Mail a list by calling `send` once per reader.
 - **Unsubscribe.** Every email is sent as list mail with a one-click unsubscribe the mail service adds.
   Anyone who unsubscribed from the user's agent address, bounced or complained is never mailed again,
@@ -30,6 +32,7 @@ interface PluginEmailMessage {
   subject: string
   html: string
   idempotencyKey?: string
+  fromName?: string
 }
 
 type PluginEmailSendResult =
@@ -74,11 +77,29 @@ Pass a stable key per (message, reader) — for a newsletter, `<issueId>:<addres
 the same key is sent once. The host hashes the key and prefixes it with your plugin id before it
 reaches the mail service, so it never appears in a log and never collides with another plugin's key.
 
+#### `fromName`
+
+An optional display name, so a reader's inbox shows `Weekly Digest` instead of the bare agent
+address. It needs the `email.fromName` permission (Tier-1 **elevated**, declared together with
+`email.send`); the person approves it once at install, and an update that adds it asks again.
+
+- The address never changes: the name only sits beside it.
+- The host removes quotes, angle brackets, `@`, backslashes, invisible and line-break characters, and
+  any word that looks like an email address or a link, then collapses spaces.
+- The cleaned name is cut to 64 characters (an emoji counts as one).
+- A name that still reads as the app's own name, in any case, spacing or look-alike letters, is
+  refused with `from-name-not-allowed` and nothing is sent.
+- A name that is empty after cleaning sends the mail under the address alone.
+- Passing `fromName` without the permission is refused with `from-name-not-permitted` and nothing is
+  sent. Leave the field out to send exactly as before.
+
 ### Reasons
 
 | `reason` | Meaning | What to do |
 | --- | --- | --- |
 | `invalid-input` | A field is missing, too long, or not allowed, or the body was empty after cleaning | Fix the call; do not retry as is |
+| `from-name-not-permitted` | `fromName` was passed but the plugin was not granted `email.fromName` | Declare the permission, or leave `fromName` out |
+| `from-name-not-allowed` | `fromName` reads as the app's own name | Pick a different name |
 | `not-set-up` | The user has not claimed an agent email address, or is signed out | Ask the user to set up agent email |
 | `rate-limited` | The per-plugin burst is used up | Wait a second and retry |
 | `plugin-daily-cap` | This plugin has sent 500 today (UTC day, counted in the cloud for sent and scheduled mail together) | Stop until tomorrow |
@@ -128,10 +149,14 @@ interface PluginEmailIssue {
   html: string
   sendAt: string
   idempotencyKey?: string
+  fromName?: string
 }
 ```
 
 - `to`: 1 to 2000 addresses; duplicates are removed, ignoring case.
+- `fromName`: the same optional display name as on `send`, with the same permission, cleaning, cap
+  and refusals (see [`fromName`](#fromname)). The cloud checks the stored name again when the issue
+  is sent and sends nothing if it no longer passes.
 - `sendAt`: an ISO-8601 UTC time (`2026-10-22T09:00:00.000Z`) at least one minute and at most 30 days ahead.
 - Every `send` rule applies: same permission, the user's agent address as sender, one-click
   unsubscribe on every email, the HTML cleaning, and a hashed `idempotencyKey` (the same key returns
@@ -197,6 +222,8 @@ its content was deleted.
 | `reason` | Meaning |
 | --- | --- |
 | `invalid-input` | A field is missing, not allowed, or the body was empty after cleaning |
+| `from-name-not-permitted` | `fromName` was passed without the `email.fromName` permission |
+| `from-name-not-allowed` | `fromName` reads as the app's own name |
 | `not-set-up` | No agent email address, or signed out |
 | `send-at-passed` | The send time is less than a minute away or in the past |
 | `send-at-too-far` | The send time is more than 30 days away |
