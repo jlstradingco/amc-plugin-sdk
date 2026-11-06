@@ -16,7 +16,7 @@
  * TO RECONCILE: read the host file from GitHub master (a local host checkout can be thousands of
  * commits stale), copy it over the vendored file unchanged, then update all four fields below and
  * re-copy the payload table from the host's
- * tests/unit/lint/marketplace-plugin-entry-path-parity.test.ts.
+ * tests/unit/lint/22/marketplace-plugin-entry-path-parity.test.ts.
  *
  *   gh api repos/jlstradingco/Agent-Orchestrator/contents/src/shared/plugin-manifest-entry-path.ts \
  *     --jq .content | base64 -d > packages/sdk/src/validators/manifest-entry-path.ts
@@ -36,7 +36,7 @@ export const HOST_ENTRY_PATH_PROVENANCE = {
 
 /**
  * The host's own shared payload table, copied from
- * tests/unit/lint/marketplace-plugin-entry-path-parity.test.ts at sourceCommit.
+ * tests/unit/lint/22/marketplace-plugin-entry-path-parity.test.ts at sourceCommit.
  */
 
 /** Values the host refuses as a plugin-relative entry path. */

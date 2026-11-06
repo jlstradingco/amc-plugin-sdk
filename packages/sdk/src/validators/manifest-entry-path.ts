@@ -11,9 +11,9 @@
  * WHY IT IS COPIED, AND WHY THAT IS STILL ONE RULE. `amc-back` and `firebase/marketplace/functions`
  * both declare `rootDir: "src"`, so neither can import a file under the app's `src/` — the same wall
  * the marketplace capability-envelope policy hit (see `firebase/marketplace/SURFACE-AUTHORITY.md`
- * and tests/unit/lint/marketplace-automation-envelope-policy-parity.test.ts). The repo's answer,
+ * and tests/unit/lint/04/marketplace-automation-envelope-policy-parity.test.ts). The repo's answer,
  * used here, is one rule text held byte-identical in every copy and pinned so a hand edit cannot
- * survive: tests/unit/lint/marketplace-plugin-entry-path-parity.test.ts compares the three copies
+ * survive: tests/unit/lint/22/marketplace-plugin-entry-path-parity.test.ts compares the three copies
  * AND runs one shared payload table through all of them. Edit one copy alone and the build fails.
  *
  * DEPENDENCY-FREE ON PURPOSE — no imports, no zod, no node builtins. A copy has to typecheck and
