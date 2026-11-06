@@ -190,6 +190,13 @@ export interface PluginManifest {
   "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "sessions.launchAny" | "sessions.observeStatus" | "inbox" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "email.send" | "webassembly" | "email.fromName">
   "mobile"?: boolean
   "usageActions"?: Array<string>
+  "uiAnchors"?: Array<{
+    "id": string
+    "label": string
+    "description": string
+    "kind": "button" | "link" | "input" | "toggle" | "tab" | "menuitem" | "row" | "region" | "composite" | "dialog" | "panel" | "display" | "select" | "form"
+    "when"?: string
+  }>
 }
 
 export interface AgentMC {

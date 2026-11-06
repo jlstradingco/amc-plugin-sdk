@@ -157,6 +157,28 @@ export interface PluginWorkspaceBinding {
   granularity: 'package'
 }
 
+export interface PluginUiAnchor {
+  id: string
+  label: string
+  description: string
+  kind:
+    | 'button'
+    | 'link'
+    | 'input'
+    | 'toggle'
+    | 'tab'
+    | 'menuitem'
+    | 'row'
+    | 'region'
+    | 'composite'
+    | 'dialog'
+    | 'panel'
+    | 'display'
+    | 'select'
+    | 'form'
+  when?: string
+}
+
 /**
  * Manifest declaration for the `ctx.workspace` capability.
  *
@@ -452,6 +474,15 @@ export interface PluginManifest {
    * this list is never counted.
    */
   usageActions?: string[]
+  /**
+   * The controls in your plugin page that the in-app assistant may point at. At most 64.
+   * Each entry names a control with an `id` (lowercase letters, digits and single hyphens,
+   * up to 48 characters), a one-line `label`, a one-line `description` written for the
+   * assistant, and a `kind`. Put `data-ui-anchor="<id>"` on the matching element in your
+   * page. The app prefixes every id with `plugin:<your plugin id>:`, so your ids can never
+   * collide with the app's. An app older than this key ignores it.
+   */
+  uiAnchors?: PluginUiAnchor[]
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]

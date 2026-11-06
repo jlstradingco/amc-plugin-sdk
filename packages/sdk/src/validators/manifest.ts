@@ -486,6 +486,61 @@ const usageActionsSchema = z
     message: 'usageActions may not list the same action twice',
   })
 
+const UI_ANCHORS_MAX = 64
+const UI_ANCHOR_NAME_MAX = 120
+const UI_ANCHOR_KINDS = [
+  'button',
+  'link',
+  'input',
+  'toggle',
+  'tab',
+  'menuitem',
+  'row',
+  'region',
+  'composite',
+  'dialog',
+  'panel',
+  'display',
+  'select',
+  'form',
+] as const
+
+function hasControlCharacter(text: string): boolean {
+  return [...text].some((character) => {
+    const code = character.charCodeAt(0)
+    return code < 32 || code === 127
+  })
+}
+
+function plainLine(maxLength: number) {
+  return z
+    .string()
+    .min(1)
+    .max(maxLength)
+    .refine((text) => !hasControlCharacter(text), { message: 'must be one line of plain text' })
+}
+
+const uiAnchorSchema = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .max(48)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'must be lowercase letters, digits and single hyphens'),
+    label: plainLine(80),
+    description: plainLine(300),
+    kind: z.enum(UI_ANCHOR_KINDS),
+    when: plainLine(120).optional(),
+  })
+  .strict()
+
+const uiAnchorsSchema = z
+  .array(uiAnchorSchema)
+  .max(UI_ANCHORS_MAX)
+  .refine((entries) => new Set(entries.map((entry) => entry.id)).size === entries.length, {
+    message: 'uiAnchors may not list the same id twice',
+  })
+
 const LINK_CLAIMS_MAX = 20
 const LINK_CLAIM_HOST_MAX = 253
 const LINK_CLAIM_PATH_MAX = 200
@@ -567,8 +622,18 @@ export const manifestSchema = z.object({
   linkClaims: z.array(linkClaimSchema).min(1).max(LINK_CLAIMS_MAX).optional(),
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
   usageActions: usageActionsSchema.optional(),
+  uiAnchors: uiAnchorsSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
+    ;(manifest.uiAnchors ?? []).forEach((anchor, index) => {
+      if (`plugin:${manifest.plugin.id}:${anchor.id}`.length > UI_ANCHOR_NAME_MAX) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['uiAnchors', index, 'id'],
+          message: 'the full anchor name (plugin id plus this id) is too long: shorten this id',
+        })
+      }
+    })
     if ((manifest.permissions ?? []).includes('network.upload') !== (manifest.uploadHosts?.length ?? 0) > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

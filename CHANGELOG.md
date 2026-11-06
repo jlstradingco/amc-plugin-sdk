@@ -11,6 +11,14 @@ together.
 
 ## [Unreleased]
 
+### Added — `uiAnchors` on the manifest
+
+A plugin can list the controls in its page that the in-app assistant may point at. Each entry has an
+`id`, a one-line `label` and `description`, a `kind` and an optional `when`; put
+`data-ui-anchor="<id>"` on the matching element. Omniscio names each one `plugin:<plugin id>:<id>`.
+`validateManifest` checks the entries, and the generated manifest reference lists the key. See
+[the manifest guide](docs/guide/manifest.md#uianchors). An app that predates the key ignores it.
+
 ## [3.3.0] - 2026-11-04
 
 ### Fixed — `amc-plugin preflight` no longer runs `npx amc-plugin`

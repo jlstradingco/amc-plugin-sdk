@@ -32,6 +32,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `backend` | object | No | Backend entry point and resource limits |
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
 | `mobile` | boolean | No | Let your plugin open on the owner's phone. Off unless `true` — see [`mobile`](#mobile) |
+| `uiAnchors` | array | No | Controls in your page the in-app assistant may point at — see [`uiAnchors`](#uianchors) |
 | `permissions` | array | No | Requested API permissions |
 | `cli` | object | No | CLI endpoint declarations |
 
@@ -750,6 +751,42 @@ Phone Simulator.
   inspect the phone page.
 - The owner can turn all phone plugins off in Settings → Mobile Access → Devices.
 - It must be `true` or `false`; anything else fails `amc-plugin validate`.
+
+## `uiAnchors`
+
+Lets the in-app assistant point at buttons and other controls inside your plugin page. Without it the
+assistant sees your plugin as one blank area.
+
+```json
+{
+  "uiAnchors": [
+    {
+      "id": "open-file",
+      "label": "Open file",
+      "description": "Opens the file picker so the user can choose a PDF.",
+      "kind": "button",
+      "when": "always"
+    }
+  ]
+}
+```
+
+- **Two halves.** List the control here, and put `data-ui-anchor="open-file"` on the matching element in
+  your page. The two must use the same `id`; a marker with no entry here is ignored.
+- **Fields.** `id` is lowercase letters, digits and single hyphens, up to 48 characters, and unique.
+  `label` (80), `description` (300) and the optional `when` (120) are one line of plain text each, with no
+  line breaks. `kind` is one of `button`, `link`, `input`, `toggle`, `tab`, `menuitem`, `row`, `region`,
+  `composite`, `dialog`, `panel`, `display`, `select`, `form`. At most 64 entries.
+- **The assistant reads these words, not your page.** It sees your `label`, `description` and `when`, marked
+  as written by your plugin. Write them as plain descriptions of the control, never as instructions.
+- **Names.** Omniscio names each control `plugin:<your plugin id>:<id>`, so your ids can never collide with
+  the app's or another plugin's. You never write the full name, and the whole name must fit 120 characters:
+  a long plugin id leaves less room for the `id`.
+- **When it works.** Only while your plugin's pane is on screen and loaded, on the desktop app. The phone
+  frame is not covered.
+- **Older apps.** An app that predates this key ignores it and loads your plugin as before; the
+  assistant just cannot point inside it.
+- It must be an array of valid entries; anything else fails `amc-plugin validate`.
 
 ## Complete Examples
 
