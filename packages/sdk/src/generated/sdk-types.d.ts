@@ -262,10 +262,12 @@ export interface AgentMC {
     "assembleContext": (...args: unknown[]) => Promise<unknown>
     "assembleFile": (...args: unknown[]) => Promise<unknown>
     "cancelVideoExport": (...args: unknown[]) => Promise<unknown>
+    "claimHostCopy": (...args: unknown[]) => Promise<unknown>
     "deleteHostCopy": (...args: unknown[]) => Promise<unknown>
     "discardDesignerFiles": (...args: unknown[]) => Promise<unknown>
     "exportPptx": (...args: unknown[]) => Promise<unknown>
     "exportVideo": (...args: unknown[]) => Promise<unknown>
+    "hostCopyUnowned": (...args: unknown[]) => Promise<unknown>
     "measureArtifact": (...args: unknown[]) => Promise<unknown>
     "renderHtml": (...args: unknown[]) => Promise<unknown>
     "researchTopic": (...args: unknown[]) => Promise<unknown>
