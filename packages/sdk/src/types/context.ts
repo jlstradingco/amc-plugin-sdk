@@ -348,9 +348,12 @@ export interface PluginSessions {
   stop(sessionId: string): Promise<void>
   archive(sessionId: string): Promise<void>
   /**
-   * Permanently erase a session your plugin owns: the host stops it, then deletes
-   * the session and every message it stored, at once (not a hidden or archived
-   * row). Rejects for a session your plugin does not own, or one already gone.
+   * Permanently erase a hidden background session your plugin created in its own
+   * sandbox and never revealed: the host stops it, then deletes the session and
+   * every message it stored, at once (not a hidden or archived row). Rejects, and
+   * removes nothing, for a session a person can see (`userInitiated` or revealed),
+   * one launched into a real project, another plugin's session, one already gone,
+   * or one that cannot be stopped. Desktop only: a paired phone cannot call it.
    */
   delete(sessionId: string): Promise<void>
   /**

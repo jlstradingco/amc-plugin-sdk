@@ -608,6 +608,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       // invent — is not one of the eleven the host can report.
       stop: (sessionId) => { sessionStatus.set(sessionId, 'ended'); return Promise.resolve() },
       archive: (sessionId) => { sessionStatus.set(sessionId, 'archived'); return Promise.resolve() },
+      delete: (sessionId) => { sessionStatus.delete(sessionId); sessionMessages.delete(sessionId); return Promise.resolve() },
       onStatusChange: () => () => {}
     },
 
