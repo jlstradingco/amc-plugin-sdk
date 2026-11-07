@@ -11,6 +11,14 @@ together.
 
 ## [Unreleased]
 
+### Added — `session.delete` and `ctx.sessions.delete`
+
+A plugin can permanently erase a background session it created in its own sandbox: the host stops it,
+then removes the session and everything it stored at once, through the same removal as the user's
+own Delete chat. It refuses a session a person can see, one launched into a real project, and another
+plugin's session, and a paired phone cannot call it. See
+[the sessions reference](docs/api/sessions.md). An app that predates it answers `Unknown method`.
+
 ### Added — `uiAnchors` on the manifest
 
 A plugin can list the controls in its page that the in-app assistant may point at. Each entry has an

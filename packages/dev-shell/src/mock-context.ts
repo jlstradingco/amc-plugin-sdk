@@ -511,6 +511,12 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         sessionStatus.set(sid, 'archived')
         return Promise.resolve()
       },
+      delete: (sid) => {
+        if (shouldLog) console.log(`${prefix} [sessions] delete(${sid})`)
+        sessionStatus.delete(sid)
+        sessionMessages.delete(sid)
+        return Promise.resolve()
+      },
       onStatusChange: () => () => {},
     },
 

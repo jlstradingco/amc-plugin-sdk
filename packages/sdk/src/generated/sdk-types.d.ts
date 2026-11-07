@@ -528,6 +528,7 @@ export interface AgentMC {
   }
   "session": {
     "create": (...args: unknown[]) => Promise<unknown>
+    "delete": (...args: unknown[]) => Promise<unknown>
     "getCost": (...args: unknown[]) => Promise<unknown>
     "getMessages": (...args: unknown[]) => Promise<unknown>
     "getStatus": (...args: unknown[]) => Promise<unknown>
@@ -806,6 +807,7 @@ export interface PluginContext {
   "sessions": {
     "archive": (...args: unknown[]) => Promise<unknown>
     "create": (...args: unknown[]) => Promise<unknown>
+    "delete": (...args: unknown[]) => Promise<unknown>
     "fanout": (...args: unknown[]) => Promise<unknown>
     "getMessages": (...args: unknown[]) => Promise<unknown>
     "getStatus": (...args: unknown[]) => Promise<unknown>

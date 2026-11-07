@@ -333,6 +333,21 @@ await AgentMC.session.rename(sessionId, 'Security Audit - Round 2')
 await AgentMC.session.stop(sessionId)
 ```
 
+### `delete(sessionId: string): Promise<void>`
+
+Permanently erase a background session your plugin created in its own sandbox: Omniscio stops it,
+then removes the session and every message, search entry and attachment it stored, at once. Use it
+when your user deletes the thing the session worked on, so their text does not linger. The same call
+is `ctx.sessions.delete(sessionId)` on the backend.
+
+It rejects, and removes nothing, for a session a person can see (`userInitiated`, or revealed), one
+launched into a real project, another plugin's session, or one that cannot be stopped. Panels on a
+paired phone cannot call it.
+
+```typescript
+await AgentMC.session.delete(sessionId)
+```
+
 ### `launchWithDraft(opts: { projectId: string; draftText: string; autoSend?: boolean }): Promise<void>`
 
 Open a new session in Omniscio's main UI with pre-filled draft text. Frontend only.

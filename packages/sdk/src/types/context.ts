@@ -348,6 +348,12 @@ export interface PluginSessions {
   stop(sessionId: string): Promise<void>
   archive(sessionId: string): Promise<void>
   /**
+   * Permanently erase a session your plugin owns: the host stops it, then deletes
+   * the session and every message it stored, at once (not a hidden or archived
+   * row). Rejects for a session your plugin does not own, or one already gone.
+   */
+  delete(sessionId: string): Promise<void>
+  /**
    * The handler's second argument carries `pendingAction` and
    * `recoveryTerminal`. An older host calls it with the status only.
    */

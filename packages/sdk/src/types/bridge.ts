@@ -185,6 +185,12 @@ export interface BridgeSession {
   rename(sessionId: string, name: string): Promise<void>
   stop(sessionId: string): Promise<void>
   /**
+   * Permanently erase a session your plugin owns: the host stops it, then deletes
+   * the session and every message it stored, at once (not a hidden or archived
+   * row). Rejects for a session your plugin does not own, or one already gone.
+   */
+  delete(sessionId: string): Promise<void>
+  /**
    * `autoSend` submits the draft immediately instead of leaving it in the
    * composer — `plugin-bridge/session-handler.ts`'s `launchWithDraft` case reads all three keys.
    */
