@@ -106,9 +106,99 @@ const title = await ctx.ai.generateTitle(reportContent)
 await ctx.db.update('reports', reportId, { title })
 ```
 
+---
+
+### `generateStructured(opts): Promise<Record<string, unknown>>`
+
+Ask for a JSON answer in a shape you define, instead of prose you have to parse. You pass a JSON
+Schema, the host forces the model to fill it, and you get the filled object back.
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `opts.prompt` | `string` | What to extract or decide, up to 32 KB |
+| `opts.tool` | `object` | The shape to fill: `{ name, description?, inputSchema }` — `name` up to 64 characters, `inputSchema` a JSON Schema object of at most 128 keys |
+| `opts.systemPrompt` | `string` | Optional instructions, up to 32 KB |
+| `opts.model` | `string` | Optional Anthropic model id |
+| `opts.premium` | `boolean` | Optional: use the premium model (Opus) instead of the default |
+| `opts.maxOutputTokens` | `number` | Optional answer length, 1 to 16,384 — a value outside it is refused, never clamped |
+
+**Returns:** `Promise<Record<string, unknown>>` — the object that fills `inputSchema`.
+
+Metered against your plugin's own daily AI cap, the same one `generateMessage` uses, so a plugin can
+never spend past it by looping on this call.
+
+**Example:**
+
+```typescript
+const lead = await ctx.ai.generateStructured({
+  prompt: `Extract the contact from this email:\n\n${emailBody}`,
+  tool: {
+    name: 'contact',
+    description: 'The person the email is about.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        company: { type: 'string' },
+        intent: { type: 'string', enum: ['buy', 'support', 'other'] },
+      },
+      required: ['name', 'intent'],
+    },
+  },
+})
+ctx.log.info(`${lead.name} at ${lead.company}`)
+```
+
+---
+
+### `isConfigured(): Promise<boolean>`
+
+Whether an AI key account exists, checked before you offer to generate anything.
+
+**Returns:** `Promise<boolean>` — `true` when `generateMessage`, `generateTitle` and
+`generateStructured` will run; `false` when they would fail.
+
+Use it to disable a Generate button and say why, rather than letting the person click and read an
+error. It asks the same resolver those calls use, so a key saved in an isolated slot counts.
+
+**Example:**
+
+```typescript
+const ready = await AgentMC.ai.isConfigured()
+if (!ready) {
+  AgentMC.toast.show({ type: 'info', message: 'Add an AI API key in Settings first.' })
+}
+```
+
+---
+
+### `listEngines(): Promise<PluginEngineCatalog>`
+
+The engines and models this person can actually use, so a plugin can offer the same choice a session
+does instead of hard-coding a model name.
+
+**Returns:** `Promise<PluginEngineCatalog>` — `{ version, defaults, engines, agentsLocked }`. Each
+entry of `defaults` (`session` and `writing`) is `{ provider, model, label }`, and each engine carries
+`{ id, label, ready, writing, writingReady, canRunNoTools, defaultModel, models, data }`. `ready:
+false` means that engine cannot run here (no account, or the person's settings floor it).
+
+**Example:**
+
+```typescript
+const { engines } = await AgentMC.ai.listEngines()
+const usable = engines.filter((engine) => engine.ready)
+const model = usable[0]?.defaultModel
+if (!model) {
+  AgentMC.toast.show({ type: 'info', message: 'No AI engine is ready on this computer yet.' })
+}
+```
+
 ## Notes
 
 - `generateTextViaSubscription` runs on the person's Claude plan; every other method here goes through Omniscio's AI service on a stored key.
 - These key calls go through Omniscio's AI service, which requires an API key account. OAuth/login accounts cannot make direct AI calls. If no API key account is available, the call will fail with a descriptive error.
+- Call `isConfigured` first when you are about to show a Generate control — it is the difference between a disabled button and a failed click.
 - `generateMessage` is best for short, targeted tasks. For complex multi-turn interactions, use the [Sessions](./sessions) API instead.
 - `generateTitle` is optimized for producing concise titles (typically under 10 words).

@@ -518,6 +518,26 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         return Promise.resolve()
       },
       onStatusChange: () => () => {},
+      fanout: (fanoutOpts) => {
+        const launched = fanoutOpts.targets.map((target) => {
+          const sessionId = `mock-session-${++sessionCounter}`
+          sessionMessages.set(sessionId, [])
+          sessionStatus.set(sessionId, 'running')
+          if (shouldLog) console.log(`${prefix} [sessions] fanout -> ${sessionId}`)
+          return {
+            sessionId,
+            projectId: target.projectId,
+            provider: target.provider ?? 'claude',
+            model: target.model ?? null
+          }
+        })
+        return Promise.resolve({
+          launched,
+          queued: [],
+          skipped: [],
+          ...(fanoutOpts.swarm === true ? { swarmBoard: `mock-swarm-${sessionCounter}` } : {})
+        })
+      },
     },
 
     ai: {

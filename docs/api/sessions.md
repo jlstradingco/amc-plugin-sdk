@@ -246,6 +246,73 @@ ctx.sessions.onStatusChange(sessionId, (_status, info) => {
 })
 ```
 
+---
+
+### `fanout(opts): Promise<{ launched, queued, skipped, swarmBoard? }>`
+
+Start several sessions in one call — one per project — from a shared prompt. This is the batch road;
+`create` makes one session.
+
+**Required Permission:** `sessions.launchAny` — and **not** `sessions`, which this call does not
+need. Built-in and first-party only: a third-party plugin is refused even when it declares the
+permission. Every session it starts is paid, so call it only when the person has asked for the batch.
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `opts.prompt` | `string` | The prompt every target receives, up to 200,000 characters |
+| `opts.targets` | `array` | 1 to 20 targets, each `{ projectId, provider?, model?, thinkingLevel?, mcpOverrides?, location? }` — `location` is `'local'` or `'cloud'` |
+| `opts.name` | `string` | Optional label for the session names, up to 100 characters |
+| `opts.peerAwareness` | `boolean` | Prefix each prompt with a briefing naming the other sessions |
+| `opts.swarm` | `boolean` | Turns on peer awareness and creates one shared board for the batch |
+
+**Returns:** `Promise<{ launched, skipped, queued, swarmBoard? }>`
+
+| Field | Meaning |
+|---|---|
+| `launched` | The sessions that started now: `{ sessionId, projectId, provider, model }` |
+| `queued` | Targets the spawn pacer accepted and DEFERRED: `{ projectId, position, etaSeconds }`. They start later, so they are in neither of the other two lists |
+| `skipped` | Targets that will not start, each with `reason` — and, when the engine/model pair was the cause, `kind: 'foreign' \| 'retired'` |
+| `swarmBoard?` | The shared board's channel, present only when you passed `swarm: true` |
+
+**Example:**
+
+```typescript
+const { launched, queued, skipped } = await ctx.sessions.fanout({
+  prompt: 'Review this migration plan and list the risks.',
+  targets: [{ projectId: planProjectId, location: 'cloud' }],
+  name: 'Migration review',
+})
+ctx.log.info(`${launched.length} started, ${queued.length} waiting, ${skipped.length} skipped`)
+```
+
+---
+
+### `reveal(sessionId: string): Promise<void>`
+
+Bring a plugin session the person has never seen into the main session list and open it, instead of
+leaving it among the plugin's hidden background sessions.
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `sessionId` | `string` | Your plugin's own session id |
+
+**Returns:** `Promise<void>`.
+
+It works on a session your plugin created, and only while that session is still owned by you; a
+session the person already sees is unaffected (it is opened, not duplicated). A session created with
+`userInitiated: true` is visible already and needs no reveal.
+
+**Example:**
+
+```typescript
+const { sessionId } = await ctx.sessions.create({ prompt: 'Draft the launch notes' })
+await ctx.sessions.reveal(sessionId)
+```
+
 ## Frontend Methods
 
 The frontend `BridgeSession` interface is available as `AgentMC.session`.

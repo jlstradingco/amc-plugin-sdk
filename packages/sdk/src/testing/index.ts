@@ -678,7 +678,28 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       stop: (sessionId) => { sessionStatus.set(sessionId, 'ended'); return Promise.resolve() },
       archive: (sessionId) => { sessionStatus.set(sessionId, 'archived'); return Promise.resolve() },
       delete: (sessionId) => { sessionStatus.delete(sessionId); sessionMessages.delete(sessionId); return Promise.resolve() },
-      onStatusChange: () => () => {}
+      onStatusChange: () => () => {},
+      fanout: (fanoutOpts) => {
+        const launched = fanoutOpts.targets.map((target) => {
+          const sessionId = `test-session-${crypto.randomUUID().slice(0, 8)}`
+          sessionStatus.set(sessionId, 'running')
+          sessionMessages.set(sessionId, [])
+          return {
+            sessionId,
+            projectId: target.projectId,
+            provider: target.provider ?? 'claude',
+            model: target.model ?? null
+          }
+        })
+        return Promise.resolve({
+          launched,
+          queued: [],
+          skipped: [],
+          ...(fanoutOpts.swarm === true
+            ? { swarmBoard: `test-swarm-${crypto.randomUUID().slice(0, 8)}` }
+            : {})
+        })
+      }
     },
 
     ai: {

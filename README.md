@@ -158,7 +158,6 @@ Every plugin requires a `manifest.json` at the project root:
   },
   "settings": [],
   "storage": { "collections": {} },
-  "migrations": [],
   "sdkVersion": "2.0.0",
   "ui": {
     "entryPoint": "dist/ui/index.html",
@@ -170,16 +169,17 @@ Every plugin requires a `manifest.json` at the project root:
     "endpoints": [
       { "method": "GET", "path": "status", "description": "Get status", "auth": true }
     ]
-  },
-  "cron": {
-    "jobs": [
-      { "id": "heartbeat", "label": "Heartbeat", "schedule": "*/30 * * * *", "description": "Health check", "approvalRequired": true }
-    ]
   }
 }
 ```
 
 Validated at build time by Zod schemas — see `manifestSchema` in `@agent-mc/plugin-sdk/validators`.
+
+There is no `migrations` array and no `cron` block: neither is a manifest key, so a manifest carrying
+one validates and then behaves as if it were absent. Schema changes come from the host's automatic
+`ADD COLUMN` sweep, and scheduled work is an [automation](#automations) with a schedule rather than a
+manifest block. The `cron` PERMISSION is real and belongs in `permissions`. The full accepted surface,
+key by key, is [the manifest reference](docs/guide/manifest.md).
 
 ## CLI Commands
 

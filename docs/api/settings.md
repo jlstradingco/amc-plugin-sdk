@@ -1,8 +1,8 @@
 # Settings
 
-Read your plugin's settings as configured by the user through Omniscio's Settings > Plugins panel.
+Read your plugin's settings, save one, and react when one changes.
 
-**Availability:** Both (backend `ctx.settings` / frontend `AgentMC.settings`)
+**Availability:** Both (backend `ctx.settings` / frontend `AgentMC.settings`) — `onChange` is panel-only
 **Required Permission:** None
 
 ## Methods
@@ -55,6 +55,67 @@ if (!apiKey) {
 // Backend
 const interval = await ctx.settings.get('syncInterval') as number ?? 30
 ctx.log.info(`Sync interval: ${interval} minutes`)
+```
+
+---
+
+### `set(key: string, value: unknown): Promise<void>`
+
+Save one setting. The value is merged into your plugin's stored settings — every other key keeps its
+current value — so a settings screen can save a single field without writing back a whole object.
+
+**Availability:** Both (backend `ctx.settings.set` / frontend `AgentMC.settings.set`)
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `key` | `string` | The setting key, as declared in your manifest's `settings` |
+| `value` | `unknown` | The new value, validated against that setting's declared type |
+
+**Returns:** `Promise<void>` — it rejects when the key is not one of your declared settings, or the
+value does not fit its type.
+
+Saving also tells your backend: its `onSettingsChanged(settings)` hook runs with the new value, so a
+running plugin picks the change up without a restart.
+
+**Example:**
+
+```typescript
+// Frontend — a settings screen saving one field
+await AgentMC.settings.set('apiUrl', input.value.trim())
+
+// Backend
+await ctx.settings.set('syncInterval', 60)
+```
+
+---
+
+### `onChange(callback): () => void`
+
+Run a callback every time your settings are saved from Omniscio's Settings > Plugins panel, whichever
+surface saved them.
+
+**Availability:** Frontend only (panel `AgentMC.settings.onChange`). A backend reacts through its
+`onSettingsChanged` lifecycle hook instead.
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `callback` | `(settings: Record<string, unknown>) => void` | Receives the full settings object after each save |
+
+**Returns:** an unsubscribe function — call it when your pane unmounts.
+
+**Example:**
+
+```typescript
+useEffect(() => {
+  const off = AgentMC.settings.onChange((settings) => {
+    setThemeAccent(settings.accent as string)
+  })
+  return off
+}, [])
 ```
 
 ## Defining Settings

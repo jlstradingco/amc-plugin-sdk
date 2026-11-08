@@ -15,6 +15,11 @@ The `manifest.json` file is the central configuration for your plugin. It declar
   "process": { "allowedCommands": [ ... ] },
   "backend": { ... },
   "sessionTools": true,
+  "mobile": false,
+  "uiAnchors": [ ... ],
+  "linkClaims": [ ... ],
+  "uploadHosts": [ ... ],
+  "usageActions": [ ... ],
   "permissions": [ ... ],
   "cli": { "endpoints": [ ... ] }
 }
@@ -33,6 +38,9 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
 | `mobile` | boolean | No | Let your plugin open on the owner's phone. Off unless `true` — see [`mobile`](#mobile) |
 | `uiAnchors` | array | No | Controls in your page the in-app assistant may point at — see [`uiAnchors`](#uianchors) |
+| `linkClaims` | array | No | Web URLs your plugin wants to handle, 1–20 entries of `{ "host", "path" }` — see [`linkClaims`](#linkclaims) |
+| `uploadHosts` | array | No | The exact websites `http.uploadFile` may send files to, up to 10 — **required together with `network.upload`** — see [`uploadHosts`](#uploadhosts) |
+| `usageActions` | array | No | The feature actions your plugin counts with `usage.record(action)`, up to 20 — see [`usageActions`](#usageactions) |
 | `permissions` | array | No | Requested API permissions |
 | `linkClaims` | array | No | External links your plugin handles, up to 20 — see [`linkClaims`](#linkclaims) |
 | `uploadHosts` | array | No | Exact hostnames your plugin uploads to, up to 10; required with and by `network.upload` — see [`uploadHosts`](#uploadhosts) |
@@ -539,7 +547,7 @@ projects, and your plugin holds a workspace grant on that project, Omniscio call
 
 ## `keybindings` Array
 
-Registers keyboard shortcuts your plugin owns (`src/shared/plugin-manifest-schema.ts:360-373`).
+Registers keyboard shortcuts your plugin owns (`src/shared/plugin-manifest-schema.ts:453`).
 
 ```json
 {
@@ -602,7 +610,7 @@ your manifest; the old copy is removed. The consent card lists every pinned prog
 General-purpose interpreters and shells (`node`, `python`, `bash`, `powershell`, `cmd`) and
 command launchers (`git`, `ssh`, `make`, `env`, `xargs`) are refused by name: allowing one would
 let the plugin run arbitrary code, so the host rejects the manifest rather than trusting the plugin.
-The full list is `INTERPRETER_DENYLIST` in `src/shared/plugin-manifest-schema.ts:44-103`. The SDK
+The full list is `INTERPRETER_DENYLIST` in `src/shared/plugin-manifest-schema.ts:68-127`. The SDK
 ships the same list, generated from that file, as `PROCESS_INTERPRETER_DENYLIST`, and
 `amc-plugin validate` applies it the way Omniscio does: case does not matter, and a `.exe` or
 `.cmd` suffix is ignored, so `NODE.EXE` and `bash.cmd` are refused too. SDK 3.2 and earlier
@@ -829,6 +837,64 @@ assistant sees your plugin as one blank area.
   frame is not covered.
 - **Older apps.** An app that predates this key ignores it and loads your plugin as before; the
   assistant just cannot point inside it.
+- It must be an array of valid entries; anything else fails `amc-plugin validate`.
+
+## `linkClaims`
+
+Web URLs your plugin wants to handle, so Omniscio can offer it to the person when they are looking at
+one of them — an "open this in my plugin" route.
+
+```json
+{
+  "linkClaims": [
+    { "host": "github.com", "path": "/{owner}/{repo}/issues/{number}" }
+  ]
+}
+```
+
+- **Shape.** Between 1 and 20 entries. Each names an exact `host` (a lowercase domain, no scheme, port,
+  wildcard or user name, up to 253 characters) and a `path` that starts with `/` (up to 200).
+- **Path segments.** Each segment is a literal (`issues`) or a `{placeholder}`, and at least one segment
+  must be literal — a claim can never cover a whole site.
+- **What it does not do.** It never makes the plugin handle the link automatically. The host uses it to
+  offer your plugin as a destination side by side with the browser.
+- It must be an array of valid entries; anything else fails `amc-plugin validate`.
+
+## `uploadHosts`
+
+The exact websites your plugin may send files to with `http.uploadFile`. This is the list the person
+approves, once, on the first upload.
+
+```json
+{
+  "permissions": ["network.upload"],
+  "uploadHosts": ["rupload.facebook.com"]
+}
+```
+
+- **Paired with the permission.** `network.upload` and `uploadHosts` go together: a plugin that uploads
+  must list the websites it uploads to, and a plugin that lists them must ask for `network.upload`. A
+  manifest with one and not the other is refused at load.
+- **Exact names.** Up to 10 entries, each one exact lowercase website name such as
+  `upload.example.com` — no scheme, port, path, wildcard or IP address.
+- **Anything not listed is refused.** `http.uploadFile` to a site that is not in this list fails instead
+  of sending.
+
+## `usageActions`
+
+The feature actions your plugin counts, so they appear in Omniscio's own usage and Feature Discovery
+figures.
+
+```json
+{
+  "usageActions": ["enrich-lead", "sync-board"]
+}
+```
+
+- **Call them by these names.** `usage.record("enrich-lead")` counts; an action that is not in this list
+  is never counted.
+- **Shape.** Up to 20 names, each 1 to 40 characters of lowercase `a`–`z`, digits and `-`, with no
+  duplicates.
 - It must be an array of valid entries; anything else fails `amc-plugin validate`.
 
 ## Complete Examples

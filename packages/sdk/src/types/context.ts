@@ -446,6 +446,39 @@ export interface PluginSessions {
     sessionId: string,
     handler: (status: SessionStatus, info: SessionStatusInfo) => void
   ): () => void
+  /**
+   * Start one session per target project from a single prompt — 1 to 20 targets.
+   *
+   * Gated twice: the manifest must declare `sessions.launchAny`, AND the plugin
+   * must be built-in or classified first-party by the Marketplace.
+   */
+  fanout(opts: PluginSessionFanoutOptions): Promise<PluginSessionFanoutResult>
+}
+
+export interface PluginSessionFanoutOptions {
+  prompt: string
+  targets: Array<{
+    projectId: string
+    provider?: string
+    model?: string
+    thinkingLevel?: string
+    mcpOverrides?: Record<string, boolean> | null
+    location?: 'local' | 'cloud'
+  }>
+  name?: string
+  peerAwareness?: boolean
+  swarm?: boolean
+}
+
+export interface PluginSessionFanoutResult {
+  launched: Array<{ sessionId: string; projectId: string; provider: string; model: string | null }>
+  queued: Array<{ projectId: string; position: number; etaSeconds: number }>
+  skipped: Array<{
+    projectId: string
+    reason: string
+    kind?: 'foreign' | 'retired'
+  }>
+  swarmBoard?: string
 }
 
 /**

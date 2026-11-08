@@ -543,6 +543,170 @@ The grant follows the person's approval, not the manifest alone: until they appr
 
 ---
 
+### `stt`
+
+**Grants access to:** `AgentMC.stt` (**webview** only — `transcribe`, `isConfigured`)
+
+Turn speech into text with the person's configured speech service. `transcribe(audioBase64, opts?)`
+takes audio your panel recorded and resolves the transcript; `isConfigured()` tells you whether a
+speech provider is set up at all, so you can hide a microphone control instead of failing on click.
+Metered against the person's allowance.
+
+---
+
+### `microphone`
+
+**Grants access to:** the panel's `navigator.mediaDevices.getUserMedia({ audio: true })` (**webview** only)
+
+Without it, a plugin panel's request for the microphone is refused by Omniscio's media-permission
+guard, even in a Chromium context that would otherwise allow it. This is an **elevated** permission:
+it is a live microphone any time the panel is open, so declare it only for a plugin that records —
+and say in your UI when recording starts.
+
+```typescript
+const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+```
+
+A plugin cannot ask for the camera this way; video is reserved for Omniscio's own recorder.
+
+---
+
+### `auth.sharedSignIn`
+
+**Grants access to:** the shared webview sign-in session (**webview** only; no namespace)
+
+Share one browser sign-in session with the other plugins the person allowed this for, so a set of
+related plugins signs in once rather than once each. **Elevated**, because those plugins can then see
+each other's saved sign-in data: the person approves the group, and a plugin outside it stays on its
+own isolated session.
+
+Declare it alongside `auth` when your plugin reads who is signed in.
+
+---
+
+### `boards.link`
+
+**Grants access to:** `AgentMC.boardLinks` (**webview** — `create`, `listForEntity`, `remove`, `searchItems`)
+
+Attach your plugin's own content to a task on a board the person granted, and detach it again —
+without ever changing the task itself. `create({ itemId, entityId, label? })` links one of your items
+to a task, `listForEntity({ entityId })` reads the links on one task, `remove({ linkId })` detaches
+one, and `searchItems({ query, limit? })` finds tasks to link to (up to 50 results).
+
+**Elevated**: it writes on the person's task list. Pair it with [`boards.read`](#boardsread) to show
+the boards themselves.
+
+---
+
+### `sessions.launchAny`
+
+**Grants access to:** `ctx.sessions.fanout` (**backend**) — this one permission, not `sessions`
+
+Start sessions in any of the person's projects, with any engine and model, in one batch. A plugin
+that only batches does not need `sessions` at all, and asking for it would widen the consent card to
+session creation and management this call never uses. It is a narrower gate than it sounds:
+**built-in plugins and first-party marketplace plugins the Marketplace has classified only** — a
+third-party plugin is refused even with the permission declared. Every session it starts is paid, so
+call it only for a batch the person asked for.
+
+See the [Sessions API](../api/sessions).
+
+---
+
+### `sessions.observeStatus`
+
+**Grants access to:** the session-status feed (**webview** only; no namespace)
+
+See when the person's sessions start, finish, or need them, so a plugin can show a live activity
+indicator. It never sees a session's text, and it grants nothing over a session.
+
+---
+
+### `launch`
+
+**Grants access to:** `ctx.launch.open(url | path)` (**backend only**)
+
+Open a link or a file in the app's own viewer, or hand a URL to the browser — with the person
+confirming a program's launch. **Elevated**: it is the road from a plugin to something outside the
+app, so Omniscio asks before anything runs.
+
+Declare [`system`](#system) for the clipboard and the checked program launcher.
+
+---
+
+### `oauth`
+
+**Grants access to:** `ctx.oauth.authorize(opts)` (**backend only**)
+
+Sign the person in to a third-party service they choose to connect: your backend receives the
+resulting tokens and never sees their password. **Elevated** — the consent screen names your plugin,
+and the person can revoke the connection at any time.
+
+Prefer [`auth.session`](#authsession) when the service is Google or GitHub; this one is for
+everything else.
+
+---
+
+### `channel`
+
+**Grants access to:** `ctx.channel.connect` / `send` / `close` (**backend only**)
+
+Hold a live connection to an external service the person chose — a socket or a stream — and send and
+close it. `connect` subscribes, so your backend keeps receiving until you call `close()`; a long-lived
+connection needs a `backend` in the manifest. **Elevated**.
+
+---
+
+### `documents.read`
+
+**Grants access to:** the read methods of the Writer namespace (**webview** — `list`, `get`,
+`folderList`, `search`, `exportFile`, `driveListFiles`, `publishToGoogleDoc` and their siblings)
+
+Open and search everything the person has written in the app, and publish one of those documents to
+a Google account they have connected. Read-only: nothing is changed.
+
+The separate `AgentMC.documents` API, which opens the one document the person picked, needs no
+permission at all.
+
+---
+
+### `documents.write`
+
+**Grants access to:** the write methods of the Writer namespace (**webview** — `create`,
+`saveContent`, `delete`, `restore`, `folderCreate`, `folderDelete`, `importFromFile`,
+`publishToShares` and their siblings)
+
+Create, change and permanently delete what the person has written, including restoring an older
+version over the current one. **Elevated**, and it does not imply read: declare both when your plugin
+needs to list what it edits.
+
+---
+
+### `members.read`
+
+**Grants access to:** `AgentMC.members.list()` (**webview** and backend — `ctx.members.list()`)
+
+Read the names, pictures and roles of the people in the workspace the person is using. It never sees
+email addresses, and it grants nothing about their sessions or their content.
+
+---
+
+### `workspace.read`, `workspace.write`, `workspace.exec`
+
+**Grants access to:** `ctx.workspace` (**backend**) — three separate grants over the projects the
+person hands your plugin
+
+`workspace.read` enumerates and reads a granted project's files and worktrees; `workspace.write`
+creates, changes and deletes them; `workspace.exec` runs one bounded command inside a granted
+project, behind a native confirm. They are **elevated**, and none implies another: a manifest asking
+for `workspace.write` or `workspace.exec` without an explicit `workspace.read` is refused by the host
+loader, the marketplace publish gate and `amc-plugin validate`.
+
+See the [Workspace API](../api/workspace) for the methods, and the note under the summary table for
+why the host will not infer one from another.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -564,8 +728,12 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `sessions` | `PluginSessions` | Create/manage Claude Code sessions |
 | `sessions.images` | `PluginSessions.sendMessage` `images` option | Send pictures to your own tool-less AI session (needs `sessions` too) |
 | `sessions.readHistory` | `PluginSessionHistory` (**webview**) | Read PAST sessions/projects the user explicitly grants |
+| `sessions.launchAny` | `ctx.sessions.fanout` (**backend**) | Start a batch of sessions across any project — built-in and first-party plugins only, and it does not need `sessions` |
+| `sessions.observeStatus` | *(session-status feed; no namespace)* | See when sessions start, finish or need the person — never their text |
 | `ai` | `PluginAi` | Direct AI text generation |
 | `tts` | `PluginTts` (**webview**, `AgentMC.tts`) | Read text aloud with the user's configured voice (metered) |
+| `stt` | `AgentMC.stt` (**webview**) | Turn a recording into text with the configured speech service (metered) |
+| `microphone` | *(media-permission guard; no namespace)* | Record from the microphone while your panel is open — elevated |
 | `network` | `PluginHttp` | Outbound HTTP requests |
 | `network.upload` | `AgentMC.http.uploadFile` (**webview**) | Upload a picked-folder file to the sites listed in `uploadHosts` (**requires `uploadHosts`**) |
 | `cron` | `PluginCron` | Scheduled background tasks |
@@ -575,6 +743,13 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `rss` | `ctx.rss` (`fetchFeed`, `listFeeds`, `getRecentEntries`) | Read RSS feeds and articles from Omniscio's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
+| `auth.sharedSignIn` | *(shared webview sign-in session)* | Sign in once across the plugins the person grouped — elevated |
+| `oauth` | `ctx.oauth.authorize` (**backend**) | Sign the person in to another service they choose — elevated |
+| `channel` | `ctx.channel.connect` / `send` / `close` (**backend**) | Hold a live connection to an external service — elevated |
+| `launch` | `ctx.launch.open` (**backend**) | Open a link or file, or run a program the person confirms — elevated |
+| `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
+| `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
+| `members.read` | `AgentMC.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
 | `chrome.widget` | `AgentMC.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
@@ -585,6 +760,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
 | `boards.read` | `AgentMC.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
+| `boards.link` | `AgentMC.boardLinks` (**webview**) | Attach and detach your own content on a task the person granted — elevated |
 | `coreRead` | `PluginCore` (`ctx.core`, backend only) | Elevated, blanket read of sessions, projects and message text |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
 | `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |
