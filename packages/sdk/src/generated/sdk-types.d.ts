@@ -415,7 +415,6 @@ export interface AgentMC {
     "getManagerDashboardAgg": (...args: unknown[]) => Promise<unknown>
     "getMedia": (...args: unknown[]) => Promise<unknown>
     "getMediaUrl": (...args: unknown[]) => Promise<unknown>
-    "getTeamDashboard": (...args: unknown[]) => Promise<unknown>
     "getTeamProgress": (...args: unknown[]) => Promise<unknown>
     "glossaryTermsForLesson": (...args: unknown[]) => Promise<unknown>
     "helperAsk": (...args: unknown[]) => Promise<unknown>
