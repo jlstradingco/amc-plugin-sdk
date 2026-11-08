@@ -8,6 +8,15 @@ import {
   type ManifestEntryPathProblem,
 } from './manifest-entry-path.js'
 
+export const REQUIRED_PERMISSION_PARTNERS = [
+  ['workspace.write', 'workspace.read'],
+  ['workspace.exec', 'workspace.read'],
+  ['chrome.widget', 'chrome'],
+  ['sessions.images', 'sessions'],
+  ['email.fromName', 'email.send'],
+  ['boards.link', 'boards.read'],
+] as const
+
 const pluginIdRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/
 const PLUGIN_ID_MAX = 100
 
@@ -642,43 +651,13 @@ export const manifestSchema = z.object({
           '"network.upload" and "uploadHosts" go together: a plugin that uploads files must list the websites it uploads to, and a plugin that lists them must ask for network.upload',
       })
     }
-    // The host REJECTS a manifest asking for workspace.write or workspace.exec
-    // without an explicit workspace.read alongside it, and so does the
-    // marketplace publish gate (`workspace_permission_pairing`). It deliberately
-    // does NOT infer read from write: roughly twenty consumers read the raw
-    // permissions array and the consent ledger, so an inferred permission would
-    // make the consent card the user reads disagree with what the plugin holds.
-    //
-    // Without this rule `permissions: ["workspace.write"]` passed
-    // `amc-plugin validate`, then failed BOTH the publish gate and the install.
     const permissions = manifest.permissions ?? []
-    // `chrome.widget` draws in the titlebar, the highest-trust surface in the
-    // app. The host requires an explicit `chrome` sibling for the same reason it
-    // requires `workspace.read`: the consent card the user reads must match the
-    // permissions array the plugin actually holds, so nothing is implied.
-    if (permissions.includes('chrome.widget') && !permissions.includes('chrome')) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['permissions'],
-        message:
-          '"chrome.widget" requires an explicit "chrome" permission in the same manifest: add chrome to permissions',
-      })
-    }
-    if (permissions.includes('boards.link') && !permissions.includes('boards.read')) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['permissions'],
-        message:
-          '"boards.link" requires an explicit "boards.read" permission in the same manifest: add boards.read to permissions',
-      })
-    }
-    if (permissions.includes('workspace.read')) return
-    for (const perm of ['workspace.write', 'workspace.exec'] as const) {
-      if (permissions.includes(perm)) {
+    for (const [permission, partner] of REQUIRED_PERMISSION_PARTNERS) {
+      if (permissions.includes(permission) && !permissions.includes(partner)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['permissions'],
-          message: `"${perm}" requires an explicit "workspace.read" permission in the same manifest: add workspace.read to permissions`,
+          message: `"${permission}" requires an explicit "${partner}" permission in the same manifest: add ${partner} to permissions`,
         })
       }
     }
