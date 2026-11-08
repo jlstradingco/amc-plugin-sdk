@@ -105,7 +105,7 @@ See [Project Structure](./project-structure) for a detailed breakdown of every f
 
 ## Build
 
-Compile TypeScript and copy non-TS assets (HTML, CSS, images) into `dist/`:
+Compile TypeScript, copy non-TS assets (HTML, CSS, images) into `dist/`, and bundle the panel script:
 
 ```bash
 cd my-plugin
@@ -115,16 +115,18 @@ npm run build
 Expected output:
 
 ```
-Manifest validated
-Compiling TypeScript...
-Build complete
+✓ Manifest validated
+ℹ Compiling TypeScript and bundling panel scripts...
+✓ Bundled dist/ui/plugin.js
+✓ Build complete
 ```
 
-The `build` command does three things:
+`npm run build` runs `amc-plugin build`, which does four things:
 
 1. Validates `manifest.json` against the SDK schema
 2. Runs `tsc` to compile TypeScript into `dist/`
 3. Copies non-TypeScript files from `src/ui/` into `dist/ui/` (HTML, CSS, images)
+4. Bundles each script a page loads into one self-contained file, so the page can load it as a plain script ([details](../reference/cli.md#build))
 
 ## Validate
 

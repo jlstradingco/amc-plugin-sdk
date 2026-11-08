@@ -1,10 +1,10 @@
 import { Command } from 'commander'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, warn, filePath, manifestNotFound, actionableError } from '../lib/output.js'
-import { isTypeScriptProject, copyNonTsFiles } from '../lib/project.js'
+import { isTypeScriptProject } from '../lib/project.js'
+import { compilePlugin } from '../lib/compile.js'
 import { copyPluginToDir } from '../lib/install.js'
 import { resolveAmcPluginsDir, readCliToken, reloadPluginInAmc } from '../lib/amc-host.js'
 
@@ -14,12 +14,11 @@ interface InstallOptions {
   watch?: boolean
 }
 
-/** Directory names that must never trigger a --watch re-install. */
 const WATCH_IGNORE = new Set(['node_modules', '.git', 'dist', '.amcplugin'])
 
 export const installCommand = new Command('install')
   .description('Build and install this plugin into your local AMC, then hot-reload it')
-  .option('--no-build', 'Skip the TypeScript build (install files as-authored)')
+  .option('--no-build', 'Skip the build (install files as-authored)')
   .option('--no-reload', 'Copy files only; do not hot-reload the running AMC')
   .option('-w, --watch', 'Re-install + hot-reload on every source change')
   .action(async (opts: InstallOptions) => {
@@ -37,16 +36,12 @@ export const installCommand = new Command('install')
       }
       const pluginId = manifest.plugin.id as string
 
-      // Build (TS only — flat plugins ship as-authored) unless --no-build.
       if (opts.build && isTypeScriptProject(cwd)) {
-        info('Building TypeScript...')
+        info('Building plugin...')
         try {
-          execSync('npx tsc', { cwd, stdio: 'inherit' })
-          const srcUi = path.join(cwd, 'src', 'ui')
-          const distUi = path.join(cwd, 'dist', 'ui')
-          if (fs.existsSync(srcUi)) copyNonTsFiles(srcUi, distUi)
+          compilePlugin(cwd)
         } catch {
-          actionableError('TypeScript compilation failed', 'Fix the errors above and re-run.')
+          actionableError('Build failed', 'Fix the errors above and re-run.')
           return false
         }
       }
@@ -82,7 +77,6 @@ export const installCommand = new Command('install')
       return
     }
 
-    // --watch: recursive fs.watch with a short debounce, ignoring build output.
     info('Watching for changes — press Ctrl+C to stop')
     let timer: NodeJS.Timeout | null = null
     let running = false

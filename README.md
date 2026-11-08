@@ -186,7 +186,7 @@ Validated at build time by Zod schemas — see `manifestSchema` in `@agent-mc/pl
 | Command | Description |
 |---|---|
 | `amc-plugin create <name>` | Scaffold a new plugin (templates: `basic`, `with-backend`, `full`) |
-| `amc-plugin build` | Compile TypeScript, copy UI assets, validate manifest, scan for banned imports |
+| `amc-plugin build` | Compile TypeScript, copy UI assets, bundle each panel script, validate manifest, scan for banned imports |
 | `amc-plugin validate` | Run all validation checks without emitting output (CI-friendly) |
 | `amc-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback) |
 

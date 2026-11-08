@@ -11,6 +11,27 @@ together.
 
 ## [Unreleased]
 
+### Fixed — a scaffolded plugin's panel no longer opens blank
+
+`tsc` leaves `export {};` at the end of `dist/ui/plugin.js`, and a page that loads it with a plain
+`<script src="plugin.js">` stops on that line, so a freshly created plugin showed an empty panel in
+Omniscio and in the dev shell. `amc-plugin build` now bundles each script a page loads into one
+self-contained file with esbuild, so your UI can also be split across files and import npm packages.
+`dev`, `install`, `package` (when `dist/` is missing) and the dev shell's hot reload build the same
+way. The scaffold's and the examples' `npm run build` now run `amc-plugin build` instead of `tsc`.
+See [the build command](docs/reference/cli.md#build).
+
+### Added — the Panel scripts check in `package` and `preflight`
+
+`package` refuses to write an archive whose page loads a script that is missing or would not load as
+the page declares it. `preflight` and `publish` run the same check on the pages and scripts inside the
+chosen `.amcplugin`, so an archive built before this fix is caught even after `dist/` is rebuilt. See
+[Panel scripts](docs/reference/cli.md#panel-scripts).
+
+### Dependencies
+
+- `@agent-mc/plugin-cli` now depends on `esbuild` (`^0.28.2`), which does the panel-script bundling.
+
 ### Added — `session.delete` and `ctx.sessions.delete`
 
 A plugin can permanently erase a background session it created in its own sandbox: the host stops it,

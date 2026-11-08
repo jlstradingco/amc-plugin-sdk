@@ -14,15 +14,11 @@ type Template = typeof TEMPLATES[number]
 
 const isSvgPath = (icon: string): boolean => icon.toLowerCase().endsWith('.svg')
 
-// Top-level folders a scaffolded plugin's package ships a packaged icon from — the same rule
-// `validate` applies via collectPackageEntries. No template ships files at the project root,
-// and a TypeScript plugin's package carries only dist/ (build output) and assets/.
 const SHIPPED_ICON_ROOTS: Record<Template, string[]> = {
   basic: ['assets'],
   'with-backend': ['assets'],
   full: ['assets'],
   webview: ['assets', 'ui', 'prompts'],
-  // Flat like `webview`, so it ships the same folders. Keep widget.html under ui/.
   widget: ['assets', 'ui', 'prompts'],
 }
 
@@ -39,13 +35,6 @@ function escapeHtml(str: string): string {
 const MAX_TAGS = 10
 const MAX_TAG_LEN = 30
 
-/**
- * Parse a comma-separated `--tags` / prompt value into a bounded, normalized list
- * for the scaffolded manifest. Mirrors the host `sanitizeTags` bounds (≤10 tags,
- * ≤30 chars each, lowercased, deduped, control chars / angle brackets dropped) so a
- * scaffolded manifest never fails upload validation. Empty input falls back to the
- * chosen category, keeping the plugin searchable from day one.
- */
 export function parseTagsInput(raw: string | undefined, fallbackCategory: string): string[] {
   const seen = new Set<string>()
   const out: string[] = []
@@ -61,9 +50,6 @@ export function parseTagsInput(raw: string | undefined, fallbackCategory: string
   return out.length > 0 ? out : [fallbackCategory]
 }
 
-// The widget template's plugin script. Pushes DATA to the titlebar widget — a shape,
-// short text, a meaning (tone) and an icon NAME — and Omniscio draws every pixel.
-// `value` is capped at 8 characters and `label` at 16 by the host, on purpose.
 const WIDGET_PLUGIN_JS = `// Plain-JS webview plugin that draws a titlebar widget. No build step.
 //
 // You send DATA; Omniscio draws it. Pick a shape, a short value (8 characters
@@ -120,10 +106,6 @@ function buildWidgetPopoverHtml(displayName: string): string {
 `
 }
 
-// Scaffolded .gitignore. Beyond build output, it excludes env/secret files up front
-// (the `git add -A` the scaffold runs — and every one the developer runs later — would
-// otherwise commit a `.env` full of keys). `.env.example` stays tracked so the template
-// for required vars can be shared safely.
 const SCAFFOLD_GITIGNORE = [
   '# Dependencies',
   'node_modules/',
@@ -146,9 +128,6 @@ const SCAFFOLD_GITIGNORE = [
   ''
 ].join('\n')
 
-// Scaffolded README.md. A fresh plugin shipped with no README is a bare repo the
-// author (and anyone they share it with) has to reverse-engineer; this gives them a
-// self-describing starting point wired to the exact npm scripts the scaffold writes.
 export function buildReadme(opts: {
   displayName: string
   description: string
@@ -218,8 +197,6 @@ export function buildPackageJson(opts: {
   if (author) pkg.author = author
   pkg.license = 'UNLICENSED'
 
-  // Webview plugins have no compile step, so no build script or TypeScript
-  // dependency. Backend templates add a test script + vitest.
   const scripts: Record<string, string> = isWebview
     ? {
         dev: 'amc-plugin dev',
@@ -244,32 +221,8 @@ export function buildPackageJson(opts: {
   return pkg
 }
 
-/**
- * The `sdkVersion` every scaffolded manifest declares. It is the Omniscio HOST's
- * plugin-SDK contract — `AMC_PLUGIN_SDK_VERSION` in Agent-Orchestrator
- * `src/shared/plugin-sdk-version.ts` — NOT this package's version: the host is on
- * contract 2.0.0 while these packages are 3.x, and the two move independently.
- *
- * Bare on purpose: the host reads a bare version as a minimum ("this contract or
- * newer"), but a caret range as "same major only". CLI 3.0.0 wrote `^3.0.0` here,
- * in step with the npm range in buildPackageJson, and every plugin it scaffolded
- * was marked incompatible and lost its toolbar button.
- *
- * Raise it only when the host constant moves and new plugins need the newer
- * contract. The npm range in buildPackageJson is what follows this package's major.
- */
 const HOST_SDK_CONTRACT_FLOOR = '2.0.0'
 
-/**
- * Assemble the scaffolded `manifest.json` for a template. Kept pure (no filesystem)
- * so every template's manifest can be unit-tested against the SDK's own
- * `validateManifest` — the drift that silently broke the github-issues example
- * (cron gained required `label` / `approvalRequired`) would otherwise only surface
- * when a developer ran `amc-plugin validate` on a freshly scaffolded `full` plugin.
- * Key insertion order matches the previous inline literal so generated files are
- * byte-identical: plugin, settings, storage, migrations, sdkVersion, ui, then the
- * template-conditional backend/permissions/cli/cron.
- */
 export function buildManifest(opts: {
   id: string
   displayName: string
@@ -294,10 +247,6 @@ export function buildManifest(opts: {
       icon,
       category,
       license: { type: 'free' },
-      // Discoverability tags folded into marketplace search + shown as card chips.
-      // Taken from `--tags` / the create prompt (bounded to ≤10 tags, ≤30 chars
-      // each); an empty entry falls back to the chosen category so the plugin ships
-      // searchable on the marketplace from day one.
       tags,
     },
     settings: [],
@@ -311,20 +260,16 @@ export function buildManifest(opts: {
     sidebar: { title: displayName, icon },
   }
 
-  // Titlebar widget (widget template): `chrome.widget` requires an explicit `chrome`
-  // beside it, and `ui.widget.entryPoint` is the page shown in the click popover.
   if (template === 'widget') {
     manifest.permissions = ['chrome', 'chrome.widget']
     manifest.ui = { ...(manifest.ui as Record<string, unknown>), widget: { entryPoint: 'ui/widget.html' } }
   }
 
-  // Backend setup (with-backend and full templates)
   if (hasBackend) {
     manifest.backend = { entryPoint: 'dist/backend/index.js' }
     manifest.permissions = ['storage']
   }
 
-  // Cron + CLI setup (full template only)
   if (template === 'full') {
     manifest.permissions = ['storage', 'cron', 'cli']
     manifest.cli = {
@@ -362,9 +307,6 @@ export const createCommand = new Command('create')
   .option('--author <author>', 'Plugin author')
   .option('--category <category>', 'Plugin category', 'other')
   .option('--tags <tags>', 'Comma-separated discoverability tags (defaults to the category)')
-  // Defaults to a PACKAGED path, not a Lucide name. The old default ('puzzle') did exactly
-  // what it said and shipped a puzzle piece -- the scaffold was actively steering every new
-  // plugin at a generic glyph, and 16 of 17 published plugins followed it.
   .option(
     '--icon <icon>',
     'Path to your logo inside the package (e.g. assets/icon.svg), or a Lucide icon name for a generic glyph',
@@ -432,8 +374,6 @@ export const createCommand = new Command('create')
       icon = response.icon
     }
 
-    // Decided once, here, by the same classifier `validate` uses — a hand-rolled test of the
-    // icon string disagreed with it and let `../x.svg` write outside the new project.
     const iconKind = classifyPluginIcon(icon)
     if (iconKind === 'unsafe-path') {
       actionableError(
@@ -461,12 +401,8 @@ export const createCommand = new Command('create')
 
     fs.mkdirSync(targetDir, { recursive: true })
 
-    // manifest.json — fully assembled (template-aware ui/backend/permissions/cli/cron)
-    // by the pure buildManifest so every scaffolded template stays validator-clean.
     const manifest = buildManifest({ id: name, displayName, author, description, icon, category, tags, template })
 
-    // A webview plugin is flat-JS: files ship as-authored at the root (no tsc
-    // compile step), matching how AMC's builtin plugins are structured.
     const isWebview = template === 'webview' || template === 'widget'
     const uiRoot = isWebview ? path.join(targetDir, 'ui') : path.join(targetDir, 'src', 'ui')
 
@@ -520,8 +456,6 @@ init()
 `)
     }
 
-    // Backend files (with-backend and full templates) — the manifest's backend
-    // entry / permissions are set by buildManifest above.
     if (template === 'with-backend' || template === 'full') {
       fs.mkdirSync(path.join(targetDir, 'src', 'backend'), { recursive: true })
 
@@ -546,7 +480,6 @@ const activate: PluginActivate = (ctx) => {
 export default activate
 `)
 
-      // Sample test wired to the SDK test harness
       fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.test.ts'), `import { describe, it, expect } from 'vitest'
 import { createTestContext } from '@agent-mc/plugin-sdk/testing'
 import activate from './index.js'
@@ -562,13 +495,6 @@ describe('${displayName} backend', () => {
 `)
     }
 
-    // The scaffold now DEFAULTS plugin.icon to a packaged path, so it has to ship a file at
-    // that path — otherwise every freshly-created plugin would fail its own `validate` with
-    // "Icon file not found". A neutral placeholder the developer replaces with their real
-    // mark; monochrome `currentColor` so it reads on both light and dark surfaces.
-    // Only written when the icon is a packaged .svg path and nothing is there already: a
-    // developer who passed --icon with a Lucide name is untouched, and SVG text is never
-    // written into a .png/.jpg path. Any other packaged format is the developer's to add.
     if (iconKind === 'packaged-path' && !isSvgPath(icon)) {
       info(`Add your logo at ${icon} before you package — the scaffold only writes an .svg placeholder.`)
     }
@@ -590,8 +516,6 @@ describe('${displayName} backend', () => {
 
     fs.writeFileSync(path.join(targetDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
 
-    // package.json — metadata (description/author/license) plus template-aware
-    // scripts + dev deps, all assembled by buildPackageJson.
     const hasBackend = template === 'with-backend' || template === 'full'
     fs.writeFileSync(
       path.join(targetDir, 'package.json'),
@@ -602,8 +526,6 @@ describe('${displayName} backend', () => {
       ),
     )
 
-    // tsconfig.json — TS templates only. Its absence is the signal that marks a
-    // plugin as flat-JS (no tsc run).
     if (!isWebview) {
       fs.writeFileSync(path.join(targetDir, 'tsconfig.json'), JSON.stringify({
         compilerOptions: {
@@ -622,10 +544,8 @@ describe('${displayName} backend', () => {
       }, null, 2))
     }
 
-    // .gitignore
     fs.writeFileSync(path.join(targetDir, '.gitignore'), SCAFFOLD_GITIGNORE)
 
-    // README.md
     fs.writeFileSync(
       path.join(targetDir, 'README.md'),
       buildReadme({
@@ -638,13 +558,11 @@ describe('${displayName} backend', () => {
       }),
     )
 
-    // Install dependencies
     if (!opts.skipInstall) {
       info('Installing dependencies...')
       execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
     }
 
-    // Init git
     if (!opts.skipGit) {
       execSync('git init', { cwd: targetDir, stdio: 'pipe' })
       execSync('git add -A', { cwd: targetDir, stdio: 'pipe' })

@@ -64,7 +64,7 @@ amc-plugin create my-plugin \
 
 ### `build`
 
-Compile TypeScript, copy non-TS UI files to `dist/`, and scan for banned imports.
+Compile TypeScript, copy non-TS UI files to `dist/`, bundle each panel script, and scan for banned imports.
 
 **Usage:**
 
@@ -79,7 +79,8 @@ amc-plugin build
 1. Validates `manifest.json` against the SDK schema.
 2. Runs `tsc` to compile TypeScript to `dist/`.
 3. Copies non-TS files from `src/ui/` to `dist/ui/` (HTML, CSS, images).
-4. Scans `dist/` for banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) and **warns** on a hit. `validate` runs the same scan and fails instead.
+4. Bundles each panel script. For every `<script src="X.js">` in a page under `dist/ui/` (not `type="module"`, and loaded from the plugin itself), it takes the matching source in `src/ui/` (`X.ts`, `.tsx`, `.js`, `.jsx` or `.mjs`) and writes one self-contained script to `dist/ui/X.js`, with every import inlined. A script that already loads as a plain script (a vendored library, for example) ships exactly as it is. `tsc` alone leaves `export {};` at the end of the file, and a page that loads it as a plain script stops on its first line with a blank panel. Bundling also means you can split your UI across files and import npm packages. Type-only imports from `@agent-mc/plugin-sdk` disappear in the bundle; the host provides `window.AgentMC` at runtime.
+5. Scans `dist/` for banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) and **warns** on a hit. `validate` runs the same scan and fails instead.
 
 **Example:**
 
@@ -88,7 +89,9 @@ cd my-plugin
 amc-plugin build
 ```
 
-**Exit codes:** `0` success, `1` manifest invalid or TypeScript compilation failed.
+**Exit codes:** `0` success, `1` manifest invalid, TypeScript compilation failed, or a panel script import could not be resolved.
+
+`dev`, `install`, `package` (when `dist/` is missing) and the dev shell's hot reload all build the same way.
 
 ---
 
@@ -200,9 +203,10 @@ amc-plugin package
 
 1. Validates `manifest.json`.
 2. Builds if `dist/` does not exist.
-3. Creates `<plugin-id>-<version>.amcplugin` in the project root.
-4. Includes `manifest.json`, `dist/`, `assets/` (if present) and the root `README.md` (if present — the marketplace renders it as the listing's long description; CLI 3.1 and later).
-5. Warns if the archive exceeds the 50 MB marketplace limit.
+3. Checks that every page script loads ([Panel scripts](#panel-scripts)) and stops before writing the archive if one would not.
+4. Creates `<plugin-id>-<version>.amcplugin` in the project root.
+5. Includes `manifest.json`, `dist/`, `assets/` (if present) and the root `README.md` (if present — the marketplace renders it as the listing's long description; CLI 3.1 and later).
+6. Warns if the archive exceeds the 50 MB marketplace limit.
 
 **Example:**
 
@@ -211,7 +215,7 @@ amc-plugin package
 # Packaged: my-plugin-1.0.0.amcplugin (0.12 MB)
 ```
 
-**Exit codes:** `0` success, `1` manifest invalid or build failed.
+**Exit codes:** `0` success, `1` manifest invalid, build failed, or a page script would not load.
 
 ---
 
@@ -241,11 +245,23 @@ amc-plugin preflight [options]
 | Permissions | An unknown permission is declared | Duplicate permissions |
 | Command tables | A table can hold a runnable command ([the rule](#command-tables)) and carries no valid waiver | A fuzzier command-like shape |
 | Banned imports | The shipped files import a banned module ([details](#validate)) | There is no built output to scan |
+| Panel scripts | A page in the archive loads a script that is missing from the archive, or that fails to load as the page declares it ([details](#panel-scripts)) | &mdash; |
 | Package | The folder holds more than one `.amcplugin` and no `--package` was given, or the chosen archive is not named `<id>-<version>.amcplugin` for the manifest version, or its own `manifest.json` says another version or a `-test.N` label | &mdash; |
 | Package size | Archive exceeds the 50 MB marketplace limit | Archive exceeds 25 MB |
 | Listing | &mdash; | No `README.md` at the plugin root, an absent or empty `plugin.screenshots`, or an absent or empty `plugin.links` — the marketplace detail page would be bare (see [Publishing → What your listing shows](../guide/publishing.md#what-your-listing-shows)) |
 
 If the marketplace registry is unreachable, the version check is skipped rather than blocking.
+
+#### Panel scripts
+
+A page's `<script src="plugin.js">` without `type="module"` is a plain script. A plain script cannot contain `import` or `export`, and if it does, the browser stops at that line and the panel stays blank. This check reads each HTML page, finds every plain script loaded from the plugin itself, and parses that file the way the page will load it. Module scripts and scripts from a URL are skipped.
+
+When a `.amcplugin` is chosen, the check reads the pages and scripts **inside the archive**, so an archive made before a fix is caught even after you rebuild `dist/`. `package` runs the same check on the folder before it writes the archive.
+
+The fix depends on the plugin type:
+
+- **TypeScript plugin:** run `amc-plugin build`, which bundles each page script, then `amc-plugin package` to rebuild the archive.
+- **Plain-JS (webview) plugin:** files ship as written, so remove the `import`/`export` from the script, or load it with `<script type="module">`.
 
 ::: tip Why the banned-import check appears twice
 `validate` is a check you choose to run; this is the one standing between a banned import
@@ -442,13 +458,13 @@ amc-plugin dev [options]
 
 | Flag | Description | Default |
 |---|---|---|
-| `--no-build` | Skip the initial TypeScript build | `false` |
+| `--no-build` | Skip the initial build | `false` |
 
 **What it does:**
 
-1. Builds the plugin (unless `--no-build` is passed).
+1. Builds the plugin the same way as `build` (unless `--no-build` is passed or `dist/` already exists).
 2. Opens the dev shell -- an Electron window that loads your plugin UI with a mock `AgentMC` context.
-3. Watches `src/` for changes and hot-reloads automatically.
+3. Watches `src/` for changes, rebuilds with the same `amc-plugin` that started the shell, and hot-reloads automatically.
 
 **Example:**
 

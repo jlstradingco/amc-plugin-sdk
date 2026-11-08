@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 import { manifestNotFound } from './output.js'
+import type { PackageFiles } from './page-scripts.js'
 
 const PACKAGE_EXTENSION = '.amcplugin'
 const TEST_LABEL = /-test\.\d+/i
@@ -45,24 +46,53 @@ export function listPackageCandidates(dir: string): string[] {
   )
 }
 
-function readZipMember(archive: Buffer, member: string): Buffer | null {
+interface ZipEntry {
+  name: string
+  method: number
+  compressedSize: number
+  localOffset: number
+}
+
+function listZipEntries(archive: Buffer): ZipEntry[] | null {
   const end = findEndRecord(archive)
   if (end < 0) return null
-  const entryCount = archive.readUInt16LE(end + 10)
+  const entries: ZipEntry[] = []
   let offset = archive.readUInt32LE(end + 16)
-  for (let i = 0; i < entryCount; i++) {
+  for (let i = archive.readUInt16LE(end + 10); i > 0; i--) {
     if (offset + 46 > archive.length || archive.readUInt32LE(offset) !== CENTRAL_DIR_ENTRY) return null
-    const method = archive.readUInt16LE(offset + 10)
-    const compressedSize = archive.readUInt32LE(offset + 20)
     const nameLength = archive.readUInt16LE(offset + 28)
-    const extraLength = archive.readUInt16LE(offset + 30)
-    const commentLength = archive.readUInt16LE(offset + 32)
-    const localOffset = archive.readUInt32LE(offset + 42)
-    const name = archive.toString('utf-8', offset + 46, offset + 46 + nameLength)
-    if (name === member) return readLocalData(archive, localOffset, method, compressedSize)
-    offset += 46 + nameLength + extraLength + commentLength
+    entries.push({
+      name: archive.toString('utf-8', offset + 46, offset + 46 + nameLength),
+      method: archive.readUInt16LE(offset + 10),
+      compressedSize: archive.readUInt32LE(offset + 20),
+      localOffset: archive.readUInt32LE(offset + 42)
+    })
+    offset += 46 + nameLength + archive.readUInt16LE(offset + 30) + archive.readUInt16LE(offset + 32)
   }
-  return null
+  return entries
+}
+
+function readZipEntry(archive: Buffer, entry: ZipEntry): Buffer | null {
+  return readLocalData(archive, entry.localOffset, entry.method, entry.compressedSize)
+}
+
+function readZipMember(archive: Buffer, member: string): Buffer | null {
+  const entry = listZipEntries(archive)?.find(e => e.name === member)
+  return entry ? readZipEntry(archive, entry) : null
+}
+
+export function readPackageFiles(file: string): PackageFiles | null {
+  const archive = fs.readFileSync(file)
+  const entries = listZipEntries(archive)
+  if (!entries) return null
+  const byName = new Map(entries.map(e => [e.name, e]))
+  return {
+    names: [...byName.keys()].filter(name => !name.endsWith('/')),
+    read: (name) => {
+      const entry = byName.get(name)
+      return entry ? (readZipEntry(archive, entry)?.toString('utf-8') ?? null) : null
+    }
+  }
 }
 
 function findEndRecord(archive: Buffer): number {

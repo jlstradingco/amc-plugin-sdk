@@ -20,6 +20,7 @@ import {
 import { findRootReadme, resolveBannedScanDirs } from '../lib/project.js'
 import { readPluginIdentity, selectPackage } from '../lib/package-selection.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
+import { pageScriptsResult } from '../lib/page-scripts.js'
 import { ok, fail, warn, info, heading, actionableError, manifestNotFound } from '../lib/output.js'
 
 export interface PreflightRunResult {
@@ -27,22 +28,8 @@ export interface PreflightRunResult {
   hasFailure: boolean
 }
 
-/**
- * The upload gate for the sandbox boundary: resolve what ships, scan it, and turn the
- * hits into a verdict. `validate` enforces the same rule, but an author has to CHOOSE
- * to run it — this is the check standing between a banned import and the marketplace.
- *
- * Exported so tests exercise the SHIPPED path rather than re-deriving these three steps.
- * A test that reproduces the wiring can pass while the wiring itself is wrong: an earlier
- * cut of this change did exactly that, and the copy had already drifted (production
- * relativised the hits, the test's copy did not) inside the same commit that exists to
- * delete two other drifted copies.
- */
 export function bannedImportsResult(cwd: string, manifest: unknown): PreflightResult {
   const scanDirs = resolveBannedScanDirs(cwd, manifest as Parameters<typeof resolveBannedScanDirs>[1])
-  // Preflight renders one line per check, so drop the project prefix — three absolute
-  // paths run to ~250 characters of mostly-repeated directory. `validate` prints each
-  // hit on its own line and can afford the full path; this cannot.
   const hits = scanDirs.flatMap(scanBannedImports).map(hit => hit.split(cwd + path.sep).join(''))
   return checkBannedImports(hits, scanDirs.length)
 }
@@ -52,9 +39,6 @@ export function readmeStoreTextResult(cwd: string): PreflightResult {
   return checkReadmeIsStoreText(readme ? fs.readFileSync(path.join(cwd, readme), 'utf-8') : null)
 }
 
-// Gathers all raw inputs (manifest, published version, package size, README
-// presence) and runs the pure preflight checks. Shared by the standalone
-// `preflight` command and the `publish` preflight gate.
 export async function runPreflight(
   cwd: string,
   opts: { changelog?: string; packagePath?: string } = {}
@@ -81,13 +65,11 @@ export async function runPreflight(
   const pluginId: string = manifest.plugin.id
   const manifestVersion: string = manifest.plugin.version
 
-  // Published version from the marketplace registry (null = never published).
   let publishedVersion: string | null = null
   try {
     const registry = await getRegistry()
     publishedVersion = registry.plugins.find(p => p.id === pluginId)?.version ?? null
   } catch {
-    // Registry unreachable — skip the immutable-version guard rather than block.
   }
 
   const results: PreflightResult[] = []
@@ -112,9 +94,9 @@ export async function runPreflight(
     }
     if (selection.kind === 'selected') packagePath = selection.path
   }
-  if (packagePath && fs.existsSync(packagePath)) {
-    results.push(checkPackageSize(fs.statSync(packagePath).size))
-  }
+  const packageOnDisk = packagePath && fs.existsSync(packagePath) ? packagePath : undefined
+  results.push(pageScriptsResult(cwd, manifest, packageOnDisk))
+  if (packageOnDisk) results.push(checkPackageSize(fs.statSync(packageOnDisk).size))
 
   const { hasFailure } = summarizePreflight(results)
   return { results, hasFailure }

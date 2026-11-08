@@ -3,61 +3,37 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { execSync, spawnSync } from 'node:child_process'
+import * as vm from 'node:vm'
+import { readPackageFiles } from '../lib/package-selection.js'
+import { findPageScriptProblems } from '../lib/page-scripts.js'
 
-/**
- * Wire up a scaffolded plugin's node_modules with the SDK and TypeScript
- * from the monorepo, so tsc / npx tsc works without npm install.
- */
 function setupPluginNodeModules(pluginDir: string) {
   const sdkPkg = path.resolve(__dirname, '../../../sdk')
-  // Install under the SDK's real scope so the scaffolded plugin's
-  // `import ... from '@agent-mc/plugin-sdk'` resolves from its OWN node_modules.
-  // (Previously '@amc' — a stale pre-rename scope — which only resolved locally
-  // because Windows module resolution walked up into the monorepo; a clean
-  // Linux /tmp runner has nothing above it, so tsc failed to find the module.)
   const nmSdk = path.join(pluginDir, 'node_modules', '@agent-mc', 'plugin-sdk')
   fs.mkdirSync(nmSdk, { recursive: true })
   fs.cpSync(path.join(sdkPkg, 'dist'), path.join(nmSdk, 'dist'), { recursive: true })
   fs.copyFileSync(path.join(sdkPkg, 'package.json'), path.join(nmSdk, 'package.json'))
 
-  // typescript -- junction to the CLI package's copy (fast, no admin on Windows)
   const tsSrc = path.resolve(__dirname, '../../node_modules/typescript')
   const tsDest = path.join(pluginDir, 'node_modules', 'typescript')
   fs.symlinkSync(tsSrc, tsDest, 'junction')
 
-  // .bin/tsc shim so `npx tsc` resolves locally
   const binDir = path.join(pluginDir, 'node_modules', '.bin')
   fs.mkdirSync(binDir, { recursive: true })
 
-  // Shell shim (Git Bash / MSYS)
   fs.writeFileSync(
     path.join(binDir, 'tsc'),
     '#!/bin/sh\nexec node "$( dirname "$0" )/../typescript/bin/tsc" "$@"\n',
     { mode: 0o755 },
   )
 
-  // CMD shim (Windows)
   fs.writeFileSync(
     path.join(binDir, 'tsc.CMD'),
     '@ECHO off\r\nnode "%~dp0\\..\\typescript\\bin\\tsc" %*\r\n',
   )
 }
 
-/**
- * Every test below shells out to the built CLI, and two of them run a real
- * `tsc`. Vitest's defaults (5s per test, 10s per hook) are sized for unit tests
- * and are not enough for a subprocess compile: `builds successfully` measures
- * ~1.6s on an idle machine but exceeded 5s — and failed the suite — on a loaded
- * one, roughly 40% of runs. A timeout there is indistinguishable at a glance
- * from a real regression, so the release gate in RELEASING.md was reporting a
- * colour that depended on machine load.
- *
- * These budgets are deliberately generous: they exist to stop a slow box
- * failing the build, not to assert performance. Anything approaching them is a
- * genuine hang.
- */
 const SHELL_OUT_TIMEOUT_MS = 30_000
-/** `beforeAll` builds two workspace packages via pnpm, which dwarfs any single test. */
 const BUILD_HOOK_TIMEOUT_MS = 120_000
 
 describe('Plugin lifecycle E2E', () => {
@@ -67,7 +43,6 @@ describe('Plugin lifecycle E2E', () => {
   const cliDist = path.resolve(__dirname, '../../dist/index.js')
 
   beforeAll(() => {
-    // Build SDK and CLI so dist/ artifacts are current
     execSync('pnpm --filter @agent-mc/plugin-sdk build', {
       cwd: monorepoRoot,
       stdio: 'pipe',
@@ -153,8 +128,6 @@ describe('Plugin lifecycle E2E', () => {
   })
 
   it('builds successfully', () => {
-    // Since we used --skip-install, wire up node_modules manually so
-    // tsc can resolve '@agent-mc/plugin-sdk' types and the 'typescript' compiler
     setupPluginNodeModules(pluginDir)
 
     execSync(`node "${cliDist}" build`, { cwd: pluginDir, stdio: 'pipe' })
@@ -164,15 +137,19 @@ describe('Plugin lifecycle E2E', () => {
     expect(fs.existsSync(path.join(pluginDir, 'dist', 'backend', 'index.js'))).toBe(true)
   }, SHELL_OUT_TIMEOUT_MS)
 
+  it('build bundles the panel script so the page can load it, and leaves the backend as tsc wrote it', () => {
+    const panel = fs.readFileSync(path.join(pluginDir, 'dist', 'ui', 'plugin.js'), 'utf-8')
+    expect(() => new vm.Script(panel)).not.toThrow()
+    expect(panel).not.toMatch(/^export /m)
+    const backend = fs.readFileSync(path.join(pluginDir, 'dist', 'backend', 'index.js'), 'utf-8')
+    expect(backend).toContain('export default activate')
+  })
+
   it('validates successfully', () => {
     const output = execSync(`node "${cliDist}" validate`, {
       cwd: pluginDir,
       encoding: 'utf-8',
     })
-    // `validate` prints `✓ <check>` per check via ok() and the summary line
-    // `✓ All checks passed` on success; failures go to stderr via fail() and
-    // exit non-zero (execSync would then throw). Assert the real success signal
-    // rather than a literal 'PASS'/'FAIL' the command never emits.
     expect(output).toContain('All checks passed')
     expect(output).not.toContain('✗')
   }, SHELL_OUT_TIMEOUT_MS)
@@ -182,7 +159,6 @@ describe('Plugin lifecycle E2E', () => {
       cwd: pluginDir,
       encoding: 'utf-8',
     })
-    // The scaffold seeds `tags: [<category>]`, so `--category other` yields `other`.
     expect(output).toContain('Tags:')
     expect(output).toContain('other')
   }, SHELL_OUT_TIMEOUT_MS)
@@ -193,6 +169,27 @@ describe('Plugin lifecycle E2E', () => {
     const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.amcplugin'))
     expect(files).toHaveLength(1)
     expect(files[0]).toBe('e2e-test-plugin-1.0.0.amcplugin')
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('packages a panel script that loads, and rebuilds it the same way when dist/ is missing', () => {
+    fs.rmSync(path.join(pluginDir, 'dist'), { recursive: true, force: true })
+    execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
+    const archive = readPackageFiles(path.join(pluginDir, 'e2e-test-plugin-1.0.0.amcplugin'))
+    expect(archive?.names).toContain('dist/ui/plugin.js')
+    expect(findPageScriptProblems(archive!)).toEqual([])
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('refuses to package a page that loads an ES module as a plain script', () => {
+    const panel = path.join(pluginDir, 'dist', 'ui', 'plugin.js')
+    const bundled = fs.readFileSync(panel, 'utf-8')
+    fs.writeFileSync(panel, 'init();\nexport {};\n')
+    try {
+      const run = spawnSync(process.execPath, [cliDist, 'package'], { cwd: pluginDir, encoding: 'utf-8' })
+      expect(run.status).toBe(1)
+      expect(run.stderr).toContain('dist/ui/index.html loads dist/ui/plugin.js as a plain script')
+    } finally {
+      fs.writeFileSync(panel, bundled)
+    }
   }, SHELL_OUT_TIMEOUT_MS)
 })
 
@@ -240,11 +237,9 @@ describe('Webview (flat-JS) plugin lifecycle E2E', () => {
 
     const files = fs.readdirSync(pluginDir).filter(f => f.endsWith('.amcplugin'))
     expect(files).toEqual(['webview-e2e-plugin-1.0.0.amcplugin'])
-    // Flat plugins must never trigger a TypeScript compile.
     expect(fs.existsSync(path.join(pluginDir, 'dist'))).toBe(false)
   }, SHELL_OUT_TIMEOUT_MS)
 
-  // The command-table ship check, end to end: the same manifest change flips validate's exit code.
   const validateWith = (edit: (manifest: Record<string, unknown>) => void) => {
     const manifestPath = path.join(pluginDir, 'manifest.json')
     const original = fs.readFileSync(manifestPath, 'utf-8')
@@ -340,8 +335,6 @@ describe('Widget plugin lifecycle E2E', () => {
 
     const files = fs.readdirSync(pluginDir).filter((f) => f.endsWith('.amcplugin'))
     expect(files).toEqual(['widget-e2e-plugin-1.0.0.amcplugin'])
-    // A zip stores each entry's path uncompressed in its headers, so the popover
-    // page's presence can be read without unzipping.
     const archive = fs.readFileSync(path.join(pluginDir, files[0]!))
     expect(archive.includes('ui/widget.html')).toBe(true)
   }, SHELL_OUT_TIMEOUT_MS)

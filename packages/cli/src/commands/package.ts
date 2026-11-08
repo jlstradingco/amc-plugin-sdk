@@ -3,8 +3,10 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
-import { ok, fail, info, warn, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, copyNonTsFiles, collectPackageEntries } from '../lib/project.js'
+import { ok, fail, info, warn, actionableError, manifestNotFound } from '../lib/output.js'
+import { isTypeScriptProject, collectPackageEntries } from '../lib/project.js'
+import { compilePlugin } from '../lib/compile.js'
+import { pageScriptsResult } from '../lib/page-scripts.js'
 
 export const packageCommand = new Command('package')
   .description('Bundle plugin into a .amcplugin archive')
@@ -26,23 +28,22 @@ export const packageCommand = new Command('package')
 
     const flat = !isTypeScriptProject(cwd)
 
-    // For TS projects, ensure dist/ is built. Flat plugins ship files as-authored.
-    if (!flat) {
-      const distDir = path.join(cwd, 'dist')
-      if (!fs.existsSync(distDir)) {
-        info('No dist/ found, building first...')
-        execSync('npx tsc', { cwd, stdio: 'inherit' })
-        const srcUi = path.join(cwd, 'src', 'ui')
-        const distUi = path.join(cwd, 'dist', 'ui')
-        if (fs.existsSync(srcUi)) {
-          copyNonTsFiles(srcUi, distUi)
-        }
+    if (!flat && !fs.existsSync(path.join(cwd, 'dist'))) {
+      info('No dist/ found, building first...')
+      try {
+        compilePlugin(cwd)
+      } catch {
+        actionableError('Build failed', 'Check the errors above and fix your source files.')
+        process.exit(1)
       }
     }
 
-    // manifest.json. TS plugins ship a single `dist/` tree (+ optional assets/);
-    // flat plugins ship their as-authored folders (ui/, assets/, prompts/…).
-    // Shared with `install` so both agree on a plugin's shippable payload.
+    const pageScripts = pageScriptsResult(cwd, manifest)
+    if (pageScripts.status === 'fail') {
+      actionableError(`${pageScripts.name}: ${pageScripts.message}`, pageScripts.suggestion ?? '')
+      process.exit(1)
+    }
+
     const rootEntries = collectPackageEntries(cwd, manifest)
 
     const pluginId = manifest.plugin.id
@@ -50,9 +51,6 @@ export const packageCommand = new Command('package')
     const outputName = `${pluginId}-${version}.amcplugin`
     const outputPath = path.join(cwd, outputName)
 
-    // archiver v8 uses named exports (ZipArchive, TarArchive, etc.)
-    // but @types/archiver@7 still declares a default-export factory.
-    // Use a type assertion to access the actual runtime API.
     const archiverMod = await import('archiver').catch(() => null) as
       | { ZipArchive: new (opts: { zlib: { level: number } }) => import('archiver').Archiver }
       | null

@@ -1,17 +1,20 @@
 import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { execSync, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, filePath, manifestNotFound, actionableError } from '../lib/output.js'
 import { isTypeScriptProject } from '../lib/project.js'
+import { compilePlugin } from '../lib/compile.js'
+
+const PLUGIN_CLI_ENTRY_ENV = 'AMC_PLUGIN_CLI_ENTRY'
 
 const require = createRequire(import.meta.url)
 
 export const devCommand = new Command('dev')
   .description('Launch the dev shell with hot-reload for local plugin development')
-  .option('--no-build', 'Skip the initial TypeScript build')
+  .option('--no-build', 'Skip the initial build')
   .action(async (opts: { build: boolean }) => {
     const cwd = process.cwd()
     const manifestPath = path.join(cwd, 'manifest.json')
@@ -29,34 +32,17 @@ export const devCommand = new Command('dev')
     }
     ok('Manifest valid')
 
-    // Flat-JS / webview plugins have no compile step — never run tsc for them.
-    const distDir = path.join(cwd, 'dist')
-    if (opts.build && isTypeScriptProject(cwd) && !fs.existsSync(distDir)) {
-      info('Building TypeScript...')
+    if (opts.build && isTypeScriptProject(cwd) && !fs.existsSync(path.join(cwd, 'dist'))) {
+      info('Building plugin...')
       try {
-        execSync('npx tsc', { cwd, stdio: 'inherit' })
-
-        // Copy non-TS UI files
-        const srcUi = path.join(cwd, 'src', 'ui')
-        const distUi = path.join(cwd, 'dist', 'ui')
-        if (fs.existsSync(srcUi)) {
-          copyNonTsFiles(srcUi, distUi)
-        }
+        compilePlugin(cwd)
         ok('Build complete')
       } catch {
-        actionableError(
-          'TypeScript compilation failed',
-          'Check the errors above and fix your source files.'
-        )
+        actionableError('Build failed', 'Check the errors above and fix your source files.')
         process.exit(1)
       }
     }
 
-    // Resolve the Electron BINARY. The `electron` package's main export is the
-    // absolute path to the platform binary (electron.exe on Windows), so spawn
-    // THAT. The previous code spawned electron/cli.js directly, which is EFTYPE
-    // on Windows (a .js file is not an executable) — it crashed `amc-plugin dev`
-    // on every Windows machine.
     let electronPath: string
     try {
       electronPath = require('electron') as unknown as string
@@ -68,7 +54,6 @@ export const devCommand = new Command('dev')
       process.exit(1)
     }
 
-    // Find dev-shell entry point
     let shellEntry: string
     try {
       shellEntry = require.resolve('@agent-mc/plugin-dev-shell')
@@ -84,11 +69,10 @@ export const devCommand = new Command('dev')
       `Launching dev shell for ${filePath(manifest.plugin?.name ?? manifest.plugin?.id ?? 'plugin')}`
     )
 
-    // Launch the Electron dev shell (spawn the binary with the shell entry).
     const child = spawn(electronPath, [shellEntry, cwd], {
       cwd,
       stdio: 'inherit',
-      env: { ...process.env }
+      env: { ...process.env, [PLUGIN_CLI_ENTRY_ENV]: process.argv[1] }
     })
 
     child.on('close', (code) => {
@@ -96,15 +80,3 @@ export const devCommand = new Command('dev')
     })
   })
 
-function copyNonTsFiles(src: string, dest: string): void {
-  if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const srcPath = path.join(src, entry.name)
-    const destPath = path.join(dest, entry.name)
-    if (entry.isDirectory()) {
-      copyNonTsFiles(srcPath, destPath)
-    } else if (!entry.name.endsWith('.ts')) {
-      fs.copyFileSync(srcPath, destPath)
-    }
-  }
-}

@@ -1,7 +1,22 @@
 import chokidar from 'chokidar'
-import { execSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import * as path from 'node:path'
-import * as fs from 'node:fs'
+
+const PLUGIN_CLI_ENTRY_ENV = 'AMC_PLUGIN_CLI_ENTRY'
+const FALLBACK_BUILD_COMMAND = 'npx --no-install amc-plugin build'
+
+export function runPluginBuild(pluginDir: string, env: NodeJS.ProcessEnv = process.env): void {
+  const cliEntry = env[PLUGIN_CLI_ENTRY_ENV]
+  if (!cliEntry) {
+    execSync(FALLBACK_BUILD_COMMAND, { cwd: pluginDir, stdio: 'pipe' })
+    return
+  }
+  execFileSync(process.execPath, [cliEntry, 'build'], {
+    cwd: pluginDir,
+    stdio: 'pipe',
+    env: { ...env, ELECTRON_RUN_AS_NODE: '1' }
+  })
+}
 
 export interface HotReloadCallbacks {
   onUiChange(): void
@@ -20,18 +35,7 @@ export function startHotReload(pluginDir: string, callbacks: HotReloadCallbacks)
     rebuildTimeout = setTimeout(() => {
       try {
         console.log(`[hot-reload] Recompiling (${type} change)...`)
-        execSync('npx tsc', { cwd: pluginDir, stdio: 'pipe' })
-
-        const srcUi = path.join(pluginDir, 'src', 'ui')
-        const distUi = path.join(pluginDir, 'dist', 'ui')
-        if (fs.existsSync(srcUi)) {
-          if (!fs.existsSync(distUi)) fs.mkdirSync(distUi, { recursive: true })
-          for (const entry of fs.readdirSync(srcUi)) {
-            if (!entry.endsWith('.ts')) {
-              fs.copyFileSync(path.join(srcUi, entry), path.join(distUi, entry))
-            }
-          }
-        }
+        runPluginBuild(pluginDir)
 
         if (type === 'manifest') callbacks.onManifestChange()
         else if (type === 'ui') callbacks.onUiChange()

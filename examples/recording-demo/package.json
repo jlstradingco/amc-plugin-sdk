@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "amc-plugin build",
     "dev": "amc-plugin dev",
     "package": "amc-plugin package",
     "validate": "amc-plugin validate"

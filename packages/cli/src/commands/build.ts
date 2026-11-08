@@ -1,14 +1,14 @@
 import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { execSync } from 'node:child_process'
 import { validateManifest } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, info, actionableError, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, copyNonTsFiles, resolveBannedScanDirs } from '../lib/project.js'
+import { isTypeScriptProject, resolveBannedScanDirs } from '../lib/project.js'
+import { compilePlugin } from '../lib/compile.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 
 export const buildCommand = new Command('build')
-  .description('Compile plugin TypeScript to JavaScript and validate manifest')
+  .description('Compile plugin TypeScript, bundle each panel script, and validate manifest')
   .action(async () => {
     const cwd = process.cwd()
     const manifestPath = path.join(cwd, 'manifest.json')
@@ -26,8 +26,6 @@ export const buildCommand = new Command('build')
     }
     ok('Manifest validated')
 
-    // Flat-JS / webview plugins have no TypeScript compile step — their files
-    // ship as-authored. Running tsc here would hang (nothing to compile).
     if (!isTypeScriptProject(cwd)) {
       info('No tsconfig.json — flat plugin, skipping TypeScript compilation')
       warnBannedImports(resolveBannedScanDirs(cwd, manifest))
@@ -35,29 +33,19 @@ export const buildCommand = new Command('build')
       return
     }
 
-    info('Compiling TypeScript...')
+    info('Compiling TypeScript and bundling panel scripts...')
     try {
-      execSync('npx tsc', { cwd, stdio: 'inherit' })
+      const bundles = compilePlugin(cwd)
+      bundles.forEach(b => ok(`Bundled ${path.relative(cwd, b.outfile)}`))
     } catch {
-      actionableError('TypeScript compilation failed', 'Check the errors above and fix your source files.')
+      actionableError('Build failed', 'Check the errors above and fix your source files.')
       process.exit(1)
-    }
-
-    const srcUi = path.join(cwd, 'src', 'ui')
-    const distUi = path.join(cwd, 'dist', 'ui')
-    if (fs.existsSync(srcUi)) {
-      copyNonTsFiles(srcUi, distUi)
     }
 
     warnBannedImports(resolveBannedScanDirs(cwd, manifest))
     ok('Build complete')
   })
 
-// `build` reports the SAME banned-import list `validate` enforces, but only as a
-// warning — the author sees it early, and `validate` is where it hard-fails. This
-// used to be a private copy of the scanner, which silently drifted: it stayed
-// require-only after #32 taught the shared one to catch the ESM `import … from`
-// form that tsc actually emits, and it never learned `child_process` at all.
 function warnBannedImports(dirs: string[]): void {
   const warnings = dirs.flatMap(scanBannedImports)
   if (warnings.length > 0) {
