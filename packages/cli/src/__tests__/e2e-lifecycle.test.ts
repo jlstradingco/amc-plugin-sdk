@@ -139,8 +139,9 @@ describe('Plugin lifecycle E2E', () => {
     expect(pkg.description).toBe('A test plugin')
     expect(pkg.author).toBe('Test Author')
     expect(pkg.license).toBe('UNLICENSED')
-    expect(pkg.scripts.build).toBe('tsc')
+    expect(pkg.scripts.build).toBe('amc-plugin build')
     expect(pkg.devDependencies['@agent-mc/plugin-sdk']).toBeDefined()
+    expect(pkg.devDependencies['@agent-mc/plugin-cli']).toMatch(/^\^\d+\.\d+\.\d+/)
   })
 
   it('scaffolds a .gitignore that excludes env/secret files', () => {

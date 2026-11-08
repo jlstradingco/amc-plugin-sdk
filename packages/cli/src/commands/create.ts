@@ -2,9 +2,12 @@ import { Command } from 'commander'
 import prompts from 'prompts'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { createRequire } from 'node:module'
 import { execSync } from 'node:child_process'
 import { classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, info, actionableError } from '../lib/output.js'
+
+const CLI_VERSION: string = createRequire(import.meta.url)('../../package.json').version
 
 const TEMPLATES = ['basic', 'with-backend', 'full', 'webview', 'widget'] as const
 type Template = typeof TEMPLATES[number]
@@ -167,7 +170,7 @@ export function buildReadme(opts: {
     '## Getting started',
     '',
     '```bash',
-    'npm install       # install the SDK + TypeScript',
+    'npm install       # install the SDK, the amc-plugin CLI + TypeScript',
     'npm run dev       # launch the dev shell with hot reload',
     'npm run build     # compile src/ to dist/',
     'npm run validate  # check the manifest',
@@ -224,14 +227,14 @@ export function buildPackageJson(opts: {
         validate: 'amc-plugin validate',
       }
     : {
-        build: 'tsc',
+        build: 'amc-plugin build',
         dev: 'amc-plugin dev',
         package: 'amc-plugin package',
         validate: 'amc-plugin validate',
       }
   const devDependencies: Record<string, string> = isWebview
-    ? { '@agent-mc/plugin-sdk': '^3.0.0' }
-    : { '@agent-mc/plugin-sdk': '^3.0.0', typescript: '^5.5.0' }
+    ? { '@agent-mc/plugin-cli': `^${CLI_VERSION}`, '@agent-mc/plugin-sdk': '^3.0.0' }
+    : { '@agent-mc/plugin-cli': `^${CLI_VERSION}`, '@agent-mc/plugin-sdk': '^3.0.0', typescript: '^5.5.0' }
   if (hasBackend) {
     scripts.test = 'amc-plugin test'
     devDependencies['vitest'] = '^3.0.0'

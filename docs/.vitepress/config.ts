@@ -7,6 +7,7 @@ export default defineConfig({
   base: '/sdk/',
   outDir: '../../docs/help-site/public/sdk',
   appearance: false,
+  metaChunk: true,
   transformHead({ pageData, title, description }) {
     return sdkHeadTags({
       relativePath: pageData.relativePath,
