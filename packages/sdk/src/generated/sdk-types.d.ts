@@ -397,6 +397,7 @@ export interface AgentMC {
     "doceboAuthComplete": (...args: unknown[]) => Promise<unknown>
     "doceboAuthStart": (...args: unknown[]) => Promise<unknown>
     "doceboListCourses": (...args: unknown[]) => Promise<unknown>
+    "enrollInWorkspaceCourse": (...args: unknown[]) => Promise<unknown>
     "enrollUser": (...args: unknown[]) => Promise<unknown>
     "flushProgressOutbox": (...args: unknown[]) => Promise<unknown>
     "generateOutline": (...args: unknown[]) => Promise<unknown>
@@ -908,6 +909,9 @@ export interface PluginContext {
   "toast": {
     "notify": (...args: unknown[]) => Promise<unknown>
     "show": (...args: unknown[]) => Promise<unknown>
+  }
+  "usage": {
+    "record": (...args: unknown[]) => Promise<unknown>
   }
   "workspace": {
     "deleteFile": (...args: unknown[]) => Promise<unknown>

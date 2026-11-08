@@ -1,3 +1,42 @@
+export interface PublishedMethodGap {
+  surface: 'backend' | 'webview'
+  namespace: string
+  generatedOnly: readonly string[]
+  publishedOnly: readonly string[]
+  reason: string
+}
+
+export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = [
+  {
+    surface: 'backend',
+    namespace: 'sessions',
+    generatedOnly: ['fanout', 'reveal'],
+    publishedOnly: [],
+    reason: 'Both are real host actions the published PluginSessions has yet to declare'
+  },
+  {
+    surface: 'backend',
+    namespace: 'email',
+    generatedOnly: [],
+    publishedOnly: ['sender'],
+    reason: "The backend context builds email.sender, but the worker proxy forwards only the five send-schedule actions, so the generated sheet omits it"
+  },
+  {
+    surface: 'backend',
+    namespace: 'rss',
+    generatedOnly: ['fetchFeed', 'getRecentEntries', 'listFeeds'],
+    publishedOnly: [],
+    reason: 'The whole rss namespace is still untyped on the published backend context'
+  },
+  {
+    surface: 'webview',
+    namespace: 'documents',
+    generatedOnly: ['forget', 'grants', 'reopen'],
+    publishedOnly: [],
+    reason: 'The published BridgeDocuments declares only the picker half of the documents namespace'
+  }
+]
+
 export interface UntypedBridgeNamespace {
   namespace: string
   reason: string

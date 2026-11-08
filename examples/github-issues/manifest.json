@@ -59,16 +59,5 @@
   },
   "backend": {
     "entryPoint": "dist/backend/index.js"
-  },
-  "cron": {
-    "jobs": [
-      {
-        "id": "sync-issues",
-        "label": "Sync GitHub Issues",
-        "schedule": "*/15 * * * *",
-        "description": "Sync issues from GitHub",
-        "approvalRequired": false
-      }
-    ]
   }
 }

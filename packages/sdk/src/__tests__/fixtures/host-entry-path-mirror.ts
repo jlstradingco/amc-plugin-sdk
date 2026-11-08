@@ -27,11 +27,11 @@
 export const HOST_ENTRY_PATH_PROVENANCE = {
   hostFile: 'src/shared/plugin-manifest-entry-path.ts',
   /** ISO date the copy was last compared against the host's GitHub master. */
-  reconciledAt: '2026-10-14',
-  /** Latest host commit touching hostFile on that date (2026-10-14T12:39:16Z). */
-  sourceCommit: 'cdee3215831673b3030dcee563e2c04868aeae16',
+  reconciledAt: '2026-11-08',
+  /** Latest host commit touching hostFile on that date. */
+  sourceCommit: 'd26be5234528241008c5fb4bbd67cdf957829ce7',
   /** `git hash-object` of hostFile at sourceCommit — and of the vendored copy. */
-  blobSha: '5e316d12969d6fa6de6abe631a9e501a7b3e6a11',
+  blobSha: 'b6e23dd64fc4733dbc13ed14394668a33db32723',
 } as const
 
 /**

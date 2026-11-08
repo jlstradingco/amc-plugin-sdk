@@ -34,13 +34,56 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `mobile` | boolean | No | Let your plugin open on the owner's phone. Off unless `true` — see [`mobile`](#mobile) |
 | `uiAnchors` | array | No | Controls in your page the in-app assistant may point at — see [`uiAnchors`](#uianchors) |
 | `permissions` | array | No | Requested API permissions |
+| `linkClaims` | array | No | External links your plugin handles, up to 20 — see [`linkClaims`](#linkclaims) |
+| `uploadHosts` | array | No | Exact hostnames your plugin uploads to, up to 10; required with and by `network.upload` — see [`uploadHosts`](#uploadhosts) |
+| `usageActions` | array | No | Action names your plugin reports for usage counts, up to 20, each 1-40 lowercase letters, digits or hyphens — see [`usageActions`](#usageactions) |
 | `cli` | object | No | CLI endpoint declarations |
 
-This is the WHOLE accepted surface: every key in the table is a key of the host's manifest schema (`src/shared/plugin-manifest-schema.ts:182-453`), and a key that is not there is silently stripped at parse time rather than rejected — so a typo or a field you remember from an older guide fails by doing nothing.
+This is the WHOLE accepted surface: every key in the table is a key of the host's manifest schema (`src/shared/plugin-manifest-schema.ts:271-566`), and a key that is not there is silently stripped at parse time rather than rejected — so a typo or a field you remember from an older guide fails by doing nothing.
 
 ::: warning No `migrations`, no `cron` block
-Earlier versions of this guide documented both. Neither is a host manifest key (`src/shared/plugin-manifest-schema.ts:182-453`); zod strips them, so a manifest that carries one validates and then behaves as if it were absent. Schema changes come from the automatic `ADD COLUMN` sweep described under [`storage`](#storage-block), and scheduled work is an automation with a schedule, not a manifest block. The `cron` PERMISSION is real and stays in the `permissions` array.
+Earlier versions of this guide documented both. Neither is a host manifest key (`src/shared/plugin-manifest-schema.ts:271-566`); zod strips them, so a manifest that carries one validates and then behaves as if it were absent. Schema changes come from the automatic `ADD COLUMN` sweep described under [`storage`](#storage-block), and scheduled work is an automation with a schedule, not a manifest block. The `cron` PERMISSION is real and stays in the `permissions` array.
 :::
+
+## `linkClaims`
+
+An array of `{ "host": "...", "path": "..." }` claims, up to 20. A claim says your plugin handles
+links of that shape — so a link the owner clicks opens in your plugin (through its `open-link` CLI
+endpoint) instead of the browser. `host` is an exact lowercase hostname; `path` starts with `/`, needs
+at least one literal segment, and may carry `{placeholder}` segments. The owner can turn link opening
+off per plugin, so treat the claim as a candidate, never a guarantee.
+
+```json
+{
+  "linkClaims": [{ "host": "tasks.example.com", "path": "/projects/{projectId}" }]
+}
+```
+
+## `uploadHosts`
+
+An array of exact lowercase hostnames your plugin uploads files to, up to 10 — no scheme, port, path,
+wildcard or IP address. It is tied to the `network.upload` permission in both directions: a plugin that
+uploads must list its hosts, and a plugin that lists hosts must ask for `network.upload`. A manifest
+that carries only one of the two is refused at parse time.
+
+```json
+{
+  "permissions": ["network.upload"],
+  "uploadHosts": ["upload.example.com"]
+}
+```
+
+## `usageActions`
+
+The names your plugin reports for usage counts, up to 20. Each is 1-40 characters of lowercase
+letters, digits and hyphens, and no name may appear twice. They are what a usage row is keyed by, so
+keep them stable once shipped.
+
+```json
+{
+  "usageActions": ["file-export", "db-migrate"]
+}
+```
 
 ## `plugin` Block
 
@@ -392,7 +435,7 @@ is missing**. So a new column appears if you declare it here and bump `plugin.ve
 drops are not possible through any Omniscio path; migrate the data yourself in `onEnable` if you
 need one.
 
-A `migrations` array is NOT a host manifest key (`src/shared/plugin-manifest-schema.ts:182-453`):
+A `migrations` array is NOT a host manifest key (`src/shared/plugin-manifest-schema.ts:271-566`):
 zod strips it, so a manifest carrying one validates and the block does nothing.
 
 ## `ui` Block

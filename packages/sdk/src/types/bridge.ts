@@ -30,6 +30,10 @@ export type BridgeHostFailureCode =
  * `mode` is always `'dark'`, `accent` a fixed RGB triple, `surfaces` always
  * `{}`. Do not build on it expecting the user's real theme.
  */
+export interface BridgeSettings extends PluginSettings {
+  onChange(callback: (changed: Record<string, unknown>) => void): () => void
+}
+
 export interface BridgeThemeValue {
   mode: string
   /** An `r,g,b` triple, e.g. `'139,92,246'`. */
@@ -790,7 +794,7 @@ export interface BridgeHttp {
 export interface AgentMC {
   storage: PluginStorage
   db: PluginDb
-  settings: PluginSettings
+  settings: BridgeSettings
   events: BridgeEvents
   theme: BridgeTheme
   toast: PluginToast

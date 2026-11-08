@@ -133,6 +133,7 @@ export interface PluginDb {
 export interface PluginSettings {
   getAll(): Promise<Record<string, unknown>>
   get(key: string): Promise<unknown>
+  set(key: string, value: unknown): Promise<void>
 }
 
 /**
@@ -168,6 +169,87 @@ export interface PluginHost {
 
 export interface PluginUsage {
   record(action: string): Promise<void>
+}
+
+export type PluginMemberRole = 'owner' | 'admin' | 'member' | 'guest'
+
+export interface PluginMember {
+  id: string
+  displayName: string
+  avatarUrl: string | null
+  role: PluginMemberRole
+}
+
+export interface PluginMembers {
+  list(): Promise<PluginMember[]>
+}
+
+export type PluginLaunchKind = 'url' | 'path' | 'exe' | 'cmd'
+
+export interface PluginLaunchRequest {
+  kind: PluginLaunchKind
+  value: string
+}
+
+export interface PluginLaunchResult {
+  ok: boolean
+  error?: string
+}
+
+export interface PluginLaunch {
+  open(request: PluginLaunchRequest): Promise<PluginLaunchResult>
+}
+
+export interface PluginOAuthRequest {
+  authUrl: string
+  tokenUrl: string
+  clientId: string
+  clientSecret?: string
+  scopes?: string | string[]
+  extraAuthParams?: Record<string, string>
+}
+
+export interface PluginOAuthTokens {
+  accessToken: string
+  refreshToken?: string
+  tokenType?: string
+  scope?: string
+  expiresIn?: number
+  expiresAt?: number
+  idToken?: string
+}
+
+export type PluginOAuthResult =
+  | { ok: true; tokens: PluginOAuthTokens }
+  | { ok: false; error: string }
+
+export interface PluginOAuth {
+  authorize(request: PluginOAuthRequest): Promise<PluginOAuthResult>
+}
+
+export interface PluginChannelConnectOptions {
+  kind?: 'ws' | 'webhook'
+  url: string
+  protocols?: string | string[]
+  headers?: Record<string, string>
+}
+
+export type PluginChannelEvent =
+  | { type: 'open' }
+  | { type: 'message'; data: string }
+  | { type: 'close'; code: number; reason: string }
+  | { type: 'error'; message: string }
+
+export interface PluginChannelHandle {
+  send(data: unknown): Promise<unknown>
+  close(): Promise<unknown>
+}
+
+export interface PluginChannel {
+  connect(
+    options: PluginChannelConnectOptions,
+    onMessage?: (event: PluginChannelEvent) => void
+  ): Promise<PluginChannelHandle>
 }
 
 export interface PluginLogger {
@@ -1584,6 +1666,10 @@ export interface PluginContext {
   auth: PluginAuth
   recording: PluginRecording
   spend: PluginSpend
+  members: PluginMembers
+  launch: PluginLaunch
+  oauth: PluginOAuth
+  channel: PluginChannel
   email?: PluginEmail
   /**
    * Your panel's request channel to this backend — see {@link PluginRpc}. Optional because

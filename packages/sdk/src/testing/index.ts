@@ -39,7 +39,14 @@ import type {
   PluginEmailMessage,
   PluginEmailSendResult,
   PluginEmailSchedule,
-  PluginEmailSender
+  PluginEmailSender,
+  PluginMember,
+  PluginLaunchRequest,
+  PluginLaunchResult,
+  PluginOAuthRequest,
+  PluginOAuthResult,
+  PluginChannelConnectOptions,
+  PluginChannelEvent
 } from '../types/index.js'
 
 export { createRpcDouble } from './rpc-double.js'
@@ -120,6 +127,9 @@ export interface TestContextOptions {
   }
   email?: (message: PluginEmailMessage) => PluginEmailSendResult | Promise<PluginEmailSendResult>
   emailSender?: PluginEmailSender
+  members?: PluginMember[]
+  launch?: (request: PluginLaunchRequest) => PluginLaunchResult | Promise<PluginLaunchResult>
+  oauth?: (request: PluginOAuthRequest) => PluginOAuthResult | Promise<PluginOAuthResult>
   db?: {
     /**
      * What `ctx.db.stats()` reports as its `method`. Defaults to 'payload-estimate',
@@ -156,6 +166,11 @@ export interface TestHarness {
   inboxItems: InboxItem[]
   sentEmails: PluginEmailMessage[]
   scheduledEmails: PluginEmailSchedule[]
+  launches: PluginLaunchRequest[]
+  oauthRequests: PluginOAuthRequest[]
+  channelConnects: Array<{ options: PluginChannelConnectOptions; channelId: string }>
+  emitChannelEvent(channelId: string, event: PluginChannelEvent): void
+  channelSends: Array<{ channelId: string; data: unknown }>
   dismissInboxItem(itemId: string, dismissed?: boolean): void
   /** Trigger a registered cron handler by id. */
   runCron(id: string): Promise<void>
@@ -397,6 +412,13 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     inboxAlerts: [],
     sentEmails: [],
     scheduledEmails: [],
+    launches: [],
+    oauthRequests: [],
+    channelConnects: [],
+    channelSends: [],
+    emitChannelEvent(channelId: string, event: PluginChannelEvent) {
+      channelHandlers.get(channelId)?.(event)
+    },
     dismissInboxItem(itemId: string, dismissed = true) {
       for (const handler of inboxDismissHandlers) handler({ itemId, dismissed })
     },
@@ -411,6 +433,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       return handler(req)
     }
   }
+
+  const channelHandlers = new Map<string, (event: PluginChannelEvent) => void>()
 
   const ctx: PluginContext = {
     pluginId,
@@ -554,7 +578,52 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
 
     settings: {
       getAll: () => Promise.resolve({ ...settings }),
-      get: (key) => Promise.resolve(settings[key])
+      get: (key) => Promise.resolve(settings[key]),
+      set: (key, value) => {
+        settings[key] = value
+        return Promise.resolve()
+      }
+    },
+
+    members: {
+      list: () => Promise.resolve([...(opts.members ?? [])])
+    },
+
+    launch: {
+      open: (request) => {
+        harness.launches.push(request)
+        if (opts.launch) return Promise.resolve(opts.launch(request))
+        return Promise.resolve({ ok: true })
+      }
+    },
+
+    oauth: {
+      authorize: (request) => {
+        harness.oauthRequests.push(request)
+        if (opts.oauth) return Promise.resolve(opts.oauth(request))
+        return Promise.resolve({
+          ok: false as const,
+          error: 'the test harness runs no sign-in flow'
+        })
+      }
+    },
+
+    channel: {
+      connect: (options, onMessage) => {
+        const channelId = `test-channel-${harness.channelConnects.length + 1}`
+        harness.channelConnects.push({ options, channelId })
+        if (onMessage) channelHandlers.set(channelId, onMessage)
+        return Promise.resolve({
+          send: (data) => {
+            harness.channelSends.push({ channelId, data })
+            return Promise.resolve()
+          },
+          close: () => {
+            channelHandlers.delete(channelId)
+            return Promise.resolve()
+          }
+        })
+      }
     },
 
     log: {
