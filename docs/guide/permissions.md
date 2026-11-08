@@ -260,12 +260,16 @@ Note that `ctx.toast.show()` (in-app toasts) is available without this permissio
 Allows the plugin to read RSS feeds and articles managed by Omniscio's Channels system:
 
 ```typescript
-// Fetch articles from a specific feed
-const articles = await ctx.rss.getArticles({ feedId: 'abc-123', limit: 20 })
-
-// Get all configured feeds
-const feeds = await ctx.rss.getFeeds()
+const feed = await ctx.rss.fetchFeed('https://example.com/feed.xml')
+const feeds = await ctx.rss.listFeeds()
+const entries = await ctx.rss.getRecentEntries({ sinceDays: 7, feedId: 'abc-123', limit: 20 })
 ```
+
+- `fetchFeed(url)` fetches and parses one feed URL (SSRF-checked) → `{ title, description?, link?, entries: [{ id, title, link?, content?, contentSnippet?, pubDate?, author?, categories? }] }`.
+- `listFeeds()` returns the user's configured feeds → `{ id, url, name, lastFetchedAt, lastEntryAt, unreadCount, refreshIntervalMin, errorMessage, createdAt }`.
+- `getRecentEntries({ sinceDays?, feedId?, limit? })` returns recent parsed entries from the local store, defaulting to the last 7 days and narrowing to one feed when `feedId` is given → `{ id, feedId, guid, title, link, content, author, publishedAt, isRead, isArchived, createdAt, fetchedContent, aiSummary, wasClicked, readDurationMs }`.
+
+The namespace is read-only: there are no feed mutators.
 
 Plugins that source content from RSS feeds (e.g. newsletter builders, digest generators) should declare this permission.
 
@@ -568,7 +572,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `cli` | `PluginCli` | HTTP endpoints on Omniscio's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
 | `system` | Host launcher / clipboard / file-open | Open paths and read the clipboard from your UI, and run an allow-listed or pinned program through `ctx.process` (backend) or `window.AgentMC.process` (UI); a backend's own `child_process` is refused by the sandbox |
-| `rss` | `PluginRss` | Read RSS feeds and articles from Omniscio's Channels |
+| `rss` | `ctx.rss` (`fetchFeed`, `listFeeds`, `getRecentEntries`) | Read RSS feeds and articles from Omniscio's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
