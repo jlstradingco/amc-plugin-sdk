@@ -429,6 +429,7 @@ export interface AgentMC {
     "getConcept": (...args: unknown[]) => Promise<unknown>
     "getCourse": (...args: unknown[]) => Promise<unknown>
     "getCourseDeckStatus": (...args: unknown[]) => Promise<unknown>
+    "getCourseRetention": (...args: unknown[]) => Promise<unknown>
     "getCourseShareLink": (...args: unknown[]) => Promise<unknown>
     "getEnrollment": (...args: unknown[]) => Promise<unknown>
     "getImportStatus": (...args: unknown[]) => Promise<unknown>
