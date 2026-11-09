@@ -291,9 +291,45 @@ omniscio-plugin preflight --changelog "Added dark mode support"
 
 ---
 
+### `login`
+
+Sign in to the Omniscio Marketplace with GitHub and store the credential every other command reuses.
+
+**Usage:**
+
+```bash
+omniscio-plugin login
+```
+
+**Options:** None.
+
+**What it does:**
+
+1. Reuses a stored credential that is still valid, renews an expired one silently from its refresh token, and otherwise opens GitHub sign-in in your browser.
+2. Saves the credential to `~/.amc/marketplace-token` — the file `publish`, `status` and `whoami` all read.
+3. Reports the account you are signed in as, and where the credential lives.
+
+Run it when you need the credential without publishing: a release build of Omniscio has no marketplace sign-in of its own, so its **My Plugins** tab borrows this file. Run it again while signed in and it reports the stored account instead of reopening the browser; to sign in as someone else, see **The GitHub account trap** under [`publish`](#publish).
+
+::: tip Older CLIs
+A CLI released before this command still creates the same credential — `omniscio-plugin publish` signs you in on first use.
+:::
+
+**Example:**
+
+```bash
+omniscio-plugin login
+# Signed in as: janedoe (uid: abc123)
+# Credential saved to /home/you/.amc/marketplace-token
+```
+
+**Exit codes:** `0` signed in, `1` the sign-in did not complete or the credential could not be saved (the message names the file).
+
+---
+
 ### `publish`
 
-Upload a `.amcplugin` archive to the Omniscio Marketplace for review. Authenticates via GitHub OAuth on first use.
+Upload a `.amcplugin` archive to the Omniscio Marketplace for review. Authenticates via GitHub OAuth on first use; run [`login`](#login) to sign in ahead of time.
 
 **Usage:**
 
@@ -417,6 +453,9 @@ omniscio-plugin whoami
 ```bash
 omniscio-plugin whoami
 # Signed in as: janedoe (uid: abc123)
+
+omniscio-plugin whoami
+# Not signed in. Run `omniscio-plugin login` to sign in.
 ```
 
 **Exit codes:** `0` always.
@@ -442,7 +481,7 @@ omniscio-plugin logout
 # Signed out (was: janedoe)
 ```
 
-**Exit codes:** `0` always.
+**Exit codes:** `0` signed out (or nothing was stored), `1` the stored credential exists but could not be removed — the message names the file to delete by hand.
 
 ---
 

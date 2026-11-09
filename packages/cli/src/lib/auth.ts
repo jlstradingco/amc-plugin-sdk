@@ -286,6 +286,8 @@ export async function authenticate(): Promise<StoredToken> {
   console.log('Waiting for sign-in...')
   const pollUrl = `${BASE_URL}/getAuthSession?session=${sessionId}`
 
+  let saveError: Error | null = null
+
   for (let i = 0; i < 120; i++) { // 2 minutes max
     await sleep(1000)
 
@@ -301,7 +303,15 @@ export async function authenticate(): Promise<StoredToken> {
             github: data.github ?? 'unknown',
             expiresAt: data.expiresAt ?? new Date(Date.now() + 3600 * 1000).toISOString()
           }
-          saveToken(storedToken)
+          try {
+            saveToken(storedToken)
+          } catch (err) {
+            // A write can fail for a reason that clears on its own (the app holds
+            // this same file open on Windows), so keep polling rather than failing
+            // the sign-in that just succeeded — and remember WHY if the wait ends.
+            saveError = err instanceof Error ? err : new Error(String(err))
+            continue
+          }
           console.log(`\nSigned in as ${storedToken.github}`)
           return storedToken
         }
@@ -314,6 +324,9 @@ export async function authenticate(): Promise<StoredToken> {
     if (i % 5 === 0 && i > 0) process.stdout.write('.')
   }
 
+  if (saveError) {
+    throw new Error(`Signed in, but the credential could not be saved to ${TOKEN_PATH}: ${saveError.message}`)
+  }
   throw new Error('Authentication timed out. Please try again.')
 }
 

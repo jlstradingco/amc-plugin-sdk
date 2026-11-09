@@ -11,6 +11,20 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — `omniscio-plugin login`
+
+Signing in was only reachable as a side effect of `publish`, so an author who needed the
+marketplace credential on its own — a release build's **My Plugins** tab borrows that exact file
+and has no sign-in of its own — had no command to run, while the marketplace documentation
+already told them the credential was the one `omniscio-plugin login` wrote. `login` runs the same
+GitHub flow and writes the same `~/.amc/marketplace-token`; run it again while signed in and it
+reports the stored account instead of reopening the browser. `whoami`'s signed-out hint now names
+it too.
+
+A sign-in that succeeds but cannot write the credential is now reported as exactly that, naming
+the file, instead of being retried for two minutes and then reported as "Authentication timed
+out". See [the login command](docs/reference/cli.md#login).
+
 ### Fixed — a scaffolded plugin's panel no longer opens blank
 
 `tsc` leaves `export {};` at the end of `dist/ui/plugin.js`, and a page that loads it with a plain

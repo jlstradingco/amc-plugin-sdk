@@ -60,6 +60,16 @@ describe('Plugin lifecycle E2E', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true })
   })
 
+  // Registration is only visible to argv, not to a unit test that imports the command
+  // module: a `login` that exists but was never added to the program still answers
+  // "unknown command 'login'" on the built CLI, which is the bug this covers.
+  it('ships the login command on the built CLI', () => {
+    const result = spawnSync(process.execPath, [cliDist, 'login', '--help'], { encoding: 'utf-8' })
+    expect(result.stderr).not.toContain('unknown command')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('omniscio-plugin login')
+  })
+
   it('creates a plugin with the with-backend template', () => {
     execSync(
       [

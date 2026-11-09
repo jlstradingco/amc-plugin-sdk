@@ -78,7 +78,7 @@ npx -p @omniscio/plugin-cli omniscio-plugin publish
 
 ### First-Time Authentication
 
-On first publish, the CLI opens your browser to the Omniscio Marketplace sign-in page for GitHub OAuth authentication:
+You can sign in ahead of time with [`omniscio-plugin login`](/reference/cli#login), which runs the same GitHub sign-in and stores the same credential. On a first publish without one, the CLI signs you in itself — it opens your browser to the Omniscio Marketplace sign-in page for GitHub OAuth authentication:
 
 ```
 Opening browser for GitHub sign-in...
@@ -220,6 +220,23 @@ The marketplace enforces a **50 MB** package size limit. The `omniscio-plugin pa
 
 ## Authentication Management
 
+### Sign In
+
+```bash
+npx -p @omniscio/plugin-cli omniscio-plugin login
+```
+
+Output:
+
+```
+Signed in as: your-github-username (uid: abc123)
+Credential saved to ~/.amc/marketplace-token
+```
+
+Run it whenever you need the marketplace credential without publishing — a release build of Omniscio has no marketplace sign-in of its own, so its **My Plugins** tab reads the one this command stores. Run it again while signed in and it tells you which account is stored and where. GitHub reuses whatever account your browser is signed into, so read **The GitHub account trap** under [publish](/reference/cli#publish) before switching accounts.
+
+An older CLI has no `login`: run `omniscio-plugin publish` and it signs you in on first use, writing the same file.
+
 ### Check Current Identity
 
 ```bash
@@ -235,7 +252,7 @@ Signed in as: your-github-username (uid: abc123)
 If not signed in:
 
 ```
-Not signed in. Run `omniscio-plugin publish` to authenticate.
+Not signed in. Run `omniscio-plugin login` to sign in.
 ```
 
 ### Sign Out
@@ -250,7 +267,7 @@ Output:
 Signed out (was: your-github-username)
 ```
 
-This deletes the stored token at `~/.amc/marketplace-token`. The next `publish` command will prompt for authentication again.
+This deletes the stored token at `~/.amc/marketplace-token`. The next `publish` or `login` will ask you to sign in again.
 
 ### Token Storage
 
@@ -266,6 +283,7 @@ The token includes your GitHub username, Firebase UID, and an expiration timesta
 
 | Command | Description |
 |---|---|
+| `omniscio-plugin login` | Sign in to the marketplace with GitHub |
 | `omniscio-plugin publish` | Upload plugin to the marketplace |
 | `omniscio-plugin publish --watch` | Upload and poll until approved/rejected |
 | `omniscio-plugin publish --changelog "..."` | Upload with a changelog message |

@@ -8,6 +8,7 @@ import { validateCommand } from './commands/validate.js'
 import { packageCommand } from './commands/package.js'
 import { installCommand } from './commands/install.js'
 import { preflightCommand } from './commands/preflight.js'
+import { loginCommand } from './commands/login.js'
 import { publishCommand } from './commands/publish.js'
 import { whoamiCommand } from './commands/whoami.js'
 import { logoutCommand } from './commands/logout.js'
@@ -34,6 +35,7 @@ program.addCommand(validateCommand)
 program.addCommand(packageCommand)
 program.addCommand(installCommand)
 program.addCommand(preflightCommand)
+program.addCommand(loginCommand)
 program.addCommand(publishCommand)
 program.addCommand(whoamiCommand)
 program.addCommand(logoutCommand)
