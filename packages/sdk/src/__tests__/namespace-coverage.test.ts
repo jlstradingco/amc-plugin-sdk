@@ -93,7 +93,7 @@ describe('bridge namespace coverage', () => {
 
 function declarationText(name: string): string | null {
   for (const file of [PUBLISHED_BACKEND, PUBLISHED_BRIDGE]) {
-    const source = fs.readFileSync(file, 'utf-8')
+    const source = fs.readFileSync(file, 'utf-8').replace(/\r\n/g, '\n')
     const interfaceAt = source.indexOf(`export interface ${name} `)
     if (interfaceAt >= 0) {
       const fromInterface = source.slice(interfaceAt)

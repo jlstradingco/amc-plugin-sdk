@@ -1,0 +1,46 @@
+name: Publish
+
+on:
+  push:
+    branches: [master]
+    paths: ['packages/*/package.json']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Rehearse every package without publishing anything
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Install pnpm
+        run: npm install -g pnpm@11
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build the packages
+        run: pnpm build
+      - name: Typecheck all packages (tests included)
+        run: pnpm run typecheck
+      - name: Test all packages
+        run: pnpm --workspace-concurrency=1 -r test
+      - name: Publish the versions npm does not have yet
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        run: node scripts/publish-unreleased.mjs
+      - name: Rehearse publishing every package
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: node scripts/publish-unreleased.mjs --dry-run

@@ -50,7 +50,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "node ../../../scripts/run-work-entry.mjs scripts/build.mjs",
+    "build": "node ../../scripts/run-work-entry.mjs scripts/build.mjs",
     "typecheck": "tsc -p tsconfig.typecheck.json",
     "clean": "rm -rf dist",
     "test": "vitest run",

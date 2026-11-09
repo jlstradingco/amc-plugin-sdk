@@ -22,36 +22,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Pinned to the major that package.json's `packageManager` field names.
-      # Unpinned, this tracks whatever npm calls latest, so a pnpm major release
-      # lands in CI unannounced — and `allowBuilds` in pnpm-workspace.yaml is a
-      # v11 setting that replaced onlyBuiltDependencies.
       - name: Install pnpm
         run: npm install -g pnpm@11
-      # --ignore-scripts skips electron's binary download (a dev-shell dep);
-      # tsc and the mock-context tests never launch a real Electron window.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
-      # `pnpm -r build` runs tsc across every package and emits dist/, which
-      # dev-shell and the tests resolve SDK types from. It is NOT the full
-      # typecheck: the build configs exclude src/__tests__ so the published
-      # package does not carry its own specs.
-      - name: Build all packages
-        run: pnpm -r build
-      # The other half of that trade. tsconfig.typecheck.json exists precisely
-      # to keep type-checking the tests the build configs exclude, but nothing
-      # ran it, so every test file's types were unchecked in CI -- including
-      # compile-time guard assertions, whose whole job is to fail the build when
-      # a type drifts. A guard nothing compiles is not a guard.
+      - name: Build the packages
+        run: pnpm build
       - name: Typecheck all packages (tests included)
         run: pnpm run typecheck
-      # The examples/ are not workspace members (they pin a published SDK range
-      # so a user can copy one out), so `pnpm -r build` never checks them. This
-      # typechecks them against the freshly built local SDK dist/ via a
-      # paths-mapped config, catching a breaking SDK change in the examples too.
       - name: Typecheck examples against local SDK
         run: pnpm run typecheck:examples
-      # Serialized so the CLI's real-tsc e2e build test isn't starved by
-      # parallel workspace load (it has a per-test timeout).
       - name: Test all packages
         run: pnpm --workspace-concurrency=1 -r test

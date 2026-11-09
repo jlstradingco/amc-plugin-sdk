@@ -1,158 +1,147 @@
 # Releasing the SDK
 
-How to publish `@omniscio/plugin-sdk`, `@omniscio/plugin-cli` and
-`@omniscio/plugin-dev-shell`. The three are **released together** on one version
-number.
+How `@omniscio/plugin-sdk`, `@omniscio/plugin-cli` and `@omniscio/plugin-dev-shell` reach npm.
+The three are **released together** on one version number.
 
-The three packages live in **`plugin-sdk/` inside the Omniscio repository**. That
-folder is the source of truth; `github.com/jlstradingco/amc-plugin-sdk` is a
-read-only mirror the app syncs from it, and nothing is ever committed there.
+The packages live in **`plugin-sdk/` inside the Omniscio repository**. That folder is the source
+of truth; `github.com/jlstradingco/amc-plugin-sdk` is a read-only mirror the app syncs from it,
+and nothing is ever committed there by hand.
 
-There is no publish automation. `plugin-sdk/.github/workflows/ci.yml` only builds
-and tests; nothing in CI ever runs a publish. Every release is a human running the
-steps below.
+**A release is a version bump that lands on the Omniscio repository's `master`.** The mirror picks
+the folder up on its next sync, and the mirror's `publish.yml` workflow publishes every version npm
+does not have yet. Nobody holds an npm key: npm trusts that one workflow in that one repository
+(npm "trusted publishing"), and every version it publishes carries a public provenance record of
+the commit and run that built it.
 
-## Where the workflows run
+## The folder stands alone
 
-GitHub only reads workflows at the root of a repository, so the two workflow files
-inside this folder are read **in the mirror**, where the folder becomes the
-repository root: `ci.yml` runs that repo's CI and `docs.yml` deploys the public
-docs site to GitHub Pages. The Omniscio repository carries no copy of them — the
-folder is covered there by the app's own checks. Edit these in-folder files
-whenever you change what the SDK's CI or docs site does.
+The mirror is this folder and nothing else, so nothing in it may reach outside it.
 
-## The one thing that will bite you
+- **Every build, test and script works with no Omniscio repository around it.** The host test
+  `tests/unit/plugins/sdk-folder-stands-alone.test.ts` (in the Omniscio repository) fails on any
+  path in this folder that resolves outside it — in package scripts, string paths, and
+  `path.join` / `path.resolve` / `new URL` calls, however they are wrapped.
+- **`scripts/run-work-entry.mjs` runs package entries.** Inside the Omniscio repository it hands
+  the call to the repository's own work runner, so the repository's admission rules still apply;
+  in the mirror there is no such runner and it runs the entry directly. If it finds the Omniscio
+  repository but not its runner, it refuses rather than run the entry unadmitted.
+- **A comparison against the app belongs in the app's tests**, not here — for example
+  `tests/unit/plugins/sdk-namespace-members.test.ts` checks the published bridge and context types
+  against the app's own surface.
+- **The docs site is built by the Omniscio repository**, which publishes it at
+  [docs.omniscio.com/sdk](https://docs.omniscio.com/sdk/). The folder's `build` script builds only
+  `packages/*`, and the mirror has no docs workflow.
 
-**Publish with `pnpm publish`, never `npm publish`.**
+## What the mirror's workflows run
 
-`packages/cli` and `packages/dev-shell` both declare their SDK dependency as
-`"@omniscio/plugin-sdk": "workspace:^"`. That is not a real npm range — pnpm
-rewrites it to a concrete version at publish time. `npm publish` ships the
-literal `workspace:^` string to the registry, and every consumer's install
-breaks.
+GitHub reads workflows only at a repository's root, so the two files in `.github/workflows/` run
+**in the mirror**, where this folder is the root.
 
-## Before you publish
+- **`ci.yml`** — on every push, pull request and manual start: install, `pnpm build`,
+  `pnpm run typecheck`, `pnpm run typecheck:examples`, `pnpm --workspace-concurrency=1 -r test`.
+  - `pnpm install` keeps `--ignore-scripts`: it skips electron's binary download, a dev-shell
+    dependency that no build or test launches.
+  - pnpm is pinned to the major that `package.json`'s `packageManager` names, so a new pnpm major
+    never arrives unannounced.
+  - `pnpm build` is not the whole typecheck: the build configs exclude `src/__tests__` so the
+    packages do not ship their own specs, and only `pnpm run typecheck` checks those.
+  - The examples are not workspace members (each pins a published range so an author can copy one
+    out), so `typecheck:examples` checks them against the freshly built local `dist/`.
+  - Tests run one package at a time so the CLI's real-`tsc` end-to-end test is not starved.
+- **`publish.yml`** — on a push to `master` that changes a `packages/*/package.json`, and on a
+  manual start: install, build, typecheck, test, then `node scripts/publish-unreleased.mjs`.
+  - It never runs on a pull request, and two runs never publish at once.
+  - Its only credential is the short-lived token GitHub issues to that run (`id-token: write`).
+  - A manual start defaults to a **dry run**: every package is packed and rehearsed with
+    `npm publish --dry-run`, and nothing is published.
 
-1. **Working tree clean, on the Omniscio repository's `master`, with `plugin-sdk/`
-   up to date.** Run everything from the `plugin-sdk/` folder:
+## How a version is published
+
+`scripts/publish-unreleased.mjs` asks npm about each package in dependency order — the SDK, then
+the dev shell, then the CLI — and for each version npm lacks:
+
+1. `pnpm pack` writes the tarball. pnpm rewrites the `workspace:^` ranges to real versions; the
+   script refuses a tarball whose `package.json` still carries one.
+2. `npm publish <tarball> --access public` publishes it through trusted publishing.
+
+A version npm already has is skipped, so a re-run after a partial failure publishes only what is
+missing. An npm lookup that fails for any reason other than "not found" stops the run rather than
+being read as "already published". **Never `npm publish` a package folder by hand**: npm ships
+`workspace:^` literally and every consumer's install breaks.
+
+## Cutting a release
+
+1. **Bump all three `package.json` versions** to the new number in one commit. Never stagger
+   them — a partial bump is how `dev-shell` drifted to `1.0.0` while the others were at `1.0.7`.
+2. **Regenerate the SDK's facts** from the Omniscio repository root:
+   `npm run scripts:run -- plugin-kit:generate`, and commit what it changes. The host's plugin-SDK
+   contract version is generated from `packages/sdk/package.json`; never hand-edit it.
+3. **Turn `## [Unreleased]` in `CHANGELOG.md` into the new version's section.** If a previous
+   version was stamped but never published, say so and tell upgraders to read the skipped section
+   too — the registry's `latest` is the only version anyone actually has. (`1.1.0` was stamped,
+   changelogged and never published; `1.2.0` had to carry its breaking `PluginDb` change forward.)
+4. **Land it on `master`** through the app's normal landing flow, as one commit touching only
+   `plugin-sdk/` (plus the regenerated facts). Then check, rather than assume:
    ```sh
-   cd plugin-sdk            # from the Omniscio repository root
-   pnpm install --frozen-lockfile --ignore-scripts
+   npm view @omniscio/plugin-sdk version
+   npm view @omniscio/plugin-cli dependencies      # real ranges, never workspace:^
+   npm view @omniscio/plugin-dev-shell version
    ```
-2. **Green locally, the same way CI runs it:**
-   ```sh
-   pnpm -r build            # tsc across every package; emits dist/ (also builds the docs)
-   pnpm run typecheck       # the tests too — the build configs exclude them
-   pnpm --workspace-concurrency=1 -r test
-   ```
-   `pnpm -r build` is not the whole typecheck. The build configs exclude
-   `src/__tests__` so the published package does not carry its own specs, which
-   means a broken spec — or a compile-time guard assertion that no longer holds —
-   passes the build and only `pnpm run typecheck` catches it.
-   Keep `--ignore-scripts` on the install. CI passes it to skip electron's binary
-   download (a dev-shell dependency that `tsc` and the mock-context tests never
-   need). It has a second benefit locally: without it, pnpm 10+ writes an
-   `allowBuilds:` block full of placeholder text into `pnpm-workspace.yaml` and
-   then fails every later `pnpm run …` until you answer it, which also leaves
-   your working tree dirty mid-release.
-3. **`npm whoami`** — you must be authenticated as a publisher for the
-   `@omniscio` scope (the npm organization `omniscio`).
+   Each version's npm page shows its provenance: the mirror commit and the workflow run.
 
-## Cutting the release
+To rehearse without publishing, start the mirror's **Publish** workflow by hand with *dry run*
+left on.
 
-1. **Bump all three `package.json` versions** to the new number, in the same
-   commit. Do not stagger them; a partial bump is how `dev-shell` drifted to
-   `1.0.0` while the others were at `1.0.7`.
-2. **Add a `CHANGELOG.md` section** at the top, following Keep a Changelog.
-   If a previous version was stamped but never published, say so in the new
-   section and tell upgraders to read the skipped section too — the registry's
-   `latest` is the only version anyone actually has. (This is not hypothetical:
-   `1.1.0` was stamped, changelogged, and never published; `1.2.0` had to carry
-   its breaking `PluginDb` change forward.)
-3. Commit as `chore(release): bump sdk+cli+dev-shell to X.Y.Z with CHANGELOG`
-   and land it on the Omniscio repository's `master` through the app's normal
-   landing flow — one commit, touching only `plugin-sdk/`. The mirror picks the
-   folder up on its next sync; nothing is committed to the mirror by hand.
+## npm's side
 
-## Publishing
+Each of the three packages names one trusted publisher: GitHub Actions, `jlstradingco` /
+`amc-plugin-sdk` / `publish.yml`, allowed to publish directly. Publishing access is set to
+"Require two-factor authentication and disallow tokens", so no key can publish, even a leaked one.
 
-Run every publish from the `plugin-sdk/` folder, in this order: the SDK, then
-the dev shell, then the CLI. The dev shell depends on the SDK, and the CLI
-depends on both, so publishing the CLI earlier ships a version that cannot
-install until its dependencies exist.
-
-```sh
-pnpm --filter @omniscio/plugin-sdk publish --access public
-pnpm --filter @omniscio/plugin-dev-shell publish --access public
-pnpm --filter @omniscio/plugin-cli publish --access public
-```
-
-`pnpm publish` refuses to run off `master`/`main` or with a dirty working tree.
-Publishing a release commit from its own branch before it lands needs
-`--no-git-checks` on each command — use it only for that.
-
-Only `plugin-sdk` has a `prepublishOnly` hook, so it rebuilds itself. **Build the
-other two yourself first** (`pnpm -r build` above covers it) or you will publish
-a stale `dist/`.
-
-Then verify what the registry actually serves, rather than assuming:
-
-```sh
-npm view @omniscio/plugin-sdk version
-npm view @omniscio/plugin-cli dependencies      # must show a real range, NOT workspace:^
-npm view @omniscio/plugin-dev-shell version
-```
+- **Never rename `publish.yml`** or move the mirror: npm matches the workflow filename and the
+  repository exactly, and a mismatch refuses every publish.
+- A **new** package needs its trusted publisher added on npm before its first automated publish,
+  and npm expires a trusted-publisher entry that is not used to publish within 2 days of its
+  creation — create it on the day of the release that first uses it.
+- The `omniscio` npm organization owns the `@omniscio` scope.
 
 ## After publishing
 
-1. **Tag it in the Omniscio repository** — `git tag plugin-sdk-vX.Y.Z`, on the
-   release commit. The mirror is rebuilt from this folder and carries no tags, so
-   the tag here is the only durable record of which commit shipped which version;
-   without it "was 1.1.0 ever released?" costs a registry query to answer. Never
-   push the tag to GitHub without the owner's say-so.
-2. **Sweep the version drift.** Several places pin a published SDK range and can
-   only be updated once the version exists on npm:
-   - `examples/*/package.json` — the `@omniscio/plugin-sdk` dependency range.
-   - Any README or doc that names the current version.
-   Land this as a follow-up commit (`docs: sweep SDK version drift after the
-   X.Y.Z release`). Doing it *before* publishing would point the examples at a
-   version nobody can install.
-   **Never sweep a manifest `sdkVersion`** — not in `examples/*/manifest.json`,
-   not in the docs, not in `packages/cli/src/commands/create.ts`. It is the
-   Omniscio host's plugin-SDK contract (`AMC_PLUGIN_SDK_VERSION` in the Omniscio
-   repository's `src/shared/plugin-sdk-version.ts`, outside this folder), not this package's
-   version, and it is written bare because the host reads a bare version as a
-   minimum. Moving it to `^3.0.0` with the 3.0.0 release made Omniscio
-   (contract `2.0.0`) hide every plugin that CLI scaffolded. Raise it only when
-   the host constant moves and new plugins need the newer contract, and update
-   the host copy in `packages/cli/src/__tests__/host-sdk-contract.test.ts` in
-   the same change. The scaffold's npm range (`buildPackageJson` in the same
-   file) is the value that follows this package: raise it in the release commit
-   of a new major, before publishing, or the published CLI scaffolds plugins that
-   resolve to the previous major.
-3. **Reconcile the Omniscio host, if permissions changed.** The Omniscio app keeps an
-   acknowledgement fixture at `tests/unit/lint/fixtures/sdk-permission-support.ts`
-   (a path at the Omniscio repository root, above this folder) listing which
-   permissions the published SDK understands, guarded by
-   `plugin-sdk-permission-parity`. If this release added a permission, move it
-   out of `SDK_PENDING_PERMISSIONS` and bump `SDK_RECONCILED_VERSION` there.
+1. **Tag it in the Omniscio repository** — `git tag plugin-sdk-vX.Y.Z` on the release commit.
+   The mirror carries no tags, so this tag is the only record of which commit shipped which
+   version. Never push it to GitHub without the owner's say-so.
+2. **Sweep the version drift.** Places that pin a published range — `examples/*/package.json` and
+   any README that names the current version — can only move once the version exists on npm. Land
+   that as a follow-up commit (`docs: sweep SDK version drift after the X.Y.Z release`).
+   **Never sweep a manifest `sdkVersion`** — not in `examples/*/manifest.json`, not in the docs,
+   not in `packages/cli/src/commands/create.ts`. It is the Omniscio host's plugin-SDK contract
+   (`AMC_PLUGIN_SDK_VERSION` in the Omniscio repository's `src/shared/plugin-sdk-version.ts`), not
+   this package's version, and the host reads a bare version as a minimum. Moving it to `^3.0.0`
+   with the 3.0.0 release made Omniscio (contract `2.0.0`) hide every plugin that CLI scaffolded.
+   Raise it only when the host constant moves, and update the host copy in
+   `packages/cli/src/__tests__/host-sdk-contract.test.ts` in the same change. The scaffold's npm
+   range (`buildPackageJson` in the same file) follows this package: raise it in the release
+   commit of a new major.
+3. **Reconcile the Omniscio host if permissions changed.** The app's acknowledgement fixture
+   `tests/unit/lint/fixtures/sdk-permission-support.ts` lists which permissions the published SDK
+   understands, guarded by `plugin-sdk-permission-parity`. If this release added one, move it out
+   of `SDK_PENDING_PERMISSIONS` and bump `SDK_RECONCILED_VERSION` there.
 
 ## Never bump the SDK to a new major without the host
 
 The host's plugin-SDK contract (`AMC_PLUGIN_SDK_VERSION`, generated into
 `packages/sdk/src/generated/sdk-facts.ts`) is read from `packages/sdk/package.json`. A plugin
 declaring `sdkVersion: "^3.0.0"` loads only while that constant is on major 3, so moving the
-package to `4.0.0` hides every caret-pinned plugin until the host's relabel rule covers it. Ship
-a rename or an additive change as a minor; raise the major only together with the host's
+package to `4.0.0` hides every caret-pinned plugin until the host's relabel rule covers it. Ship a
+rename or an additive change as a minor; raise the major only together with the host's
 compatibility rule, and run the plugin-compatibility tests with `^1`, `^2`, `^3` and bare pins.
 
 ## The old `@agent-mc/*` names
 
 The packages were published as `@agent-mc/plugin-sdk`, `@agent-mc/plugin-cli` and
 `@agent-mc/plugin-dev-shell` up to 3.3.0. Those versions stay on npm, untouched, so every plugin
-pinned to them keeps installing. Once 3.4.0 is live under `@omniscio`, an `@agent-mc` maintainer
-marks the old packages as moved (this changes no installed plugin, it only prints a notice on
-install):
+pinned to them keeps installing. An `@agent-mc` maintainer marks them as moved (this changes no
+installed plugin; it only prints a notice on install):
 
 ```sh
 npm deprecate "@agent-mc/plugin-sdk@*" "Renamed to @omniscio/plugin-sdk — the same SDK; 3.3.0 keeps working"
@@ -163,19 +152,17 @@ npm deprecate "@agent-mc/plugin-dev-shell@*" "Renamed to @omniscio/plugin-dev-sh
 Never publish a new version under the old names: a forwarding package would be picked up by every
 existing `^3` plugin on its next install, swapping its code for something it never asked for.
 
-## Reserve the plain command names
+## The plain command names are held
 
-Nobody may publish an unscoped package called `omniscio-plugin` or `amc-plugin`: an author who
-types `npx omniscio-plugin` without the CLI installed would otherwise run a stranger's code.
-Once, from the account that owns `@omniscio`, publish a placeholder under each name whose README
-says "install `@omniscio/plugin-cli`" and whose `bin` prints that and exits 1.
+The unscoped `omniscio-plugin` and `amc-plugin` packages (0.0.1) belong to the `omniscio`
+organization's account. Each only prints "install `@omniscio/plugin-cli`" and exits 1, so an author
+who types `npx omniscio-plugin` without the CLI installed never runs a stranger's code.
 
 ## Version numbering
 
-Semantic versioning, against **what is on npm** — not against the last number
-committed here. A stamped-but-unpublished version is not a release.
+Semantic versioning, against **what is on npm** — not against the last number committed here. A
+stamped-but-unpublished version is not a release.
 
-A breaking change is anything that makes a previously-compiling plugin stop
-compiling: removing or narrowing an exported type, tightening the manifest
-schema, or changing a method signature. Adding a type, adding a permission to
-the valid set, or adding an optional field is a minor.
+A breaking change is anything that makes a previously-compiling plugin stop compiling: removing or
+narrowing an exported type, tightening the manifest schema, or changing a method signature. Adding
+a type, adding a permission to the valid set, or adding an optional field is a minor.

@@ -80,6 +80,27 @@ the page declares it. `preflight` and `publish` run the same check on the pages 
 chosen `.amcplugin`, so an archive built before this fix is caught even after `dist/` is rebuilt. See
 [Panel scripts](docs/reference/cli.md#panel-scripts).
 
+### Added — `ctx.sessions.reveal` is typed
+
+The app already answered `ctx.sessions.reveal(sessionId)` from a plugin's backend; `PluginSessions`
+now declares it, and the testing context and the dev shell implement it. The fan-out and
+model-picker types (`PluginSessionFanoutOptions`, `PluginSessionFanoutResult`, `ModelPickOption`,
+`ModelPickRequest`, `BridgeModelPicker`) are exported from the package root.
+
+### Changed — releases publish from GitHub, with provenance
+
+Every version from this one on is published by the public repository's `publish.yml` workflow
+through npm trusted publishing: no key exists to leak, and each version's npm page links the exact
+commit and run that built it. See [RELEASING.md](RELEASING.md).
+
+### Fixed — the public repository builds and tests on its own again
+
+`pnpm build` in a clone of the public repository failed from 2026-09-23 because the SDK's build
+step reached into the app's repository. The folder now builds, type-checks and tests with nothing
+around it, and the app checks on every change that nothing in it reaches outside again. `pnpm
+build` builds the three packages; the docs site is built and published from the app at
+[docs.omniscio.com/sdk](https://docs.omniscio.com/sdk/).
+
 ### Dependencies
 
 - `@omniscio/plugin-cli` now depends on `esbuild` (`^0.28.2`), which does the panel-script bundling.
