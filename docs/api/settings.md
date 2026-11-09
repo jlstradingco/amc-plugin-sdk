@@ -2,7 +2,7 @@
 
 Read your plugin's settings, save one, and react when one changes.
 
-**Availability:** Both (backend `ctx.settings` / frontend `AgentMC.settings`) — `onChange` is panel-only
+**Availability:** Both (backend `ctx.settings` / frontend `Omniscio.settings`) — `onChange` is panel-only
 **Required Permission:** None
 
 ## Methods
@@ -17,7 +17,7 @@ Retrieve all settings for your plugin as a key-value object.
 
 ```typescript
 // Frontend
-const settings = await AgentMC.settings.getAll()
+const settings = await Omniscio.settings.getAll()
 const apiUrl = settings.apiUrl as string
 const maxRetries = settings.maxRetries as number
 
@@ -44,9 +44,9 @@ Retrieve a single setting by its key.
 
 ```typescript
 // Frontend
-const apiKey = await AgentMC.settings.get('apiKey') as string
+const apiKey = await Omniscio.settings.get('apiKey') as string
 if (!apiKey) {
-  AgentMC.toast.show({
+  Omniscio.toast.show({
     type: 'error',
     message: 'Please configure your API key in Settings > Plugins',
   })
@@ -64,7 +64,7 @@ ctx.log.info(`Sync interval: ${interval} minutes`)
 Save one setting. The value is merged into your plugin's stored settings — every other key keeps its
 current value — so a settings screen can save a single field without writing back a whole object.
 
-**Availability:** Both (backend `ctx.settings.set` / frontend `AgentMC.settings.set`)
+**Availability:** Both (backend `ctx.settings.set` / frontend `Omniscio.settings.set`)
 
 **Parameters:**
 
@@ -83,7 +83,7 @@ running plugin picks the change up without a restart.
 
 ```typescript
 // Frontend — a settings screen saving one field
-await AgentMC.settings.set('apiUrl', input.value.trim())
+await Omniscio.settings.set('apiUrl', input.value.trim())
 
 // Backend
 await ctx.settings.set('syncInterval', 60)
@@ -96,7 +96,7 @@ await ctx.settings.set('syncInterval', 60)
 Run a callback every time your settings are saved from Omniscio's Settings > Plugins panel, whichever
 surface saved them.
 
-**Availability:** Frontend only (panel `AgentMC.settings.onChange`). A backend reacts through its
+**Availability:** Frontend only (panel `Omniscio.settings.onChange`). A backend reacts through its
 `onSettingsChanged` lifecycle hook instead.
 
 **Parameters:**
@@ -111,7 +111,7 @@ surface saved them.
 
 ```typescript
 useEffect(() => {
-  const off = AgentMC.settings.onChange((settings) => {
+  const off = Omniscio.settings.onChange((settings) => {
     setThemeAccent(settings.accent as string)
   })
   return off

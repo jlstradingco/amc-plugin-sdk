@@ -2,11 +2,11 @@
 
 Pub/sub messaging across your whole plugin. Emit on a channel and every subscriber of your plugin hears it -- in your backend, in your UI, or both.
 
-**Availability:** Both (backend `ctx.events` / frontend `AgentMC.events`)
+**Availability:** Both (backend `ctx.events` / frontend `Omniscio.events`)
 **Required Permission:** None
 
 ::: tip One bus, two surfaces
-An `emit` fans out to **both** halves of your plugin: your backend worker's `ctx.events.on` handlers and your webview's `AgentMC.events.on` subscribers. Delivery is self-inclusive, like any pub/sub -- the surface that emitted also receives, if it subscribed to that channel.
+An `emit` fans out to **both** halves of your plugin: your backend worker's `ctx.events.on` handlers and your webview's `Omniscio.events.on` subscribers. Delivery is self-inclusive, like any pub/sub -- the surface that emitted also receives, if it subscribed to that channel.
 
 The flip side: re-emitting from inside your own handler for that channel will loop. The host does not guard against it, so that one is yours to avoid.
 :::
@@ -44,7 +44,7 @@ await ctx.events.emit('sync:started', { source: 'cron' })
 
 ### `on(channel: string, handler: (data: unknown) => void): void`
 
-Subscribe to a channel. The handler fires for events emitted anywhere in your plugin -- elsewhere in the backend, or from your UI via `AgentMC.events.emit`.
+Subscribe to a channel. The handler fires for events emitted anywhere in your plugin -- elsewhere in the backend, or from your UI via `Omniscio.events.emit`.
 
 **Parameters:**
 
@@ -83,7 +83,7 @@ early. Do not build teardown into `onDisable` expecting it to work.
 
 ## Frontend Methods
 
-`AgentMC.events` is the same bus as the backend half, typed as `BridgeEvents`. A channel means the same thing on either side, while the UI adds subscription teardown and readiness that the backend has no use for.
+`Omniscio.events` is the same bus as the backend half, typed as `BridgeEvents`. A channel means the same thing on either side, while the UI adds subscription teardown and readiness that the backend has no use for.
 
 ### `emit(channel: string, data: unknown): Promise<void>`
 
@@ -92,8 +92,8 @@ Emit on a channel. It reaches your backend worker's `ctx.events.on` handlers and
 It resolves once Omniscio accepts the bridge call. It does not tell you whether anyone was listening. A rejected call carries the bridge's stable error `code`, so you can handle an oversized payload or permission failure directly.
 
 ```typescript
-await AgentMC.events.emit('sync:request', null)
-await AgentMC.events.emit('task:cancel', { taskId: 'abc-123' })
+await Omniscio.events.emit('sync:request', null)
+await Omniscio.events.emit('task:cancel', { taskId: 'abc-123' })
 ```
 
 ### `on(channel: string, handler: (data: unknown) => void): BridgeEventSubscription`
@@ -101,7 +101,7 @@ await AgentMC.events.emit('task:cancel', { taskId: 'abc-123' })
 Subscribe to a channel. Call the returned function to stop. Unlike the backend half, the UI's `on` does return a working unsubscribe. Its `ready` promise resolves only after Omniscio has acknowledged the subscription, so await it before emitting an event that the new listener must receive.
 
 ```typescript
-const unsubscribe = AgentMC.events.on('sync:complete', (data) => {
+const unsubscribe = Omniscio.events.on('sync:complete', (data) => {
   const { count } = data as { count: number }
   showToast(`Synced ${count} records`)
 })
@@ -123,11 +123,11 @@ created.
 **It only fires in an overlay window.** The host sends this channel solely to plugin overlay
 windows. The method exists in an in-panel webview because both share a preload, but nothing
 delivers the channel there, so a subscription from a panel is **silently never called**. For a
-panel, poll `AgentMC.session.getStatus()` instead.
+panel, poll `Omniscio.session.getStatus()` instead.
 :::
 
 ```typescript
-const unsubscribe = AgentMC.events.onSessionStatus((event) => {
+const unsubscribe = Omniscio.events.onSessionStatus((event) => {
   const { sessionId, status } = event as { sessionId: string; status: string }
   if (sessionId !== mySessionId) return
   console.log('My session is now:', status)
@@ -208,13 +208,13 @@ The same `sync:complete` events already reach your webview -- no extra work in t
 
 ```typescript
 // UI
-AgentMC.events.on('sync:complete', (data) => {
+Omniscio.events.on('sync:complete', (data) => {
   const { count } = data as { count: number }
   render(`Synced ${count} records`)
 })
 
 syncButton.onclick = () => {
-  AgentMC.events.emit('sync:request', null)
+  Omniscio.events.emit('sync:request', null)
   render('Syncing...')
 }
 ```

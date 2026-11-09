@@ -1,4 +1,4 @@
-import type { PluginActivate, PluginContext } from '@agent-mc/plugin-sdk'
+import type { PluginActivate, PluginContext } from '@omniscio/plugin-sdk'
 
 interface GitHubIssue {
   number: number

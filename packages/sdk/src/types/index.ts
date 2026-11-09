@@ -16,10 +16,7 @@ export type {
   PluginStorageStats, PluginSettings, PluginLogger, PluginEvents,
   PluginSessions, PluginSessionImage, PluginSessionCreateOptions, PluginSessionCreateResult, PluginSessionFanoutOptions, PluginSessionFanoutResult, SessionStatus, SessionStatusInfo, SessionStatusDetail, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginEngineCatalog, PluginFs, PluginHttp, PluginHttpInit, PluginHttpResponse, PluginCron, PluginCli,
   PluginSidebar, PluginToast, PluginContext, PluginRpc, PluginHost, PluginUsage,
-  PluginMember, PluginMemberRole, PluginMembers,
-  PluginLaunch, PluginLaunchKind, PluginLaunchRequest, PluginLaunchResult,
-  PluginOAuth, PluginOAuthRequest, PluginOAuthResult, PluginOAuthTokens,
-  PluginChannel, PluginChannelConnectOptions, PluginChannelEvent, PluginChannelHandle,
+  PluginMemberRole, PluginLaunchKind,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, InboxDismissal, PluginInbox,
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
   PluginEmailMessage, PluginEmailFailureReason, PluginEmailSendResult, PluginEmail,
@@ -39,6 +36,11 @@ export type {
   WorkspaceApi,
   // Core read (`coreRead`)
   CoreSession, CoreProject, CoreMessage, PluginCore,
+  PluginMember, PluginMembers,
+  PluginChannelConnectOptions, PluginChannelEvent, PluginChannelSendResult, PluginChannelHandle, PluginChannel,
+  PluginLaunchRequest, PluginLaunchResult, PluginLaunch,
+  PluginOAuthRequest, PluginOAuthTokens, PluginOAuthResult, PluginOAuth,
+  PluginRssParsedEntry, PluginRssFeedResult, PluginRssFeed, PluginRssEntry, PluginRssRecentOptions, PluginRss,
 } from './context.js'
 
 // Titlebar widget (`chrome.widget`) — webview-only, declared with the bridge types

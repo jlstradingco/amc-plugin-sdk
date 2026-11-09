@@ -1,7 +1,7 @@
 {
-  "name": "@agent-mc/plugin-cli",
-  "version": "3.3.0",
-  "description": "CLI tool for building AMC plugins",
+  "name": "@omniscio/plugin-cli",
+  "version": "3.4.0",
+  "description": "CLI tool for building Omniscio plugins",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jlstradingco/amc-plugin-sdk.git",
@@ -13,6 +13,8 @@
   },
   "type": "module",
   "bin": {
+    "omniscio-plugin": "./dist/index.js",
+    "omniscio-automation": "./dist/automation-index.js",
     "amc-plugin": "./dist/index.js",
     "amc-automation": "./dist/automation-index.js"
   },
@@ -27,8 +29,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agent-mc/plugin-dev-shell": "workspace:^",
-    "@agent-mc/plugin-sdk": "workspace:^",
+    "@omniscio/plugin-dev-shell": "workspace:^",
+    "@omniscio/plugin-sdk": "workspace:^",
     "archiver": "^8.0.0",
     "chalk": "^5.4.0",
     "commander": "^12.0.0",

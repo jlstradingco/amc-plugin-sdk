@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PLUGIN_PERMISSIONS } from '@agent-mc/plugin-sdk'
+import { PLUGIN_PERMISSIONS } from '@omniscio/plugin-sdk'
 import {
   checkVersionAgainstRegistry,
   checkChangelog,
@@ -100,7 +100,7 @@ describe('checkDeclaredPermissions', () => {
 
   // Regression guard. The 1.2.0 SDK widened its permission enum to cover four
   // shipped host capabilities, but preflight kept a hand-copied list that never
-  // learned them — so `amc-plugin publish` still exited 1 on "Unknown
+  // learned them — so `omniscio-plugin publish` still exited 1 on "Unknown
   // permission(s)" for the exact plugins the enum was widened to allow. The list
   // had also been missing `system` and `chrome` for longer than that. Accepting
   // every SDK permission is the invariant; the source of the set is the fix.

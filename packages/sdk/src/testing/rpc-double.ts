@@ -1,5 +1,5 @@
 /**
- * An in-memory stand-in for Omniscio's panel-to-backend channel (`AgentMC.backend.invoke` →
+ * An in-memory stand-in for Omniscio's panel-to-backend channel (`Omniscio.backend.invoke` →
  * `ctx.rpc.handle`), faithful in the ways that change what a plugin sees:
  *
  * - arguments and results make the host's JSON round trip (a `Date` arrives as a string,

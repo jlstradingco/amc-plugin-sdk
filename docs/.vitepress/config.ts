@@ -29,8 +29,8 @@ export default defineConfig({
         {
           text: 'CLI Reference',
           items: [
-            { text: 'amc-plugin', link: '/reference/cli' },
-            { text: 'amc-automation', link: '/reference/automation-cli' }
+            { text: 'omniscio-plugin', link: '/reference/cli' },
+            { text: 'omniscio-automation', link: '/reference/automation-cli' }
           ]
         }
       ],
@@ -43,6 +43,7 @@ export default defineConfig({
             { text: 'Project Structure', link: '/guide/project-structure' },
             { text: 'Manifest', link: '/guide/manifest' },
             { text: 'Permissions', link: '/guide/permissions' },
+            { text: 'Theming', link: '/guide/theming' },
             { text: 'Panel Commands', link: '/guide/commands' },
             { text: 'Dev Shell', link: '/guide/dev-shell' },
             { text: 'Publishing', link: '/guide/publishing' },
@@ -79,7 +80,21 @@ export default defineConfig({
             { text: 'Spend', link: '/api/spend' },
             { text: 'Workspace', link: '/api/workspace' },
             { text: 'Core', link: '/api/core' },
-            { text: 'Widget', link: '/api/widget' }
+            { text: 'Widget', link: '/api/widget' },
+            { text: 'Boards', link: '/api/boards' },
+            { text: 'Board Links', link: '/api/board-links' },
+            { text: 'Channel', link: '/api/channel' },
+            { text: 'Clipboard', link: '/api/clipboard' },
+            { text: 'Launch', link: '/api/launch' },
+            { text: 'Members', link: '/api/members' },
+            { text: 'Navigation', link: '/api/navigation' },
+            { text: 'Notifications', link: '/api/notifications' },
+            { text: 'OAuth', link: '/api/oauth' },
+            { text: 'Process', link: '/api/process' },
+            { text: 'RSS', link: '/api/rss' },
+            { text: 'Share', link: '/api/share' },
+            { text: 'Shell', link: '/api/shell' },
+            { text: 'Speech to Text', link: '/api/stt' }
           ]
         }
       ]

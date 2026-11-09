@@ -12,7 +12,7 @@ export const whoamiCommand = new Command('whoami')
     // the next publish would renew without a browser.
     const token = getStoredTokenIgnoringExpiry()
     if (!token) {
-      info('Not signed in. Run `amc-plugin publish` to authenticate.')
+      info('Not signed in. Run `omniscio-plugin publish` to authenticate.')
       return
     }
     ok(`Signed in as: ${token.github} (uid: ${token.uid})`)

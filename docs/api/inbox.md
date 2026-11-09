@@ -2,7 +2,7 @@
 
 Surface items in Omniscio's inbox -- the unified list where the user reviews things that need their attention.
 
-**Availability:** Both (backend `ctx.inbox` / frontend `AgentMC.inbox`)
+**Availability:** Both (backend `ctx.inbox` / frontend `Omniscio.inbox`)
 **Required Permission:** `inbox`
 
 Use the inbox to raise plugin-owned items the user should look at: a finished report, a review request, a detected problem. Items you set replace the plugin's previous set, so you always publish the current list rather than appending one at a time.
@@ -43,7 +43,7 @@ await ctx.inbox.postAlert({
 
 ### `onDismiss(handler: (dismissal: InboxDismissal) => void): () => void`
 
-**Availability:** backend only (`ctx.inbox`); the webview `AgentMC.inbox` has no `onDismiss`.
+**Availability:** backend only (`ctx.inbox`); the webview `Omniscio.inbox` has no `onDismiss`.
 
 Find out when the user dismisses one of your inbox rows, or undoes that dismissal. Without a handler your plugin is never told, so its own screen can keep showing a row the user already cleared.
 
@@ -127,7 +127,7 @@ await ctx.inbox.setItems([])
 
 ```typescript
 // Frontend
-await AgentMC.inbox.setItems([
+await Omniscio.inbox.setItems([
   { id: 'welcome', title: 'Finish setup', body: 'Connect an account to get started.' },
 ])
 ```

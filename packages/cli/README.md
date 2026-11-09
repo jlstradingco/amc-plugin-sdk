@@ -1,4 +1,4 @@
-# @agent-mc/plugin-cli
+# @omniscio/plugin-cli
 
 The command-line toolchain for building Omniscio plugins — scaffold a plugin, validate its
 manifest, build it, package it, and install it into Omniscio.
@@ -6,13 +6,13 @@ manifest, build it, package it, and install it into Omniscio.
 ## Install
 
 ```bash
-npm install --save-dev @agent-mc/plugin-cli
+npm install --save-dev @omniscio/plugin-cli
 ```
 
 ## Usage
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin create my-plugin
+npx -p @omniscio/plugin-cli omniscio-plugin create my-plugin
 ```
 
 ## Documentation

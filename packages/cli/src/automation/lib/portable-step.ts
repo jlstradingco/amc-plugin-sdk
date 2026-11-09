@@ -1,16 +1,16 @@
 /**
- * The allow-list applied INSIDE a step, mirroring AMC's own `pickPortableStep`.
+ * The allow-list applied INSIDE a step, mirroring Omniscio's own `pickPortableStep`.
  *
  * `envelope.ts` filters the recipe's TOP level to `SHAREABLE_FIELDS`, and says of
  * that list: "anything not named here simply does not travel". That guarantee used
  * to stop at the top level — `steps` and `pipelines` rode the envelope VERBATIM, so
  * every field an author's step happened to carry was published to a world-readable
- * catalog. AMC's share path never had that hole: `buildSharedAutomation` maps every
+ * catalog. Omniscio's share path never had that hole: `buildSharedAutomation` maps every
  * step (top-level and pipeline alike) through a 21-field allow-list before the
  * envelope is built.
  *
  * The gap was reachable by the ordinary workflow. An author who copies a recipe out
- * of AMC to edit it as a file starts from a step object carrying whatever the local
+ * of Omniscio to edit it as a file starts from a step object carrying whatever the local
  * recipe had — ids, local project references, engine pins — and none of it was
  * stripped. The four fields the local checks DO reject (`script`, `subRecipe`,
  * `promptFile`, `targetProjectId`) were a deny-list of four, not an allow-list of
@@ -63,7 +63,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 /**
  * Copy only the shareable fields off a step.
  *
- * Deliberately TOTAL where the host's version throws: AMC's `pickPortableStep`
+ * Deliberately TOTAL where the host's version throws: Omniscio's `pickPortableStep`
  * rejects a step missing its `name`, because on that path a missing name is an
  * internal invariant break. Here it is ordinary author input — `checkSteps` already
  * reports it as an error, and `--skip-validation` is a documented way past that — so
@@ -125,7 +125,7 @@ export function pickPortablePipelines(pipelines: unknown): Record<string, Record
  *
  * Silent stripping is the wrong shape for an author-facing tool: a field that
  * vanishes between the file on disk and the published automation should be NAMED, or
- * the author debugs its absence against a catalog they cannot see into. AMC reports
+ * the author debugs its absence against a catalog they cannot see into. Omniscio reports
  * the same thing as its "removed" list at share time; `checks/stripped-fields.ts`
  * turns this into one advisory finding.
  */

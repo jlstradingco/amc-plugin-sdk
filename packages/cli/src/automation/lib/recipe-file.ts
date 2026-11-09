@@ -53,7 +53,7 @@ export function resolveRecipePath(dir: string, explicit?: string): string {
   if (found.length === 0) {
     throw new RecipeFileError(
       `No ${RECIPE_SUFFIX} file found in ${dir}`,
-      "Run 'amc-automation init <name>' to scaffold one."
+      "Run 'omniscio-automation init <name>' to scaffold one."
     )
   }
   const names = found.map((f) => path.basename(f)).join(', ')

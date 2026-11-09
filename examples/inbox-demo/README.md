@@ -1,11 +1,11 @@
 # Inbox Demo
 
-Minimal AMC plugin demonstrating the **inbox** API — publishing items into the user's AMC inbox.
+Minimal Omniscio plugin demonstrating the **inbox** API — publishing items into the user's Omniscio inbox.
 
 ## What It Shows
 
-- `AgentMC.inbox.setItems(items)` — publish this plugin's inbox items
-- `AgentMC.storage.set/get` — remember the current item list across reloads
+- `Omniscio.inbox.setItems(items)` — publish this plugin's inbox items
+- `Omniscio.storage.set/get` — remember the current item list across reloads
 
 ## Full-Replace Semantics
 
@@ -32,7 +32,7 @@ interface InboxItem {
 
 | Permission | Why |
 |---|---|
-| `inbox` | Publish items to the AMC inbox |
+| `inbox` | Publish items to the Omniscio inbox |
 | `storage` | Persist the working item list |
 
 ## Running

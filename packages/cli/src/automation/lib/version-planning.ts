@@ -1,4 +1,4 @@
-// Pure version planning for `amc-automation publish`.
+// Pure version planning for `omniscio-automation publish`.
 //
 // The marketplace treats a published version as IMMUTABLE: re-submitting a version
 // that already exists is refused with a 409, and a refused upload still costs one of

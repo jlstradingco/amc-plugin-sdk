@@ -2,7 +2,7 @@
 
 Control your plugin's sidebar appearance -- update the badge count and manage the list of items shown beneath your plugin in Omniscio's sidebar.
 
-**Availability:** Both (backend `ctx.sidebar` / frontend `AgentMC.sidebar`)
+**Availability:** Both (backend `ctx.sidebar` / frontend `Omniscio.sidebar`)
 **Required Permission:** None
 
 ::: danger `status` is REQUIRED, and omitting it fails silently
@@ -49,8 +49,8 @@ Set the numeric badge shown on your plugin's sidebar icon. Pass `0` to clear the
 
 ```typescript
 // Frontend
-AgentMC.sidebar.setBadge(3)   // Show "3" badge
-AgentMC.sidebar.setBadge(0)   // Clear badge
+Omniscio.sidebar.setBadge(3)   // Show "3" badge
+Omniscio.sidebar.setBadge(0)   // Clear badge
 
 // Backend
 ctx.sidebar.setBadge(5)
@@ -74,7 +74,7 @@ Replace the list of items shown under your plugin in the sidebar. Each item can 
 
 ```typescript
 // Frontend
-AgentMC.sidebar.setItems([
+Omniscio.sidebar.setItems([
   { id: 'task-1', title: 'Security Audit', status: 'running', progress: 45 },
   { id: 'task-2', title: 'Code Review', status: 'waiting', needsYou: true },
   { id: 'task-3', title: 'Deploy', currentStep: 2, totalSteps: 5 },
@@ -87,7 +87,7 @@ ctx.sidebar.setItems([
 ])
 
 // Clear all items
-AgentMC.sidebar.setItems([])
+Omniscio.sidebar.setItems([])
 ```
 
 ## Notes

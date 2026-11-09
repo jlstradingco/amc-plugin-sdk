@@ -1,11 +1,11 @@
-# `amc-automation` CLI Reference
+# `omniscio-automation` CLI Reference
 
-Publishes Omniscio automations. Ships from `@agent-mc/plugin-cli` alongside
-`amc-plugin`, sharing its marketplace sign-in.
+Publishes Omniscio automations. Ships from `@omniscio/plugin-cli` alongside
+`omniscio-plugin`, sharing its marketplace sign-in.
 
 ```bash
-npm install -g @agent-mc/plugin-cli
-amc-automation --help
+npm install -g @omniscio/plugin-cli
+omniscio-automation --help
 ```
 
 ## Exit codes
@@ -19,7 +19,7 @@ Warnings never change the exit code. Only errors do.
 
 ---
 
-## `amc-automation init <name>`
+## `omniscio-automation init <name>`
 
 Scaffolds `<slug>.recipe.json` plus a `README.md`. The result is a valid,
 publishable automation — `init` then `validate` is clean by construction.
@@ -31,16 +31,16 @@ publishable automation — `init` then `validate` is clean by construction.
 | `--force` | off | Overwrite an existing recipe (and README) |
 
 ```bash
-$ amc-automation init "Daily Digest" --category productivity
+$ omniscio-automation init "Daily Digest" --category productivity
 ✓ Created daily-digest.recipe.json
-ℹ Next: edit the steps, then run `amc-automation validate`.
+ℹ Next: edit the steps, then run `omniscio-automation validate`.
 ```
 
 An existing `README.md` is left alone unless you pass `--force`.
 
 ---
 
-## `amc-automation validate [file]`
+## `omniscio-automation validate [file]`
 
 Runs the local checks. `[file]` is optional when the directory holds exactly one
 `*.recipe.json`; with several, the CLI names them and asks you to pick.
@@ -59,7 +59,7 @@ another developer, and this version already being published. Pass the same
 version you were never going to submit.
 
 ```bash
-$ amc-automation validate
+$ omniscio-automation validate
 
 Local checks
 
@@ -122,7 +122,7 @@ a crashed process.
 
 ---
 
-## `amc-automation publish [file]`
+## `omniscio-automation publish [file]`
 
 Validates, authenticates, and uploads for review.
 
@@ -138,13 +138,13 @@ Validates, authenticates, and uploads for review.
 | `--skip-validation` | off | Publish despite local errors |
 
 ```bash
-$ amc-automation publish --changelog "first release"
+$ omniscio-automation publish --changelog "first release"
 
 Publishing as: octocat
 ? Publish this automation to the marketplace as "octocat"? › (y/N)
 ℹ Publishing daily-digest v1.0.0 as octocat...
 ✓ Submitted for review (submission abc123)
-ℹ Run `amc-automation status` to follow the review.
+ℹ Run `omniscio-automation status` to follow the review.
 ```
 
 ### The account it publishes under
@@ -154,11 +154,11 @@ logged into, so a publish can go out under an identity you never chose — and a
 published automation carries that name permanently. Every publish therefore
 confirms the account first, defaulting to **no**.
 
-- Wrong account? Answer `n`, then `amc-automation publish --switch-account`.
+- Wrong account? Answer `n`, then `omniscio-automation publish --switch-account`.
 - Automating it? `-y` skips the question, and `--as <user>` aborts outright if
   the signed-in account is not the one you named. Use both together in CI.
 
-The sign-in is shared with `amc-plugin`, so switching the account here switches
+The sign-in is shared with `omniscio-plugin`, so switching the account here switches
 it for both.
 
 ### The automation id
@@ -174,12 +174,12 @@ single-character name and a name near the 100-character limit are both rejected.
 In CI, pair `--as` with `-y`:
 
 ```bash
-amc-automation publish --as my-org-bot -y --changelog "$(git log -1 --pretty=%s)"
+omniscio-automation publish --as my-org-bot -y --changelog "$(git log -1 --pretty=%s)"
 ```
 
 ---
 
-## `amc-automation status`
+## `omniscio-automation status`
 
 Shows the review state of your submissions, filtered to the automation in the
 current directory.
@@ -189,7 +189,7 @@ current directory.
 | `--all` | Every submission, not just this directory's |
 
 ```bash
-$ amc-automation status
+$ omniscio-automation status
 
 Submissions
 
@@ -213,4 +213,4 @@ marketplace" means exactly that and nothing else.
 | `AMC_MARKETPLACE_AUTH_URL` | Override the sign-in page |
 
 The stored token lives at `~/.amc/marketplace-token` and is shared with
-`amc-plugin` — sign in once, use both. `amc-plugin logout` clears it.
+`omniscio-plugin` — sign in once, use both. `omniscio-plugin logout` clears it.

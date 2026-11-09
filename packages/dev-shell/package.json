@@ -1,6 +1,7 @@
 {
-  "name": "@agent-mc/plugin-dev-shell",
-  "version": "3.3.0",
+  "name": "@omniscio/plugin-dev-shell",
+  "version": "3.4.0",
+  "description": "Local dev shell for Omniscio plugins",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jlstradingco/amc-plugin-sdk.git",
@@ -23,7 +24,7 @@
     "start": "electron ./dist/shell-window.js"
   },
   "dependencies": {
-    "@agent-mc/plugin-sdk": "workspace:^",
+    "@omniscio/plugin-sdk": "workspace:^",
     "chokidar": "^4.0.0",
     "electron": "^39.0.0"
   },

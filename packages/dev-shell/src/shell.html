@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AMC Plugin Dev Shell</title>
+  <title>Omniscio Plugin Dev Shell</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { display: flex; flex-direction: column; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #1a1a2e; color: #e0e0e0; }
@@ -24,7 +24,7 @@
 <body>
   <div class="header">
     <div class="dot"></div>
-    <span id="title">AMC Plugin Dev Shell</span>
+    <span id="title">Omniscio Plugin Dev Shell</span>
   </div>
   <div class="main">
     <div class="sidebar">
@@ -44,11 +44,13 @@
     const pluginName = params.get('pluginName')
     const pluginVersion = params.get('pluginVersion')
     const entryPoint = params.get('entryPoint')
+    const preloadUrl = params.get('preloadUrl')
 
-    document.getElementById('title').textContent = `AMC Plugin Dev Shell - ${pluginName} v${pluginVersion}`
+    document.getElementById('title').textContent = `Omniscio Plugin Dev Shell - ${pluginName} v${pluginVersion}`
 
     if (entryPoint) {
       const webview = document.getElementById('plugin-view')
+      if (preloadUrl) webview.setAttribute('preload', preloadUrl)
       webview.src = `file://${pluginDir}/${entryPoint}`
     }
   </script>

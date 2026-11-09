@@ -15,7 +15,7 @@ export type PublishAccountGate =
  * Both binaries share ONE token file, so either command can perform the switch —
  * but the advice should name the one the author is actually running.
  */
-const DEFAULT_PUBLISH_COMMAND = 'amc-plugin publish'
+const DEFAULT_PUBLISH_COMMAND = 'omniscio-plugin publish'
 
 export function evaluatePublishAccount(
   storedGithub: string | null,

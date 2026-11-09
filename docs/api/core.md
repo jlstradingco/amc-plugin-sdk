@@ -65,7 +65,7 @@ interface CoreMessage {
 ## Example
 
 ```typescript
-import type { PluginActivate } from '@agent-mc/plugin-sdk'
+import type { PluginActivate } from '@omniscio/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => ({
   async onEnable() {

@@ -1,6 +1,6 @@
 // GENERATED — do NOT edit by hand.
 //
-// A snapshot of AMC cross-app composability matrix, shipped with the SDK so a
+// A snapshot of Omniscio cross-app composability matrix, shipped with the SDK so a
 // third-party author can validate a listing OFFLINE. They have no access to the
 // internal endpoint-index.md, so without this the host-capabilities check could
 // not run at all.

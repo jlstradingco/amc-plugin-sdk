@@ -34,10 +34,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@agent-mc/plugin-dev-shell':
+      '@omniscio/plugin-dev-shell':
         specifier: workspace:^
         version: link:../dev-shell
-      '@agent-mc/plugin-sdk':
+      '@omniscio/plugin-sdk':
         specifier: workspace:^
         version: link:../sdk
       archiver:
@@ -74,7 +74,7 @@ importers:
 
   packages/dev-shell:
     dependencies:
-      '@agent-mc/plugin-sdk':
+      '@omniscio/plugin-sdk':
         specifier: workspace:^
         version: link:../sdk
       chokidar:

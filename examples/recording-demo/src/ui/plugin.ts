@@ -1,7 +1,7 @@
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
-import type { Recording } from '@agent-mc/plugin-sdk'
+import type { Omniscio } from '@omniscio/plugin-sdk/browser'
+import type { Recording } from '@omniscio/plugin-sdk'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 const startBtn = document.getElementById('start-btn') as HTMLButtonElement
 const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement
@@ -12,7 +12,7 @@ const recList = document.getElementById('rec-list') as HTMLUListElement
 let activeRecordingId: string | null = null
 
 /**
- * There is no `AgentMC.recording`.
+ * There is no `Omniscio.recording`.
  *
  * Screen recording is a BACKEND capability (`ctx.recording`). This UI therefore
  * asks its own backend to do the work over the shared event bus — an `emit`
@@ -78,7 +78,7 @@ amc.events.on('recording:error', (data) => {
 })
 
 startBtn.addEventListener('click', () => {
-  statusEl.textContent = 'Starting… (AMC will ask you to confirm)'
+  statusEl.textContent = 'Starting… (Omniscio will ask you to confirm)'
   amc.events.emit('recording:start', {})
 })
 

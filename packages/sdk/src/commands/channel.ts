@@ -2,7 +2,7 @@
  * `createCommandChannel` — the backend half of a private command channel.
  *
  * A plugin acts only on commands that arrive through a door an AI agent cannot open: its own
- * panel (`AgentMC.backend.invoke` → `ctx.rpc`) or its own code (`submit`, e.g. from a
+ * panel (`Omniscio.backend.invoke` → `ctx.rpc`) or its own code (`submit`, e.g. from a
  * manifest-declared CLI action the host approves). The channel NEVER reads a table row as a
  * command, so a forged, edited or re-armed row does nothing.
  *

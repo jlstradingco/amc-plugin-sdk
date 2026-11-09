@@ -2,7 +2,7 @@
 
 Enumerate the user's Firebase accounts and projects, and start an interactive login.
 
-**Availability:** Webview only (`AgentMC.firebase`)
+**Availability:** Webview only (`Omniscio.firebase`)
 **Required Permission:** `firebase`
 
 ::: danger This is a WEBVIEW capability, not a backend one
@@ -10,8 +10,8 @@ An earlier version of this page said "Backend only (`ctx.firebase`)". That was b
 builds its backend context **without** this namespace, so `ctx.firebase` is `undefined` and calling it
 throws a `TypeError` at activation rather than producing a permission error.
 
-Use **`AgentMC.firebase`** from your plugin's webview. If a backend needs the result, forward it over
-the shared event bus (`AgentMC.events` -> `ctx.events`).
+Use **`Omniscio.firebase`** from your plugin's webview. If a backend needs the result, forward it over
+the shared event bus (`Omniscio.events` -> `ctx.events`).
 :::
 
 Backed by the user's **locally installed Firebase CLI**. This is not a Firebase SDK -- there is no database access here, only the account and project metadata the CLI can report.
@@ -80,17 +80,17 @@ interface FirebaseSetupStatus {
 ```typescript
 export function activate(ctx: PluginContext) {
   ctx.cli.handle('/firebase/projects', async () => {
-    const projects = await AgentMC.firebase.listProjects()
+    const projects = await Omniscio.firebase.listProjects()
     if (projects.length > 0) return { status: 200, body: { projects } }
 
     // Empty is ambiguous -- turn it into an answer the user can act on.
-    const status = await AgentMC.firebase.setupStatus()
+    const status = await Omniscio.firebase.setupStatus()
 
     if (!status.cliInstalled) {
       return { status: 200, body: { projects: [], hint: 'Install the Firebase CLI to continue.' } }
     }
     if (!status.signedIn) {
-      await AgentMC.firebase.startLogin()
+      await Omniscio.firebase.startLogin()
       return { status: 200, body: { projects: [], hint: 'A browser window was opened to sign in.' } }
     }
     if (status.firebaseAccess === 'needs-tos') {

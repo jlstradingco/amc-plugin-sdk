@@ -57,7 +57,7 @@ describe('copyPluginToDir', () => {
     const dest = path.join(destParent, 'my-plugin')
 
     copyPluginToDir(srcDir, manifest, dest)
-    // AMC persists plugin fs data under <dest>/data — it must survive re-install.
+    // Omniscio persists plugin fs data under <dest>/data — it must survive re-install.
     fs.mkdirSync(path.join(dest, 'data'))
     fs.writeFileSync(path.join(dest, 'data', 'state.json'), '{"count":42}')
 

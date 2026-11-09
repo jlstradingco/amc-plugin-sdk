@@ -135,7 +135,7 @@ The `id` field is permanent. It is used as the storage namespace, database prefi
 :::
 
 ::: tip Your listing is more than the manifest
-The marketplace also renders the `README.md` next to `manifest.json` as the plugin's long description (`amc-plugin package` ships it from CLI 3.1), while `plugin.screenshots` and `plugin.links` fill the gallery and the Support tab. See [Publishing → What your listing shows](./publishing.md#what-your-listing-shows).
+The marketplace also renders the `README.md` next to `manifest.json` as the plugin's long description (`omniscio-plugin package` ships it from CLI 3.1), while `plugin.screenshots` and `plugin.links` fill the gallery and the Support tab. See [Publishing → What your listing shows](./publishing.md#what-your-listing-shows).
 :::
 
 ### Plugin Icon
@@ -191,7 +191,7 @@ piece in those moments.
 }
 ```
 
-#### What `amc-plugin validate` tells you
+#### What `omniscio-plugin validate` tells you
 
 - **Warns** when `icon` is a Lucide name — you will ship a stock glyph. Not an error; a stock
   glyph is a legitimate choice, just rarely the intended one.
@@ -203,7 +203,7 @@ piece in those moments.
 - **Fails** on a path that escapes the package (`../`, an absolute path, a drive letter, or a
   URL scheme).
 
-`amc-plugin create` scaffolds `assets/icon.svg` with a placeholder for you to replace. It writes
+`omniscio-plugin create` scaffolds `assets/icon.svg` with a placeholder for you to replace. It writes
 a placeholder only for an `.svg` path inside the project; for another format such as `.png`,
 add the file yourself. It refuses a path that escapes the project, and a path outside the folders
 the package ships (`assets/` for TypeScript templates; `assets/`, `ui/` and `prompts/` for `webview`),
@@ -401,7 +401,7 @@ On a table that is `agentWritable`, list the columns an outside write must never
   columns stay writable, and your own backend and panel write every column as before.
 - **List every column and the table is append-only from outside** — `DELETE` is refused too, so an
   audit trail cannot be erased through the control server.
-- Up to 64 entries, and each must be a column declared in `columns`. `amc-plugin validate` refuses an
+- Up to 64 entries, and each must be a column declared in `columns`. `omniscio-plugin validate` refuses an
   undeclared name with the same message Omniscio gives.
 
 ### The key-value store: `storage.kv`
@@ -415,7 +415,7 @@ unless the store opts in. Reads stay open.
 
 ### Command tables: `commandTableWaiver`
 
-`amc-plugin validate`, `preflight` and `publish` fail when a table can hold a runnable command — an
+`omniscio-plugin validate`, `preflight` and `publish` fail when a table can hold a runnable command — an
 instruction column (`type`, `command`, `action`, `op`, `kind`, `method`…), an argument column
 (`payload`, `args`, `params`, `input`, `body`, `data`, `prompt`, also as `payloadJson` /
 `payload_json`) and a status column (`status`, `state`, `*_status`). See
@@ -490,7 +490,7 @@ Declares the frontend entry point, sidebar appearance, and how Omniscio frames y
 | `sessions.realProjectContext` | boolean | No | — | Add your plugin's standing context to sessions in the user's REAL projects that your plugin holds a workspace grant for. See below |
 
 ::: warning Every entry point must stay inside your package
-`amc-plugin validate` applies Omniscio's own entry-path rule to `ui.entryPoint` and the
+`omniscio-plugin validate` applies Omniscio's own entry-path rule to `ui.entryPoint` and the
 `overlay`, `settingsPanel`, `widget`, `windows` and `backend` entry points. A path fails if it:
 
 - is blank, longer than 500 characters, or contains a tab or line break;
@@ -504,14 +504,14 @@ two dots, such as `my..page.html`, is fine. Omniscio refuses to load a plugin th
 `widget.entryPoint` is the 320 x 256 popover behind a [titlebar widget](../api/widget). It must be a
 plugin-relative path: not blank, no URL or scheme, no leading `/` or `\`, no drive letter and no
 `..` segment — the same rule as every other entry point above, and it is what Omniscio
-checks at install, so a bad path fails `amc-plugin validate` rather than showing a blank frame.
+checks at install, so a bad path fails `omniscio-plugin validate` rather than showing a blank frame.
 Without it, clicking the widget opens your plugin's own panel. `chrome.widget` is only valid beside
-an explicit `chrome` permission. `amc-plugin validate` also checks that the file exists and that
+an explicit `chrome` permission. `omniscio-plugin validate` also checks that the file exists and that
 `package` will ship it.
 
 `entryPoint` and `sidebar` are **both optional** — a `ui` block is useful for its side effects
 alone, e.g. `{ "hideProjectPanel": true }`. (Earlier SDK versions required them, so a manifest Omniscio
-installed happily could fail `amc-plugin validate`.)
+installed happily could fail `omniscio-plugin validate`.)
 
 ::: warning "Full width" is two flags, not one
 The column Omniscio clears for you has **two** owners, and each has its own opt-out. Hiding one
@@ -523,7 +523,7 @@ alone just hands the column to the other, so a plugin that wants the full width 
 
 `hideSessionsPane` was missing from this SDK's schema until 2026-08-21. Because the schema is
 non-strict, a manifest declaring both **kept `hideProjectPanel` and silently dropped its
-sibling** on the way through `amc-plugin validate` and `package` — so the plugin looked
+sibling** on the way through `omniscio-plugin validate` and `package` — so the plugin looked
 correct dev-loaded and un-full-widthed itself once packaged. If you worked around that by
 giving up on full width, you can stop.
 :::
@@ -563,14 +563,14 @@ Registers keyboard shortcuts your plugin owns (`src/shared/plugin-manifest-schem
 | `commandId` | string | Yes | Letters, digits and hyphens only (1–100) — the command your plugin handles |
 | `label` | string | Yes | Human-readable name shown in the shortcut UI (1–200) |
 
-At most **20** entries; a longer list fails validation. `amc-plugin validate` checks every one of
+At most **20** entries; a longer list fails validation. `omniscio-plugin validate` checks every one of
 these rules (SDK 3.2 and earlier dropped the block unchecked, so a bad `commandId` only failed at
 install).
 
 ## `process` Block
 
 Declares what your plugin may run through the host launcher (`ctx.process` from a backend,
-`window.AgentMC.process` from your UI). Declare at least one of the two lists; a name may not be
+`window.Omniscio.process` from your UI). Declare at least one of the two lists; a name may not be
 in both.
 
 ```json
@@ -612,7 +612,7 @@ command launchers (`git`, `ssh`, `make`, `env`, `xargs`) are refused by name: al
 let the plugin run arbitrary code, so the host rejects the manifest rather than trusting the plugin.
 The full list is `INTERPRETER_DENYLIST` in `src/shared/plugin-manifest-schema.ts:68-127`. The SDK
 ships the same list, generated from that file, as `PROCESS_INTERPRETER_DENYLIST`, and
-`amc-plugin validate` applies it the way Omniscio does: case does not matter, and a `.exe` or
+`omniscio-plugin validate` applies it the way Omniscio does: case does not matter, and a `.exe` or
 `.cmd` suffix is ignored, so `NODE.EXE` and `bash.cmd` are refused too. SDK 3.2 and earlier
 dropped the `process` block unchecked.
 
@@ -663,7 +663,7 @@ deadlines:
 | `onAppReadyMs` | 10,000 | `onAppReady` |
 | `cliDispatchMs` | 30,000 | One CLI endpoint call, before the caller gets a 504 |
 
-Each value must be a positive whole number — `amc-plugin validate` refuses `0`, a negative, a
+Each value must be a positive whole number — `omniscio-plugin validate` refuses `0`, a negative, a
 fraction or a string, as Omniscio does. Omniscio then clamps every value to 1,000–60,000, and a key
 you leave out keeps its default.
 
@@ -748,7 +748,7 @@ If the action is refused, answer with a failure status and `{ "error": "<one pla
 
 ## `sdkVersion`
 
-The Omniscio plugin-SDK **contract** your plugin needs — not the version of the `@agent-mc/plugin-sdk` package. Omniscio checks it against the contract it provides, and a plugin it cannot satisfy is marked incompatible and loses its toolbar button.
+The Omniscio plugin-SDK **contract** your plugin needs — not the version of the `@omniscio/plugin-sdk` package. Omniscio checks it against the contract it provides, and a plugin it cannot satisfy is marked incompatible and loses its toolbar button.
 
 ```json
 {
@@ -760,7 +760,7 @@ Write a bare version. A bare version means "this contract or newer", so your plu
 
 ## `sessionTools`
 
-Gives the AI sessions your plugin starts (`ctx.sessions.create` or `AgentMC.session.create`) the
+Gives the AI sessions your plugin starts (`ctx.sessions.create` or `Omniscio.session.create`) the
 built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
 
 ```json
@@ -775,7 +775,7 @@ built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
   whose session edits code and pushes it.
 - **The user sees it at install** as "Agent Sessions". Adding it in an update asks them to approve
   again.
-- It must be `true` or `false`; anything else fails `amc-plugin validate`.
+- It must be `true` or `false`; anything else fails `omniscio-plugin validate`.
 
 ## `mobile`
 
@@ -792,16 +792,16 @@ Phone Simulator.
   app" on a phone.
 - **It runs walled off.** On the phone your `ui.entryPoint` page loads in a sandboxed frame with its
   own throwaway origin: it cannot see Omniscio's sign-in, storage or page, and it can reach only its
-  own files under the folder of `ui.entryPoint`. Every `AgentMC` call keeps the permissions you
+  own files under the folder of `ui.entryPoint`. Every `Omniscio` call keeps the permissions you
   declared, minus the actions a phone always refuses (native dialogs, the file system, spawning).
 - **Browser storage is temporary.** `localStorage` and `sessionStorage` work but are cleared when the
-  page closes, and `indexedDB` is unavailable — keep anything that must last in `AgentMC.storage`.
+  page closes, and `indexedDB` is unavailable — keep anything that must last in `Omniscio.storage`.
 - **No outside network.** The page may fetch only its own files; call your backend through the bridge.
 - **Test it without a phone:** load your plugin in Developer Mode, turn it on, then open the Phone
   Simulator (Settings → Plugins → Developer Mode, or Settings → Mobile Access). Press F12 there to
   inspect the phone page.
 - The owner can turn all phone plugins off in Settings → Mobile Access → Devices.
-- It must be `true` or `false`; anything else fails `amc-plugin validate`.
+- It must be `true` or `false`; anything else fails `omniscio-plugin validate`.
 
 ## `uiAnchors`
 
@@ -837,7 +837,56 @@ assistant sees your plugin as one blank area.
   frame is not covered.
 - **Older apps.** An app that predates this key ignores it and loads your plugin as before; the
   assistant just cannot point inside it.
-- It must be an array of valid entries; anything else fails `amc-plugin validate`.
+- It must be an array of valid entries; anything else fails `omniscio-plugin validate`.
+
+## `linkClaims`
+
+Links your plugin can open itself. When the person switches **Open links in this plugin** on for your plugin (on its card in Settings → Plugins, off by default), a plain click on a matching link in session output opens it in your plugin instead of the browser.
+
+```json
+{
+  "linkClaims": [
+    { "host": "github.com", "path": "/{owner}/{repo}/pull/{number}" },
+    { "host": "github.com", "path": "/{owner}/{repo}/issues/{number}" }
+  ]
+}
+```
+
+| Field | Rules |
+|---|---|
+| `host` | One exact lowercase domain with at least two labels, such as `github.com`. No wildcards, ports or user names. |
+| `path` | Starts with `/` and has at least one literal segment, so a claim can never cover a whole site. A `{name}` segment matches exactly one path segment. |
+
+Between 1 and 20 claims. Only `https` links match, and redirects are never followed.
+
+**Receiving the link.** Omniscio calls your backend's CLI endpoint `POST open-link` with the body `{ "url": "<the clicked link>" }` — the link and nothing else, never the session or the text around it. Declare that endpoint in your [`cli` block](#cli-block) without an approval preview, answer within 10 seconds, and reply `{ "opened": true }` once your panel shows the item, or `{ "opened": false, "message": "<one plain sentence>" }` when it cannot, and the link opens in the browser instead.
+
+Some clicks always go to the browser whatever the settings say: Ctrl, Cmd, Shift, Alt and middle click, the right-click **Open in browser** item, and any link two enabled plugins both claim. An Omniscio that predates `linkClaims` ignores the key.
+
+## `uploadHosts`
+
+The exact websites [`Omniscio.http.uploadFile`](../api/http) may send files to.
+
+```json
+{
+  "permissions": ["network", "network.upload"],
+  "uploadHosts": ["rupload.facebook.com"]
+}
+```
+
+`network.upload` and `uploadHosts` go together: declaring one without the other fails validation. Each entry is one exact lowercase website name, such as `upload.example.com` — no scheme, port, path, wildcard or IP address. The person approves the list once, on your plugin's first upload. Up to 10 hosts.
+
+## `usageActions`
+
+The feature actions your plugin counts with `usage.record(action)`, so you can see which features people use.
+
+```json
+{
+  "usageActions": ["export-pdf", "share-link", "ai-summary"]
+}
+```
+
+At most 20 names, each 1 to 40 characters from `a-z`, `0-9` and `-`. `usage.record` with a name not on this list is ignored, never counted. Only a count is stored — no arguments, no content, nothing that identifies the person — and counts leave the computer on their own anonymous channel.
 
 ## `linkClaims`
 
@@ -858,7 +907,7 @@ one of them — an "open this in my plugin" route.
   must be literal — a claim can never cover a whole site.
 - **What it does not do.** It never makes the plugin handle the link automatically. The host uses it to
   offer your plugin as a destination side by side with the browser.
-- It must be an array of valid entries; anything else fails `amc-plugin validate`.
+- It must be an array of valid entries; anything else fails `omniscio-plugin validate`.
 
 ## `uploadHosts`
 
@@ -895,7 +944,7 @@ figures.
   is never counted.
 - **Shape.** Up to 20 names, each 1 to 40 characters of lowercase `a`–`z`, digits and `-`, with no
   duplicates.
-- It must be an array of valid entries; anything else fails `amc-plugin validate`.
+- It must be an array of valid entries; anything else fails `omniscio-plugin validate`.
 
 ## Complete Examples
 

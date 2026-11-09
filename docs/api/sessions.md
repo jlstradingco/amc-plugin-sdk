@@ -3,13 +3,13 @@
 Create and manage Claude Code sessions programmatically.
 
 ::: warning The two surfaces answer differently
-`ctx.sessions` (backend) and `AgentMC.session` (frontend) share method names but **do not share
+`ctx.sessions` (backend) and `Omniscio.session` (frontend) share method names but **do not share
 return shapes**. `getStatus` resolves a bare string on the backend and an object on the frontend;
 message bodies are named `text` on the backend and `content` on the frontend. Check which surface
 you are on before reading a result — this page states the shape for each.
 :::
 
-**Availability:** Both (backend `ctx.sessions` / frontend `AgentMC.session`)
+**Availability:** Both (backend `ctx.sessions` / frontend `Omniscio.session`)
 **Required Permission:** `sessions`
 
 ## Backend Methods
@@ -47,7 +47,7 @@ Earlier SDK versions declared one. Omniscio has **always** derived the project f
 appeared to target a project and silently did not. It has been removed rather than left to mislead.
 :::
 
-`userInitiated` is read on this backend surface only — the frontend's `AgentMC.session.create`
+`userInitiated` is read on this backend surface only — the frontend's `Omniscio.session.create`
 silently discards it.
 
 **Example:**
@@ -104,7 +104,7 @@ Get the current status of a session.
 
 **Returns:** `Promise<SessionStatus>` -- a **bare string**, e.g. `'running'`, `'needs_you'`, `'ended'`.
 
-The frontend's `AgentMC.session.getStatus` resolves `{ status, pendingAction }` instead. Same
+The frontend's `Omniscio.session.getStatus` resolves `{ status, pendingAction }` instead. Same
 method name, two shapes.
 
 ### `getStatus(sessionId: string, opts: { detail: true }): Promise<SessionStatusDetail>`
@@ -180,7 +180,7 @@ await ctx.sessions.stop(sessionId)
 
 ### `archive(sessionId: string): Promise<void>`
 
-Backend only — the frontend `AgentMC.session` has no `archive`.
+Backend only — the frontend `Omniscio.session` has no `archive`.
 
 File away a session your plugin created, so it leaves the user's board. A running session is ended
 first. Archiving is reversible from the Archive view and does not delete the session's messages.
@@ -315,7 +315,7 @@ await ctx.sessions.reveal(sessionId)
 
 ## Frontend Methods
 
-The frontend `BridgeSession` interface is available as `AgentMC.session`.
+The frontend `BridgeSession` interface is available as `Omniscio.session`.
 
 ::: info Differences from backend
 - `create()` accepts **only** `prompt` — `userInitiated` is silently discarded on this surface.
@@ -342,7 +342,7 @@ Like the backend `create()`, the session has no built-in tools unless your manif
 [`sessionTools: true`](../guide/manifest#sessiontools).
 
 ```typescript
-const { sessionId } = await AgentMC.session.create({
+const { sessionId } = await Omniscio.session.create({
   prompt: 'Review the latest changes',
 })
 ```
@@ -353,7 +353,7 @@ Note the options-object signature instead of a plain string. `images` follows th
 the backend (see [`sessions.images`](../guide/permissions#sessions-images)).
 
 ```typescript
-await AgentMC.session.sendMessage(sessionId, { text: 'Check for memory leaks' })
+await Omniscio.session.sendMessage(sessionId, { text: 'Check for memory leaks' })
 ```
 
 ### `getMessages(sessionId: string): Promise<BridgeSessionMessage[]>`
@@ -363,7 +363,7 @@ Still-streaming rows are dropped; `system` rows are kept and the body is raw (to
 output are not stripped).
 
 ```typescript
-const messages = await AgentMC.session.getMessages(sessionId)
+const messages = await Omniscio.session.getMessages(sessionId)
 messages.forEach((m) => console.log(`${m.role}: ${m.content}`))
 ```
 
@@ -376,12 +376,12 @@ Resolves an **object**, not a bare string. `pendingAction` is `null` unless the 
 on something.
 
 ```typescript
-const { status, pendingAction } = await AgentMC.session.getStatus(sessionId)
+const { status, pendingAction } = await Omniscio.session.getStatus(sessionId)
 if (status === 'needs_you') console.log(`Waiting on: ${pendingAction}`)
 ```
 
 ::: danger Comparing the result to a string never matches
-`const s = await AgentMC.session.getStatus(id); if (s === 'ended')` is always false — `s` is an
+`const s = await Omniscio.session.getStatus(id); if (s === 'ended')` is always false — `s` is an
 object. Read `s.status`. Older SDK versions typed this as `Promise<string>`, so this mistake used
 to compile; it is now a type error.
 :::
@@ -391,13 +391,13 @@ to compile; it is now a type error.
 Rename a session. Frontend only.
 
 ```typescript
-await AgentMC.session.rename(sessionId, 'Security Audit - Round 2')
+await Omniscio.session.rename(sessionId, 'Security Audit - Round 2')
 ```
 
 ### `stop(sessionId: string): Promise<void>`
 
 ```typescript
-await AgentMC.session.stop(sessionId)
+await Omniscio.session.stop(sessionId)
 ```
 
 ### `delete(sessionId: string): Promise<void>`
@@ -412,7 +412,7 @@ launched into a real project, another plugin's session, or one that cannot be st
 paired phone cannot call it.
 
 ```typescript
-await AgentMC.session.delete(sessionId)
+await Omniscio.session.delete(sessionId)
 ```
 
 ### `launchWithDraft(opts: { projectId: string; draftText: string; autoSend?: boolean }): Promise<void>`
@@ -424,14 +424,14 @@ own projects rather than your plugin's virtual one. `autoSend` submits the draft
 instead of leaving it in the composer.
 
 ```typescript
-await AgentMC.session.launchWithDraft({
+await Omniscio.session.launchWithDraft({
   projectId: 'proj-abc-123',
   draftText: 'Refactor the auth module to use OAuth 2.0',
   autoSend: false,
 })
 ```
 
-## Per-context chats (`AgentMC.sessionsPane`)
+## Per-context chats (`Omniscio.sessionsPane`)
 
 A plugin whose Sessions pane should show one set of chats per open item (a document, a board, a
 file) opts in with two manifest keys and one webview call.
@@ -483,18 +483,18 @@ key your plugin has not declared since the app started is refused.
 both are empty for a chat that belongs to no item. Without `perContext` nothing changes.
 
 ```typescript
-await AgentMC.sessionsPane.setContext({ key: doc.id, label: doc.fileName })
-await AgentMC.sessionsPane.setContext(null)
+await Omniscio.sessionsPane.setContext({ key: doc.id, label: doc.fileName })
+await Omniscio.sessionsPane.setContext(null)
 ```
 
 ## Notes
 
 - Creating a session spawns a real Claude Code process. Each session consumes API credits.
 - `ctx.sessions.create()` always targets your plugin's own virtual project; use
-  `AgentMC.session.launchWithDraft()` when you need to launch into one of the user's projects.
+  `Omniscio.session.launchWithDraft()` when you need to launch into one of the user's projects.
 - Status values are `'running'`, `'needs_you'`, `'error'`, `'stalled'`, `'starting'`, `'ready'`,
   `'terminating'`, `'ended'`, `'archived'`, `'paused'` and `'waiting'`. (`'needs_input'` appeared in
   earlier versions of this page and is not a status Omniscio reports.) The `SessionStatus` type keeps
   these as autocomplete suggestions while still accepting a status a future Omniscio release adds.
-- Concurrent `AgentMC.session.create()` calls with an identical prompt are de-duplicated and resolve
+- Concurrent `Omniscio.session.create()` calls with an identical prompt are de-duplicated and resolve
   to the same `sessionId`.

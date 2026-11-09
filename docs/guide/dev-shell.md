@@ -10,12 +10,12 @@ From your plugin directory:
 npm run dev
 ```
 
-This runs `amc-plugin dev`, which:
+This runs `omniscio-plugin dev`, which:
 
 1. Reads your `manifest.json` to determine the plugin name, version, and entry points
 2. Runs an initial TypeScript build
 3. Opens an Electron dev-shell window for your plugin, with the plugin name and version in its title
-4. Loads your UI entry point (`dist/ui/index.html`) in a webview
+4. Loads your UI entry point (`dist/ui/index.html`) in a webview, with a mock bridge installed as `window.Omniscio` and `window.AgentMC` before your page runs
 5. If your plugin has a backend, activates it with a mock `PluginContext`
 6. Starts watching `src/` and `manifest.json` for changes
 
@@ -40,6 +40,16 @@ The dev shell uses [chokidar](https://github.com/paulmillr/chokidar) to watch yo
 ::: warning
 Backend changes require a restart of the dev shell. The backend module is loaded once at startup with `require()` and Node.js caches it. Kill the dev shell (close the window or Ctrl+C in the terminal) and run `npm run dev` again to pick up backend changes.
 :::
+
+## Mock Webview Bridge
+
+Your panel gets a mock bridge under both names, `window.Omniscio` and `window.AgentMC` (the same object), so panel code runs unchanged:
+
+- **`toast.show(...)`** draws the toast as a banner in the bottom-right corner of your page and logs it.
+- **`storage`** (`get`, `set`, `delete`, `list`) keeps values in memory for the session.
+- **`settings`** (`get`, `getAll`) answers from `amc-dev-settings.json` beside your plugin.
+- **`theme.get()`** answers Omniscio's own placeholder, `{ mode: 'dark', accent: '139,92,246', surfaces: {} }`.
+- **Every other call** is logged to the terminal as `[dev-shell] <namespace>.<method>` and resolves `undefined`, so nothing throws. Subscribe methods (`on…`) return an unsubscribe function, and their callbacks never fire.
 
 ## Mock Backend Context
 
@@ -133,7 +143,7 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | Feature | Dev shell | Real Omniscio |
 |---|---|---|
 | UI rendering | Full (Electron webview) | Full (Electron webview) |
-| Theme CSS variables | Injected by shell HTML | Injected by Omniscio |
+| Theme CSS variables | Not injected — your `var()` fallbacks apply | Injected by Omniscio (see [Theming](./theming)) |
 | Storage | Persisted to `.amc-dev/` (JSON file) | SQLite `plugin_kv` (persistent) |
 | DB | Faithful in-memory store (where/orderBy/limit, 100-row default page) -- lost on restart | SQLite tables (persistent) |
 | Settings | Seeded from `amc-dev-settings.json` | Configured in Omniscio settings UI |
@@ -142,10 +152,10 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | Filesystem | Sandboxed to `ctx.dataDir` (real files; in-memory when no `dataDir`) | Sandboxed to `ctx.dataDir` — the same per-plugin root, also enforced by the worker's OS-level permission allow-set |
 | Cron scheduling | Logs only, no execution | Real cron scheduler |
 | CLI endpoints | Logs only, not reachable | Reachable via control server |
-| Notifications | Logs to console | Real OS notifications |
+| Toasts and notifications | `toast.show` draws a banner; other calls log | In-app toasts and real OS notifications |
 | Plugin permissions | Not enforced | Enforced at runtime |
 | Sidebar badge/items | Logs to console | Updates Omniscio sidebar |
-| Titlebar widget (`AgentMC.widget`) | Not available | Drawn by Omniscio in the titlebar |
+| Titlebar widget (`Omniscio.widget`) | Calls are logged; nothing is drawn | Drawn by Omniscio in the titlebar |
 | `ctx.core` data | Fixed sample data | The user's real sessions, projects and messages |
 
 ::: tip
@@ -154,16 +164,16 @@ For integration testing with real Omniscio APIs, install your built plugin into 
 
 ### Titlebar widgets are tested inside Omniscio
 
-The dev shell has no titlebar and injects no widget bridge into its webview, so `AgentMC.widget` is **not available** there: calling `AgentMC.widget.set(...)` throws a `TypeError`. The SDK deliberately ships no widget mock, since a fake would only tell you your call type-checks, not that the host accepts and draws it. Guard the call so the rest of your page still runs in the shell:
+The dev shell has no titlebar, so `Omniscio.widget.set(...)` there is only logged and draws nothing. The SDK deliberately draws no fake widget, since a fake would only tell you your call type-checks, not that the host accepts and draws it. Guard the call so the rest of your page still runs in the shell:
 
 ```typescript
-const amc = (window as unknown as { AgentMC?: AgentMC }).AgentMC
+const amc = (window as unknown as { Omniscio?: Omniscio }).Omniscio
 if (amc?.widget?.set) {
   await amc.widget.set({ shape: 'stat', value: '3', label: 'open items', icon: 'Bell' })
 }
 ```
 
-To see a widget, run `npm run package` and install the `.amcplugin` through Settings > Plugins > Install from file. The `widget` template (`amc-plugin create my-widget --template widget`) already contains this guard.
+To see a widget, run `npm run package` and install the `.amcplugin` through Settings > Plugins > Install from file. The `widget` template (`omniscio-plugin create my-widget --template widget`) already contains this guard.
 
 ## Window Configuration
 

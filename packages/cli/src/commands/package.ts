@@ -2,10 +2,10 @@ import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
-import { validateManifest } from '@agent-mc/plugin-sdk'
+import { validateManifest } from '@omniscio/plugin-sdk'
 import { ok, fail, info, warn, actionableError, manifestNotFound } from '../lib/output.js'
 import { isTypeScriptProject, collectPackageEntries } from '../lib/project.js'
-import { compilePlugin } from '../lib/compile.js'
+import { compilePluginOrExit } from '../lib/compile.js'
 import { pageScriptsResult } from '../lib/page-scripts.js'
 
 export const packageCommand = new Command('package')
@@ -30,12 +30,7 @@ export const packageCommand = new Command('package')
 
     if (!flat && !fs.existsSync(path.join(cwd, 'dist'))) {
       info('No dist/ found, building first...')
-      try {
-        compilePlugin(cwd)
-      } catch {
-        actionableError('Build failed', 'Check the errors above and fix your source files.')
-        process.exit(1)
-      }
+      compilePluginOrExit(cwd)
     }
 
     const pageScripts = pageScriptsResult(cwd, manifest)

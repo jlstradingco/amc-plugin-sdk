@@ -1,14 +1,14 @@
 # Auth Demo
 
-Minimal AMC plugin demonstrating the **auth** identity API and the **auth.session** scoped-token API.
+Minimal Omniscio plugin demonstrating the **auth** identity API and the **auth.session** scoped-token API.
 
 ## What It Shows
 
-- `AgentMC.auth.isAuthenticated()` — is anyone signed in to AMC
-- `AgentMC.auth.getUser()` — the signed-in user's `uid`, `email`, `displayName`, `photoURL`
-- `AgentMC.auth.requestSignIn()` — prompt the user to sign in
-- `AgentMC.auth.onAuthStateChange(handler)` — react to sign-in / sign-out
-- `AgentMC.auth.getSession(provider, scopes)` — request a scoped OAuth access token for Google or GitHub
+- `Omniscio.auth.isAuthenticated()` — is anyone signed in to Omniscio
+- `Omniscio.auth.getUser()` — the signed-in user's `uid`, `email`, `displayName`, `photoURL`
+- `Omniscio.auth.requestSignIn()` — prompt the user to sign in
+- `Omniscio.auth.onAuthStateChange(handler)` — react to sign-in / sign-out
+- `Omniscio.auth.getSession(provider, scopes)` — request a scoped OAuth access token for Google or GitHub
 
 ## Permissions
 

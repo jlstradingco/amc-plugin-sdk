@@ -154,7 +154,7 @@ describe('checkHostCapabilities', () => {
     expect(codes(findings)).toContain('undeclared-required-app')
   })
 
-  it('passes a listing that touches no AMC app at all', () => {
+  it('passes a listing that touches no Omniscio app at all', () => {
     const findings = checkHostCapabilities(
       recipe({ steps: [{ name: 'Think', prompt: 'Summarise the attached text.' }] }),
       MATRIX

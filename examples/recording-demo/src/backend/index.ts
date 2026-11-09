@@ -1,9 +1,9 @@
-import type { PluginContext, PluginBackend, Recording } from '@agent-mc/plugin-sdk'
+import type { PluginContext, PluginBackend, Recording } from '@omniscio/plugin-sdk'
 
 /**
  * Screen recording lives on the BACKEND, not the webview.
  *
- * This example used to drive `AgentMC.recording.*` straight from its UI. That
+ * This example used to drive `Omniscio.recording.*` straight from its UI. That
  * namespace does not exist on the webview bridge at all — the calls were
  * `undefined`, and the demo wrapped every one in a try/catch that reported
  * "recording is not yet available in this build", which hid the real cause for

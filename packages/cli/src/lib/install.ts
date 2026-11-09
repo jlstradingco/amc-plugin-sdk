@@ -9,11 +9,11 @@ interface ManifestLike {
 
 /**
  * Copy a built plugin's payload (manifest.json + its package entries) into an
- * AMC plugins directory (`<userData>/plugins/<id>`), overwriting prior code.
+ * Omniscio plugins directory (`<userData>/plugins/<id>`), overwriting prior code.
  *
  * A re-copied entry directory is cleared first so a file the developer deleted
  * in source doesn't linger in the installed copy. The plugin's runtime `data/`
- * dir — where AMC persists the plugin's ctx.fs state — is NOT part of the
+ * dir — where Omniscio persists the plugin's ctx.fs state — is NOT part of the
  * package payload, so it is left untouched and survives every re-install.
  *
  * Returns the top-level entry names that were copied.

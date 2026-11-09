@@ -1,11 +1,11 @@
 # CLI Reference
 
-The `amc-plugin` CLI is a Commander.js-based tool for building, validating, packaging, and publishing Omniscio plugins.
+The `omniscio-plugin` CLI is a Commander.js-based tool for building, validating, packaging, and publishing Omniscio plugins.
 
 ## Install
 
 ```bash
-npm install -g @agent-mc/plugin-cli
+npm install -g @omniscio/plugin-cli
 ```
 
 ---
@@ -19,7 +19,7 @@ Scaffold a new plugin project with starter files, manifest, and optional git ini
 **Usage:**
 
 ```bash
-amc-plugin create <name> [options]
+omniscio-plugin create <name> [options]
 ```
 
 **Arguments:**
@@ -46,10 +46,10 @@ amc-plugin create <name> [options]
 
 ```bash
 # Interactive mode
-amc-plugin create my-plugin
+omniscio-plugin create my-plugin
 
 # Non-interactive (CI-friendly)
-amc-plugin create my-plugin \
+omniscio-plugin create my-plugin \
   --template with-backend \
   --display-name "My Plugin" \
   --description "Does cool things" \
@@ -69,7 +69,7 @@ Compile TypeScript, copy non-TS UI files to `dist/`, bundle each panel script, a
 **Usage:**
 
 ```bash
-amc-plugin build
+omniscio-plugin build
 ```
 
 **Options:** None.
@@ -79,14 +79,14 @@ amc-plugin build
 1. Validates `manifest.json` against the SDK schema.
 2. Runs `tsc` to compile TypeScript to `dist/`.
 3. Copies non-TS files from `src/ui/` to `dist/ui/` (HTML, CSS, images).
-4. Bundles each panel script. For every `<script src="X.js">` in a page under `dist/ui/` (not `type="module"`, and loaded from the plugin itself), it takes the matching source in `src/ui/` (`X.ts`, `.tsx`, `.js`, `.jsx` or `.mjs`) and writes one self-contained script to `dist/ui/X.js`, with every import inlined. A script that already loads as a plain script (a vendored library, for example) ships exactly as it is. `tsc` alone leaves `export {};` at the end of the file, and a page that loads it as a plain script stops on its first line with a blank panel. Bundling also means you can split your UI across files and import npm packages. Type-only imports from `@agent-mc/plugin-sdk` disappear in the bundle; the host provides `window.AgentMC` at runtime.
+4. Bundles each panel script. For every `<script src="X.js">` in a page under `dist/ui/` (not `type="module"`, and loaded from the plugin itself), it takes the matching source in `src/ui/` (`X.ts`, `.tsx`, `.js`, `.jsx` or `.mjs`) and writes one self-contained script to `dist/ui/X.js`, with every import inlined. A script that already loads as a plain script (a vendored library, for example) ships exactly as it is. `tsc` alone leaves `export {};` at the end of the file, and a page that loads it as a plain script stops on its first line with a blank panel. Bundling also means you can split your UI across files and import npm packages. Type-only imports from `@omniscio/plugin-sdk` disappear in the bundle; the host provides `window.Omniscio` at runtime.
 5. Scans `dist/` for banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) and **warns** on a hit. `validate` runs the same scan and fails instead.
 
 **Example:**
 
 ```bash
 cd my-plugin
-amc-plugin build
+omniscio-plugin build
 ```
 
 **Exit codes:** `0` success, `1` manifest invalid, TypeScript compilation failed, or a panel script import could not be resolved.
@@ -102,7 +102,7 @@ Run all validation checks without building. CI-friendly -- returns a non-zero ex
 **Usage:**
 
 ```bash
-amc-plugin validate
+omniscio-plugin validate
 ```
 
 **Options:** None.
@@ -149,7 +149,7 @@ matter what passes the scan.
 
 ```bash
 # In a GitHub Actions workflow
-amc-plugin validate
+omniscio-plugin validate
 ```
 
 **Exit codes:** `0` all checks passed, `1` one or more checks failed.
@@ -196,7 +196,7 @@ Bundle the plugin into a `.amcplugin` archive (zip) for distribution or marketpl
 **Usage:**
 
 ```bash
-amc-plugin package
+omniscio-plugin package
 ```
 
 **Options:** None.
@@ -213,7 +213,7 @@ amc-plugin package
 **Example:**
 
 ```bash
-amc-plugin package
+omniscio-plugin package
 # Packaged: my-plugin-1.0.0.amcplugin (0.12 MB)
 ```
 
@@ -228,7 +228,7 @@ Run publish-readiness checks **without uploading**. This is the same gate `publi
 **Usage:**
 
 ```bash
-amc-plugin preflight [options]
+omniscio-plugin preflight [options]
 ```
 
 **Options:**
@@ -262,7 +262,7 @@ When a `.amcplugin` is chosen, the check reads the pages and scripts **inside th
 
 The fix depends on the plugin type:
 
-- **TypeScript plugin:** run `amc-plugin build`, which bundles each page script, then `amc-plugin package` to rebuild the archive.
+- **TypeScript plugin:** run `omniscio-plugin build`, which bundles each page script, then `omniscio-plugin package` to rebuild the archive.
 - **Plain-JS (webview) plugin:** files ship as written, so remove the `import`/`export` from the script, or load it with `<script type="module">`.
 
 ::: tip Why the banned-import check appears twice
@@ -271,14 +271,14 @@ and the marketplace. Both use the same rule and look in the same place, so a plu
 passes `validate` passes here.
 
 "No built output to scan" **warns rather than fails** — with nothing inspected, zero hits
-proves nothing, and reporting a pass would be a false all-clear. Run `amc-plugin build`
+proves nothing, and reporting a pass would be a false all-clear. Run `omniscio-plugin build`
 first so the files you are about to upload are the ones that get checked.
 :::
 
 **Example:**
 
 ```bash
-amc-plugin preflight --changelog "Added dark mode support"
+omniscio-plugin preflight --changelog "Added dark mode support"
 # ✓ Version: 1.1.0 is newer than the published 1.0.0
 # ⚠ Permissions: Duplicate permission(s): storage
 #   → Remove the duplicate entries from manifest.json permissions.
@@ -298,7 +298,7 @@ Upload a `.amcplugin` archive to the Omniscio Marketplace for review. Authentica
 **Usage:**
 
 ```bash
-amc-plugin publish [options]
+omniscio-plugin publish [options]
 ```
 
 **Options:**
@@ -330,7 +330,7 @@ into — there is no account chooser, so a publish can silently go out under the
 Before uploading, `publish` shows `Uploading as: <github>` and asks you to confirm.
 If it's the wrong account:
 
-- Run `amc-plugin publish --switch-account` to sign out and re-authenticate, **or**
+- Run `omniscio-plugin publish --switch-account` to sign out and re-authenticate, **or**
 - Use `--as <github-user>` in scripts to hard-assert the intended account (aborts on mismatch).
 
 To land on the right account during sign-in, open an incognito / private window
@@ -342,7 +342,7 @@ signed into the correct GitHub account first, or sign out at
 
 `publish` and `preflight` never pick "the first `.amcplugin` they find". They look in the plugin folder and in `dist/`, and:
 
-- **No package at all:** `amc-plugin package` runs first, then the result is checked like any other.
+- **No package at all:** `omniscio-plugin package` runs first, then the result is checked like any other.
 - **More than one package, no `--package`:** refused. The message lists every file; name the one to upload with `--package <path>`.
 - **Exactly one package, or the one named by `--package`:** it must be called `<plugin id>-<manifest version>.amcplugin`, and the `manifest.json` inside it must carry that same version. Anything else is refused.
 - **A `-test.N` label** in `manifest.json`, in the file name or in the version inside the archive is refused. Store releases carry a plain version, so a test build is never uploaded by accident.
@@ -355,16 +355,16 @@ A CLI released before this check still uploads the first `.amcplugin` it finds. 
 
 ```bash
 # Interactive — confirms "Uploading as: <you>" before upload
-amc-plugin publish --changelog "Added dark mode support" --watch
+omniscio-plugin publish --changelog "Added dark mode support" --watch
 
 # Publish under a specific account, re-authenticating if needed
-amc-plugin publish --switch-account
+omniscio-plugin publish --switch-account
 
 # CI — assert the account and skip the prompt
-amc-plugin publish --as my-org-bot --yes
+omniscio-plugin publish --as my-org-bot --yes
 
 # The folder holds more than one package — name the one to upload
-amc-plugin publish --package releases/my-plugin-1.3.2.amcplugin
+omniscio-plugin publish --package releases/my-plugin-1.3.2.amcplugin
 ```
 
 **Exit codes:** `0` success (or approved with `--watch`), `1` package refused, preflight failed, upload failed, rejected, or `--as` mismatch.
@@ -378,7 +378,7 @@ Show the marketplace submission status for the current plugin.
 **Usage:**
 
 ```bash
-amc-plugin status
+omniscio-plugin status
 ```
 
 **Options:** None.
@@ -390,7 +390,7 @@ Reads `manifest.json` to determine the plugin ID, then queries the marketplace f
 **Example:**
 
 ```bash
-amc-plugin status
+omniscio-plugin status
 # Submissions for "my-plugin":
 #   [OK] my-plugin v1.0.0 — approved (5/15/2026)
 #   [?]  my-plugin v1.1.0 — pending (5/17/2026)
@@ -407,7 +407,7 @@ Show the authenticated GitHub username.
 **Usage:**
 
 ```bash
-amc-plugin whoami
+omniscio-plugin whoami
 ```
 
 **Options:** None.
@@ -415,7 +415,7 @@ amc-plugin whoami
 **Example:**
 
 ```bash
-amc-plugin whoami
+omniscio-plugin whoami
 # Signed in as: janedoe (uid: abc123)
 ```
 
@@ -430,7 +430,7 @@ Clear the stored marketplace authentication token.
 **Usage:**
 
 ```bash
-amc-plugin logout
+omniscio-plugin logout
 ```
 
 **Options:** None.
@@ -438,7 +438,7 @@ amc-plugin logout
 **Example:**
 
 ```bash
-amc-plugin logout
+omniscio-plugin logout
 # Signed out (was: janedoe)
 ```
 
@@ -453,7 +453,7 @@ Launch the dev shell with hot-reload for rapid plugin development.
 **Usage:**
 
 ```bash
-amc-plugin dev [options]
+omniscio-plugin dev [options]
 ```
 
 **Options:**
@@ -465,14 +465,14 @@ amc-plugin dev [options]
 **What it does:**
 
 1. Builds the plugin the same way as `build` (unless `--no-build` is passed or `dist/` already exists).
-2. Opens the dev shell -- an Electron window that loads your plugin UI with a mock `AgentMC` context.
-3. Watches `src/` for changes, rebuilds with the same `amc-plugin` that started the shell, and hot-reloads automatically.
+2. Opens the dev shell -- an Electron window that loads your plugin UI with a mock `Omniscio` context.
+3. Watches `src/` for changes, rebuilds with the same `omniscio-plugin` that started the shell, and hot-reloads automatically.
 
 **Example:**
 
 ```bash
-amc-plugin dev
-amc-plugin dev --no-build
+omniscio-plugin dev
+omniscio-plugin dev --no-build
 ```
 
 **Exit codes:** `0` clean exit, `1` build failed.
@@ -486,7 +486,7 @@ Show a summary of the current plugin project (name, version, author, category, d
 **Usage:**
 
 ```bash
-amc-plugin info [options]
+omniscio-plugin info [options]
 ```
 
 **Options:**
@@ -498,7 +498,7 @@ amc-plugin info [options]
 **Example:**
 
 ```bash
-amc-plugin info
+omniscio-plugin info
 # Plugin:      my-plugin
 # Version:     1.0.0
 # Category:    other
@@ -507,7 +507,7 @@ amc-plugin info
 # UI:          dist/ui/index.html
 # Backend:     dist/backend/index.js
 
-amc-plugin info --json
+omniscio-plugin info --json
 # {"id":"my-plugin","version":"1.0.0", ...}
 ```
 
@@ -517,12 +517,12 @@ amc-plugin info --json
 
 ### `update`
 
-Self-update the `@agent-mc/plugin-cli` package to the latest version.
+Self-update the `@omniscio/plugin-cli` package to the latest version.
 
 **Usage:**
 
 ```bash
-amc-plugin update [options]
+omniscio-plugin update [options]
 ```
 
 **Options:**
@@ -534,11 +534,11 @@ amc-plugin update [options]
 **Example:**
 
 ```bash
-amc-plugin update --check
+omniscio-plugin update --check
 # Current: 1.0.0, Latest: 1.2.0 — update available
 
-amc-plugin update
-# Updated @agent-mc/plugin-cli to 1.2.0
+omniscio-plugin update
+# Updated @omniscio/plugin-cli to 1.2.0
 ```
 
 **Exit codes:** `0` success (or already up to date), `1` update failed.
@@ -553,7 +553,7 @@ local vitest if installed, otherwise falls back to `npx vitest`.
 **Usage:**
 
 ```bash
-amc-plugin test [patterns...] [options]
+omniscio-plugin test [patterns...] [options]
 ```
 
 **Arguments:**
@@ -570,14 +570,14 @@ amc-plugin test [patterns...] [options]
 
 **Testing your backend with the SDK harness:**
 
-The SDK ships a test harness at `@agent-mc/plugin-sdk/testing` that gives you a
+The SDK ships a test harness at `@omniscio/plugin-sdk/testing` that gives you a
 faithful in-memory `PluginContext` — real storage and db (query / where / orderBy /
 limit, paged like Omniscio: 100 rows unless you pass a `limit`), plus capture surfaces for toasts, notifications, logs, events, sidebar,
 and inbox, and triggers for cron jobs and CLI handlers. No Omniscio or Electron needed.
 
 ```ts
 import { describe, it, expect } from 'vitest'
-import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import { createTestContext } from '@omniscio/plugin-sdk/testing'
 import activate from './index.js'
 
 describe('my backend', () => {
@@ -617,9 +617,9 @@ script, and a starter `src/backend/index.test.ts` wired to this harness.
 **Example:**
 
 ```bash
-amc-plugin test
-amc-plugin test --watch
-amc-plugin test src/backend
+omniscio-plugin test
+omniscio-plugin test --watch
+omniscio-plugin test src/backend
 ```
 
 **Exit codes:** propagates vitest's exit code (`0` all passed, `1` failures), `1` if vitest can't run.
@@ -635,7 +635,7 @@ relies on, with a fix suggestion for anything that isn't right.
 **Usage:**
 
 ```bash
-amc-plugin doctor [options]
+omniscio-plugin doctor [options]
 ```
 
 **Options:**
@@ -649,7 +649,7 @@ amc-plugin doctor [options]
 | Check | Description |
 |---|---|
 | Node.js | Node version is supported (>= 18, 20+ recommended) |
-| Plugin SDK | `@agent-mc/plugin-sdk` is installed and up to date with npm |
+| Plugin SDK | `@omniscio/plugin-sdk` is installed and up to date with npm |
 | Manifest | `manifest.json` (if present) is valid against the SDK schema |
 | Omniscio host | A running Omniscio is reachable on `127.0.0.1:19519` (for local install / hot-reload) |
 | Omniscio CLI token | A control-server token is available (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`) |
@@ -664,10 +664,10 @@ Override the host port with the `AMC_CLI_PORT` environment variable.
 **Example:**
 
 ```bash
-amc-plugin doctor
+omniscio-plugin doctor
 # Omniscio Plugin Doctor
 # ✓ Node.js: Node v22.11.0
-# ✓ Plugin SDK: @agent-mc/plugin-sdk 1.1.0
+# ✓ Plugin SDK: @omniscio/plugin-sdk 1.1.0
 # ✓ Manifest: manifest.json is valid
 # ⚠ Omniscio host: No running Omniscio on 127.0.0.1:19519
 #     → Start Omniscio to enable local install and hot-reload.
@@ -676,7 +676,7 @@ amc-plugin doctor
 #
 # ⚠ 5 passed, 1 warning, 0 failed
 
-amc-plugin doctor --json
+omniscio-plugin doctor --json
 ```
 
 **Exit codes:** `0` no failures, `1` an unsupported Node or invalid manifest.

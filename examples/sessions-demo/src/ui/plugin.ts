@@ -1,6 +1,6 @@
-import type { AgentMC, BridgeSessionMessage } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio, BridgeSessionMessage } from '@omniscio/plugin-sdk/browser'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 const promptInput = document.getElementById('prompt') as HTMLInputElement
 const askBtn = document.getElementById('ask-btn') as HTMLButtonElement

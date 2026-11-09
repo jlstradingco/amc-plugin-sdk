@@ -4,9 +4,9 @@ Start, stop and list screen recordings from a plugin — driven by a webview, ex
 plugin's **backend**.
 
 > **This example was rewritten on 2026-08-11.** It previously called
-> `AgentMC.recording.*` directly from the webview and wrapped every call in a try/catch that
+> `Omniscio.recording.*` directly from the webview and wrapped every call in a try/catch that
 > reported "recording is not yet available in this build". That message was wrong and it hid
-> the real cause: **there is no `AgentMC.recording`.** Recording is a backend capability
+> the real cause: **there is no `Omniscio.recording`.** Recording is a backend capability
 > (`ctx.recording`), and the SDK had mistakenly declared it on the webview bridge too, so every
 > call was `undefined`.
 
@@ -19,7 +19,7 @@ plugin's **backend**.
   - `ctx.recording.stop(recordingId)` — takes a **bare id string**, not a handle object.
   - `ctx.recording.list()` / `ctx.recording.get(id)` — this plugin's recordings only.
 - **Crossing the two surfaces**, since the UI cannot call the capability itself: the webview and
-  the backend talk over the shared event bus (`AgentMC.events` ↔ `ctx.events`), which fans an
+  the backend talk over the shared event bus (`Omniscio.events` ↔ `ctx.events`), which fans an
   `emit` out to subscribers on both sides.
 
 There is no `getShareUrl` and no `delete`. Both were documented by earlier versions of this SDK

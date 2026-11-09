@@ -4,7 +4,7 @@ Store and read your plugin's own credentials, encrypted by the operating system'
 (macOS Keychain, Windows DPAPI, libsecret) instead of the plaintext rows [Storage](./storage)
 and [Database](./db) use.
 
-**Availability:** Both (backend `ctx.secrets` / frontend `AgentMC.secrets`)
+**Availability:** Both (backend `ctx.secrets` / frontend `Omniscio.secrets`)
 **Required Permission:** `secrets`
 
 Use this for anything that would be damaging to leak -- an API key, a database password, an
@@ -126,7 +126,7 @@ const keys = await ctx.secrets.list()
 from the storage map, mirroring the host's separate table.
 
 ```typescript
-import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import { createTestContext } from '@omniscio/plugin-sdk/testing'
 
 const { ctx } = createTestContext()
 await ctx.secrets.set('token', 'abc123')

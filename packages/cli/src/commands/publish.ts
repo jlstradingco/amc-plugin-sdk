@@ -11,7 +11,7 @@ import { runPreflight, renderPreflight, locatePackage } from './preflight.js'
 import { evaluatePublishAccount, SWITCH_ACCOUNT_GUIDANCE } from '../lib/publish-account.js'
 
 export const publishCommand = new Command('publish')
-  .description('Upload plugin to the AMC Marketplace for review')
+  .description('Upload plugin to the Omniscio Marketplace for review')
   .option('--changelog <text>', 'Changelog for this version')
   .option('--watch', 'Poll until submission is approved or rejected')
   .option('--skip-preflight', 'Skip the pre-upload readiness checks')
@@ -70,7 +70,7 @@ export const publishCommand = new Command('publish')
       })
       if (!confirmed) {
         info('Cancelled — nothing was uploaded.')
-        info("Wrong account? Run 'amc-plugin publish --switch-account'.")
+        info("Wrong account? Run 'omniscio-plugin publish --switch-account'.")
         return
       }
     }
@@ -99,9 +99,9 @@ export const publishCommand = new Command('publish')
       // Display security findings if present
       displaySecurityFindings(result)
 
-      info('View your submission in Agent Mission Control → Marketplace → My Plugins tab.')
+      info('View your submission in Omniscio → Marketplace → My Plugins tab.')
       if (!opts.watch) {
-        info('Run `amc-plugin status` to check progress, or use --watch to wait.')
+        info('Run `omniscio-plugin status` to check progress, or use --watch to wait.')
         return
       }
 
@@ -130,7 +130,7 @@ export const publishCommand = new Command('publish')
         if (i % 2 === 0) process.stdout.write('.')
       }
 
-      info('Timed out waiting for review. Check back with `amc-plugin status`.')
+      info('Timed out waiting for review. Check back with `omniscio-plugin status`.')
     } catch (err) {
       if (err instanceof MarketplaceApiError) {
         fail(`Upload failed: ${err.message}`)

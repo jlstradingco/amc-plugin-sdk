@@ -2,7 +2,7 @@
 
 Collection-based CRUD storage backed by SQLite. Supports filtering, ordering, and pagination.
 
-**Availability:** Both (backend `ctx.db` / frontend `AgentMC.db`)
+**Availability:** Both (backend `ctx.db` / frontend `Omniscio.db`)
 **Required Permission:** `storage`
 
 ## QueryOptions
@@ -44,7 +44,7 @@ Insert a new row into a collection. An `id` field is generated automatically if 
 
 ```typescript
 // Frontend
-const task = await AgentMC.db.insert('tasks', {
+const task = await Omniscio.db.insert('tasks', {
   title: 'Review PR #42',
   priority: 1,
   done: false,
@@ -78,10 +78,10 @@ Query rows from a collection with optional filters, ordering, and pagination.
 
 ```typescript
 // Frontend -- get all tasks
-const allTasks = await AgentMC.db.query('tasks')
+const allTasks = await Omniscio.db.query('tasks')
 
 // Frontend -- filtered and sorted
-const urgent = await AgentMC.db.query('tasks', {
+const urgent = await Omniscio.db.query('tasks', {
   where: { priority: 1, done: false },
   orderBy: { created_at: 'desc' },
   limit: 10,
@@ -114,7 +114,7 @@ Retrieve a single row by its ID.
 
 ```typescript
 // Frontend
-const task = await AgentMC.db.getById('tasks', 'a1b2c3')
+const task = await Omniscio.db.getById('tasks', 'a1b2c3')
 
 // Backend
 const task = await ctx.db.getById('tasks', 'a1b2c3')
@@ -143,7 +143,7 @@ Update specific fields on an existing row. Fields not included in the update are
 
 ```typescript
 // Frontend
-await AgentMC.db.update('tasks', 'a1b2c3', {
+await Omniscio.db.update('tasks', 'a1b2c3', {
   done: true,
   completedAt: Date.now(),
 })
@@ -174,7 +174,7 @@ Delete a single row by its ID.
 
 ```typescript
 // Frontend
-await AgentMC.db.delete('tasks', 'a1b2c3')
+await Omniscio.db.delete('tasks', 'a1b2c3')
 
 // Backend
 await ctx.db.delete('tasks', 'a1b2c3')
@@ -199,7 +199,7 @@ Delete all rows matching a set of field equality conditions.
 
 ```typescript
 // Frontend -- delete all completed tasks
-await AgentMC.db.deleteWhere('tasks', { done: true })
+await Omniscio.db.deleteWhere('tasks', { done: true })
 
 // Backend -- delete all low-priority items
 await ctx.db.deleteWhere('tasks', { priority: 0 })

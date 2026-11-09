@@ -2,7 +2,7 @@ import type { Finding } from '../lib/findings.js'
 import { collectAllSteps, collectMalformedSteps } from '../lib/recipe-steps.js'
 
 /**
- * Step-level checks that mirror AMC's own pre-flight gates (checks 3 and 4 in
+ * Step-level checks that mirror Omniscio's own pre-flight gates (checks 3 and 4 in
  * RECIPE_AUTHORING_GUIDE §8). A recipe that fails these is published but can
  * never RUN, which is the worst outcome available — a listing that does nothing.
  *
@@ -53,7 +53,7 @@ export function checkSteps(recipe: Record<string, unknown>): Finding[] {
         code: 'empty-prompt',
         message: `"${label}" has no prompt, so this automation cannot run.`,
         ...at,
-        fix: 'Add a non-empty "prompt". AMC blocks the run on an empty one.'
+        fix: 'Add a non-empty "prompt". Omniscio blocks the run on an empty one.'
       })
     }
   }

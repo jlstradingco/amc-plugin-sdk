@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { validateManifest } from '@agent-mc/plugin-sdk'
+import { validateManifest } from '@omniscio/plugin-sdk'
 import { buildManifest } from '../commands/create.js'
 
-// Every template `amc-plugin create` scaffolds must produce a manifest the SDK's own
-// validator accepts — otherwise a developer's first `amc-plugin validate` fails on a
+// Every template `omniscio-plugin create` scaffolds must produce a manifest the SDK's own
+// validator accepts — otherwise a developer's first `omniscio-plugin validate` fails on a
 // file they never touched. This guards the exact drift that silently broke the
 // github-issues example (cron gained required `label` / `approvalRequired`): the
 // `full` template is the only scaffold carrying a cron job + cli endpoints, so a

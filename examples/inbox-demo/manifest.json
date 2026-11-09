@@ -3,8 +3,8 @@
     "id": "inbox-demo",
     "name": "Inbox Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
-    "description": "Demonstrates publishing items to the AMC inbox",
+    "author": "Omniscio Team",
+    "description": "Demonstrates publishing items to the Omniscio inbox",
     "icon": "inbox",
     "category": "other",
     "license": { "type": "free" }

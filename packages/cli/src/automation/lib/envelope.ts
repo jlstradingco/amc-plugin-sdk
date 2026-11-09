@@ -133,7 +133,7 @@ export function buildEnvelope(
     definition.pipelines = pickPortablePipelines(recipe.pipelines)
   }
 
-  // executionMode is required by the envelope; multi-session is AMC's own default.
+  // executionMode is required by the envelope; multi-session is Omniscio's own default.
   if (definition.executionMode === undefined) definition.executionMode = 'multi-session'
 
   return {

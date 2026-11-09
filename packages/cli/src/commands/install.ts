@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { validateManifest } from '@agent-mc/plugin-sdk'
+import { validateManifest } from '@omniscio/plugin-sdk'
 import { ok, fail, info, warn, filePath, manifestNotFound, actionableError } from '../lib/output.js'
 import { isTypeScriptProject } from '../lib/project.js'
 import { compilePlugin } from '../lib/compile.js'
@@ -17,9 +17,9 @@ interface InstallOptions {
 const WATCH_IGNORE = new Set(['node_modules', '.git', 'dist', '.amcplugin'])
 
 export const installCommand = new Command('install')
-  .description('Build and install this plugin into your local AMC, then hot-reload it')
+  .description('Build and install this plugin into your local Omniscio, then hot-reload it')
   .option('--no-build', 'Skip the build (install files as-authored)')
-  .option('--no-reload', 'Copy files only; do not hot-reload the running AMC')
+  .option('--no-reload', 'Copy files only; do not hot-reload the running Omniscio')
   .option('-w, --watch', 'Re-install + hot-reload on every source change')
   .action(async (opts: InstallOptions) => {
     const cwd = process.cwd()
@@ -54,8 +54,8 @@ export const installCommand = new Command('install')
 
       const token = readCliToken()
       if (!token) {
-        warn('AMC control token not found (~/.amc/cli-token or $AMC_CLI_TOKEN).')
-        warn('Skipping hot-reload — restart AMC to pick up the changes.')
+        warn('Omniscio control token not found (~/.amc/cli-token or $AMC_CLI_TOKEN).')
+        warn('Skipping hot-reload — restart Omniscio to pick up the changes.')
         return true
       }
       const reload = await reloadPluginInAmc(pluginId, {
@@ -63,9 +63,9 @@ export const installCommand = new Command('install')
         sourceSessionId: process.env.AMC_SESSION_ID,
       })
       if (reload.ok) {
-        ok('Hot-reloaded in AMC')
+        ok('Hot-reloaded in Omniscio')
       } else {
-        warn(`Could not hot-reload (${reload.error}). Files are installed — restart AMC to pick them up.`)
+        warn(`Could not hot-reload (${reload.error}). Files are installed — restart Omniscio to pick them up.`)
       }
       return true
     }

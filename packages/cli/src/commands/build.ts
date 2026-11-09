@@ -1,10 +1,10 @@
 import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { validateManifest } from '@agent-mc/plugin-sdk'
-import { ok, fail, warn, info, actionableError, manifestNotFound } from '../lib/output.js'
+import { validateManifest } from '@omniscio/plugin-sdk'
+import { ok, fail, warn, info, manifestNotFound } from '../lib/output.js'
 import { isTypeScriptProject, resolveBannedScanDirs } from '../lib/project.js'
-import { compilePlugin } from '../lib/compile.js'
+import { compilePluginOrExit } from '../lib/compile.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 
 export const buildCommand = new Command('build')
@@ -34,13 +34,8 @@ export const buildCommand = new Command('build')
     }
 
     info('Compiling TypeScript and bundling panel scripts...')
-    try {
-      const bundles = compilePlugin(cwd)
-      bundles.forEach(b => ok(`Bundled ${path.relative(cwd, b.outfile)}`))
-    } catch {
-      actionableError('Build failed', 'Check the errors above and fix your source files.')
-      process.exit(1)
-    }
+    const bundles = compilePluginOrExit(cwd)
+    bundles.forEach(b => ok(`Bundled ${path.relative(cwd, b.outfile)}`))
 
     warnBannedImports(resolveBannedScanDirs(cwd, manifest))
     ok('Build complete')

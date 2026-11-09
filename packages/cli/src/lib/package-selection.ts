@@ -135,7 +135,7 @@ function refuseWrongFile(dir: string, file: string, identity: PluginIdentity): P
   const kind = TEST_LABEL.test(name) ? 'a test build' : 'not this release'
   return refuse(
     `${display(dir, file)} is ${kind}: this release is ${identity.id} ${identity.version}, so the file must be named ${expected}`,
-    `Publish ${expected}: pass it with --package <path>, or run 'amc-plugin package' and remove the other .amcplugin files first.`
+    `Publish ${expected}: pass it with --package <path>, or run 'omniscio-plugin package' and remove the other .amcplugin files first.`
   )
 }
 
@@ -145,7 +145,7 @@ function checkContents(dir: string, file: string, identity: PluginIdentity): Pac
   if (packaged === null) {
     return refuse(
       `Could not read manifest.json inside ${display(dir, file)}, so its version cannot be checked`,
-      `Rebuild it with 'amc-plugin package' and publish ${expected}.`
+      `Rebuild it with 'omniscio-plugin package' and publish ${expected}.`
     )
   }
   if (TEST_LABEL.test(packaged)) {
@@ -157,7 +157,7 @@ function checkContents(dir: string, file: string, identity: PluginIdentity): Pac
   if (packaged !== identity.version) {
     return refuse(
       `${display(dir, file)} contains version ${packaged}, but manifest.json declares ${identity.version}`,
-      `Rebuild it with 'amc-plugin package' and publish ${expected}.`
+      `Rebuild it with 'omniscio-plugin package' and publish ${expected}.`
     )
   }
   return null

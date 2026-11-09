@@ -3,11 +3,11 @@ import { collectAllSteps } from '../lib/recipe-steps.js'
 import { CROSS_APP_MATRIX, type SdkCrossAppSurface } from '../data/cross-app-matrix.js'
 
 /**
- * Does this automation declare the AMC apps it actually uses?
+ * Does this automation declare the Omniscio apps it actually uses?
  *
  * THE PROBLEM THIS CATCHES. A published automation runs on the INSTALLER's machine,
  * where Jira may never have been connected and Supermail may not be set up. Until
- * `requiresApps` existed there was no way to say so: AMC's portability model knew
+ * `requiresApps` existed there was no way to say so: Omniscio's portability model knew
  * only about dependencies on the AUTHORING machine (a local script, a file on disk),
  * all of which are fatal, and had no vocabulary for a satisfiable dependency on the
  * host. So a cross-app listing declared nothing, published, installed cleanly, and
@@ -21,13 +21,13 @@ import { CROSS_APP_MATRIX, type SdkCrossAppSurface } from '../data/cross-app-mat
  *   over-declared  — a warning. Not dangerous on its own, but it trains installers to
  *                    ignore the requirements list, which devalues the honest ones.
  *
- * WHY IT RUNS LOCALLY. A third-party author has no access to AMC's internal route
+ * WHY IT RUNS LOCALLY. A third-party author has no access to Omniscio's internal route
  * table, so before this they had no way to know which apps their own prompts touched.
  * The matrix snapshot in ../data makes the check possible offline, before an upload
  * slot is spent.
  */
 
-/** Route paths mentioned in a block of text. Mirrors AMC's `extractRoutePaths`. */
+/** Route paths mentioned in a block of text. Mirrors Omniscio's `extractRoutePaths`. */
 export function extractRoutePaths(text: string): string[] {
   const found = new Set<string>()
   for (const m of text.matchAll(/\/[a-z][a-z0-9-]*(?:\/[A-Za-z0-9_:.*-]+)*/g)) {
@@ -46,7 +46,7 @@ export function extractRoutePaths(text: string): string[] {
  * that teaches authors and installers to ignore the requirements list. `/ping` and
  * `/status` are the same kind of thing: liveness, not capability.
  *
- * Mirrors AMC's INFRASTRUCTURE_ROUTE_PREFIXES — keep the two in step.
+ * Mirrors Omniscio's INFRASTRUCTURE_ROUTE_PREFIXES — keep the two in step.
  */
 export const INFRASTRUCTURE_ROUTE_PREFIXES: readonly string[] = [
   '/capabilities',
@@ -111,7 +111,7 @@ export function checkHostCapabilities(
       findings.push({
         severity: 'error',
         code: 'unknown-required-app',
-        message: `"requiresApps" names "${app}", which is not an AMC app.`,
+        message: `"requiresApps" names "${app}", which is not an Omniscio app.`,
         fix:
           'Use the surface slug exactly — for example "jira", "supermail", "kms". ' +
           'A name that is not a surface is silently ignored, so the requirement would ' +
@@ -159,7 +159,7 @@ export function checkHostCapabilities(
       code: 'unpreflightable-required-app',
       message: `${app} cannot be checked before the run on the installer's machine.`,
       fix:
-        `AMC has no readiness check for ${app} yet, so GET /capabilities/probe cannot ` +
+        `Omniscio has no readiness check for ${app} yet, so GET /capabilities/probe cannot ` +
         'confirm it up front. Your automation will still run — but make its first step ' +
         `handle ${app} being unavailable, rather than assuming it is there.`
     })

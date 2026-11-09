@@ -12,23 +12,23 @@ const PUBLISHED_BACKEND = path.join(here, '..', 'types', 'context.ts')
 const EXPOSED_FLOOR = 40
 const TYPED_FLOOR = 10
 
-function interfaceBody(file: string): string {
-  const source = fs.readFileSync(file, 'utf-8')
-  const start = source.indexOf('export interface AgentMC')
-  expect(start, `${file} declares no AgentMC interface`).toBeGreaterThanOrEqual(0)
+function interfaceBody(file: string, name: string): string {
+  const source = fs.readFileSync(file, 'utf-8').replace(/\r\n/g, '\n')
+  const start = source.indexOf(`export interface ${name} {`)
+  expect(start, `${file} declares no ${name} interface`).toBeGreaterThanOrEqual(0)
   const fromInterface = source.slice(start)
   const end = fromInterface.indexOf('\n}')
-  expect(end, `AgentMC in ${file} has no closing brace`).toBeGreaterThan(0)
+  expect(end, `${name} in ${file} has no closing brace`).toBeGreaterThan(0)
   return fromInterface.slice(0, end)
 }
 
 function exposedNamespaces(): string[] {
-  const body = interfaceBody(GENERATED_TYPES)
+  const body = interfaceBody(GENERATED_TYPES, 'AgentMC')
   return [...body.matchAll(/^ {2}"([A-Za-z0-9_]+)"\s*:/gm)].map((match) => match[1]!)
 }
 
 function publishedNamespaces(): string[] {
-  const body = interfaceBody(PUBLISHED_BRIDGE)
+  const body = interfaceBody(PUBLISHED_BRIDGE, 'Omniscio')
   return [...body.matchAll(/^ {2}([A-Za-z][A-Za-z0-9_]*)\??\s*:/gm)].map((match) => match[1]!)
 }
 
@@ -49,7 +49,7 @@ describe('bridge namespace coverage', () => {
     const unaccounted = exposed.filter((name) => !publishedSet.has(name) && !registeredSet.has(name))
     expect(
       unaccounted,
-      `Exposed but neither typed on AgentMC (types/bridge.ts) nor listed in ` +
+      `Exposed but neither typed on Omniscio (types/bridge.ts) nor listed in ` +
         `namespace-coverage-register.ts: ${unaccounted.join(', ')}. Type the namespace, or add a ` +
         `register entry explaining why it is still untyped.`
     ).toEqual([])
@@ -59,7 +59,7 @@ describe('bridge namespace coverage', () => {
     const stale = UNTYPED_BRIDGE_GAPS.map((gap) => gap.namespace).filter((name) => publishedSet.has(name))
     expect(
       stale,
-      `Typed on AgentMC but still listed as an untyped gap: ${stale.join(', ')}. ` +
+      `Typed on Omniscio but still listed as an untyped gap: ${stale.join(', ')}. ` +
         `Delete the register entry in this same change.`
     ).toEqual([])
   })
@@ -69,7 +69,7 @@ describe('bridge namespace coverage', () => {
     const phantom = published.filter((name) => !exposedSet.has(name))
     expect(
       phantom,
-      `Typed on AgentMC but not exposed to the webview: ${phantom.join(', ')}. ` +
+      `Typed on Omniscio but not exposed to the webview: ${phantom.join(', ')}. ` +
         `Remove the type, or expose the namespace in the host surface.`
     ).toEqual([])
   })
@@ -193,9 +193,9 @@ function methodDrift(
 
 describe('bridge method coverage', () => {
   const untypedSet = new Set(UNTYPED_BRIDGE_GAPS.map((gap) => gap.namespace))
-  const surfaces: Array<{ surface: 'backend' | 'webview'; iface: string }> = [
-    { surface: 'backend', iface: 'PluginContext' },
-    { surface: 'webview', iface: 'AgentMC' }
+  const surfaces: Array<{ surface: 'backend' | 'webview'; generatedIface: string; publishedIface: string }> = [
+    { surface: 'backend', generatedIface: 'PluginContext', publishedIface: 'PluginContext' },
+    { surface: 'webview', generatedIface: 'AgentMC', publishedIface: 'Omniscio' }
   ]
 
   it('reads real method names off both sheets instead of comparing two empty lists', () => {
@@ -207,9 +207,9 @@ describe('bridge method coverage', () => {
     expect(published.settings).toContain('set')
   })
 
-  for (const { surface, iface } of surfaces) {
+  for (const { surface, generatedIface, publishedIface } of surfaces) {
     it(`types the same actions as the host on every ${surface} namespace`, () => {
-      const drift = methodDrift(surface, generatedMethods(iface), publishedMethods(iface), untypedSet)
+      const drift = methodDrift(surface, generatedMethods(generatedIface), publishedMethods(publishedIface), untypedSet)
       const registered = PUBLISHED_METHOD_GAPS.filter((gap) => gap.surface === surface)
       const unexplained = drift.filter(
         (item) =>
@@ -229,8 +229,8 @@ describe('bridge method coverage', () => {
   }
 
   it('deletes a method register entry the moment the two sheets agree', () => {
-    const drift = surfaces.flatMap(({ surface, iface }) =>
-      methodDrift(surface, generatedMethods(iface), publishedMethods(iface), untypedSet)
+    const drift = surfaces.flatMap(({ surface, generatedIface, publishedIface }) =>
+      methodDrift(surface, generatedMethods(generatedIface), publishedMethods(publishedIface), untypedSet)
     )
     const stale = PUBLISHED_METHOD_GAPS.filter(
       (gap) =>

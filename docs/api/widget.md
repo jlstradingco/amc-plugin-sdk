@@ -2,7 +2,7 @@
 
 A live status widget in the Omniscio titlebar: a number, a short label and a status tone that you can update at any time.
 
-**Availability:** Webview only (`AgentMC.widget`). There is no `ctx.widget`.
+**Availability:** Webview only (`Omniscio.widget`). There is no `ctx.widget`.
 **Required Permissions:** `chrome` **and** `chrome.widget`
 
 ::: tip You send data, Omniscio draws it
@@ -11,7 +11,7 @@ Omniscio owns the titlebar, so a widget is a **description**, not a drawing. You
 
 ## Permissions
 
-`chrome.widget` must be declared together with `chrome`. A manifest with `chrome.widget` alone fails `amc-plugin validate`, as it fails Omniscio's own check. Omniscio will not infer one from the other: the consent card the user reads has to match the permissions your plugin holds.
+`chrome.widget` must be declared together with `chrome`. A manifest with `chrome.widget` alone fails `omniscio-plugin validate`, as it fails Omniscio's own check. Omniscio will not infer one from the other: the consent card the user reads has to match the permissions your plugin holds.
 
 ```json
 {
@@ -98,14 +98,14 @@ The list is small on purpose. It excludes the icons Omniscio uses for its own ac
 - **Without it**, a click opens your plugin's own panel.
 - With **`panel: 'none'`**, the widget is an indicator and nothing opens.
 
-`amc-plugin validate` checks that the `ui.widget.entryPoint` file exists, and `amc-plugin package` ships it. Keep it under `ui/` in a flat plugin.
+`omniscio-plugin validate` checks that the `ui.widget.entryPoint` file exists, and `omniscio-plugin package` ships it. Keep it under `ui/` in a flat plugin.
 
 ## Example
 
 ```typescript
-import type { AgentMC, WidgetTone } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio, WidgetTone } from '@omniscio/plugin-sdk/browser'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 async function publish(failing: number, total: number) {
   if (total === 0) {
@@ -128,8 +128,8 @@ async function publish(failing: number, total: number) {
 ## Notes
 
 - Webview only. A backend that needs a widget should send the data to its webview with [`ctx.events`](./events).
-- `@agent-mc/plugin-sdk/browser` exports `WidgetSpec`, `WidgetShape`, `WidgetTone` and `BridgeWidget`.
+- `@omniscio/plugin-sdk/browser` exports `WidgetSpec`, `WidgetShape`, `WidgetTone` and `BridgeWidget`.
 
 ## Testing
 
-The dev shell has no titlebar and the SDK ships no webview mock, so `AgentMC.widget` is not available there. Guard the call (`if (amc.widget?.set)`) so your page still loads, and test the widget inside Omniscio. See the [dev shell guide](../guide/dev-shell).
+The dev shell has no titlebar and the SDK ships no webview mock, so `Omniscio.widget` is not available there. Guard the call (`if (amc.widget?.set)`) so your page still loads, and test the widget inside Omniscio. See the [dev shell guide](../guide/dev-shell).

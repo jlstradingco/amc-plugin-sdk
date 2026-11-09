@@ -82,7 +82,7 @@ polled. See [The two exec paths](#the-two-exec-paths).
 
 The three are **not hierarchical and none implies another.** A manifest asking for
 `workspace.write` or `workspace.exec` without an explicit `workspace.read` alongside it is
-**rejected** -- by the host loader, by the marketplace publish gate, and by `amc-plugin
+**rejected** -- by the host loader, by the marketplace publish gate, and by `omniscio-plugin
 validate`. The host refuses to infer it on purpose: around twenty consumers read the raw
 permissions array and the consent ledger, so an inferred permission would make the consent
 card the user reads disagree with what the plugin actually holds.

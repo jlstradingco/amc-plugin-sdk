@@ -114,6 +114,6 @@ export const PROCESS_INTERPRETER_DENYLIST = [
 
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 
-export const AMC_PLUGIN_SDK_VERSION = "3.3.0"
+export const AMC_PLUGIN_SDK_VERSION = "3.4.0"
 
 export const PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER = "{{unsubscribe_url}}"

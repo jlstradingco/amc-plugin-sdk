@@ -1,10 +1,10 @@
 <div align="center">
 
-# @agent-mc/plugin-sdk
+# @omniscio/plugin-sdk
 
-**TypeScript types, interfaces, and validators for building Agent Mission Control plugins**
+**TypeScript types, interfaces, and validators for building Omniscio plugins**
 
-[![npm](https://img.shields.io/npm/v/@agent-mc/plugin-sdk?color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/@agent-mc/plugin-sdk)
+[![npm](https://img.shields.io/npm/v/@omniscio/plugin-sdk?color=cb3837&logo=npm&logoColor=white)](https://www.npmjs.com/package/@omniscio/plugin-sdk)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -14,12 +14,12 @@
 
 ## Overview
 
-This package provides the type definitions and manifest validators for [Agent Mission Control](https://github.com/jlstradingco/agent-mission-control) (AMC) plugins. It is a dev dependency for plugin projects — it supplies TypeScript interfaces for the sandboxed `PluginContext` your backend code receives, the `AgentMC` browser bridge your UI code uses, and a Zod-powered manifest validator for build-time checks.
+This package provides the type definitions and manifest validators for [Omniscio](https://omniscio.com) plugins. It is a dev dependency for plugin projects — it supplies TypeScript interfaces for the sandboxed `PluginContext` your backend code receives, the `Omniscio` browser bridge your UI code uses, and a Zod-powered manifest validator for build-time checks.
 
 ## Install
 
 ```bash
-npm install @agent-mc/plugin-sdk --save-dev
+npm install @omniscio/plugin-sdk --save-dev
 ```
 
 ## Usage
@@ -27,7 +27,7 @@ npm install @agent-mc/plugin-sdk --save-dev
 ### Backend types
 
 ```typescript
-import type { PluginActivate, PluginContext } from '@agent-mc/plugin-sdk'
+import type { PluginActivate, PluginContext } from '@omniscio/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => {
   return {
@@ -47,19 +47,19 @@ export default activate
 ### Browser bridge types
 
 ```typescript
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio } from '@omniscio/plugin-sdk/browser'
 
 declare global {
-  interface Window { AgentMC: AgentMC }
+  interface Window { Omniscio: Omniscio }
 }
 
-const settings = await window.AgentMC.settings.getAll()
+const settings = await window.Omniscio.settings.getAll()
 ```
 
 ### Manifest validation
 
 ```typescript
-import { validateManifest } from '@agent-mc/plugin-sdk/validators'
+import { validateManifest } from '@omniscio/plugin-sdk/validators'
 
 const result = validateManifest(manifest)
 if (!result.valid) {
@@ -80,7 +80,7 @@ Every backend plugin receives a `PluginContext` with these sandboxed capabilitie
 | `ai` | `PluginAi` | `ai` | Direct AI text generation (`generateMessage`, `generateTitle`) |
 | `http` | `PluginHttp` | `network` | Outbound HTTP requests (`fetch`) |
 | `cron` | `PluginCron` | `cron` | Scheduled recurring tasks |
-| `cli` | `PluginCli` | `cli` | HTTP endpoints on AMC's control server |
+| `cli` | `PluginCli` | `cli` | HTTP endpoints on Omniscio's control server |
 | `toast` | `PluginToast` | `notifications`* | In-app toasts and OS notifications |
 | `sidebar` | `PluginSidebar` | — | Badge count and navigation items |
 | `settings` | `PluginSettings` | — | Read plugin settings (`getAll`, `get`) |
@@ -91,7 +91,7 @@ Every backend plugin receives a `PluginContext` with these sandboxed capabilitie
 
 ## Permissions
 
-Declare in `manifest.json` — AMC shows these at install and enforces at runtime:
+Declare in `manifest.json` — Omniscio shows these at install and enforces at runtime:
 
 ```json
 {
@@ -108,7 +108,7 @@ Declare in `manifest.json` — AMC shows these at install and enforces at runtim
 | `cron` | `ctx.cron` |
 | `cli` | `ctx.cli` |
 | `notifications` | `ctx.toast.notify()` |
-| `rss` | Access to AMC's built-in RSS feed data |
+| `rss` | Access to Omniscio's built-in RSS feed data |
 
 ## Exports
 
@@ -116,11 +116,11 @@ This package provides five entry points:
 
 | Import path | What it provides |
 |---|---|
-| `@agent-mc/plugin-sdk` | All TypeScript types + `validateManifest()` + `manifestSchema` + `checkCommandTables()` |
-| `@agent-mc/plugin-sdk/browser` | `AgentMC` browser bridge type for UI plugins |
-| `@agent-mc/plugin-sdk/validators` | Zod manifest schema and validation function |
-| `@agent-mc/plugin-sdk/commands` | `createCommandChannel` (backend) and `createCommandClient` (panel): a private command channel agents cannot write to |
-| `@agent-mc/plugin-sdk/testing` | `createTestContext`, `createRpcDouble` and `describeForgedRowsAreInert` for plugin tests |
+| `@omniscio/plugin-sdk` | All TypeScript types + `validateManifest()` + `manifestSchema` + `checkCommandTables()` |
+| `@omniscio/plugin-sdk/browser` | `Omniscio` browser bridge type for UI plugins |
+| `@omniscio/plugin-sdk/validators` | Zod manifest schema and validation function |
+| `@omniscio/plugin-sdk/commands` | `createCommandChannel` (backend) and `createCommandClient` (panel): a private command channel agents cannot write to |
+| `@omniscio/plugin-sdk/testing` | `createTestContext`, `createRpcDouble` and `describeForgedRowsAreInert` for plugin tests |
 
 ## Backend Lifecycle
 

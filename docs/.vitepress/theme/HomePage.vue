@@ -19,7 +19,7 @@ const showSuccess = ref(false)
 const hasStartedTyping = ref(false)
 
 function copyInstall() {
-  navigator.clipboard.writeText('npm install -g @agent-mc/plugin-cli')
+  navigator.clipboard.writeText('npm install -g @omniscio/plugin-cli')
   copied.value = true
   setTimeout(() => { copied.value = false }, 1500)
 }
@@ -38,7 +38,7 @@ const codeLines: Segment[][] = [
     { text: ' } ' },
     { text: 'from', cls: 'tok-keyword' },
     { text: ' ' },
-    { text: "'@agent-mc/plugin-sdk'", cls: 'tok-string' },
+    { text: "'@omniscio/plugin-sdk'", cls: 'tok-string' },
   ],
   [],
   [
@@ -331,7 +331,7 @@ const features = [
       <button class="install-pill" @click="copyInstall" :class="{ copied }">
         <span v-if="!copied" class="install-text">
           <span class="install-dollar">$</span>
-          npm install -g @agent-mc/plugin-cli
+          npm install -g @omniscio/plugin-cli
         </span>
         <span v-else class="install-copied">Copied!</span>
       </button>

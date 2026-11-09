@@ -152,7 +152,7 @@ describe('clearToken', () => {
     //
     // Making the token path a DIRECTORY produces the genuine article on every
     // platform — EPERM on Windows, EISDIR on POSIX — which is the same class of
-    // failure as the file being held open by another AMC process.
+    // failure as the file being held open by another Omniscio process.
     fs.mkdirSync(TOKEN_PATH, { recursive: true })
     const { clearToken } = await import('../lib/auth.js')
     expect(() => clearToken()).not.toThrow()

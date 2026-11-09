@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 
 function bridgeNamespaceNames(): string[] {
   const source = fs.readFileSync(path.join(here, '..', 'types', 'bridge.ts'), 'utf-8')
-  const iface = source.slice(source.indexOf('export interface AgentMC'))
+  const iface = source.slice(source.indexOf('export interface Omniscio {'))
   const body = iface.slice(0, iface.indexOf('\n}'))
   const names = [...body.matchAll(/^ {2}([a-zA-Z][A-Za-z0-9_]*)\s*:/gm)].map((m) => m[1])
   expect(names.length).toBeGreaterThan(0)

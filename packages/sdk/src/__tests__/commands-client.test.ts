@@ -13,7 +13,7 @@ import { createRpcDouble, createTestContext } from '../testing/index.js'
 import { HOST_INVOKE_FAILURES } from './fixtures/host-mirror.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const globals = globalThis as { AgentMC?: unknown }
+const globals = globalThis as { Omniscio?: unknown; AgentMC?: unknown }
 
 const rejectingBackend = (message: string): BridgeBackend => ({
   invoke: () => Promise.reject(new Error(message)),
@@ -49,6 +49,7 @@ function slowChannel() {
 }
 
 afterEach(() => {
+  delete globals.Omniscio
   delete globals.AgentMC
   vi.useRealTimers()
 })
@@ -67,12 +68,25 @@ describe('on an Omniscio without the panel-to-backend channel', () => {
   })
 })
 
-describe('by default the client uses window.AgentMC.backend', () => {
+describe('by default the client uses window.Omniscio.backend', () => {
   it('reads it when a command runs, so a client made before the bridge loads still works', async () => {
     const { double } = slowChannel()
     const client = createCommandClient('demo')
-    globals.AgentMC = { backend: double.backend }
+    globals.Omniscio = { backend: double.backend }
     await expect(client.run('ping', null)).resolves.toBe('pong')
+  })
+
+  it('prefers window.Omniscio when the old window.AgentMC name is present too', async () => {
+    const { double } = slowChannel()
+    globals.Omniscio = { backend: double.backend }
+    globals.AgentMC = { storage: {} }
+    await expect(createCommandClient('demo').run('ping', null)).resolves.toBe('pong')
+  })
+
+  it('falls back to window.AgentMC on an Omniscio released before the rename', async () => {
+    const { double } = slowChannel()
+    globals.AgentMC = { backend: double.backend }
+    await expect(createCommandClient('demo').run('ping', null)).resolves.toBe('pong')
   })
 })
 

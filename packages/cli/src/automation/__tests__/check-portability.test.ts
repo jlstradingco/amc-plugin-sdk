@@ -42,7 +42,7 @@ describe('checkPortability', () => {
     )
   })
 
-  it('reports EVERY blocker in one pass, like AMC does', () => {
+  it('reports EVERY blocker in one pass, like Omniscio does', () => {
     const found = codes({
       ...base,
       scope: 'project',

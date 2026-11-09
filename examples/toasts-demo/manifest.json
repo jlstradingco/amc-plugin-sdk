@@ -3,7 +3,7 @@
     "id": "toasts-demo",
     "name": "Toasts Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
+    "author": "Omniscio Team",
     "description": "Demonstrates toast notifications and OS-level alerts",
     "icon": "bell",
     "category": "other",

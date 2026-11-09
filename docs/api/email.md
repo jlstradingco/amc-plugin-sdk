@@ -53,7 +53,7 @@ already delivered and named that message.
 Put the placeholder `{{unsubscribe_url}}` anywhere in `html`, usually as a link:
 
 ```typescript
-import { PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER } from '@agent-mc/plugin-sdk'
+import { PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER } from '@omniscio/plugin-sdk'
 
 const footer = `<a href="${PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER}">Unsubscribe</a>`
 ```

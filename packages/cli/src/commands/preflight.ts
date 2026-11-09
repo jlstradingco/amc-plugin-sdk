@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import chalk from 'chalk'
-import { validateManifest } from '@agent-mc/plugin-sdk'
+import { validateManifest } from '@omniscio/plugin-sdk'
 import { getRegistry } from '../lib/marketplace-api.js'
 import { commandTablesPreflight } from '../lib/command-tables.js'
 import {
@@ -56,7 +56,7 @@ export async function runPreflight(
           name: 'Manifest',
           status: 'fail',
           message: `manifest.json is invalid: ${validation.errors[0] ?? 'unknown error'}`,
-          suggestion: "Run 'amc-plugin validate' to see all manifest errors."
+          suggestion: "Run 'omniscio-plugin validate' to see all manifest errors."
         }
       ]
     }
@@ -117,7 +117,7 @@ export function locatePackage(cwd: string, explicit?: string): string {
   const identity = readPluginIdentity(cwd)
   let selection = selectPackage(cwd, identity, explicit)
   if (selection.kind === 'none') {
-    info('No .amcplugin found. Running `amc-plugin package` first...')
+    info('No .amcplugin found. Running `omniscio-plugin package` first...')
     execFileSync(process.execPath, [process.argv[1], 'package'], { cwd, stdio: 'inherit' })
     selection = selectPackage(cwd, identity)
   }

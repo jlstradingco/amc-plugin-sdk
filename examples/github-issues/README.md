@@ -1,6 +1,6 @@
 # GitHub Issues
 
-Full-stack AMC plugin that syncs and displays GitHub issues. Demonstrates backend lifecycle, cron scheduling, HTTP requests, settings, sidebar badges, and toasts.
+Full-stack Omniscio plugin that syncs and displays GitHub issues. Demonstrates backend lifecycle, cron scheduling, HTTP requests, settings, sidebar badges, and toasts.
 
 ## What It Shows
 
@@ -16,12 +16,12 @@ Full-stack AMC plugin that syncs and displays GitHub issues. Demonstrates backen
 
 **Frontend APIs:**
 
-- `AgentMC.db.query()` — read cached issues
-- `AgentMC.settings.get()` — display current repo
+- `Omniscio.db.query()` — read cached issues
+- `Omniscio.settings.get()` — display current repo
 
 ## Setup
 
-1. Go to AMC → Settings → Plugins → GitHub Issues
+1. Go to Omniscio → Settings → Plugins → GitHub Issues
 2. Set **GitHub Repository** to `owner/repo`
 3. Create a [Personal Access Token](https://github.com/settings/tokens) with `repo` scope
 4. Paste the token into **Personal Access Token**
@@ -36,4 +36,4 @@ npm run build
 npm run dev
 ```
 
-Note: The dev shell uses mock APIs — real GitHub sync requires installing in AMC.
+Note: The dev shell uses mock APIs — real GitHub sync requires installing in Omniscio.

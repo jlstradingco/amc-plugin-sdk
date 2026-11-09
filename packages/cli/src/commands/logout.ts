@@ -39,7 +39,7 @@ export const logoutCommand = new Command('logout')
       return
     }
     // Report what actually happened. A failed unlink (the file held open by another
-    // AMC process, a read-only home) used to throw a stack trace; claiming "Signed
+    // Omniscio process, a read-only home) used to throw a stack trace; claiming "Signed
     // out" instead would be worse still, because the credential is the whole point of
     // the command and it would still be sitting on disk.
     const revoked = await revokeSessions(token)

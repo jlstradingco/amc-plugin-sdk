@@ -3,7 +3,7 @@
     "id": "auth-demo",
     "name": "Auth Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
+    "author": "Omniscio Team",
     "description": "Demonstrates the identity and scoped-token auth APIs",
     "icon": "key",
     "category": "other",

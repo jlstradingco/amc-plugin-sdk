@@ -9,7 +9,7 @@ import type {
   CoreSession,
   CoreProject,
   CoreMessage,
-} from '@agent-mc/plugin-sdk'
+} from '@omniscio/plugin-sdk'
 // The dev shell is itself a development tool, so depending on the SDK's testing
 // entry is in-band: it keeps ONE definition of the backend message row rather
 // than a second copy that can drift from the host.
@@ -18,7 +18,7 @@ import {
   createMockSessionMessage,
   estimatePayloadBytes,
   hostQueryPage,
-} from '@agent-mc/plugin-sdk/testing'
+} from '@omniscio/plugin-sdk/testing'
 
 interface MockContextOptions {
   pluginId: string
@@ -106,17 +106,17 @@ const SAMPLE_MESSAGES: Record<string, CoreMessage[]> = {
  * packages/sdk/src/testing/index.ts — the two mocks must agree about the host.
  */
 const WORKSPACE_NOT_FAKEABLE =
-  'ctx.workspace is implemented by the AMC host, but the dev shell does not ' +
+  'ctx.workspace is implemented by the Omniscio host, but the dev shell does not ' +
   'fake it: the capability is gated by a per-project runtime grant, native ' +
   'confirm dialogs, and single-flight limits the shell cannot reproduce, so a ' +
-  'plugin that works here could still fail on install. Test it in a real AMC ' +
+  'plugin that works here could still fail on install. Test it in a real Omniscio ' +
   'build.'
 
 const PROCESS_NOT_FAKEABLE =
-  'ctx.process is implemented by the AMC host, but the dev shell does not ' +
+  'ctx.process is implemented by the Omniscio host, but the dev shell does not ' +
   'fake it: running a program is gated by the host and the real operating ' +
   'system, so a plugin that works here could still fail on install. Test it ' +
-  'in a real AMC build.'
+  'in a real Omniscio build.'
 
 function processNotFakeable(): PluginContext['process'] {
   const reject = (): Promise<never> => Promise.reject(new Error(PROCESS_NOT_FAKEABLE))
@@ -453,6 +453,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     settings: {
       getAll: () => Promise.resolve(clone(seededSettings)),
       get: (key) => Promise.resolve(clone(seededSettings[key])),
+      set: (key, value) => {
+        seededSettings[key] = clone(value)
+        return Promise.resolve()
+      },
     },
 
     log: {
@@ -465,7 +469,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     // `on` returns NOTHING, matching the host: its backend `ctx.events.on` has
     // no return statement and the worker protocol has no unsubscribe message,
     // so a subscription lives until the worker exits. Handing back an `off()`
-    // here would let a plugin clean up in the shell and crash in AMC.
+    // here would let a plugin clean up in the shell and crash in Omniscio.
     events: {
       emit: (channel, data) => {
         eventBus.emit(channel, data)
@@ -557,7 +561,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         }),
       // Shape the mock from the tool's own inputSchema rather than returning {} —
       // a plugin that renders `tldr` and `bullets` gets something to render in
-      // `amc-plugin dev` instead of a screen of undefined.
+      // `omniscio-plugin dev` instead of a screen of undefined.
       generateStructured: (opts) => {
         if (shouldLog) console.log(`${prefix} [ai] generateStructured(${opts.tool.name})`)
         return Promise.resolve(mockToolInput(opts.tool.inputSchema))

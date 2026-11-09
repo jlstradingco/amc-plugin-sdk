@@ -138,10 +138,10 @@ export interface PluginSettings {
 
 /**
  * The backend half of your plugin's own panel-to-backend request channel: your panel calls
- * `AgentMC.backend.invoke(method, ...args)` and awaits what your handler returns. Only your own
+ * `Omniscio.backend.invoke(method, ...args)` and awaits what your handler returns. Only your own
  * panel (and, where Omniscio relays it, the person's approved phone) can reach it — the local
  * control server that AI agent sessions use cannot. For commands, prefer
- * `createCommandChannel` from `@agent-mc/plugin-sdk/commands`, which builds on this.
+ * `createCommandChannel` from `@omniscio/plugin-sdk/commands`, which builds on this.
  *
  * Three host behaviours the signatures cannot show:
  * - Arguments and the return value cross a JSON boundary (the worker uses Node's `json` IPC
@@ -173,84 +173,7 @@ export interface PluginUsage {
 
 export type PluginMemberRole = 'owner' | 'admin' | 'member' | 'guest'
 
-export interface PluginMember {
-  id: string
-  displayName: string
-  avatarUrl: string | null
-  role: PluginMemberRole
-}
-
-export interface PluginMembers {
-  list(): Promise<PluginMember[]>
-}
-
 export type PluginLaunchKind = 'url' | 'path' | 'exe' | 'cmd'
-
-export interface PluginLaunchRequest {
-  kind: PluginLaunchKind
-  value: string
-}
-
-export interface PluginLaunchResult {
-  ok: boolean
-  error?: string
-}
-
-export interface PluginLaunch {
-  open(request: PluginLaunchRequest): Promise<PluginLaunchResult>
-}
-
-export interface PluginOAuthRequest {
-  authUrl: string
-  tokenUrl: string
-  clientId: string
-  clientSecret?: string
-  scopes?: string | string[]
-  extraAuthParams?: Record<string, string>
-}
-
-export interface PluginOAuthTokens {
-  accessToken: string
-  refreshToken?: string
-  tokenType?: string
-  scope?: string
-  expiresIn?: number
-  expiresAt?: number
-  idToken?: string
-}
-
-export type PluginOAuthResult =
-  | { ok: true; tokens: PluginOAuthTokens }
-  | { ok: false; error: string }
-
-export interface PluginOAuth {
-  authorize(request: PluginOAuthRequest): Promise<PluginOAuthResult>
-}
-
-export interface PluginChannelConnectOptions {
-  kind?: 'ws' | 'webhook'
-  url: string
-  protocols?: string | string[]
-  headers?: Record<string, string>
-}
-
-export type PluginChannelEvent =
-  | { type: 'open' }
-  | { type: 'message'; data: string }
-  | { type: 'close'; code: number; reason: string }
-  | { type: 'error'; message: string }
-
-export interface PluginChannelHandle {
-  send(data: unknown): Promise<unknown>
-  close(): Promise<unknown>
-}
-
-export interface PluginChannel {
-  connect(
-    options: PluginChannelConnectOptions,
-    onMessage?: (event: PluginChannelEvent) => void
-  ): Promise<PluginChannelHandle>
-}
 
 export interface PluginLogger {
   info(message: string, ...args: unknown[]): void
@@ -390,7 +313,7 @@ export interface PluginSessions {
    * `userInitiated` marks the session as user-provoked rather than
    * plugin-background, which is what decides whether AMC surfaces it in the
    * sidebar or hides it as plugin chatter. It is read on THIS backend surface
-   * only; the webview's `AgentMC.session.create` silently discards it.
+   * only; the webview's `Omniscio.session.create` silently discards it.
    *
    * The session has NO built-in tools (Read, Bash, Edit…) unless the manifest
    * declares `sessionTools: true` (see `PluginManifest.sessionTools`).
@@ -408,7 +331,7 @@ export interface PluginSessions {
   /**
    * Resolves a bare status string.
    *
-   * Backend-only shape. The webview's `AgentMC.session.getStatus` resolves
+   * Backend-only shape. The webview's `Omniscio.session.getStatus` resolves
    * `{ status, pendingAction }` instead — same method name, two shapes. Check
    * which surface you are on before comparing the result to a string.
    */
@@ -1411,7 +1334,7 @@ export interface PluginCore {
  * revoke) independently of the install-time permission; a worktree inherits its
  * project's grant.
  *
- * **Backend only.** There is no `AgentMC.workspace`: the host routes the whole
+ * **Backend only.** There is no `Omniscio.workspace`: the host routes the whole
  * namespace to plugin worker backends and its webview case throws
  * `workspace is not available through the plugin webview bridge yet`.
  *
@@ -1653,6 +1576,234 @@ export interface PluginProcess {
   onExit(handler: (event: PluginProcessExit) => void): () => void
 }
 
+/**
+ * One person in the active workspace, as a plugin may see them. Deliberately only these four fields:
+ * no email address, invite state or anything else about the person is ever included.
+ */
+export interface PluginMember {
+  /** The person's stable id. */
+  id: string
+  displayName: string
+  /** `null` when the person has no profile picture. */
+  avatarUrl: string | null
+  role: PluginMemberRole
+}
+
+/**
+ * `ctx.members` - who is in the workspace the person is working in right now. Requires the
+ * `members.read` permission. Available on the backend and, as `Omniscio.members`, on the webview.
+ *
+ * Optional on `PluginContext` so a context double written before the SDK typed it still compiles.
+ */
+export interface PluginMembers {
+  /**
+   * The people in the active workspace. The list follows the workspace the person has switched to.
+   * Rejects when the host does not yet know which workspace is active.
+   */
+  list(): Promise<PluginMember[]>
+}
+
+/** What `ctx.channel.connect` needs to open one outbound WebSocket. */
+export interface PluginChannelConnectOptions {
+  /** Only `'ws'` (an outbound WebSocket) is supported. `'webhook'` is refused by the host. */
+  kind?: 'ws'
+  /** A `wss://` address. Plain `ws://` and any local or private-network address is refused. */
+  url: string
+  /** Optional WebSocket sub-protocol name or names. */
+  protocols?: string | string[]
+  /** Extra request headers for the handshake. The host refuses connection-control headers. */
+  headers?: Record<string, string>
+}
+
+/** One thing that happened on a channel, passed to the `onMessage` callback of `ctx.channel.connect`. */
+export type PluginChannelEvent =
+  | { type: 'open' }
+  | { type: 'message'; data: string }
+  | { type: 'close'; code: number; reason: string }
+  | { type: 'error'; message: string }
+
+/** What `PluginChannelHandle.send` resolves to. A refusal is a value, not a rejection. */
+export type PluginChannelSendResult = { ok: true } | { ok: false; error: string }
+
+/** The handle `ctx.channel.connect` returns. It is not a raw socket; Omniscio owns the connection. */
+export interface PluginChannelHandle {
+  /**
+   * Send one text message. Resolves `{ ok: false, error }` instead of throwing when the channel is not
+   * open yet, is closed, or the message is too large. Wait for the `open` event before sending.
+   */
+  send(data: string): Promise<PluginChannelSendResult>
+  /** Close the channel for good. Safe to call more than once. */
+  close(): Promise<void>
+}
+
+/**
+ * `ctx.channel` - keep a long-lived outbound WebSocket to a service you choose. Requires the
+ * `channel` permission (elevated consent). Backend only.
+ *
+ * Omniscio owns the socket: it reconnects after a drop, keeps the connection alive and bounds how many
+ * channels and how much traffic a plugin may use. A channel is closed when the plugin is disabled.
+ */
+export interface PluginChannel {
+  /**
+   * Open a channel and resolve as soon as it is created, not when the socket is open: watch for the
+   * `open` event. Rejects with a plain-language message when the host refuses the request (a bad
+   * address, too many channels, or the connect rate limit).
+   */
+  connect(
+    options: PluginChannelConnectOptions,
+    onMessage: (event: PluginChannelEvent) => void
+  ): Promise<PluginChannelHandle>
+}
+
+/** What `ctx.launch.open` should open or run. */
+export interface PluginLaunchRequest {
+  /**
+   * `'url'` opens an http(s) link in the default browser. `'path'` opens a document or folder with the
+   * system's default program (network paths and programs are refused; an unfamiliar file type asks the person to confirm). `'exe'` and `'cmd'` run a
+   * program or command and always ask the person to confirm first.
+   */
+  kind: PluginLaunchKind
+  value: string
+}
+
+/** What `ctx.launch.open` resolves to. A refusal or a cancelled confirmation is `ok: false`, never a throw. */
+export interface PluginLaunchResult {
+  ok: boolean
+  /** A plain-language reason, present when `ok` is `false`. */
+  error?: string
+}
+
+/**
+ * `ctx.launch` - open a link or document, or run a program the person confirms. Requires the `launch`
+ * permission (elevated consent). Backend only.
+ */
+export interface PluginLaunch {
+  open(request: PluginLaunchRequest): Promise<PluginLaunchResult>
+}
+
+/** What `ctx.oauth.authorize` needs to run one OAuth 2.0 sign-in with your own client credentials. */
+export interface PluginOAuthRequest {
+  /** The service's authorization page address. */
+  authUrl: string
+  /** The service's token endpoint address. */
+  tokenUrl: string
+  clientId: string
+  clientSecret?: string
+  /** A space-separated string or a list of scopes. */
+  scopes?: string | string[]
+  /** Extra query parameters for the authorization page. The host never lets these replace its own. */
+  extraAuthParams?: Record<string, string>
+}
+
+/** The token set a successful `ctx.oauth.authorize` hands back. Store it in `ctx.secrets`. */
+export interface PluginOAuthTokens {
+  accessToken: string
+  refreshToken?: string
+  tokenType?: string
+  scope?: string
+  /** Seconds until the access token expires, as the service reported it. */
+  expiresIn?: number
+  /** When the access token expires, as epoch milliseconds. */
+  expiresAt?: number
+  idToken?: string
+}
+
+/** What `ctx.oauth.authorize` resolves to. Every failure is `ok: false` with a plain-language message. */
+export type PluginOAuthResult =
+  | { ok: true; tokens: PluginOAuthTokens }
+  | { ok: false; error: string }
+
+/**
+ * `ctx.oauth` - sign in to a third-party service with your own client credentials. Requires the
+ * `oauth` permission (elevated consent). Backend only.
+ *
+ * Omniscio opens the browser, receives the redirect on a temporary local address, applies PKCE and a
+ * random state check, and exchanges the code for tokens. The tokens go to your backend only.
+ */
+export interface PluginOAuth {
+  /** Only one sign-in per plugin can be in progress; a second call resolves `ok: false`. */
+  authorize(request: PluginOAuthRequest): Promise<PluginOAuthResult>
+}
+
+/** One entry of a feed fetched by `ctx.rss.fetchFeed`. Fields the feed did not carry are absent. */
+export interface PluginRssParsedEntry {
+  id: string
+  title: string
+  link?: string
+  content?: string
+  contentSnippet?: string
+  /** The publication date as the feed wrote it. */
+  pubDate?: string
+  author?: string
+  categories?: string[]
+}
+
+/** What `ctx.rss.fetchFeed` resolves to. */
+export interface PluginRssFeedResult {
+  title: string
+  description?: string
+  link?: string
+  entries: PluginRssParsedEntry[]
+}
+
+/** One of the feeds the person follows in Omniscio. */
+export interface PluginRssFeed {
+  id: string
+  url: string
+  name: string
+  lastFetchedAt: string | null
+  lastEntryAt: string | null
+  unreadCount: number
+  refreshIntervalMin: number
+  errorMessage: string | null
+  createdAt: string
+}
+
+/** One already-collected article from the person's feeds. */
+export interface PluginRssEntry {
+  id: string
+  feedId: string
+  guid: string
+  title: string
+  link: string | null
+  content: string | null
+  author: string | null
+  publishedAt: string | null
+  isRead: boolean
+  isArchived: boolean
+  createdAt: string
+  fetchedContent: string | null
+  aiSummary: string | null
+  wasClicked: boolean
+  readDurationMs: number | null
+}
+
+/** Filters for `ctx.rss.getRecentEntries`. */
+export interface PluginRssRecentOptions {
+  /** How many days back to look, 1 to 90. Defaults to 7. Ignored when `feedId` is set. */
+  sinceDays?: number
+  /** Only entries of this one feed. */
+  feedId?: string
+  /** At most this many entries, 1 to 200. Only applied together with `feedId`. */
+  limit?: number
+}
+
+/**
+ * `ctx.rss` - read RSS and Atom feeds. Requires the `rss` permission. Read-only: a plugin cannot add,
+ * change or remove the person's feeds.
+ */
+export interface PluginRss {
+  /**
+   * Fetch and parse a feed from any address. The host blocks private and internal network addresses.
+   * Rejects when the address is refused, the server answers with an error, or the page is not a feed.
+   */
+  fetchFeed(url: string): Promise<PluginRssFeedResult>
+  /** The feeds the person follows in Omniscio. */
+  listFeeds(): Promise<PluginRssFeed[]>
+  /** Articles Omniscio has already collected from the person's feeds. */
+  getRecentEntries(options?: PluginRssRecentOptions): Promise<PluginRssEntry[]>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -1699,10 +1850,6 @@ export interface PluginContext {
   auth: PluginAuth
   recording: PluginRecording
   spend: PluginSpend
-  members: PluginMembers
-  launch: PluginLaunch
-  oauth: PluginOAuth
-  channel: PluginChannel
   email?: PluginEmail
   /**
    * Your panel's request channel to this backend — see {@link PluginRpc}. Optional because
@@ -1712,7 +1859,7 @@ export interface PluginContext {
   /**
    * Feature detection — see {@link PluginHost}. Optional, and absent on every released
    * Omniscio so far: the backend `host` namespace exists only on unreleased host builds (the
-   * webview's `AgentMC.host` has existed since v0.1.89). Read it as `ctx.host?.getCapabilities()`.
+   * webview's `Omniscio.host` has existed since v0.1.89). Read it as `ctx.host?.getCapabilities()`.
    */
   host?: PluginHost
   /**
@@ -1731,8 +1878,8 @@ export interface PluginContext {
   // producing a permission error. Their permission rows exist for worker-host
   // bookkeeping; a row is not a namespace.
   //
-  // Reach them from your webview through `AgentMC.tts` / `AgentMC.sessionHistory`
-  // / `AgentMC.firebase` (see ./bridge.ts), and bridge to your backend with
+  // Reach them from your webview through `Omniscio.tts` / `Omniscio.sessionHistory`
+  // / `Omniscio.firebase` (see ./bridge.ts), and bridge to your backend with
   // `ctx.events` if the result has to cross surfaces.
   /**
    * IMPLEMENTED BY THE HOST — see {@link WorkspaceApi}. Backend only.
@@ -1749,4 +1896,17 @@ export interface PluginContext {
    */
   workspace: WorkspaceApi
   process: PluginProcess
+  /**
+   * Requires `members.read`. See {@link PluginMembers}. Optional so a `PluginContext`
+   * double written before the SDK typed it still compiles.
+   */
+  members?: PluginMembers
+  /** Backend only. Requires `channel`. See {@link PluginChannel}. Optional for the same reason as `members`. */
+  channel?: PluginChannel
+  /** Backend only. Requires `launch`. See {@link PluginLaunch}. Optional for the same reason as `members`. */
+  launch?: PluginLaunch
+  /** Backend only. Requires `oauth`. See {@link PluginOAuth}. Optional for the same reason as `members`. */
+  oauth?: PluginOAuth
+  /** Requires `rss`. See {@link PluginRss}. Optional for the same reason as `members`. */
+  rss?: PluginRss
 }

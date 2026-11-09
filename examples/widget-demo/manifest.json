@@ -3,7 +3,7 @@
     "id": "widget-demo",
     "name": "Widget Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
+    "author": "Omniscio Team",
     "description": "Draws a live status widget in the Omniscio titlebar",
     "icon": "sparkles",
     "category": "other",

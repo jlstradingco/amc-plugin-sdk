@@ -1,4 +1,4 @@
-// @script what="Builds @agent-mc/plugin-sdk into dist: compiles the ESM and CommonJS outputs with the package's own TypeScript, then marks dist/cjs as CommonJS." kind="entrypoint" owner="plugin-sdk"
+// @script what="Builds @omniscio/plugin-sdk into dist: compiles the ESM and CommonJS outputs with the package's own TypeScript, then marks dist/cjs as CommonJS." kind="entrypoint" owner="plugin-sdk"
 import { execFileSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'

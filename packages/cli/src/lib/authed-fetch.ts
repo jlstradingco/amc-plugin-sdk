@@ -2,8 +2,8 @@
 // credential once if the server refuses it mid-flight.
 //
 // Lives in its own module rather than in marketplace-api.ts because both API
-// clients need it — the plugin surface (`amc-plugin`) and the automation surface
-// (`amc-automation`) — and the automation client should not have to import the
+// clients need it — the plugin surface (`omniscio-plugin`) and the automation surface
+// (`omniscio-automation`) — and the automation client should not have to import the
 // plugin client just to make a request.
 
 import { tryRefreshStoredToken, type StoredToken } from './auth.js'

@@ -41,7 +41,7 @@ export interface RunOptions {
 }
 
 export interface CommandClientOptions {
-  /** Defaults to `window.AgentMC.backend`, read each time a command runs. Tests pass a double. */
+  /** Defaults to `window.Omniscio.backend` (`window.AgentMC.backend` on an Omniscio released before 3.4.0), read each time a command runs. Tests pass a double. */
   backend?: BridgeBackend
 }
 
@@ -76,8 +76,11 @@ export function createCommandClient<M extends CommandMap = CommandMap>(
   }
 }
 
+type BridgeGlobals = { Omniscio?: { backend?: BridgeBackend }; AgentMC?: { backend?: BridgeBackend } }
+
 function defaultBackend(): BridgeBackend | undefined {
-  return (globalThis as { AgentMC?: { backend?: BridgeBackend } }).AgentMC?.backend
+  const globals = globalThis as BridgeGlobals
+  return (globals.Omniscio ?? globals.AgentMC)?.backend
 }
 
 function assertJson(input: unknown): void {

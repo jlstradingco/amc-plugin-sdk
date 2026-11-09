@@ -24,8 +24,8 @@ const { version } = require('../package.json')
 const program = new Command()
 
 program
-  .name('amc-plugin')
-  .description('CLI tool for building Agent Mission Control plugins')
+  .name('omniscio-plugin')
+  .description('CLI tool for building Omniscio plugins')
   .version(version)
 
 program.addCommand(createCommand)

@@ -81,7 +81,7 @@ describe('findBannedImports', () => {
 
   it('does not flag benign SDK / third-party imports', () => {
     const clean = [
-      `import { PluginActivate } from '@agent-mc/plugin-sdk'`,
+      `import { PluginActivate } from '@omniscio/plugin-sdk'`,
       `const lodash = require('lodash')`,
       `import fetch from 'node-fetch'`,
     ].join('\n')
@@ -115,7 +115,7 @@ describe('scanBannedImports', () => {
   })
 
   it('returns nothing for a clean tree', () => {
-    fs.writeFileSync(path.join(dir, 'index.js'), `import { thing } from '@agent-mc/plugin-sdk'`)
+    fs.writeFileSync(path.join(dir, 'index.js'), `import { thing } from '@omniscio/plugin-sdk'`)
     expect(scanBannedImports(dir)).toEqual([])
   })
 

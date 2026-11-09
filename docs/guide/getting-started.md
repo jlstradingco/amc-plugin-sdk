@@ -5,7 +5,7 @@ Build and install your first Omniscio plugin in under five minutes.
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) v18 or later
-- [Omniscio](https://github.com/jlstradingco/agent-mission-control) installed and running
+- [Omniscio](https://omniscio.com) installed and running
 - A terminal (PowerShell, bash, zsh)
 
 ## Install the CLI
@@ -13,22 +13,22 @@ Build and install your first Omniscio plugin in under five minutes.
 Install the Omniscio Plugin CLI globally:
 
 ```bash
-npm install -g @agent-mc/plugin-cli
+npm install -g @omniscio/plugin-cli
 ```
 
 Verify the installation:
 
 ```bash
-amc-plugin --version
+omniscio-plugin --version
 # 1.0.0
 ```
 
 ## Scaffold a New Plugin
 
-Run `amc-plugin create` with a kebab-case name:
+Run `omniscio-plugin create` with a kebab-case name:
 
 ```bash
-amc-plugin create my-plugin
+omniscio-plugin create my-plugin
 ```
 
 The CLI walks you through an interactive prompt:
@@ -65,16 +65,16 @@ Choose a template with the `-t` flag:
 
 ```bash
 # Scaffold with a backend
-amc-plugin create my-tool -t with-backend
+omniscio-plugin create my-tool -t with-backend
 
 # Scaffold with everything
-amc-plugin create my-suite -t full
+omniscio-plugin create my-suite -t full
 ```
 
 You can also skip the interactive prompts entirely:
 
 ```bash
-amc-plugin create my-plugin \
+omniscio-plugin create my-plugin \
   -t basic \
   --display-name "My Plugin" \
   --description "Does something useful" \
@@ -121,7 +121,7 @@ Expected output:
 ✓ Build complete
 ```
 
-`npm run build` runs `amc-plugin build`, which does four things:
+`npm run build` runs `omniscio-plugin build`, which does four things:
 
 1. Validates `manifest.json` against the SDK schema
 2. Runs `tsc` to compile TypeScript into `dist/`
@@ -133,7 +133,7 @@ Expected output:
 Run validation checks without producing build output. Useful for CI pipelines:
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin validate
+npx -p @omniscio/plugin-cli omniscio-plugin validate
 ```
 
 Expected output:
@@ -167,7 +167,7 @@ it rather than shelling out.
 Bundle your plugin into a `.amcplugin` archive:
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin package
+npx -p @omniscio/plugin-cli omniscio-plugin package
 ```
 
 Expected output:

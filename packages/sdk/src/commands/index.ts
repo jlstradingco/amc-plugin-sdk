@@ -1,5 +1,5 @@
 /**
- * `@agent-mc/plugin-sdk/commands` — a private command channel between a plugin's panel and its
+ * `@omniscio/plugin-sdk/commands` — a private command channel between a plugin's panel and its
  * backend that AI agents on the person's computer cannot write to or replay.
  *
  * Backend: `createCommandChannel(ctx, { name, commands })`. Panel: `createCommandClient(name)`.

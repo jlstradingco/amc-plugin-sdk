@@ -18,7 +18,7 @@ import * as path from 'node:path'
 //   - CJS      `require('x')`
 //   - ESM      `import … from 'x'` / `export … from 'x'` / side-effect `import 'x'`
 //   - dynamic  `import('x')`
-// AMC plugins are ESM (`"type": "module"`), so tsc compiles their source to the
+// Omniscio plugins are ESM (`"type": "module"`), so tsc compiles their source to the
 // `from` form — the require-only patterns this replaces silently missed a plain
 // `import Database from 'better-sqlite3'`.
 // Both spellings of a node: builtin are listed, because a plugin can legally write

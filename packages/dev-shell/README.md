@@ -1,4 +1,4 @@
-# @agent-mc/plugin-dev-shell
+# @omniscio/plugin-dev-shell
 
 A standalone Electron shell for developing Omniscio plugins offline — it loads your plugin from a
 local folder with hot reload and a mock plugin context, so you can iterate without restarting
@@ -7,14 +7,14 @@ Omniscio.
 ## Install
 
 ```bash
-npm install --save-dev @agent-mc/plugin-dev-shell
+npm install --save-dev @omniscio/plugin-dev-shell
 ```
 
 ## Usage
 
 ```bash
 cd my-plugin
-npx -p @agent-mc/plugin-cli amc-plugin dev
+npx -p @omniscio/plugin-cli omniscio-plugin dev
 ```
 
 ## Documentation

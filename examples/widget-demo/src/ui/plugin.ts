@@ -1,6 +1,6 @@
-import type { AgentMC, WidgetShape, WidgetSpec, WidgetTone } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio, WidgetShape, WidgetSpec, WidgetTone } from '@omniscio/plugin-sdk/browser'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 const shapeEl = document.getElementById('shape') as HTMLSelectElement
 const toneEl = document.getElementById('tone') as HTMLSelectElement

@@ -1,6 +1,6 @@
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio } from '@omniscio/plugin-sdk/browser'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 const issueList = document.getElementById('issue-list') as HTMLUListElement
 const searchInput = document.getElementById('search') as HTMLInputElement

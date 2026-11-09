@@ -1,7 +1,7 @@
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
-import type { InboxItem } from '@agent-mc/plugin-sdk'
+import type { Omniscio } from '@omniscio/plugin-sdk/browser'
+import type { InboxItem } from '@omniscio/plugin-sdk'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 const titleInput = document.getElementById('title') as HTMLInputElement
 const bodyInput = document.getElementById('body') as HTMLInputElement
@@ -27,7 +27,7 @@ function render() {
   countEl.textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`
 
   if (items.length === 0) {
-    itemList.innerHTML = '<li class="empty">No items. Add one above — it appears in the AMC inbox.</li>'
+    itemList.innerHTML = '<li class="empty">No items. Add one above — it appears in the Omniscio inbox.</li>'
     return
   }
 

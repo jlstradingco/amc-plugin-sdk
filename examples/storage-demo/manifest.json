@@ -3,7 +3,7 @@
     "id": "storage-demo",
     "name": "Storage Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
+    "author": "Omniscio Team",
     "description": "Demonstrates the storage and database APIs",
     "icon": "database",
     "category": "other",

@@ -1,8 +1,8 @@
-// Pure, side-effect-free preflight checks for `amc-plugin publish`.
+// Pure, side-effect-free preflight checks for `omniscio-plugin publish`.
 // The command module gathers the raw inputs (manifest, registry, package size)
 // and passes them in; everything here is unit-testable without fs/network.
 
-import { PLUGIN_PERMISSIONS } from '@agent-mc/plugin-sdk'
+import { PLUGIN_PERMISSIONS } from '@omniscio/plugin-sdk'
 import { DEVELOPMENT_DOC, MAX_README_CHARS, describeReadmeProblems, findReadmeProblems } from './readme-guard.js'
 
 export type PreflightStatus = 'pass' | 'warn' | 'fail'
@@ -209,7 +209,7 @@ export function checkBannedImports(hits: string[], scannedDirCount: number): Pre
       status: 'fail',
       message: `${hits.length} banned import(s): ${named}${suffix}`,
       suggestion:
-        "Marketplace plugin backends run under Node's --permission, which blocks these modules. Run 'amc-plugin validate' for the full list, and use HTTPS instead of shelling out to a CLI."
+        "Marketplace plugin backends run under Node's --permission, which blocks these modules. Run 'omniscio-plugin validate' for the full list, and use HTTPS instead of shelling out to a CLI."
     }
   }
 
@@ -218,7 +218,7 @@ export function checkBannedImports(hits: string[], scannedDirCount: number): Pre
       name,
       status: 'warn',
       message: 'Could not scan — no built output found',
-      suggestion: "Run 'amc-plugin build' so the shipped files can be checked before upload."
+      suggestion: "Run 'omniscio-plugin build' so the shipped files can be checked before upload."
     }
   }
 

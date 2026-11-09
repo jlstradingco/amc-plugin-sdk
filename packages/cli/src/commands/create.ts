@@ -4,7 +4,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { createRequire } from 'node:module'
 import { execSync } from 'node:child_process'
-import { classifyPluginIcon } from '@agent-mc/plugin-sdk'
+import { classifyPluginIcon } from '@omniscio/plugin-sdk'
 import { ok, fail, info, actionableError } from '../lib/output.js'
 
 const CLI_VERSION: string = createRequire(import.meta.url)('../../package.json').version
@@ -34,6 +34,7 @@ function escapeHtml(str: string): string {
 
 const MAX_TAGS = 10
 const MAX_TAG_LEN = 30
+const SCAFFOLD_SDK_RANGE = '^3.4.0'
 
 export function parseTagsInput(raw: string | undefined, fallbackCategory: string): string[] {
   const seen = new Set<string>()
@@ -56,12 +57,12 @@ const WIDGET_PLUGIN_JS = `// Plain-JS webview plugin that draws a titlebar widge
 // max), a short label (16 max), a tone (a MEANING, not a colour) and an icon
 // NAME from Omniscio's allow-list. Updates coalesce to one per 250 ms, and
 // sending an identical spec again does nothing, so push whenever your state changes.
-const amc = window.AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
-// The dev shell (amc-plugin dev) has no titlebar, so this API is missing there.
+// The dev shell (omniscio-plugin dev) has no titlebar, so this API is missing there.
 // Widgets can only be tried inside Omniscio itself.
 if (!amc || !amc.widget || !amc.widget.set) {
-  console.log('AgentMC.widget is not available here. Load this plugin inside Omniscio to see it.')
+  console.log('Omniscio.widget is not available here. Load this plugin inside Omniscio to see it.')
 } else {
   let count = 0
 
@@ -149,7 +150,7 @@ export function buildReadme(opts: {
     '## Getting started',
     '',
     '```bash',
-    'npm install       # install the SDK, the amc-plugin CLI + TypeScript',
+    'npm install       # install the SDK, the omniscio-plugin CLI + TypeScript',
     'npm run dev       # launch the dev shell with hot reload',
     'npm run build     # compile src/ to dist/',
     'npm run validate  # check the manifest',
@@ -171,10 +172,10 @@ export function buildReadme(opts: {
     '',
     '```bash',
     'npm run package',
-    'amc-plugin publish',
+    'omniscio-plugin publish',
     '```',
     '',
-    'See the [AMC Plugin SDK docs](https://docs.omniscio.com/sdk/) for the full guide.',
+    'See the [Omniscio Plugin SDK docs](https://docs.omniscio.com/sdk/) for the full guide.',
     ''
   ].join('\n')
 }
@@ -199,21 +200,21 @@ export function buildPackageJson(opts: {
 
   const scripts: Record<string, string> = isWebview
     ? {
-        dev: 'amc-plugin dev',
-        package: 'amc-plugin package',
-        validate: 'amc-plugin validate',
+        dev: 'omniscio-plugin dev',
+        package: 'omniscio-plugin package',
+        validate: 'omniscio-plugin validate',
       }
     : {
-        build: 'amc-plugin build',
-        dev: 'amc-plugin dev',
-        package: 'amc-plugin package',
-        validate: 'amc-plugin validate',
+        build: 'omniscio-plugin build',
+        dev: 'omniscio-plugin dev',
+        package: 'omniscio-plugin package',
+        validate: 'omniscio-plugin validate',
       }
   const devDependencies: Record<string, string> = isWebview
-    ? { '@agent-mc/plugin-cli': `^${CLI_VERSION}`, '@agent-mc/plugin-sdk': '^3.0.0' }
-    : { '@agent-mc/plugin-cli': `^${CLI_VERSION}`, '@agent-mc/plugin-sdk': '^3.0.0', typescript: '^5.5.0' }
+    ? { '@omniscio/plugin-cli': `^${CLI_VERSION}`, '@omniscio/plugin-sdk': SCAFFOLD_SDK_RANGE }
+    : { '@omniscio/plugin-cli': `^${CLI_VERSION}`, '@omniscio/plugin-sdk': SCAFFOLD_SDK_RANGE, typescript: '^5.5.0' }
   if (hasBackend) {
-    scripts.test = 'amc-plugin test'
+    scripts.test = 'omniscio-plugin test'
     devDependencies['vitest'] = '^3.0.0'
   }
   pkg.scripts = scripts
@@ -314,7 +315,7 @@ export const createCommand = new Command('create')
   )
   .option('--skip-install', 'Skip npm install')
   .option('--skip-git', 'Skip git init and initial commit')
-  .description('Scaffold a new AMC plugin project')
+  .description('Scaffold a new Omniscio plugin project')
   .action(async (name: string, opts: CreateOptions) => {
     const template = opts.template as Template
     if (!TEMPLATES.includes(template)) {
@@ -349,7 +350,7 @@ export const createCommand = new Command('create')
     } else {
       const response = await prompts([
         { type: 'text', name: 'displayName', message: 'Display name', initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
-        { type: 'text', name: 'description', message: 'Description', initial: 'An AMC plugin' },
+        { type: 'text', name: 'description', message: 'Description', initial: 'An Omniscio plugin' },
         { type: 'text', name: 'author', message: 'Author' },
         { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
         { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: '' },
@@ -433,7 +434,7 @@ export const createCommand = new Command('create')
       fs.writeFileSync(path.join(uiRoot, 'widget.html'), buildWidgetPopoverHtml(displayName))
     } else if (isWebview) {
       fs.writeFileSync(path.join(uiRoot, 'plugin.js'), `// Plain-JS webview plugin — no build step. Edit and reload.
-const amc = window.AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 async function init() {
   const settings = await amc.settings.getAll()
@@ -443,9 +444,9 @@ async function init() {
 init()
 `)
     } else {
-      fs.writeFileSync(path.join(uiRoot, 'plugin.ts'), `import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+      fs.writeFileSync(path.join(uiRoot, 'plugin.ts'), `import type { Omniscio } from '@omniscio/plugin-sdk/browser'
 
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc: Omniscio = window.Omniscio ?? window.AgentMC
 
 async function init() {
   const settings = await amc.settings.getAll()
@@ -459,7 +460,7 @@ init()
     if (template === 'with-backend' || template === 'full') {
       fs.mkdirSync(path.join(targetDir, 'src', 'backend'), { recursive: true })
 
-      fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.ts'), `import type { PluginActivate } from '@agent-mc/plugin-sdk'
+      fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.ts'), `import type { PluginActivate } from '@omniscio/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => {
   return {
@@ -481,7 +482,7 @@ export default activate
 `)
 
       fs.writeFileSync(path.join(targetDir, 'src', 'backend', 'index.test.ts'), `import { describe, it, expect } from 'vitest'
-import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import { createTestContext } from '@omniscio/plugin-sdk/testing'
 import activate from './index.js'
 
 describe('${displayName} backend', () => {

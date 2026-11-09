@@ -2,10 +2,10 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 
-// AMC's Electron `app.getName()` — the folder under the OS app-data root.
+// Omniscio's Electron `app.getName()` — the folder under the OS app-data root.
 const APP_NAME = 'agent-mission-control'
 
-/** The default port AMC's CLI control server listens on (AMC_CLI_PORT override). */
+/** The default port Omniscio's CLI control server listens on (AMC_CLI_PORT override). */
 const DEFAULT_CONTROL_PORT = 19519
 
 export interface HostEnv {
@@ -16,7 +16,7 @@ export interface HostEnv {
 
 /**
  * Resolve the same directory Electron's `app.getPath('userData')` yields for
- * AMC, per-platform, so the CLI can install a plugin straight into the running
+ * Omniscio, per-platform, so the CLI can install a plugin straight into the running
  * app's data dir. All inputs are injectable for testing.
  */
 export function resolveAmcUserDataDir(opts: HostEnv = {}): string {
@@ -37,7 +37,7 @@ export function resolveAmcUserDataDir(opts: HostEnv = {}): string {
   return path.posix.join(xdg, APP_NAME)
 }
 
-/** The `plugins/` directory AMC's loader scans for marketplace/local plugins. */
+/** The `plugins/` directory Omniscio's loader scans for marketplace/local plugins. */
 export function resolveAmcPluginsDir(opts: HostEnv = {}): string {
   const platform = opts.platform ?? process.platform
   const sep = platform === 'win32' ? path.win32 : path.posix
@@ -52,7 +52,7 @@ export interface TokenSource {
 
 /**
  * Read the CLI control-server bearer token — `$AMC_CLI_TOKEN` wins, else the
- * `~/.amc/cli-token` file AMC writes. Returns null (never throws) when absent.
+ * `~/.amc/cli-token` file Omniscio writes. Returns null (never throws) when absent.
  */
 export function readCliToken(opts: TokenSource = {}): string | null {
   const env = opts.env ?? process.env
@@ -82,7 +82,7 @@ export interface ReloadResult {
 }
 
 /**
- * Hot-reload a just-installed plugin in the running AMC via the CLI control
+ * Hot-reload a just-installed plugin in the running Omniscio via the CLI control
  * server (`POST /plugins/:id/reload`). Bearer-authed; sends the caller's
  * session id for provenance when present.
  */

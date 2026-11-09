@@ -1,10 +1,10 @@
 /**
- * Test harness for AMC plugins. Import from '@agent-mc/plugin-sdk/testing' in a
+ * Test harness for Omniscio plugins. Import from '@omniscio/plugin-sdk/testing' in a
  * vitest / jest test to get a faithful in-memory PluginContext plus capture
  * surfaces, so a backend's activate() logic can be exercised without AMC or
  * Electron.
  *
- *   import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+ *   import { createTestContext } from '@omniscio/plugin-sdk/testing'
  *   import activate from '../src/backend'
  *
  *   const h = createTestContext({ settings: { apiKey: 'x' } })
@@ -616,7 +616,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         return Promise.resolve({
           send: (data) => {
             harness.channelSends.push({ channelId, data })
-            return Promise.resolve()
+            return Promise.resolve({ ok: true as const })
           },
           close: () => {
             channelHandlers.delete(channelId)

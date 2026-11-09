@@ -3,7 +3,7 @@
     "id": "recording-demo",
     "name": "Recording Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
+    "author": "Omniscio Team",
     "description": "Screen recording driven from a webview through its own backend",
     "icon": "video",
     "category": "other",

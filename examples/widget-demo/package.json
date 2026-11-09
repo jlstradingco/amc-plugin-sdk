@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "amc-plugin build",
-    "dev": "amc-plugin dev",
-    "package": "amc-plugin package",
-    "validate": "amc-plugin validate"
+    "build": "omniscio-plugin build",
+    "dev": "omniscio-plugin dev",
+    "package": "omniscio-plugin package",
+    "validate": "omniscio-plugin validate"
   },
   "devDependencies": {
-    "@agent-mc/plugin-sdk": "^3.0.0",
+    "@omniscio/plugin-sdk": "^3.4.0",
     "typescript": "^5.5.0"
   }
 }

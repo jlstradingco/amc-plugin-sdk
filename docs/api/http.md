@@ -58,12 +58,12 @@ await ctx.fs.writeFile('imports/data.csv', csv)
 - API keys and secrets should be stored in plugin settings (configured by the user in Omniscio's Settings > Plugins panel) and read via the [Settings](./settings) API. Never hardcode credentials.
 - There are no restrictions on which URLs you can fetch, but users see that your plugin has the `network` permission during installation.
 
-## Uploading a file the person shared — `AgentMC.http.uploadFile`
+## Uploading a file the person shared — `Omniscio.http.uploadFile`
 
-**Availability:** Plugin panel only (`window.AgentMC.http.uploadFile`)
+**Availability:** Plugin panel only (`window.Omniscio.http.uploadFile`)
 **Required Permission:** `network.upload`, plus an `uploadHosts` list in your manifest
 
-Send one file from a folder the person picked for your plugin (with `AgentMC.export.pickFolder`) to a website your manifest lists. Omniscio reads the file and streams it to the site itself, so the bytes never pass through your plugin's code.
+Send one file from a folder the person picked for your plugin (with `Omniscio.export.pickFolder`) to a website your manifest lists. Omniscio reads the file and streams it to the site itself, so the bytes never pass through your plugin's code.
 
 ```json
 {
@@ -73,9 +73,9 @@ Send one file from a folder the person picked for your plugin (with `AgentMC.exp
 ```
 
 ```typescript
-const picked = await window.AgentMC.export.pickFolder({ title: 'Choose your reels folder' })
+const picked = await window.Omniscio.export.pickFolder({ title: 'Choose your reels folder' })
 if (picked.selected) {
-  const answer = await window.AgentMC.http.uploadFile({
+  const answer = await window.Omniscio.http.uploadFile({
     url: `https://rupload.facebook.com/video-upload/v21.0/${videoId}`,
     filePath: `${picked.path}/reel.mp4`,
     headers: { Authorization: `OAuth ${pageToken}`, offset: '0' },

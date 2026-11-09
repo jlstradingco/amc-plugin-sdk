@@ -179,7 +179,7 @@ describe('createMockSessionMessage — one definition of the backend row', () =>
   })
 
   it('is shared by both mocks, so neither can drift from the host alone', async () => {
-    // The dev shell imports this same function from @agent-mc/plugin-sdk/testing.
+    // The dev shell imports this same function from @omniscio/plugin-sdk/testing.
     const h = createTestContext({ pluginId: 'p' })
     const { sessionId } = await h.ctx.sessions.create({ prompt: 'hi' })
     await h.ctx.sessions.sendMessage(sessionId, 'a question')

@@ -9,7 +9,7 @@ import { findPageScriptProblems } from '../lib/page-scripts.js'
 
 function setupPluginNodeModules(pluginDir: string) {
   const sdkPkg = path.resolve(__dirname, '../../../sdk')
-  const nmSdk = path.join(pluginDir, 'node_modules', '@agent-mc', 'plugin-sdk')
+  const nmSdk = path.join(pluginDir, 'node_modules', '@omniscio', 'plugin-sdk')
   fs.mkdirSync(nmSdk, { recursive: true })
   fs.cpSync(path.join(sdkPkg, 'dist'), path.join(nmSdk, 'dist'), { recursive: true })
   fs.copyFileSync(path.join(sdkPkg, 'package.json'), path.join(nmSdk, 'package.json'))
@@ -43,11 +43,11 @@ describe('Plugin lifecycle E2E', () => {
   const cliDist = path.resolve(__dirname, '../../dist/index.js')
 
   beforeAll(() => {
-    execSync('pnpm --filter @agent-mc/plugin-sdk build', {
+    execSync('pnpm --filter @omniscio/plugin-sdk build', {
       cwd: monorepoRoot,
       stdio: 'pipe',
     })
-    execSync('pnpm --filter @agent-mc/plugin-cli build', {
+    execSync('pnpm --filter @omniscio/plugin-cli build', {
       cwd: monorepoRoot,
       stdio: 'pipe',
     })
@@ -85,6 +85,18 @@ describe('Plugin lifecycle E2E', () => {
     expect(fs.existsSync(path.join(pluginDir, 'README.md'))).toBe(true)
   }, SHELL_OUT_TIMEOUT_MS)
 
+  it('scaffolds only the Omniscio package names, reading the old bridge name as a fallback', () => {
+    const files = fs
+      .readdirSync(pluginDir, { recursive: true, encoding: 'utf-8' })
+      .map((rel) => path.join(pluginDir, rel))
+      .filter((file) => fs.statSync(file).isFile())
+    const oldPackage = files.filter((file) => fs.readFileSync(file, 'utf-8').includes('@agent-mc'))
+    expect(oldPackage, `scaffolded files naming the old @agent-mc packages: ${oldPackage.join(', ')}`).toEqual([])
+    const ui = fs.readFileSync(path.join(pluginDir, 'src', 'ui', 'plugin.ts'), 'utf-8')
+    expect(ui).toContain("from '@omniscio/plugin-sdk/browser'")
+    expect(ui).toContain('window.Omniscio ?? window.AgentMC')
+  })
+
   it('scaffolds a README describing the plugin', () => {
     const readme = fs.readFileSync(path.join(pluginDir, 'README.md'), 'utf-8')
     expect(readme).toContain('# E2E Test Plugin')
@@ -114,9 +126,9 @@ describe('Plugin lifecycle E2E', () => {
     expect(pkg.description).toBe('A test plugin')
     expect(pkg.author).toBe('Test Author')
     expect(pkg.license).toBe('UNLICENSED')
-    expect(pkg.scripts.build).toBe('amc-plugin build')
-    expect(pkg.devDependencies['@agent-mc/plugin-sdk']).toBeDefined()
-    expect(pkg.devDependencies['@agent-mc/plugin-cli']).toMatch(/^\^\d+\.\d+\.\d+/)
+    expect(pkg.scripts.build).toBe('omniscio-plugin build')
+    expect(pkg.devDependencies['@omniscio/plugin-sdk']).toBeDefined()
+    expect(pkg.devDependencies['@omniscio/plugin-cli']).toMatch(/^\^\d+\.\d+\.\d+/)
   })
 
   it('scaffolds a .gitignore that excludes env/secret files', () => {

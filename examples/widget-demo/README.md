@@ -1,11 +1,11 @@
 # Widget Demo
 
-Minimal AMC plugin demonstrating the **titlebar widget** (`chrome.widget`).
+Minimal Omniscio plugin demonstrating the **titlebar widget** (`chrome.widget`).
 
 ## What It Shows
 
-- `AgentMC.widget.set(spec)` — draw or update a widget in the Omniscio titlebar
-- `AgentMC.widget.clear()` — remove it
+- `Omniscio.widget.set(spec)` — draw or update a widget in the Omniscio titlebar
+- `Omniscio.widget.clear()` — remove it
 - The five shapes (`stat`, `pill`, `dot`, `gauge`, `sparkline`) and the semantic tones
 - `ui.widget.entryPoint` — the popover page that opens when the widget is clicked
 

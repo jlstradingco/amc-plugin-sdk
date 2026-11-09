@@ -3,14 +3,23 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { validateManifest } from '@agent-mc/plugin-sdk'
+import { validateManifest } from '@omniscio/plugin-sdk'
 import { ok, fail, info, filePath, manifestNotFound, actionableError } from '../lib/output.js'
 import { isTypeScriptProject } from '../lib/project.js'
-import { compilePlugin } from '../lib/compile.js'
+import { compilePluginOrExit } from '../lib/compile.js'
+import { DEV_SHELL_PACKAGE_NAMES, firstResolved } from '../lib/package-names.js'
 
 const PLUGIN_CLI_ENTRY_ENV = 'AMC_PLUGIN_CLI_ENTRY'
 
 const require = createRequire(import.meta.url)
+
+function resolveOrNull(name: string): string | null {
+  try {
+    return require.resolve(name)
+  } catch {
+    return null
+  }
+}
 
 export const devCommand = new Command('dev')
   .description('Launch the dev shell with hot-reload for local plugin development')
@@ -34,13 +43,8 @@ export const devCommand = new Command('dev')
 
     if (opts.build && isTypeScriptProject(cwd) && !fs.existsSync(path.join(cwd, 'dist'))) {
       info('Building plugin...')
-      try {
-        compilePlugin(cwd)
-        ok('Build complete')
-      } catch {
-        actionableError('Build failed', 'Check the errors above and fix your source files.')
-        process.exit(1)
-      }
+      compilePluginOrExit(cwd)
+      ok('Build complete')
     }
 
     let electronPath: string
@@ -49,21 +53,21 @@ export const devCommand = new Command('dev')
     } catch {
       actionableError(
         'Electron is not installed',
-        "Run 'pnpm add -D electron' in your plugin, or reinstall @agent-mc/plugin-dev-shell (which now brings Electron with it)."
+        "Run 'pnpm add -D electron' in your plugin, or reinstall @omniscio/plugin-dev-shell (which now brings Electron with it)."
       )
       process.exit(1)
     }
 
-    let shellEntry: string
-    try {
-      shellEntry = require.resolve('@agent-mc/plugin-dev-shell')
-    } catch {
+    const [currentShellPackage] = DEV_SHELL_PACKAGE_NAMES
+    const shell = firstResolved(DEV_SHELL_PACKAGE_NAMES, resolveOrNull)
+    if (!shell) {
       actionableError(
-        '@agent-mc/plugin-dev-shell not found',
-        "Install it with 'pnpm add -D @agent-mc/plugin-dev-shell' or run from the SDK monorepo."
+        `${DEV_SHELL_PACKAGE_NAMES.join(' or ')} not found`,
+        `Install it with 'pnpm add -D ${currentShellPackage}' or run from the SDK monorepo.`
       )
       process.exit(1)
     }
+    const shellEntry = shell.value
 
     info(
       `Launching dev shell for ${filePath(manifest.plugin?.name ?? manifest.plugin?.id ?? 'plugin')}`
@@ -79,4 +83,3 @@ export const devCommand = new Command('dev')
       process.exit(code ?? 0)
     })
   })
-

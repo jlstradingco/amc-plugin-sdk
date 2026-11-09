@@ -5,7 +5,7 @@ import { createPublishCommand } from './commands/publish.js'
 import { createStatusCommand } from './commands/status.js'
 
 /**
- * Build the `amc-automation` command tree.
+ * Build the `omniscio-automation` command tree.
  *
  * Extracted from the entrypoint so the argv WIRING is reachable from tests. Every existing
  * automation test drives the `run*` functions directly, which bypasses commander entirely —
@@ -22,8 +22,8 @@ export function buildAutomationProgram(version: string): Command {
   const program = new Command()
 
   program
-    .name('amc-automation')
-    .description('CLI tool for publishing Agent Mission Control automations')
+    .name('omniscio-automation')
+    .description('CLI tool for publishing Omniscio automations')
     .version(version)
     // Without this, commander matches the program's own `-V, --version` ANYWHERE in argv, so
     // `validate --version 1.0.0` and `publish --version 2.0.0` printed the CLI version and
@@ -32,7 +32,7 @@ export function buildAutomationProgram(version: string): Command {
     // result, pinning every automation to DEFAULT_PUBLISH_VERSION forever.
     //
     // Positional options scope the program's flags to the argv BEFORE the subcommand name, so
-    // `amc-automation --version` still reports the CLI version while the subcommands keep
+    // `omniscio-automation --version` still reports the CLI version while the subcommands keep
     // theirs. Consequence to preserve: any FUTURE program-level option must be passed before
     // the subcommand name, never after it.
     .enablePositionalOptions()

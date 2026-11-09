@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { validateManifest } from '@agent-mc/plugin-sdk'
+import { validateManifest } from '@omniscio/plugin-sdk'
 import { getBaseUrl } from '../lib/auth.js'
 import { ok, fail, warn, heading } from '../lib/output.js'
 import {
@@ -13,8 +13,10 @@ import {
   checkCliToken,
   checkMarketplaceReachable,
   summarizeDoctor,
-  type DoctorResult
+  type DoctorResult,
+  type InstalledSdk
 } from '../lib/doctor-checks.js'
+import { SDK_PACKAGE_NAMES, firstResolved } from '../lib/package-names.js'
 
 const DEFAULT_CLI_PORT = 19519
 
@@ -30,8 +32,8 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response | nul
   }
 }
 
-function readInstalledSdkVersion(cwd: string): string | null {
-  const pkgPath = path.join(cwd, 'node_modules', '@agent-mc', 'plugin-sdk', 'package.json')
+function readPackageVersion(cwd: string, name: string): string | null {
+  const pkgPath = path.join(cwd, 'node_modules', ...name.split('/'), 'package.json')
   try {
     return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version ?? null
   } catch {
@@ -39,8 +41,13 @@ function readInstalledSdkVersion(cwd: string): string | null {
   }
 }
 
+function readInstalledSdk(cwd: string): InstalledSdk | null {
+  const found = firstResolved(SDK_PACKAGE_NAMES, (name) => readPackageVersion(cwd, name))
+  return found ? { name: found.name, version: found.value } : null
+}
+
 async function fetchLatestSdkVersion(): Promise<string | null> {
-  const res = await fetchWithTimeout('https://registry.npmjs.org/@agent-mc/plugin-sdk/latest', 3000)
+  const res = await fetchWithTimeout(`https://registry.npmjs.org/${SDK_PACKAGE_NAMES[0]}/latest`, 3000)
   if (!res || !res.ok) return null
   try {
     return (await res.json() as { version?: string }).version ?? null
@@ -85,7 +92,7 @@ export const doctorCommand = new Command('doctor')
 
     const results: DoctorResult[] = [
       checkNodeVersion(process.version),
-      checkSdkVersion(readInstalledSdkVersion(cwd), latestSdk),
+      checkSdkVersion(readInstalledSdk(cwd), latestSdk),
       checkManifest(manifest, validation),
       checkHostReachable(hostReachable, port),
       checkCliToken(tokenExists),
@@ -100,7 +107,7 @@ export const doctorCommand = new Command('doctor')
       return
     }
 
-    heading('AMC Plugin Doctor')
+    heading('Omniscio Plugin Doctor')
     for (const r of results) {
       const line = `${r.name}: ${r.message}`
       if (r.status === 'pass') ok(line)

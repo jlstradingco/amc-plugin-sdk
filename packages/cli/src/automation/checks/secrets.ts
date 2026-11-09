@@ -4,7 +4,7 @@ import { SHAREABLE_FIELDS } from '../lib/envelope.js'
 import { pickPortableStep } from '../lib/portable-step.js'
 
 /**
- * Key/path shapes worth a second look. Mirrors the spirit of AMC's own
+ * Key/path shapes worth a second look. Mirrors the spirit of Omniscio's own
  * SECRET_PATTERNS. WARNINGS only — a published automation is world-readable, so
  * flagging is worth a little noise, but a false positive must never block a
  * publish. The author is the only one who can tell.
@@ -129,7 +129,7 @@ export function checkSecrets(recipe: Record<string, unknown>): Finding[] {
   //
   // Naming `prompt` and `exitMessage` by hand missed `approvalGate.message` and
   // `supervisor.systemPrompt` — both free text, both shareable, and both scanned by
-  // AMC's own share-time scanner, so a key pasted into either was flagged in the app
+  // Omniscio's own share-time scanner, so a key pasted into either was flagged in the app
   // and waved through by the CLI. Filtering through `pickPortableStep` first also
   // means a local-only field is not scanned at all, which is correct: it never
   // travels, so a "secret" in it is not a publication risk and the warning would be

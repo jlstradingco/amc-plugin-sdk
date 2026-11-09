@@ -4,7 +4,7 @@ Plugins declare the permissions they need in `manifest.json`. Omniscio shows the
 
 ## Permission Model
 
-Permissions gate access to specific API surfaces. Some APIs are available to every plugin without any permission declaration. The full canonical list is exported at runtime as `PLUGIN_PERMISSIONS` from `@agent-mc/plugin-sdk`.
+Permissions gate access to specific API surfaces. Some APIs are available to every plugin without any permission declaration. The full canonical list is exported at runtime as `PLUGIN_PERMISSIONS` from `@omniscio/plugin-sdk`.
 
 ### Always Available (No Permission Needed)
 
@@ -271,15 +271,15 @@ const entries = await ctx.rss.getRecentEntries({ sinceDays: 7, feedId: 'abc-123'
 
 The namespace is read-only: there are no feed mutators.
 
-Plugins that source content from RSS feeds (e.g. newsletter builders, digest generators) should declare this permission.
+Plugins that source content from RSS feeds (e.g. newsletter builders, digest generators) should declare this permission. Full reference: [RSS](../api/rss).
 
 ---
 
 ### `system`
 
-**Grants access to:** the host's checked launcher, plus clipboard and file-opening through the UI bridge (`window.AgentMC`)
+**Grants access to:** the host's checked launcher, plus clipboard and file-opening through the UI bridge (`window.Omniscio`)
 
-Covers privileged desktop actions surfaced to a plugin's webview UI: opening a path or revealing an item in the OS file manager, reading text and images from the clipboard, and asking Omniscio to run a program through its own launcher (`ctx.process` from a backend, `window.AgentMC.process` from your UI). Only declare it if your plugin genuinely drives the host desktop.
+Covers privileged desktop actions surfaced to a plugin's webview UI: opening a path or revealing an item in the OS file manager, reading text and images from the clipboard, and asking Omniscio to run a program through its own launcher (`ctx.process` from a backend, `window.Omniscio.process` from your UI). Only declare it if your plugin genuinely drives the host desktop.
 
 **Your backend asks the launcher to run a program.** A plugin's worker is forked under Node's `--permission` model without `--allow-child-process`, so `child_process` does not work there — a `spawn` / `exec` / `execSync` / `fork` call is refused with "A plugin cannot start programs by itself. Ask Omniscio to run the program through ctx.process.spawn or ctx.process.exec, which check the command first." That is deliberate: a process your backend starts itself inherits nothing of the sandbox, so it could read the user's own credentials. Call `ctx.process.exec(command, args, opts)` for a run-to-completion result, or `ctx.process.spawn(command, args, opts)` with `ctx.process.onOutput` / `ctx.process.onExit` and `ctx.process.kill(processId)` for a long run. The command is a bare name from `process.allowedCommands` or `process.pinnedPrograms` (see the manifest guide); the working directory is always your data folder, so pass absolute paths (a `cwd` option is refused). For commands inside a project the user granted, `ctx.workspace.exec` is still the road.
 
@@ -355,14 +355,14 @@ The `navigation` permission lets a plugin ask Omniscio to move the user to a ses
 Start and stop screen recordings and manage the resulting files.
 
 ::: warning Bridge pending
-`ctx.recording` is fully wired and Tier-1 **elevated**: `start()` / `stop()` / `list()` / `get()` are real, every `start` raises a native confirm the plugin cannot bypass, and the host redacts file paths and share tokens from everything the plugin can see. (This section previously said the bridge was "not yet wired" and that calls were inert — that stopped being true before 2026-08-11.) There is no webview equivalent: `AgentMC.recording` does not exist. See the [Recording API](../api/recording).
+`ctx.recording` is fully wired and Tier-1 **elevated**: `start()` / `stop()` / `list()` / `get()` are real, every `start` raises a native confirm the plugin cannot bypass, and the host redacts file paths and share tokens from everything the plugin can see. (This section previously said the bridge was "not yet wired" and that calls were inert — that stopped being true before 2026-08-11.) There is no webview equivalent: `Omniscio.recording` does not exist. See the [Recording API](../api/recording).
 :::
 
 ---
 
 ### `network.upload`
 
-**Grants access to:** `AgentMC.http.uploadFile` (plugin panel only)
+**Grants access to:** `Omniscio.http.uploadFile` (plugin panel only)
 
 Upload a file the person shared with your plugin to a website your manifest lists in `uploadHosts`. Tier-1 **elevated**, and it must be declared together with `uploadHosts` (either one alone is refused at install). Omniscio sends the file itself over https, asks the person to approve your list of sites once, follows no redirect, and forgets the approval when your plugin is turned off. See the [HTTP API](../api/http#uploading-a-file-the-person-shared-agentmc-http-uploadfile).
 
@@ -407,7 +407,7 @@ See the [Text to Speech API](../api/tts).
 
 ### `sessions.images`
 
-**Grants access to:** `ctx.sessions.sendMessage(sessionId, text, { images })` (backend), and `images` on `AgentMC.session.sendMessage` (panel)
+**Grants access to:** `ctx.sessions.sendMessage(sessionId, text, { images })` (backend), and `images` on `Omniscio.session.sendMessage` (panel)
 
 Send pictures to one of your own AI sessions so the AI can look at them. Declare it **together with `sessions`**: a manifest that lists `sessions.images` without `sessions` is refused at install.
 
@@ -472,25 +472,24 @@ See the [Spend API](../api/spend).
 
 ### `boards.read`
 
-**Grants access to:** the webview's `AgentMC.boards` namespace — `requestAccess()` and `list()`
+**Grants access to:** the webview's `Omniscio.boards` namespace — `requestAccess()` and `list()`
 
 Read the full contents of the boards the person grants your plugin: every item, column value and
 status. The person chooses which boards — `requestAccess()` asks them — and nothing is shared until
 they do.
 
-Accepted by the SDK since 3.2.0, so a manifest declaring it passes `amc-plugin validate` and
-preflight. The `boards` namespace itself is not typed by this SDK yet: call it through
-`window.AgentMC` with your own types for now.
+Accepted by the SDK since 3.2.0, so a manifest declaring it passes `omniscio-plugin validate` and
+preflight. Typed since 3.4.0 — see [Boards](../api/boards).
 
 ---
 
 ### `chrome.widget`
 
-**Grants access to:** `AgentMC.widget` (a live status widget in the Omniscio titlebar -- **webview** only)
+**Grants access to:** `Omniscio.widget` (a live status widget in the Omniscio titlebar -- **webview** only)
 
 Draw one small widget in the app's titlebar: a number, a short label and a status tone that your plugin can update at any time. You describe it with data and Omniscio draws it, so a plugin cannot paint its own pixels in the highest-trust part of the app. The text caps (8 and 16 characters) exist so a plugin cannot imitate a system message there, and you pick a tone's **meaning** rather than a colour.
 
-`chrome.widget` **requires an explicit `chrome`** in the same manifest. A manifest with `chrome.widget` alone is rejected by Omniscio and by `amc-plugin validate`; the host will not infer one permission from the other, so the consent card the user reads matches what the plugin holds.
+`chrome.widget` **requires an explicit `chrome`** in the same manifest. A manifest with `chrome.widget` alone is rejected by Omniscio and by `omniscio-plugin validate`; the host will not infer one permission from the other, so the consent card the user reads matches what the plugin holds.
 
 ```json
 {
@@ -523,7 +522,7 @@ Prefer [`sessions.readHistory`](#sessions-readhistory) when you only need histor
 
 ### `webassembly`
 
-**Grants:** WebAssembly compilation in your plugin's own panel (**webview** only; no `ctx` or `AgentMC` namespace)
+**Grants:** WebAssembly compilation in your plugin's own panel (**webview** only; no `ctx` or `Omniscio` namespace)
 
 By default a plugin panel cannot compile WebAssembly: `WebAssembly.instantiate()` and friends throw a `CompileError`. Declaring `webassembly` lets your panel, and the workers it starts, compile and run WebAssembly, for example an ONNX or WebGPU runtime that processes video on the graphics card. This is an **elevated** permission: Omniscio lists it on the install card as "Run fast compiled code (WebAssembly) inside its own panel, for example to process video on your graphics card. It still cannot turn text into code." and the person approves it once.
 
@@ -545,7 +544,7 @@ The grant follows the person's approval, not the manifest alone: until they appr
 
 ### `stt`
 
-**Grants access to:** `AgentMC.stt` (**webview** only — `transcribe`, `isConfigured`)
+**Grants access to:** `Omniscio.stt` (**webview** only — `transcribe`, `isConfigured`)
 
 Turn speech into text with the person's configured speech service. `transcribe(audioBase64, opts?)`
 takes audio your panel recorded and resolves the transcript; `isConfigured()` tells you whether a
@@ -586,7 +585,7 @@ Declare it alongside `auth` when your plugin reads who is signed in.
 
 ### `boards.link`
 
-**Grants access to:** `AgentMC.boardLinks` (**webview** — `create`, `listForEntity`, `remove`, `searchItems`)
+**Grants access to:** `Omniscio.boardLinks` (**webview** — `create`, `listForEntity`, `remove`, `searchItems`)
 
 Attach your plugin's own content to a task on a board the person granted, and detach it again —
 without ever changing the task itself. `create({ itemId, entityId, label? })` links one of your items
@@ -665,7 +664,7 @@ connection needs a `backend` in the manifest. **Elevated**.
 Open and search everything the person has written in the app, and publish one of those documents to
 a Google account they have connected. Read-only: nothing is changed.
 
-The separate `AgentMC.documents` API, which opens the one document the person picked, needs no
+The separate `Omniscio.documents` API, which opens the one document the person picked, needs no
 permission at all.
 
 ---
@@ -684,7 +683,7 @@ needs to list what it edits.
 
 ### `members.read`
 
-**Grants access to:** `AgentMC.members.list()` (**webview** and backend — `ctx.members.list()`)
+**Grants access to:** `Omniscio.members.list()` (**webview** and backend — `ctx.members.list()`)
 
 Read the names, pictures and roles of the people in the workspace the person is using. It never sees
 email addresses, and it grants nothing about their sessions or their content.
@@ -700,7 +699,7 @@ person hands your plugin
 creates, changes and deletes them; `workspace.exec` runs one bounded command inside a granted
 project, behind a native confirm. They are **elevated**, and none implies another: a manifest asking
 for `workspace.write` or `workspace.exec` without an explicit `workspace.read` is refused by the host
-loader, the marketplace publish gate and `amc-plugin validate`.
+loader, the marketplace publish gate and `omniscio-plugin validate`.
 
 See the [Workspace API](../api/workspace) for the methods, and the note under the summary table for
 why the host will not infer one from another.
@@ -731,15 +730,15 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `sessions.launchAny` | `ctx.sessions.fanout` (**backend**) | Start a batch of sessions across any project — built-in and first-party plugins only, and it does not need `sessions` |
 | `sessions.observeStatus` | *(session-status feed; no namespace)* | See when sessions start, finish or need the person — never their text |
 | `ai` | `PluginAi` | Direct AI text generation |
-| `tts` | `PluginTts` (**webview**, `AgentMC.tts`) | Read text aloud with the user's configured voice (metered) |
-| `stt` | `AgentMC.stt` (**webview**) | Turn a recording into text with the configured speech service (metered) |
+| `tts` | `PluginTts` (**webview**, `Omniscio.tts`) | Read text aloud with the user's configured voice (metered) |
+| `stt` | `Omniscio.stt` (**webview**) | Turn a recording into text with the configured speech service (metered) |
 | `microphone` | *(media-permission guard; no namespace)* | Record from the microphone while your panel is open — elevated |
 | `network` | `PluginHttp` | Outbound HTTP requests |
-| `network.upload` | `AgentMC.http.uploadFile` (**webview**) | Upload a picked-folder file to the sites listed in `uploadHosts` (**requires `uploadHosts`**) |
+| `network.upload` | `Omniscio.http.uploadFile` (**webview**) | Upload a picked-folder file to the sites listed in `uploadHosts` (**requires `uploadHosts`**) |
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on Omniscio's control server |
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
-| `system` | Host launcher / clipboard / file-open | Open paths and read the clipboard from your UI, and run an allow-listed or pinned program through `ctx.process` (backend) or `window.AgentMC.process` (UI); a backend's own `child_process` is refused by the sandbox |
+| `system` | Host launcher / clipboard / file-open | Open paths and read the clipboard from your UI, and run an allow-listed or pinned program through `ctx.process` (backend) or `window.Omniscio.process` (UI); a backend's own `child_process` is refused by the sandbox |
 | `rss` | `ctx.rss` (`fetchFeed`, `listFeeds`, `getRecentEntries`) | Read RSS feeds and articles from Omniscio's Channels |
 | `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
@@ -749,9 +748,9 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `launch` | `ctx.launch.open` (**backend**) | Open a link or file, or run a program the person confirms — elevated |
 | `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
-| `members.read` | `AgentMC.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
+| `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
-| `chrome.widget` | `AgentMC.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |
+| `chrome.widget` | `Omniscio.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
 | `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
 | `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated; `ctx.email.sender()` reads which address that is, and sends nothing (backend only) |
@@ -759,8 +758,8 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
-| `boards.read` | `AgentMC.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
-| `boards.link` | `AgentMC.boardLinks` (**webview**) | Attach and detach your own content on a task the person granted — elevated |
+| `boards.read` | `Omniscio.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
+| `boards.link` | `Omniscio.boardLinks` (**webview**) | Attach and detach your own content on a task the person granted — elevated |
 | `coreRead` | `PluginCore` (`ctx.core`, backend only) | Elevated, blanket read of sessions, projects and message text |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
 | `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |
@@ -775,13 +774,13 @@ mutating and command-running calls.
 
 A manifest asking for `workspace.write` or `workspace.exec` **without an explicit
 `workspace.read`** is rejected — by the host loader, by the marketplace publish gate, and by
-`amc-plugin validate`. The host refuses to infer it so the consent card the user reads matches
+`omniscio-plugin validate`. The host refuses to infer it so the consent card the user reads matches
 what the plugin actually holds. See the [Workspace API](../api/workspace).
 :::
 
 ::: danger Four permissions grant a WEBVIEW namespace, not a backend one
-`tts`, `sessions.readHistory`, `firebase` and `chrome.widget` gate `AgentMC.tts` / `AgentMC.sessionHistory` /
-`AgentMC.firebase` / `AgentMC.widget`. The host builds no backend entry for any of them, so `ctx.tts` and friends
+`tts`, `sessions.readHistory`, `firebase` and `chrome.widget` gate `Omniscio.tts` / `Omniscio.sessionHistory` /
+`Omniscio.firebase` / `Omniscio.widget`. The host builds no backend entry for any of them, so `ctx.tts` and friends
 are `undefined` — a `TypeError` at activation, not a permission error. The table above lists
 the type each grants; the surface is the webview.
 :::

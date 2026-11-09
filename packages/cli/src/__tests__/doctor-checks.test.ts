@@ -37,22 +37,32 @@ describe('checkSdkVersion', () => {
     expect(r.suggestion).toBeTruthy()
   })
 
+  const current = (version: string) => ({ name: '@omniscio/plugin-sdk', version })
+
   it('passes when installed matches latest', () => {
-    expect(checkSdkVersion('1.0.7', '1.0.7').status).toBe('pass')
+    expect(checkSdkVersion(current('1.0.7'), '1.0.7').status).toBe('pass')
   })
 
   it('passes when latest is unknown (offline)', () => {
-    expect(checkSdkVersion('1.0.7', null).status).toBe('pass')
+    expect(checkSdkVersion(current('1.0.7'), null).status).toBe('pass')
   })
 
   it('warns when an update is available', () => {
-    const r = checkSdkVersion('1.0.4', '1.0.7')
+    const r = checkSdkVersion(current('1.0.4'), '1.0.7')
     expect(r.status).toBe('warn')
     expect(r.message).toContain('1.0.7')
   })
 
   it('passes when installed is ahead of the registry (local dev)', () => {
-    expect(checkSdkVersion('1.1.0', '1.0.7').status).toBe('pass')
+    expect(checkSdkVersion(current('1.1.0'), '1.0.7').status).toBe('pass')
+  })
+
+  it('names the new package when a plugin is still on the old @agent-mc name', () => {
+    const r = checkSdkVersion({ name: '@agent-mc/plugin-sdk', version: '3.3.0' }, '3.4.0')
+    expect(r.status).toBe('warn')
+    expect(r.message).toContain('@agent-mc/plugin-sdk 3.3.0')
+    expect(r.message).toContain('@omniscio/plugin-sdk')
+    expect(r.suggestion).toContain('pnpm add @omniscio/plugin-sdk')
   })
 })
 
@@ -73,11 +83,11 @@ describe('checkManifest', () => {
 })
 
 describe('checkHostReachable', () => {
-  it('passes when AMC is reachable', () => {
+  it('passes when Omniscio is reachable', () => {
     expect(checkHostReachable(true, 19519).status).toBe('pass')
   })
 
-  it('warns (never fails) when AMC is not running', () => {
+  it('warns (never fails) when Omniscio is not running', () => {
     const r = checkHostReachable(false, 19519)
     expect(r.status).toBe('warn')
     expect(r.message).toContain('19519')

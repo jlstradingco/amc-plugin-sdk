@@ -5,7 +5,7 @@
  * arrays under `pipelines` (`Record<string, Step[]>`). Both are published — the
  * publish envelope's allow-list carries `pipelines` verbatim — but the local checks
  * only ever walked `steps`, so a script step or a pasted API key inside a pipeline
- * was shipped with no warning from either the CLI or the server. AMC's own
+ * was shipped with no warning from either the CLI or the server. Omniscio's own
  * automation-share.ts walks both; this brings the CLI in line.
  *
  * Every check that reasons about steps goes through here, so a third location can
@@ -22,7 +22,7 @@ export interface LocatedStep {
   label: string
   /**
    * Field path prefix for pinpointing a value, e.g. `steps[0]` or
-   * `pipelines.review[2]`. Matches the shape AMC's own share-time scanner uses.
+   * `pipelines.review[2]`. Matches the shape Omniscio's own share-time scanner uses.
    */
   path: string
   /** The author's `name`, when it is a usable one. Undefined otherwise. */

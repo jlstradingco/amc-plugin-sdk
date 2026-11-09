@@ -84,7 +84,7 @@ describe('checkSecrets', () => {
     expect(found[0]?.stepName).toBe('a')
   })
 
-  // AMC's own share-time scanner has always walked pipelines; the CLI did not, so a
+  // Omniscio's own share-time scanner has always walked pipelines; the CLI did not, so a
   // key pasted into a pipeline prompt was published with no warning.
   describe('pipelines', () => {
     it('flags a secret in a pipeline prompt', () => {
@@ -194,7 +194,7 @@ describe('checkSecrets', () => {
 
   // A step is swept through the step-level allow-list too, so the scan covers every
   // field a step publishes. Naming `prompt` and `exitMessage` by hand missed the two
-  // fields below, which AMC's own share-time scanner has always checked.
+  // fields below, which Omniscio's own share-time scanner has always checked.
   describe('the rest of the shareable step', () => {
     const KEY = 'ghp_AAAAAAAAAAAAAAAAAAAAAAAA'
 

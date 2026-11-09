@@ -43,7 +43,7 @@ export const testCommand = new Command('test')
     if (result.error) {
       actionableError(
         'Could not run vitest',
-        "Add it to your plugin: 'pnpm add -D vitest', then re-run 'amc-plugin test'."
+        "Add it to your plugin: 'pnpm add -D vitest', then re-run 'omniscio-plugin test'."
       )
       process.exit(1)
     }

@@ -9,8 +9,8 @@ import {
   type PackageFiles
 } from '../lib/page-scripts.js'
 
-const TSC_SCAFFOLD_OUTPUT = "const amc = window.AgentMC;\nasync function init() {}\ninit();\nexport {};\n"
-const BUNDLED_OUTPUT = '"use strict";\n(() => {\n  var amc = window.AgentMC;\n})();\n'
+const TSC_SCAFFOLD_OUTPUT = "const amc = window.Omniscio;\nasync function init() {}\ninit();\nexport {};\n"
+const BUNDLED_OUTPUT = '"use strict";\n(() => {\n  var amc = window.Omniscio;\n})();\n'
 const PAGE = '<!DOCTYPE html><html><body><script src="plugin.js"></script></body></html>'
 const TS_MANIFEST = { ui: { entryPoint: 'dist/ui/index.html' } }
 
@@ -111,7 +111,7 @@ describe('pageScriptsResult on the plugin folder', () => {
     const result = pageScriptsResult(dir, TS_MANIFEST)
     expect(result.status).toBe('fail')
     expect(result.message).toContain('dist/ui/index.html loads dist/ui/plugin.js as a plain script')
-    expect(result.suggestion).toContain("Run 'amc-plugin build'")
+    expect(result.suggestion).toContain("Run 'omniscio-plugin build'")
   })
 
   it('checks every shipped page, the titlebar widget page included', () => {
@@ -128,7 +128,7 @@ describe('pageScriptsResult on the plugin folder', () => {
 
   it('passes a flat plugin whose plain-JS page script ships as authored', () => {
     write('ui/index.html', PAGE)
-    write('ui/plugin.js', 'const amc = window.AgentMC\nasync function init() {}\ninit()\n')
+    write('ui/plugin.js', 'const amc = window.Omniscio\nasync function init() {}\ninit()\n')
     expect(pageScriptsResult(dir, { ui: { entryPoint: 'ui/index.html' } })).toEqual({
       name: 'Panel scripts',
       status: 'pass',
@@ -142,7 +142,7 @@ describe('pageScriptsResult on the plugin folder', () => {
     const result = pageScriptsResult(dir, { ui: { entryPoint: 'ui/index.html' } })
     expect(result.status).toBe('fail')
     expect(result.suggestion).toContain('remove import/export')
-    expect(result.suggestion).not.toContain('amc-plugin build')
+    expect(result.suggestion).not.toContain('omniscio-plugin build')
   })
 
   it('passes a backend-only plugin with no pages', () => {

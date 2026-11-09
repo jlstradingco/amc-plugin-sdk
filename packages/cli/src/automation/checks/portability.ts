@@ -4,12 +4,12 @@ import { collectAllSteps } from '../lib/recipe-steps.js'
 /**
  * Does this recipe depend on anything the importer will not have?
  *
- * A simplified re-implementation of AMC's assessRecipePortability — the SPIRIT, not
+ * A simplified re-implementation of Omniscio's assessRecipePortability — the SPIRIT, not
  * the letter. The server decides whether a publish succeeds; this exists to fail the
  * hopeless cases locally rather than spend an upload slot discovering them.
  *
  * DELIBERATELY STRICTER THAN THE SERVER on one axis, and it is worth being explicit
- * about it. Both AMC's own share gate and the marketplace validator walk the
+ * about it. Both Omniscio's own share gate and the marketplace validator walk the
  * top-level `steps` array only, so a script or sub-recipe step inside a PIPELINE is
  * accepted by both — while `pipelines` rides the publish envelope's allow-list, so
  * the step really does travel, and really is unrunnable for whoever imports it. The

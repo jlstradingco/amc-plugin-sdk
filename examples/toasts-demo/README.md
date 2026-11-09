@@ -1,12 +1,12 @@
 # Toasts Demo
 
-Minimal AMC plugin demonstrating the **toast** and **notifications** APIs.
+Minimal Omniscio plugin demonstrating the **toast** and **notifications** APIs.
 
 ## What It Shows
 
-- `AgentMC.toast.show({ type, message })` — in-app toast (success, error, info)
-- `AgentMC.toast.notify({ title, body })` — OS-level notification
-- `AgentMC.storage.set()` / `.get()` — persist click counts
+- `Omniscio.toast.show({ type, message })` — in-app toast (success, error, info)
+- `Omniscio.toast.notify({ title, body })` — OS-level notification
+- `Omniscio.storage.set()` / `.get()` — persist click counts
 
 ## Running
 

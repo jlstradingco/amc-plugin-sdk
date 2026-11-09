@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 // The 1.2.0 release added four namespaces to `PluginContext` and re-exported their types
 // from src/types/index.ts — but NOT from src/index.ts, the package entry point. There is no
 // "./types" subpath in the exports map, so `SpendReportBreakdown`, `PluginTts`,
-// `HistoryMessage` and the rest were unreachable from '@agent-mc/plugin-sdk'. `ctx.spend`
+// `HistoryMessage` and the rest were unreachable from '@omniscio/plugin-sdk'. `ctx.spend`
 // still worked structurally through PluginContext, which is why nothing caught it: an author
 // could USE the namespace but could not NAME its types.
 //

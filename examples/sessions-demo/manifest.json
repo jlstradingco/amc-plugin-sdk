@@ -3,7 +3,7 @@
     "id": "sessions-demo",
     "name": "Sessions Demo",
     "version": "1.0.0",
-    "author": "AMC Team",
+    "author": "Omniscio Team",
     "description": "Demonstrates spawning and managing Claude sessions",
     "icon": "message-square",
     "category": "other",

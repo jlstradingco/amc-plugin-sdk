@@ -2,7 +2,7 @@
 
 Turn text into spoken audio using whichever voice the user has configured in Omniscio.
 
-**Availability:** Webview only (`AgentMC.tts`)
+**Availability:** Webview only (`Omniscio.tts`)
 **Required Permission:** `tts`
 
 ::: danger This is a WEBVIEW capability, not a backend one
@@ -10,8 +10,8 @@ An earlier version of this page said "Backend only (`ctx.tts`)". That was backwa
 builds its backend context **without** this namespace, so `ctx.tts` is `undefined` and calling it
 throws a `TypeError` at activation rather than producing a permission error.
 
-Use **`AgentMC.tts`** from your plugin's webview. If a backend needs the result, forward it over
-the shared event bus (`AgentMC.events` -> `ctx.events`).
+Use **`Omniscio.tts`** from your plugin's webview. If a backend needs the result, forward it over
+the shared event bus (`Omniscio.events` -> `ctx.events`).
 :::
 
 ::: warning Metered spend
@@ -52,12 +52,12 @@ interface SynthesizedSpeech {
 // Backend
 export function activate(ctx: PluginContext) {
   ctx.cli.handle('/speak', async (req) => {
-    if (!(await AgentMC.tts.isAvailable())) {
+    if (!(await Omniscio.tts.isAvailable())) {
       return { status: 503, body: { error: 'No voice configured in Omniscio settings' } }
     }
 
     try {
-      const speech = await AgentMC.tts.synthesize(String(req.body))
+      const speech = await Omniscio.tts.synthesize(String(req.body))
       return { status: 200, body: { audio: speech.audioBase64, mime: speech.mime } }
     } catch (err) {
       // The daily cap is the common cause here, and it is not the user's mistake.
@@ -87,10 +87,10 @@ await audio.play()
 `createTestContext()` mirrors the host's default: no voice configured, so `isAvailable()` resolves `false` and `synthesize()` rejects. Seed it to exercise the happy path.
 
 ```typescript
-import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import { createTestContext } from '@omniscio/plugin-sdk/testing'
 
 const h = createTestContext({ tts: { available: true } })
-const speech = await h.AgentMC.tts.synthesize('hello')
+const speech = await h.Omniscio.tts.synthesize('hello')
 // speech.mime === 'audio/mpeg'
 
 // Or inject your own synthesizer to assert on the text that was sent:

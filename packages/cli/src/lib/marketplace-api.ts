@@ -26,7 +26,7 @@ export const UPGRADE_REQUIRED_STATUS = 426
  * Raised when the marketplace refuses this CLI as too old.
  *
  * Separate from a generic {@link MarketplaceApiError} because no amount of retrying, re-auth or
- * waiting fixes it — the only remedy is `npm i -g @agent-mc/plugin-cli@latest`. The published CLI
+ * waiting fixes it — the only remedy is `npm i -g @omniscio/plugin-cli@latest`. The published CLI
  * has hardcoded its API URL since 1.0.x, so this is the one signal that can tell an old install
  * why it stopped working once the legacy Cloud Functions are switched off.
  */
@@ -38,7 +38,7 @@ export class MarketplaceUpgradeRequiredError extends MarketplaceApiError {
 }
 
 const UPGRADE_REQUIRED_FALLBACK =
-  'This version of the AMC plugin CLI is too old to use the marketplace. Update it with: npm i -g @agent-mc/plugin-cli@latest'
+  'This version of the Omniscio plugin CLI is too old to use the marketplace. Update it with: npm i -g @omniscio/plugin-cli@latest'
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (res.status === UPGRADE_REQUIRED_STATUS) {
@@ -48,7 +48,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
     // The server message is echoed only when it is short and plain — an unbounded, server-chosen
     // string must not become the CLI's terminal output.
     const message = serverMessage !== '' && serverMessage.length <= 300
-      ? `${serverMessage}\n\nUpdate with: npm i -g @agent-mc/plugin-cli@latest`
+      ? `${serverMessage}\n\nUpdate with: npm i -g @omniscio/plugin-cli@latest`
       : UPGRADE_REQUIRED_FALLBACK
     throw new MarketplaceUpgradeRequiredError(message)
   }

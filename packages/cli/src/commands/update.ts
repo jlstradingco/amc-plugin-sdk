@@ -6,7 +6,7 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 
 export const updateCommand = new Command('update')
-  .description('Update the amc-plugin CLI to the latest version')
+  .description('Update the omniscio-plugin CLI to the latest version')
   .option('--check', 'Check for updates without installing')
   .action(async (opts: { check?: boolean }) => {
     // Read current version
@@ -24,7 +24,7 @@ export const updateCommand = new Command('update')
     info('Checking npm registry...')
     let latestVersion: string
     try {
-      const res = await globalThis.fetch('https://registry.npmjs.org/@agent-mc/plugin-cli/latest')
+      const res = await globalThis.fetch('https://registry.npmjs.org/@omniscio/plugin-cli/latest')
       if (!res.ok) {
         // Package not published yet — expected for private repo
         info('Package not found on npm (private repo — install via git)')
@@ -51,12 +51,12 @@ export const updateCommand = new Command('update')
 
     info(`Updating ${currentVersion} → ${latestVersion}...`)
     try {
-      execSync('npm install -g @agent-mc/plugin-cli@latest', { stdio: 'inherit' })
+      execSync('npm install -g @omniscio/plugin-cli@latest', { stdio: 'inherit' })
       ok(`Updated to ${latestVersion}`)
     } catch {
       actionableError(
         'Update failed',
-        "Try running with sudo: 'sudo npm install -g @agent-mc/plugin-cli@latest'"
+        "Try running with sudo: 'sudo npm install -g @omniscio/plugin-cli@latest'"
       )
       process.exit(1)
     }

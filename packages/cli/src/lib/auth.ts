@@ -208,7 +208,7 @@ export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
  * The stored token, silently renewed if it has expired. Never opens a browser.
  *
  * The read-only commands cannot call `authenticate()` — that would hijack, say,
- * `amc-plugin info` into an interactive sign-in — but reading the file directly
+ * `omniscio-plugin info` into an interactive sign-in — but reading the file directly
  * meant they reported "Not signed in" the moment the hour-long ID token lapsed,
  * even though the refresh token beside it was still good. Returns null only when
  * there is genuinely nothing usable, which is the honest "signed out" answer.
@@ -241,7 +241,7 @@ export function saveToken(token: StoredToken): void {
  * removed, so the caller can say so rather than claiming a sign-out that did not happen.
  *
  * The unlink is guarded because it genuinely fails: on Windows a file held open by
- * another AMC process raises EBUSY, and a read-only home raises EPERM. Unguarded, that
+ * another Omniscio process raises EBUSY, and a read-only home raises EPERM. Unguarded, that
  * turned `logout` — the command a user reaches for when they are worried about a
  * credential — into an unhandled exception and a stack trace, with the token still on
  * disk and no clear statement that it still was.

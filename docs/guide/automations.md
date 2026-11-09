@@ -11,20 +11,20 @@ You publish both to the same marketplace, with two different tools:
 |---|---|---|
 | What it is | Code that extends Omniscio | A recipe Omniscio runs |
 | Written in | TypeScript | JSON (`.recipe.json`) |
-| Tool | `amc-plugin` | `amc-automation` |
+| Tool | `omniscio-plugin` | `omniscio-automation` |
 | Ships as | A `.amcplugin` archive | The recipe definition itself |
 
 Both binaries come from the same package, so if you already have the CLI you
 already have this:
 
 ```bash
-npm install -g @agent-mc/plugin-cli
+npm install -g @omniscio/plugin-cli
 ```
 
 ## Start one
 
 ```bash
-amc-automation init "Daily Digest"
+omniscio-automation init "Daily Digest"
 ```
 
 That writes `daily-digest.recipe.json` and a `README.md`. The scaffold is a
@@ -39,7 +39,7 @@ This page covers only what is specific to *publishing* one.
 ## Check it
 
 ```bash
-amc-automation validate
+omniscio-automation validate
 ```
 
 Six groups of checks run locally:
@@ -67,7 +67,7 @@ advisory-only, `1` when anything errored — so it drops straight into CI. Add
 To also get the marketplace's own verdict:
 
 ```bash
-amc-automation validate --check --version 1.2.0
+omniscio-automation validate --check --version 1.2.0
 ```
 
 This asks the marketplace whether the exact submission you are about to make
@@ -134,7 +134,7 @@ from Omniscio carries them and an advisory that always fires is one nobody reads
 ## Publish it
 
 ```bash
-amc-automation publish --changelog "what changed in this version"
+omniscio-automation publish --changelog "what changed in this version"
 ```
 
 The first publish opens your browser for GitHub sign-in and stores a token at
@@ -164,14 +164,14 @@ Useful flags:
 - `-y` / `--yes` — skip the confirmation question. For CI, where nobody is there
   to answer it; pair it with `--as`.
 - `--switch-account` — sign out and re-authenticate as someone else. Shared with
-  `amc-plugin`, so this switches the account for both tools.
+  `omniscio-plugin`, so this switches the account for both tools.
 - `--skip-validation` — publish despite local errors. Rarely what you want. It
   never skips the account confirmation.
 
 Publishing creates a **submission**, not a listing. A human reviews it:
 
 ```bash
-amc-automation status
+omniscio-automation status
 ```
 
 ## What the person installing it sees

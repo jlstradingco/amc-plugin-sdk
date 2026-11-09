@@ -29,8 +29,8 @@ export async function runStatus(
   const token = opts.token === undefined ? await getStoredTokenOrRefresh() : opts.token
   if (!token) {
     actionableError(
-      'Not signed in to the AMC Marketplace',
-      'Run `amc-automation publish` once to sign in with GitHub.'
+      'Not signed in to the Omniscio Marketplace',
+      'Run `omniscio-automation publish` once to sign in with GitHub.'
     )
     return { exitCode: 1, rows: [] }
   }

@@ -7,7 +7,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { checkCommandTables } from '@agent-mc/plugin-sdk'
+import { checkCommandTables } from '@omniscio/plugin-sdk'
 import { scannableFiles } from './banned-imports.js'
 import type { PreflightResult } from './publish-preflight.js'
 import { fail, info, ok, warn } from './output.js'
@@ -15,7 +15,7 @@ import { fail, info, ok, warn } from './output.js'
 const CHECK_NAME = 'Command tables'
 
 const BLOCK_SUGGESTION =
-  'Send commands through the panel command channel (createCommandChannel in @agent-mc/plugin-sdk/commands), ' +
+  'Send commands through the panel command channel (createCommandChannel in @omniscio/plugin-sdk/commands), ' +
   'or add "commandTableWaiver": "<why this table is safe>" to the table. See the Panel commands guide.'
 
 const WARN_SUGGESTION = 'Make sure no table row can make your plugin act; see the Panel commands guide.'

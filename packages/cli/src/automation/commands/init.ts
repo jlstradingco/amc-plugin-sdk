@@ -80,7 +80,7 @@ export function createInitCommand(): Command {
           force: options.force
         })
         ok(`Created ${filePath(path.basename(recipePath))}`)
-        info('Next: edit the steps, then run `amc-automation validate`.')
+        info('Next: edit the steps, then run `omniscio-automation validate`.')
       } catch (err) {
         console.error(err instanceof Error ? err.message : String(err))
         process.exit(1)

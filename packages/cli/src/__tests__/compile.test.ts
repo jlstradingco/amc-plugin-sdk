@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import * as vm from 'node:vm'
-import { bundleUiScripts, planUiBundles } from '../lib/compile.js'
+import { bundleUiScripts, compilePlugin, planUiBundles } from '../lib/compile.js'
 import { pageScriptsResult } from '../lib/page-scripts.js'
 
 const PAGE = '<!DOCTYPE html><html><body><script src="plugin.js"></script></body></html>'
@@ -19,7 +19,7 @@ function write(rel: string, content: string): void {
 
 function runAsPlainScript(rel: string): Record<string, unknown> {
   const body: Record<string, string> = {}
-  const window = { AgentMC: { id: 'bridge' } }
+  const window = { Omniscio: { id: 'bridge' } }
   const document = { body: { setAttribute: (k: string, v: string) => { body[k] = v } } }
   vm.runInNewContext(fs.readFileSync(path.join(dir, rel), 'utf-8'), { window, document })
   return body
@@ -28,9 +28,9 @@ function runAsPlainScript(rel: string): Record<string, unknown> {
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-compile-'))
   write('src/ui/plugin.ts', [
-    "import type { AgentMC } from '@agent-mc/plugin-sdk/browser'",
+    "import type { Omniscio } from '@omniscio/plugin-sdk/browser'",
     "import { greet } from './helper'",
-    'const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC',
+    'const amc = (window as unknown as { Omniscio: Omniscio }).Omniscio',
     "document.body.setAttribute('data-greeting', greet((amc as unknown as { id: string }).id))",
     ''
   ].join('\n'))
@@ -84,5 +84,34 @@ describe('bundleUiScripts', { timeout: ESBUILD_TEST_TIMEOUT_MS }, () => {
   it('throws when a UI import cannot be resolved, so build fails instead of shipping', () => {
     write('src/ui/plugin.ts', "import { gone } from './missing'\nconsole.log(gone)\n")
     expect(() => bundleUiScripts(dir)).toThrow(/missing/)
+  })
+})
+
+describe('compilePlugin', { timeout: ESBUILD_TEST_TIMEOUT_MS }, () => {
+  beforeEach(() => {
+    fs.rmSync(path.join(dir, 'dist'), { recursive: true, force: true })
+    write('src/ui/index.html', '<h1>hi</h1>')
+  })
+
+  it('throws when the compiler reports errors and copies nothing', () => {
+    const failing = (): void => {
+      throw new Error('Command failed: npx tsc')
+    }
+    expect(() => compilePlugin(dir, failing)).toThrow(/npx tsc/)
+    expect(fs.existsSync(path.join(dir, 'dist', 'ui', 'index.html'))).toBe(false)
+  })
+
+  it('copies the UI html beside the compiled output once the compiler succeeds', () => {
+    expect(compilePlugin(dir, () => undefined)).toEqual([])
+    expect(fs.readFileSync(path.join(dir, 'dist', 'ui', 'index.html'), 'utf-8')).toBe('<h1>hi</h1>')
+    expect(fs.existsSync(path.join(dir, 'dist', 'ui', 'plugin.ts'))).toBe(false)
+  })
+
+  it('runs the compiler in the plugin folder', () => {
+    let ranIn = ''
+    compilePlugin(dir, (cwd) => {
+      ranIn = cwd
+    })
+    expect(ranIn).toBe(dir)
   })
 })

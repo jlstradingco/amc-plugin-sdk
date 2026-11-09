@@ -2,7 +2,7 @@
 
 Generate text using AI models directly, without creating a full Claude Code session. Useful for lightweight tasks like summarization, classification, or title generation.
 
-**Availability:** Both (backend `ctx.ai` / frontend `AgentMC.ai`)
+**Availability:** Both (backend `ctx.ai` / frontend `Omniscio.ai`)
 **Required Permission:** `ai`
 
 ## Methods
@@ -24,7 +24,7 @@ Send a system prompt and user prompt to an AI model and receive a text response.
 
 ```typescript
 // Frontend
-const summary = await AgentMC.ai.generateMessage(
+const summary = await Omniscio.ai.generateMessage(
   'You are a technical writer. Summarize code changes in 2-3 sentences.',
   'Added pagination to the /users endpoint with cursor-based navigation...',
 )
@@ -95,7 +95,7 @@ Generate a short, descriptive title from a block of text. Useful for automatical
 
 ```typescript
 // Frontend
-const title = await AgentMC.ai.generateTitle(
+const title = await Omniscio.ai.generateTitle(
   'This PR migrates the authentication system from session cookies to JWT tokens, ' +
   'adds refresh token rotation, and updates all middleware...',
 )
@@ -166,9 +166,9 @@ error. It asks the same resolver those calls use, so a key saved in an isolated 
 **Example:**
 
 ```typescript
-const ready = await AgentMC.ai.isConfigured()
+const ready = await Omniscio.ai.isConfigured()
 if (!ready) {
-  AgentMC.toast.show({ type: 'info', message: 'Add an AI API key in Settings first.' })
+  Omniscio.toast.show({ type: 'info', message: 'Add an AI API key in Settings first.' })
 }
 ```
 
@@ -187,11 +187,11 @@ false` means that engine cannot run here (no account, or the person's settings f
 **Example:**
 
 ```typescript
-const { engines } = await AgentMC.ai.listEngines()
+const { engines } = await Omniscio.ai.listEngines()
 const usable = engines.filter((engine) => engine.ready)
 const model = usable[0]?.defaultModel
 if (!model) {
-  AgentMC.toast.show({ type: 'info', message: 'No AI engine is ready on this computer yet.' })
+  Omniscio.toast.show({ type: 'info', message: 'No AI engine is ready on this computer yet.' })
 }
 ```
 

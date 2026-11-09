@@ -4,14 +4,14 @@ Read the identity of the signed-in Omniscio user, and request scoped access toke
 
 **Availability:** Backend only (`ctx.auth`)
 
-::: danger The webview's `AgentMC.auth` is a DIFFERENT, one-method namespace
+::: danger The webview's `Omniscio.auth` is a DIFFERENT, one-method namespace
 This page previously said "Both". None of the six methods below exists on the webview
-bridge -- calling `AgentMC.auth.getUser()` is a `TypeError`, not a permission error.
+bridge -- calling `Omniscio.auth.getUser()` is a `TypeError`, not a permission error.
 
-`AgentMC.auth` has exactly one method, `getWebAuth()`, which returns Omniscio's Firebase config
+`Omniscio.auth` has exactly one method, `getWebAuth()`, which returns Omniscio's Firebase config
 plus a custom token so your webview can sign into the same identity via the Firebase Web
 SDK. Everything on this page is the **backend** surface. If your UI needs any of it, call it
-from your backend and forward the result over `ctx.events` -> `AgentMC.events`.
+from your backend and forward the result over `ctx.events` -> `Omniscio.events`.
 :::
 **Required Permission:** `auth` (identity) -- plus `auth.session` for `getSession()`
 

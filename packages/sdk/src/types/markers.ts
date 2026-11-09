@@ -16,7 +16,7 @@
  * changes which characters it emits, with no compiler error and no runtime
  * exception, just quietly-wrong output (tool lines start leaking into
  * "prose only" views, or vice versa). A plugin importing from here instead
- * gets the fix the next time it bumps its `@agent-mc/plugin-sdk` dependency.
+ * gets the fix the next time it bumps its `@omniscio/plugin-sdk` dependency.
  *
  * ## Provenance
  *

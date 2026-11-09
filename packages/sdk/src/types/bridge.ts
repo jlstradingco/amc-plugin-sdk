@@ -1,8 +1,8 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
- * `@agent-mc/plugin-sdk/browser` maps straight to this file, so a type declared
+ * `@omniscio/plugin-sdk/browser` maps straight to this file, so a type declared
  * only in `./context.js` is unreachable from a webview — `BridgeSessionStatus`
  * would hand back a `status` whose type could not be written down.
  */
@@ -23,12 +23,17 @@ export type BridgeHostFailureCode =
   | 'SHARE_TOO_LARGE'
 
 /**
- * What `AgentMC.theme.get()` resolves to.
+ * What `Omniscio.theme.get()` resolves to.
  *
  * `visualTheme` was declared here and has never existed. The real payload is
  * `{ mode, accent, surfaces }` — and note it is a STATIC PLACEHOLDER host-side:
  * `mode` is always `'dark'`, `accent` a fixed RGB triple, `surfaces` always
  * `{}`. Do not build on it expecting the user's real theme.
+ *
+ * The real, live theme reaches your page as CSS custom properties on `:root`
+ * (`--surface-50` … `--surface-950`, `--accent-rgb` and more), set before your
+ * first paint and updated in place when the user changes theme. Style with
+ * those — see the Theming guide.
  */
 export interface BridgeSettings extends PluginSettings {
   onChange(callback: (changed: Record<string, unknown>) => void): () => void
@@ -56,7 +61,7 @@ export interface BridgeTheme {
 }
 
 /**
- * `AgentMC.ai` — same methods as the backend's `PluginAi`, with one real
+ * `Omniscio.ai` — same methods as the backend's `PluginAi`, with one real
  * difference the shared type was hiding.
  *
  * On THIS surface `generateMessage` can resolve `null`: the host's response
@@ -80,7 +85,7 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
 export type BridgeInbox = Pick<PluginInbox, 'setItems' | 'postAlert'>
 
 /**
- * `AgentMC.auth` — the webview's auth surface, which is ONE method.
+ * `Omniscio.auth` — the webview's auth surface, which is ONE method.
  *
  * This is not `PluginAuth`. Earlier versions assigned the backend's six-method
  * `PluginAuth` here; none of those six exists on the bridge, so every one was a
@@ -106,7 +111,7 @@ export interface BridgeAuth {
 }
 
 /**
- * One message from `AgentMC.session.getMessages()` — the WEBVIEW shape.
+ * One message from `Omniscio.session.getMessages()` — the WEBVIEW shape.
  *
  * The body field is called `content` here, where the backend's
  * `ctx.sessions.getMessages()` calls it `text`. Same underlying row, two field
@@ -124,7 +129,7 @@ export interface BridgeSessionMessage {
   timestamp: string
 }
 
-/** What `AgentMC.session.getStatus()` resolves to — an object, not a bare string. */
+/** What `Omniscio.session.getStatus()` resolves to — an object, not a bare string. */
 export interface BridgeSessionStatus {
   status: SessionStatus
   /** `null` unless the session is waiting on something. */
@@ -227,7 +232,7 @@ export interface BridgeSessionsPane {
 }
 
 /**
- * Save files and pick folders through the OS dialogs, on `AgentMC.export`.
+ * Save files and pick folders through the OS dialogs, on `Omniscio.export`.
  *
  * Permission-free: the native dialog IS the consent. But note that `pickFolder`
  * also SEEDS a per-plugin folder grant — `writeFiles`, `verifyFiles` and
@@ -248,7 +253,7 @@ export interface BridgeExport {
   }): Promise<{ saved: boolean }>
   /**
    * NOTE THE CASING — `savePdf`, not `savePDF`. The mis-cased spelling this SDK
-   * shipped resolved to nothing on `window.AgentMC`, so it was a `TypeError`.
+   * shipped resolved to nothing on `window.Omniscio`, so it was a `TypeError`.
    *
    * It also takes **`html`**, not `markdown`, and there is no `metadata` — the
    * host renders the HTML you give it. `preferCSSPageSize` and `landscape`
@@ -305,7 +310,7 @@ export interface BridgeAssets {
 }
 
 /**
- * The renderer half of your plugin's event bus, on `AgentMC.events`.
+ * The renderer half of your plugin's event bus, on `Omniscio.events`.
  *
  * `emit` and `on` are exactly `PluginEvents`, so one bus spans both of your
  * plugin's surfaces and a channel means the same thing on either side. The host
@@ -380,7 +385,7 @@ export interface BridgeEvents extends Omit<PluginEvents, 'emit' | 'on'> {
    * to plugin overlay windows. The method exists in an in-panel plugin webview
    * because both surfaces share a preload, but nothing delivers the channel
    * there, so a subscription from a panel is silently never called. For a panel,
-   * poll `AgentMC.session.getStatus()` instead.
+   * poll `Omniscio.session.getStatus()` instead.
    *
    * The backend's `ctx.sessions.onStatusChange(sessionId, handler)` is NOT the
    * same shape: it takes a session id, is ownership-checked, and hands the
@@ -393,7 +398,7 @@ export interface BridgeEvents extends Omit<PluginEvents, 'emit' | 'on'> {
    * guarantee no code enforces. Narrow it yourself:
    *
    * ```ts
-   * AgentMC.events.onSessionStatus((e) => {
+   * Omniscio.events.onSessionStatus((e) => {
    *   const { sessionId, status } = e as BridgeSessionStatusEvent
    *   if (sessionId !== mySessionId) return
    * })
@@ -462,7 +467,7 @@ export interface DocumentHandle {
 }
 
 /**
- * Read and append to files the user explicitly picked, on `AgentMC.documents`.
+ * Read and append to files the user explicitly picked, on `Omniscio.documents`.
  *
  * ::: OFF BY DEFAULT — check before you build on this :::
  *
@@ -612,7 +617,7 @@ export interface BridgeDocuments {
 }
 
 /**
- * Speech to text, on `AgentMC.stt`. Sends a recording to whichever cloud
+ * Speech to text, on `Omniscio.stt`. Sends a recording to whichever cloud
  * speech service the user configured in AMC, to be transcribed host-side.
  * Requires the `stt` permission.
  *
@@ -693,7 +698,7 @@ export interface WidgetSpec {
 }
 
 /**
- * `AgentMC.widget` — a live status widget in Omniscio's titlebar. Webview only:
+ * `Omniscio.widget` — a live status widget in Omniscio's titlebar. Webview only:
  * the host builds no `ctx.widget` for backends. Requires BOTH the `chrome` and
  * `chrome.widget` permissions.
  *
@@ -708,14 +713,14 @@ export interface BridgeWidget {
 }
 
 /**
- * `AgentMC.backend` — the panel half of your plugin's own request channel to its backend:
+ * `Omniscio.backend` — the panel half of your plugin's own request channel to its backend:
  * `invoke(method, ...args)` calls the handler your backend registered with
  * `ctx.rpc.handle(method, …)` and resolves its return value.
  *
  * Arguments and the result cross a JSON boundary, and a failure rejects with an `Error` whose
  * MESSAGE is all the host sends — your handler's own message, or one of the host's when the call
  * never arrived ("Plugin backend is not running", "No backend handler registered for …"). For
- * commands, prefer `createCommandClient` from `@agent-mc/plugin-sdk/commands`, which turns those
+ * commands, prefer `createCommandClient` from `@omniscio/plugin-sdk/commands`, which turns those
  * into typed errors that say whether the command ran.
  *
  * Present from Omniscio v0.1.92; `undefined` on older hosts.
@@ -725,7 +730,7 @@ export interface BridgeBackend {
 }
 
 /**
- * `AgentMC.host` — what this Omniscio can do for the plugin: a curated list of capability tokens
+ * `Omniscio.host` — what this Omniscio can do for the plugin: a curated list of capability tokens
  * (`'ai-engine-choice'`, `'plugin-windows'`, …). Absence means no; on the phone relay only the
  * tokens that work there are listed. Present from Omniscio v0.1.89.
  */
@@ -757,7 +762,7 @@ export interface BridgeUploadFileRequest {
 }
 
 /**
- * `AgentMC.http`. `fetch` needs the `network` permission. `uploadFile` needs
+ * `Omniscio.http`. `fetch` needs the `network` permission. `uploadFile` needs
  * `network.upload` and a manifest `uploadHosts` list: the host reads the file
  * and streams it to the site itself, asks the person to approve the listed
  * sites once, and never follows a redirect (a 3xx answer comes back as is).
@@ -777,21 +782,316 @@ export interface BridgeHttp {
   uploadFile(request: BridgeUploadFileRequest): Promise<BridgeHttpResponse>
 }
 
+/** One board the person has shared with this plugin. */
+export interface BridgeGrantedBoard {
+  id: string
+  name: string
+}
+
+/** What `Omniscio.boards.requestAccess()` resolves to once the person closes the picker. */
+export interface BridgeBoardAccessOutcome {
+  /** `true` when the person dismissed the picker without choosing. */
+  cancelled: boolean
+  /** Every board this plugin may now read, including ones shared earlier. */
+  boards: BridgeGrantedBoard[]
+}
+
 /**
- * `window.AgentMC` — the surface a plugin WEBVIEW gets.
+ * `Omniscio.boards` - read which boards the person has shared with this plugin. Requires the
+ * `boards.read` permission. Webview only.
+ *
+ * Access is default-deny: a plugin sees only boards the person picked for it, and never receives raw
+ * board items.
+ */
+export interface BridgeBoards {
+  /** The boards this plugin may currently read. A deleted board is left out. */
+  list(): Promise<BridgeGrantedBoard[]>
+  /**
+   * Open Omniscio's board picker so the person can choose which boards to share. Resolves when the
+   * picker closes, with the full list of shared boards so no second call is needed.
+   */
+  requestAccess(): Promise<BridgeBoardAccessOutcome>
+}
+
+/** A board item a plugin may link to, as returned by `Omniscio.boardLinks.searchItems()`. */
+export interface BridgeBoardLinkItem {
+  id: string
+  name: string
+  boardId: string
+  boardName: string
+}
+
+/** One link between a board item and something in this plugin, as returned by `Omniscio.boardLinks`. */
+export interface BridgeBoardLink {
+  id: string
+  itemId: string
+  itemName: string
+  boardId: string
+  /** `null` when the link was created without a label. */
+  label: string | null
+}
+
+/**
+ * `Omniscio.boardLinks` - link a board item to something your plugin owns. Requires the `boards.link`
+ * permission. Webview only.
+ *
+ * The host decides the kind of link from your plugin's id, and refuses every call from a plugin it has
+ * not given one. Items must sit on a board the person shared with the plugin (see {@link BridgeBoards}).
+ */
+export interface BridgeBoardLinks {
+  /** Search items on the boards shared with this plugin. `limit` is 1 to 50 (default 20). */
+  searchItems(opts: { query: string; limit?: number }): Promise<BridgeBoardLinkItem[]>
+  /** The links attached to one of your own entities, limited to boards shared with this plugin. */
+  listForEntity(opts: { entityId: string }): Promise<BridgeBoardLink[]>
+  /** Link an item to one of your entities. Rejects when the item is missing or its board is not shared. */
+  create(opts: { itemId: string; entityId: string; label?: string }): Promise<BridgeBoardLink>
+  /** Remove one of your links. Resolves `true` also when the link is already gone. */
+  remove(opts: { linkId: string }): Promise<boolean>
+}
+
+/** A kind of clipboard content, for {@link BridgeClipboard.has}. */
+export type BridgeClipboardFormat = 'text' | 'image' | 'html' | 'rtf'
+
+/**
+ * `Omniscio.clipboard` - read and write the system clipboard. Webview only.
+ *
+ * `has` needs no permission because it answers only whether a format is present. The other four methods
+ * require the `system` permission.
+ */
+export interface BridgeClipboard {
+  /** Whether the clipboard holds this format. With no argument, whether it holds text or an image. */
+  has(format?: BridgeClipboardFormat): Promise<boolean>
+  /** Requires `system`. The clipboard's current text. */
+  readText(): Promise<string>
+  /** Requires `system`. Replaces the clipboard with this text, up to 1 MiB. */
+  writeText(text: string): Promise<void>
+  /** Requires `system`. The clipboard's image as a data URL, or `null` when there is none. */
+  readImage(): Promise<{ dataUrl: string } | null>
+  /**
+   * Requires `system`. Replaces the clipboard with an image given as a `data:image/...` URL, up to
+   * 10 MiB. Data that does not decode as an image leaves the clipboard unchanged.
+   */
+  writeImage(dataUrl: string): Promise<void>
+}
+
+/**
+ * `Omniscio.members` - who is in the workspace the person is working in right now. Requires the
+ * `members.read` permission. Also available to the backend as `ctx.members`.
+ */
+export interface BridgeMembers {
+  /** The people in the active workspace: id, name, avatar and role, nothing else. */
+  list(): Promise<PluginMember[]>
+}
+
+/**
+ * `Omniscio.navigation` - move the person to another part of Omniscio. Requires the `navigation`
+ * permission. Webview only.
+ *
+ * Calls are rate limited per plugin (10 in 5 seconds), so a runaway loop cannot keep stealing focus.
+ */
+export interface BridgeNavigation {
+  /** Show one of Omniscio's own sessions. */
+  goToSession(sessionId: string): Promise<void>
+  /** Open the direct-message conversation with a teammate, given their user id. Sends nothing. */
+  openTeamChat(uid: string): Promise<void>
+}
+
+/** What to show for `Omniscio.notifications.fire()`. */
+export interface BridgeNotification {
+  /** 1 to 120 characters. */
+  title: string
+  /** Up to 500 characters. */
+  body: string
+  /** 1 to 120 characters. Names the notification so `clear` can close it; scoped to your plugin. */
+  tag: string
+  /** Defaults to `'info'`. */
+  category?: 'email' | 'task' | 'alert' | 'info'
+  /** Where clicking the notification should lead inside a plugin. */
+  deepLink?: { pluginId: string; path: string }
+  sound?: string
+  /** Show the notification even while Focus Mode is on. */
+  bypassFocusMode?: boolean
+  silent?: boolean
+}
+
+/**
+ * `Omniscio.notifications` - system notifications that respect Focus Mode and can be closed again.
+ * Needs no permission: a panel fires and clears only its own plugin's notifications. Typed for
+ * the webview only; a backend uses `ctx.toast.notify`, which needs the `notifications` permission.
+ */
+export interface BridgeNotifications {
+  /** Show a notification. Resolves with no value. */
+  fire(opts: BridgeNotification): Promise<void>
+  /** Close the open notification that has this tag, if any. Resolves with no value. */
+  clear(opts: { tag: string }): Promise<void>
+}
+
+/**
+ * `Omniscio.process` - run programs. Requires the `system` permission, and the manifest must list the
+ * programs in `process.allowedCommands` or `process.pinnedPrograms`: any other command is refused.
+ * Also available to the backend as `ctx.process`.
+ *
+ * You cannot choose the working directory; the host runs the program in the plugin's own folder.
+ */
+export interface BridgeProcess {
+  /** Run a program to completion and collect its output. Rejects when it exceeds `timeout`. */
+  exec(
+    command: string,
+    args: string[],
+    options?: PluginProcessExecOptions
+  ): Promise<{ stdout: string; stderr: string; exitCode: number }>
+  /** Start a program in the background. Follow it with {@link BridgeProcess.onOutput} and `onExit`. */
+  spawn(
+    command: string,
+    args: string[],
+    options?: PluginProcessOptions
+  ): Promise<{ processId: string }>
+  /** Stop a program started with `spawn`. */
+  kill(processId: string): Promise<void>
+  /**
+   * Subscribe to the output of programs this plugin started. Webview only, and delivered to the
+   * plugin's overlay window only. Returns an unsubscribe function.
+   */
+  onOutput(callback: (event: PluginProcessOutput) => void): () => void
+  /**
+   * Subscribe to the exit of programs this plugin started. Webview only, and delivered to the
+   * plugin's overlay window only. Returns an unsubscribe function.
+   */
+  onExit(callback: (event: PluginProcessExit) => void): () => void
+}
+
+/** What to publish with `Omniscio.share.publishArtifact()`. */
+export interface BridgeSharePublishRequest {
+  /** The page to publish, as one self-contained HTML document, up to 20 MB. */
+  html: string
+  /** Defaults to `artifact.html`. */
+  fileName?: string
+  /** Defaults to `Shared artifact`. */
+  title?: string
+  /** Show the page edge to edge. Defaults to `false`. */
+  fullBleed?: boolean
+  /** Who may read and post comments: anyone with the link (the default), or workspace members only. */
+  commentAudience?: 'link' | 'workspace'
+}
+
+/** What `Omniscio.share.publishArtifact()` resolves to. */
+export interface BridgeSharePublishResult {
+  /** Pass this to `revokeArtifact` to take the link down. */
+  token: string
+  /** The public link. */
+  url: string
+}
+
+/** What `Omniscio.share.revokeArtifact()` resolves to. */
+export interface BridgeShareRevokeResult {
+  /** `true` once the link no longer works. */
+  revoked: boolean
+  /** `true` when taking the link down could not finish yet and will be retried. */
+  deferred: boolean
+}
+
+/**
+ * `Omniscio.share` - publish an HTML page to Omniscio Shares as a public link. Requires the `firebase`
+ * permission. Webview only. A refusal arrives with an `err.code`; see {@link BridgeHostFailureCode}
+ * for `SHARE_SIGN_IN_REQUIRED` and `SHARE_TOO_LARGE`.
+ */
+export interface BridgeShare {
+  /** Publish a page and resolve its link. */
+  publishArtifact(opts: BridgeSharePublishRequest): Promise<BridgeSharePublishResult>
+  /**
+   * Take down a link this plugin published. Resolves `{ revoked: false, deferred: false }` for a token
+   * that is not one of this plugin's own shares.
+   */
+  revokeArtifact(opts: { token: string }): Promise<BridgeShareRevokeResult>
+}
+
+/** A file-type filter for the open and save dialogs, such as `{ name: 'Images', extensions: ['png', 'jpg'] }`. */
+export interface BridgeDialogFilter {
+  name: string
+  /** Extensions without the dot. */
+  extensions: string[]
+}
+
+/** Options for `Omniscio.shell.showOpenDialog()`. */
+export interface BridgeOpenDialogOptions {
+  title?: string
+  filters?: BridgeDialogFilter[]
+  /** Allow choosing several items. */
+  multiple?: boolean
+  /** Choose a folder instead of a file. */
+  directory?: boolean
+}
+
+/** What `Omniscio.shell.showOpenDialog()` resolves to. */
+export interface BridgeOpenDialogResult {
+  /** The chosen paths; empty when cancelled. */
+  paths: string[]
+  cancelled: boolean
+}
+
+/** Options for `Omniscio.shell.showSaveDialog()`. */
+export interface BridgeSaveDialogOptions {
+  title?: string
+  defaultPath?: string
+  filters?: BridgeDialogFilter[]
+}
+
+/** What `Omniscio.shell.showSaveDialog()` resolves to. */
+export interface BridgeSaveDialogResult {
+  /** The chosen file path; absent when cancelled. */
+  path?: string
+  cancelled: boolean
+}
+
+/** Options for `Omniscio.shell.showMessageBox()`. */
+export interface BridgeMessageBoxOptions {
+  title: string
+  message: string
+  /** Defaults to `'none'`. */
+  type?: 'none' | 'info' | 'warning' | 'error' | 'question'
+  /** Up to 10 button labels. Defaults to a single `OK`. */
+  buttons?: string[]
+}
+
+/**
+ * `Omniscio.shell` - open links, files and the system's own dialogs. Webview only.
+ *
+ * Opening an http(s) link and the three dialogs need no permission: the person sees and answers each
+ * dialog. `openPath` and `showItemInFolder` require the `system` permission and only reach files inside
+ * a folder the person picked with one of these dialogs or `Omniscio.export.pickFolder`.
+ */
+export interface BridgeShell {
+  /** Open a link in the default browser. Other schemes need `system`, and `file:` is always refused. */
+  openExternal(url: string): Promise<{ opened: true }>
+  /** Requires `system`. Open a file or folder with the system's default program. */
+  openPath(path: string): Promise<{ opened: true }>
+  /** Requires `system`. Show a file in the system file manager. */
+  showItemInFolder(path: string): Promise<void>
+  /** Let the person choose files or folders. The chosen paths become usable by this plugin. */
+  showOpenDialog(opts?: BridgeOpenDialogOptions): Promise<BridgeOpenDialogResult>
+  /** Let the person choose where to save a file. Only that exact file becomes usable by this plugin. */
+  showSaveDialog(opts?: BridgeSaveDialogOptions): Promise<BridgeSaveDialogResult>
+  /** Show a message box; resolves the zero-based index of the button the person pressed. */
+  showMessageBox(opts: BridgeMessageBoxOptions): Promise<{ buttonIndex: number }>
+}
+
+/**
+ * `window.Omniscio` — the surface a plugin WEBVIEW gets. The same object is
+ * also installed as `window.AgentMC`, its name before 3.4.0, so existing
+ * plugins keep working. An Omniscio released before the rename only installs
+ * `window.AgentMC`; read `window.Omniscio ?? window.AgentMC` to run on both.
  *
  * This is a subset of what the host exposes, not the whole of it. The host's
  * preload carries roughly forty namespaces; the ones typed below are those with
  * a stable, documented contract. Notable untyped ones you can still reach at
- * runtime include `secrets`, `fs`, `shell`, `clipboard`, `process`,
- * `notifications`, `navigation`, `runtime`, `keybindings`, `tray`, `cron`,
- * `overlay`, `share` and `boards`.
+ * runtime include `secrets`, `fs`, `runtime`, `keybindings`, `tray`, `cron`
+ * and `overlay`.
  *
  * `recording` is deliberately ABSENT: it exists on the backend (`ctx.recording`)
- * and has no webview counterpart at all, so the `AgentMC.recording` this
+ * and has no webview counterpart at all, so the `Omniscio.recording` this
  * interface used to declare was `undefined` — a `TypeError`, not a bridge error.
  */
-export interface AgentMC {
+export interface Omniscio {
   storage: PluginStorage
   db: PluginDb
   settings: BridgeSettings
@@ -825,12 +1125,35 @@ export interface AgentMC {
   widget: BridgeWidget
   /** See {@link BridgeHttp}. */
   http: BridgeHttp
+  /** Requires `boards.read`. See {@link BridgeBoards}. */
+  boards: BridgeBoards
+  /** Requires `boards.link`. See {@link BridgeBoardLinks}. */
+  boardLinks: BridgeBoardLinks
+  /** See {@link BridgeClipboard}. */
+  clipboard: BridgeClipboard
+  /** Requires `members.read`. See {@link BridgeMembers}. */
+  members: BridgeMembers
+  /** Requires `navigation`. See {@link BridgeNavigation}. */
+  navigation: BridgeNavigation
+  /** Requires `notifications`. See {@link BridgeNotifications}. */
+  notifications: BridgeNotifications
+  /** Requires `system` and a manifest command list. See {@link BridgeProcess}. */
+  process: BridgeProcess
+  /** Requires `firebase`. See {@link BridgeShare}. */
+  share: BridgeShare
+  /** See {@link BridgeShell}. */
+  shell: BridgeShell
   /** Optional: absent on hosts that predate plugin usage counts. See {@link PluginUsage}. */
   usage?: PluginUsage
 }
 
+/** @deprecated Renamed to {@link Omniscio} in 3.4.0. The same type; kept so existing plugins compile. */
+export type AgentMC = Omniscio
+
 declare global {
   interface Window {
-    AgentMC: AgentMC
+    Omniscio: Omniscio
+    /** @deprecated Read `window.Omniscio`. The same object, kept so existing plugins keep working. */
+    AgentMC: Omniscio
   }
 }

@@ -91,7 +91,7 @@ export async function runValidate(opts: ValidateOptions): Promise<ValidateResult
     if (!token) {
       if (!opts.json) {
         warn('Not signed in — skipping the server check.')
-        info('Run `amc-automation publish` once to sign in, or drop --check.')
+        info('Run `omniscio-automation publish` once to sign in, or drop --check.')
       }
     } else {
       // Built with the SAME version and category `publish` would send, not with

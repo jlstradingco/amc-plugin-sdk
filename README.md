@@ -17,9 +17,9 @@
 
 ## Overview
 
-Omniscio Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Omniscio](https://github.com/jlstradingco/agent-mission-control) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
+Omniscio Plugin SDK is a monorepo providing everything you need to build, test, and distribute plugins for [Omniscio](https://omniscio.com) — an Electron desktop app for managing multiple concurrent Claude Code sessions across projects.
 
-The SDK gives plugin authors a sandboxed `PluginContext` with 20 capability interfaces, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
+The SDK gives plugin authors a sandboxed `PluginContext` and a typed `Omniscio` panel bridge covering 41 documented APIs, a CLI for scaffolding and packaging, and an Electron-based dev shell for offline development with hot-reload and mock APIs.
 
 > **Where this lives.** The SDK is developed inside the Omniscio repository, in the `plugin-sdk/` folder. [github.com/jlstradingco/amc-plugin-sdk](https://github.com/jlstradingco/amc-plugin-sdk) is a read-only mirror that the app syncs from this folder — never commit there. The documentation is built from this folder and served at [docs.omniscio.com/sdk](https://docs.omniscio.com/sdk/). The development commands below run inside `plugin-sdk/`.
 
@@ -38,32 +38,32 @@ Full TypeScript types and Zod validators for the plugin manifest format. Catches
 
 **CLI Toolchain**
 
-`amc-plugin create` scaffolds a new plugin from three templates. `build`, `validate`, and `package` handle the rest of the lifecycle.
+`omniscio-plugin create` scaffolds a new plugin from five templates. `build`, `validate`, and `package` handle the rest of the lifecycle.
 
 </td>
 </tr>
 <tr>
 <td>
 
-**20 Sandboxed APIs**
+**41 Sandboxed APIs**
 
-Storage, database, sessions, AI, filesystem, HTTP, cron, CLI endpoints, sidebar, toasts, events, settings, and logging — all scoped per-plugin.
+Storage, database, sessions, AI, filesystem, HTTP, cron, CLI endpoints, sidebar, toasts, events, settings, inbox, email, boards, clipboard, shell, process, OAuth, live channels and more — all scoped per-plugin and gated by the permissions the user approves.
 
 </td>
 <td>
 
 **Dev Shell with Hot-Reload**
 
-Standalone Electron shell loads your plugin UI in a webview with a full `MockPluginContext`. File changes trigger automatic recompile and reload.
+Standalone Electron shell loads your plugin UI in a webview with a mock `Omniscio` bridge and a full `MockPluginContext`. File changes trigger automatic recompile and reload.
 
 </td>
 </tr>
 <tr>
 <td>
 
-**Three Starter Templates**
+**Five Starter Templates**
 
-`basic` (UI only), `with-backend` (UI + backend module), `full` (UI + backend + cron + CLI endpoints) — pick the right starting point.
+`basic` (UI only), `with-backend` (UI + backend module), `full` (UI + backend + cron + CLI endpoints), `webview` (plain JS, no build step) and `widget` (a titlebar widget) — pick the right starting point.
 
 </td>
 <td>
@@ -78,12 +78,14 @@ Build, validate and publish scan compiled output for forbidden imports (`electro
 
 ## Quick Start
 
+> **Coming from `@agent-mc/plugin-sdk`?** The SDK was renamed in 3.4.0. Swap `@agent-mc/` for `@omniscio/` in your `package.json` and imports, and prefer `window.Omniscio` in your panel. The old package name, the `amc-plugin` command and `window.AgentMC` all keep working. See the [changelog](./CHANGELOG.md).
+
 ```bash
 # 1. Install the CLI globally
-npm install -g @agent-mc/plugin-cli
+npm install -g @omniscio/plugin-cli
 
 # 2. Scaffold a new plugin
-amc-plugin create my-plugin --template with-backend
+omniscio-plugin create my-plugin --template with-backend
 
 # 3. Develop with hot-reload
 cd my-plugin
@@ -91,10 +93,10 @@ npm run dev
 
 # 4. Build and validate
 npm run build
-amc-plugin validate
+omniscio-plugin validate
 
 # 5. Package for distribution
-amc-plugin package
+omniscio-plugin package
 # -> my-plugin-1.0.0.amcplugin
 ```
 
@@ -118,14 +120,14 @@ Every plugin receives a `PluginContext` object with these sandboxed capabilities
 | `sidebar` | `PluginSidebar` | Control sidebar badge and navigation items (`setBadge`, `setItems`) |
 | `toast` | `PluginToast` | Show toast notifications and OS-level alerts (`show`, `notify`) |
 
-UI plugins also get `window.AgentMC` — a browser-side bridge exposing `storage`, `db`, `settings`, `events`, `theme`, `toast`, `session`, `ai`, `export`, `project`, `sidebar`, `assets`, `inbox`, `auth`, and `recording`.
+UI plugins also get `window.Omniscio` — a browser-side bridge exposing `storage`, `db`, `settings`, `events`, `theme`, `toast`, `session`, `ai`, `export`, `project`, `sidebar`, `assets`, `inbox`, `auth`, and `recording`.
 
 ## Plugin Backend Lifecycle
 
 Backend modules export an `activate` function that receives `PluginContext` and returns a `PluginBackend`:
 
 ```typescript
-import type { PluginActivate } from '@agent-mc/plugin-sdk'
+import type { PluginActivate } from '@omniscio/plugin-sdk'
 
 const activate: PluginActivate = (ctx) => {
   return {
@@ -173,7 +175,7 @@ Every plugin requires a `manifest.json` at the project root:
 }
 ```
 
-Validated at build time by Zod schemas — see `manifestSchema` in `@agent-mc/plugin-sdk/validators`.
+Validated at build time by Zod schemas — see `manifestSchema` in `@omniscio/plugin-sdk/validators`.
 
 There is no `migrations` array and no `cron` block: neither is a manifest key, so a manifest carrying
 one validates and then behaves as if it were absent. Schema changes come from the host's automatic
@@ -185,27 +187,27 @@ key by key, is [the manifest reference](docs/guide/manifest.md).
 
 | Command | Description |
 |---|---|
-| `amc-plugin create <name>` | Scaffold a new plugin (templates: `basic`, `with-backend`, `full`) |
-| `amc-plugin build` | Compile TypeScript, copy UI assets, bundle each panel script, validate manifest, scan for banned imports |
-| `amc-plugin validate` | Run all validation checks without emitting output (CI-friendly) |
-| `amc-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback) |
+| `omniscio-plugin create <name>` | Scaffold a new plugin (templates: `basic`, `with-backend`, `full`, `webview`, `widget`) |
+| `omniscio-plugin build` | Compile TypeScript, copy UI assets, bundle each panel script, validate manifest, scan for banned imports |
+| `omniscio-plugin validate` | Run all validation checks without emitting output (CI-friendly) |
+| `omniscio-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback) |
 
 ## Automations
 
-The same package ships a second binary, `amc-automation`, for publishing Omniscio
+The same package ships a second binary, `omniscio-automation`, for publishing Omniscio
 **automations** — multi-step recipes Omniscio runs for you, as opposed to plugins,
 which extend Omniscio itself. Both publish to the same marketplace and share one
 sign-in.
 
 | Command | Description |
 |---|---|
-| `amc-automation init <name>` | Scaffold a `.recipe.json` that validates clean out of the box |
-| `amc-automation validate` | Local checks; `--check` adds the marketplace's verdict |
-| `amc-automation publish` | Submit for review |
-| `amc-automation status` | Follow the review |
+| `omniscio-automation init <name>` | Scaffold a `.recipe.json` that validates clean out of the box |
+| `omniscio-automation validate` | Local checks; `--check` adds the marketplace's verdict |
+| `omniscio-automation publish` | Submit for review |
+| `omniscio-automation status` | Follow the review |
 
 See the [Automations guide](docs/guide/automations.md) and the
-[`amc-automation` reference](docs/reference/automation-cli.md).
+[`omniscio-automation` reference](docs/reference/automation-cli.md).
 
 ## Tech Stack
 
@@ -222,19 +224,19 @@ See the [Automations guide](docs/guide/automations.md) and the
 ```
 plugin-sdk/                       # inside the Omniscio repository
 ├── packages/
-│   ├── sdk/                      # @agent-mc/plugin-sdk
+│   ├── sdk/                      # @omniscio/plugin-sdk
 │   │   ├── src/
 │   │   │   ├── index.ts          # Barrel exports (types + validators)
 │   │   │   ├── types/
 │   │   │   │   ├── manifest.ts   # PluginManifest, settings, permissions, migrations
-│   │   │   │   ├── context.ts    # PluginContext + 20 capability interfaces
+│   │   │   │   ├── context.ts    # PluginContext and its capability interfaces
 │   │   │   │   ├── backend.ts    # PluginBackend lifecycle, PluginActivate
-│   │   │   │   └── bridge.ts     # Browser-side AgentMC window bridge
+│   │   │   │   └── bridge.ts     # Browser-side Omniscio window bridge
 │   │   │   └── validators/
 │   │   │       └── manifest.ts   # Zod schema + validateManifest()
 │   │   └── package.json
 │   │
-│   ├── cli/                      # @agent-mc/plugin-cli
+│   ├── cli/                      # @omniscio/plugin-cli
 │   │   ├── src/
 │   │   │   ├── index.ts          # CLI entry point (commander program)
 │   │   │   └── commands/
@@ -244,7 +246,7 @@ plugin-sdk/                       # inside the Omniscio repository
 │   │   │       └── package.ts    # .amcplugin archive bundler
 │   │   └── package.json
 │   │
-│   └── dev-shell/                # @agent-mc/plugin-dev-shell
+│   └── dev-shell/                # @omniscio/plugin-dev-shell
 │       ├── src/
 │       │   ├── shell-window.ts   # Electron BrowserWindow host
 │       │   ├── mock-context.ts   # Full MockPluginContext (in-memory)
@@ -259,7 +261,7 @@ plugin-sdk/                       # inside the Omniscio repository
 
 ### Adding a capability namespace
 
-Every namespace the Omniscio webview exposes must be typed on `AgentMC` in
+Every namespace the Omniscio webview exposes must be typed on `Omniscio` in
 `packages/sdk/src/types/bridge.ts`. `namespace-coverage.test.ts` compares that interface against
 the host's generated surface and fails when an exposed namespace is neither typed nor listed.
 
@@ -300,37 +302,37 @@ pnpm test
 
 ```bash
 # Build a specific package
-pnpm --filter @agent-mc/plugin-sdk build
+pnpm --filter @omniscio/plugin-sdk build
 
 # Watch mode for the CLI
-pnpm --filter @agent-mc/plugin-cli dev
+pnpm --filter @omniscio/plugin-cli dev
 
 # Run SDK tests
-pnpm --filter @agent-mc/plugin-sdk test
+pnpm --filter @omniscio/plugin-sdk test
 ```
 
 ### Using in a Plugin Project
 
 ```bash
-npm install @agent-mc/plugin-sdk --save-dev
+npm install @omniscio/plugin-sdk --save-dev
 ```
 
 Import types for backend modules:
 
 ```typescript
-import type { PluginActivate, PluginContext } from '@agent-mc/plugin-sdk'
+import type { PluginActivate, PluginContext } from '@omniscio/plugin-sdk'
 ```
 
 Import types for UI code (browser-side bridge):
 
 ```typescript
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio } from '@omniscio/plugin-sdk/browser'
 ```
 
 Import validators for CI or custom tooling:
 
 ```typescript
-import { validateManifest } from '@agent-mc/plugin-sdk/validators'
+import { validateManifest } from '@omniscio/plugin-sdk/validators'
 ```
 
 ## Permissions
@@ -354,7 +356,7 @@ The docs source is `plugin-sdk/docs/` here — VitePress, built into the Omnisci
 published at **[docs.omniscio.com/sdk/](https://docs.omniscio.com/sdk/)**, covering:
 
 - **[Getting Started](https://docs.omniscio.com/sdk/guide/getting-started)** — scaffold, build, and install your first plugin
-- **[API Reference](https://docs.omniscio.com/sdk/api/)** — all 20 capability interfaces documented
+- **[API Reference](https://docs.omniscio.com/sdk/api/)** — all 41 APIs documented
 - **[Publishing](https://docs.omniscio.com/sdk/guide/publishing)** — submit to the Omniscio Marketplace
 - **[Examples](https://docs.omniscio.com/sdk/examples/)** — four reference plugins with full source
 

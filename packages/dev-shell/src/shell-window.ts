@@ -1,8 +1,11 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain, type WebContents } from 'electron'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import * as os from 'node:os'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { createMockContext } from './mock-context.js'
+import { callMockBridge, createMockBridge } from './mock-bridge.js'
+import { BRIDGE_CHANNEL, buildPreloadSource, toastBannerScript } from './webview-guest.js'
 import { startHotReload } from './hot-reload.js'
 
 // This package is ESM ("type": "module"), where Node does not define __dirname.
@@ -25,11 +28,50 @@ const pluginVersion = manifest.plugin?.version ?? '0.0.0'
 
 let mainWindow: BrowserWindow | null = null
 
+function loadDevSettings(): Record<string, unknown> {
+  const settingsFile = path.join(pluginDir, 'amc-dev-settings.json')
+  if (!fs.existsSync(settingsFile)) return {}
+  try {
+    const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'))
+    console.log(`[dev-shell] Loaded dev settings from ${settingsFile}`)
+    return settings
+  } catch (err) {
+    console.error(`[dev-shell] Failed to parse ${settingsFile}:`, err)
+    return {}
+  }
+}
+
+const PRELOAD_DIR_NAME = 'omniscio-dev-shell'
+
+function writeWebviewPreload(): string {
+  const dir = path.join(os.tmpdir(), PRELOAD_DIR_NAME)
+  fs.mkdirSync(dir, { recursive: true })
+  const file = path.join(dir, 'webview-preload.cjs')
+  fs.writeFileSync(file, buildPreloadSource())
+  return pathToFileURL(file).href
+}
+
+function serveMockBridge(devSettings: Record<string, unknown>): void {
+  let guest: WebContents | null = null
+  const bridge = createMockBridge({
+    settings: devSettings,
+    showToast: (opts) => {
+      guest?.executeJavaScript(toastBannerScript(opts)).catch(() => undefined)
+    },
+  })
+  ipcMain.handle(BRIDGE_CHANNEL, (event, namespace: string, method: string, args: unknown[]) => {
+    guest = event.sender
+    return callMockBridge(bridge, String(namespace), String(method), Array.isArray(args) ? args : [])
+  })
+}
+
 app.whenReady().then(() => {
+  const devSettings = loadDevSettings()
+  serveMockBridge(devSettings)
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    title: `AMC Plugin Dev Shell - ${pluginName} v${pluginVersion}`,
+    title: `Omniscio Plugin Dev Shell - ${pluginName} v${pluginVersion}`,
     webPreferences: {
       webviewTag: true,
       contextIsolation: true,
@@ -44,26 +86,13 @@ app.whenReady().then(() => {
       pluginName,
       pluginVersion,
       entryPoint: manifest.ui?.entryPoint ?? '',
+      preloadUrl: writeWebviewPreload(),
     },
   })
 
   if (manifest.backend?.entryPoint) {
     const backendPath = path.join(pluginDir, manifest.backend.entryPoint)
     if (fs.existsSync(backendPath)) {
-      // Dev config: `amc-dev-settings.json` next to the plugin seeds
-      // ctx.settings so settings-gated logic runs; `.amc-dev/` holds the
-      // persisted KV store so plugin state survives a dev-shell restart.
-      const settingsFile = path.join(pluginDir, 'amc-dev-settings.json')
-      let devSettings: Record<string, unknown> = {}
-      if (fs.existsSync(settingsFile)) {
-        try {
-          devSettings = JSON.parse(fs.readFileSync(settingsFile, 'utf-8'))
-          console.log(`[dev-shell] Loaded dev settings from ${settingsFile}`)
-        } catch (err) {
-          console.error(`[dev-shell] Failed to parse ${settingsFile}:`, err)
-        }
-      }
-
       const mockCtx = createMockContext({
         pluginId: manifest.plugin.id,
         pluginVersion,

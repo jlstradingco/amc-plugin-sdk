@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
-import { validateManifest, classifyPluginIcon } from '@agent-mc/plugin-sdk'
+import { validateManifest, classifyPluginIcon } from '@omniscio/plugin-sdk'
 import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
 import {
   isTypeScriptProject,

@@ -2,7 +2,7 @@
 
 Display in-app toast messages and OS-level desktop notifications.
 
-**Availability:** Both (backend `ctx.toast` / frontend `AgentMC.toast`)
+**Availability:** Both (backend `ctx.toast` / frontend `Omniscio.toast`)
 **Required Permission:** `notifications` (for `notify()` only)
 
 ## Methods
@@ -27,9 +27,9 @@ Display an in-app toast message. These appear briefly in Omniscio's toast area a
 
 ```typescript
 // Frontend
-AgentMC.toast.show({ type: 'success', message: 'Task completed' })
-AgentMC.toast.show({ type: 'error', message: 'Failed to sync data' })
-AgentMC.toast.show({ type: 'info', message: 'Scan in progress...' })
+Omniscio.toast.show({ type: 'success', message: 'Task completed' })
+Omniscio.toast.show({ type: 'error', message: 'Failed to sync data' })
+Omniscio.toast.show({ type: 'info', message: 'Scan in progress...' })
 
 // Backend
 ctx.toast.show({ type: 'success', message: 'Report generated' })
@@ -57,7 +57,7 @@ Send an OS-level desktop notification (system tray notification). These appear o
 
 ```typescript
 // Frontend
-AgentMC.toast.notify({
+Omniscio.toast.notify({
   title: 'Build Complete',
   body: 'Your project has been built successfully.',
 })

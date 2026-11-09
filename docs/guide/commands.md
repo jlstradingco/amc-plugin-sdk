@@ -6,7 +6,7 @@ Every agent session on the person's computer can read your tables, and on Omnisc
 the plugin-table fence it can write them too. A backend that runs whatever `pending` rows it finds
 lets any agent act as the person.
 
-`@agent-mc/plugin-sdk/commands` (SDK 3.2.0 and later) is the safe way to send commands from your
+`@omniscio/plugin-sdk/commands` (SDK 3.2.0 and later) is the safe way to send commands from your
 panel to your backend, and it is meant to be the easy way too.
 
 ## What the channel promises
@@ -38,7 +38,7 @@ the work. Return the input you validated from `parse`; the panel's input type co
 
 ```typescript
 // src/backend/commands.ts
-import { defineCommand } from '@agent-mc/plugin-sdk/commands'
+import { defineCommand } from '@omniscio/plugin-sdk/commands'
 
 export const commands = {
   sendDraft: defineCommand({
@@ -62,8 +62,8 @@ export const commands = {
 
 ```typescript
 // src/backend/index.ts
-import type { PluginActivate } from '@agent-mc/plugin-sdk'
-import { createCommandChannel } from '@agent-mc/plugin-sdk/commands'
+import type { PluginActivate } from '@omniscio/plugin-sdk'
+import { createCommandChannel } from '@omniscio/plugin-sdk/commands'
 import { commands } from './commands'
 
 const activate: PluginActivate = (ctx) => {
@@ -77,7 +77,7 @@ export default activate
 backend's own definitions.
 
 ```typescript
-import { createCommandClient, CommandError, type CommandMapOf } from '@agent-mc/plugin-sdk/commands'
+import { createCommandClient, CommandError, type CommandMapOf } from '@omniscio/plugin-sdk/commands'
 import type { commands } from '../backend/commands'
 
 const mail = createCommandClient<CommandMapOf<typeof commands>>('mail')
@@ -91,8 +91,8 @@ try {
 }
 ```
 
-The client reads `window.AgentMC.backend` when a command runs. A panel without a bundler can copy
-`client.js`, `protocol.js` and `errors.js` from `node_modules/@agent-mc/plugin-sdk/dist/commands/`
+The client reads `window.Omniscio.backend` when a command runs. A panel without a bundler can copy
+`client.js`, `protocol.js` and `errors.js` from `node_modules/@omniscio/plugin-sdk/dist/commands/`
 and load `client.js` as an ES module: the three files import nothing else.
 
 ## Errors
@@ -174,7 +174,7 @@ ctx.cli.handle('/send', async (req) => ({ status: 200, body: await channel.submi
 
 ## Older Omniscio versions
 
-- **The channel needs Omniscio v0.1.92** (`ctx.rpc` and `AgentMC.backend.invoke`). On older hosts
+- **The channel needs Omniscio v0.1.92** (`ctx.rpc` and `Omniscio.backend.invoke`). On older hosts
   the client throws `host-too-old` and writes nothing; the backend logs one warning, keeps running,
   and `submit` still works.
 - **The plugin-table fence (`agentWritable`) only exists on newer Omniscio builds.** Older builds
@@ -183,7 +183,7 @@ ctx.cli.handle('/send', async (req) => ({ status: 200, body: await channel.submi
 
 ## Testing it
 
-`@agent-mc/plugin-sdk/testing` has two pieces for this:
+`@omniscio/plugin-sdk/testing` has two pieces for this:
 
 - **`createRpcDouble()`** — a stand-in for Omniscio's channel. Pass `rpc` to
   `createTestContext({ rpc })` and `backend` to `createCommandClient(name, { backend })`. It makes
@@ -199,7 +199,7 @@ ctx.cli.handle('/send', async (req) => ({ status: 200, body: await channel.submi
 
 ```typescript
 import { describe, it } from 'vitest'
-import { describeForgedRowsAreInert } from '@agent-mc/plugin-sdk/testing'
+import { describeForgedRowsAreInert } from '@omniscio/plugin-sdk/testing'
 import manifest from '../manifest.json'
 import activate from '../src/backend'
 
@@ -220,7 +220,7 @@ example `() => vi.advanceTimersByTimeAsync(60_000)`); the check cannot advance t
 
 ## The ship check
 
-`amc-plugin validate`, `preflight` and `publish` fail when a table your manifest declares can hold a
+`omniscio-plugin validate`, `preflight` and `publish` fail when a table your manifest declares can hold a
 runnable command: an instruction column, an argument column and a status column together, such as
 `type` + `payload` + `status`. Fuzzier shapes only warn. A table that is genuinely safe can carry a
 written `commandTableWaiver`. The rule, its warnings and what it cannot see are in the

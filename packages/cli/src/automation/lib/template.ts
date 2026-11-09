@@ -37,7 +37,7 @@ export function buildTemplateRecipe(opts: {
 export function buildTemplateReadme(opts: { name: string; fileName: string }): string {
   return `# ${opts.name}
 
-An Agent Mission Control automation.
+An Omniscio automation.
 
 ## Files
 
@@ -48,23 +48,23 @@ An Agent Mission Control automation.
 Check it before you publish:
 
 \`\`\`
-amc-automation validate
+omniscio-automation validate
 \`\`\`
 
 That runs local checks only. To also get the marketplace's verdict:
 
 \`\`\`
-amc-automation validate --check
+omniscio-automation validate --check
 \`\`\`
 
 ## Publishing
 
 \`\`\`
-amc-automation publish --changelog "what changed in this version"
+omniscio-automation publish --changelog "what changed in this version"
 \`\`\`
 
 You will be asked to sign in with GitHub the first time. Your automation is
-submitted for review, not listed immediately — run \`amc-automation status\` to
+submitted for review, not listed immediately — run \`omniscio-automation status\` to
 follow it.
 
 ## Notes

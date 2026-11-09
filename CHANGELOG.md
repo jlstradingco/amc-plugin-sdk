@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to the AMC Plugin SDK are documented here.
+All notable changes to the Omniscio Plugin SDK are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-Versions listed here cover the published packages `@agent-mc/plugin-sdk`,
-`@agent-mc/plugin-cli`, and `@agent-mc/plugin-dev-shell`, which are released
-together.
+Versions listed here cover the published packages `@omniscio/plugin-sdk`,
+`@omniscio/plugin-cli`, and `@omniscio/plugin-dev-shell` (named `@agent-mc/*` before 3.4.0),
+which are released together.
 
 ## [Unreleased]
 
@@ -15,10 +15,10 @@ together.
 
 `tsc` leaves `export {};` at the end of `dist/ui/plugin.js`, and a page that loads it with a plain
 `<script src="plugin.js">` stops on that line, so a freshly created plugin showed an empty panel in
-Omniscio and in the dev shell. `amc-plugin build` now bundles each script a page loads into one
+Omniscio and in the dev shell. `omniscio-plugin build` now bundles each script a page loads into one
 self-contained file with esbuild, so your UI can also be split across files and import npm packages.
 `dev`, `install`, `package` (when `dist/` is missing) and the dev shell's hot reload build the same
-way. The scaffold's and the examples' `npm run build` now run `amc-plugin build` instead of `tsc`.
+way. The scaffold's and the examples' `npm run build` now run `omniscio-plugin build` instead of `tsc`.
 See [the build command](docs/reference/cli.md#build).
 
 ### Added — the Panel scripts check in `package` and `preflight`
@@ -30,7 +30,65 @@ chosen `.amcplugin`, so an archive built before this fix is caught even after `d
 
 ### Dependencies
 
-- `@agent-mc/plugin-cli` now depends on `esbuild` (`^0.28.2`), which does the panel-script bundling.
+- `@omniscio/plugin-cli` now depends on `esbuild` (`^0.28.2`), which does the panel-script bundling.
+
+## [3.4.0] - 2026-11-07
+
+### Changed — the SDK is now published as `@omniscio/*`
+
+The packages are renamed to `@omniscio/plugin-sdk`, `@omniscio/plugin-cli` and
+`@omniscio/plugin-dev-shell`, the command is `omniscio-plugin` (and `omniscio-automation`), and
+the panel bridge is `window.Omniscio`. Nothing existing breaks:
+
+- **The old names keep working.** `@agent-mc/plugin-sdk` 3.3.0 stays on npm and keeps working
+  with every Omniscio. The new CLI still answers to `amc-plugin` and `amc-automation`, and its
+  `doctor` and `dev` find a plugin's SDK and dev shell under either name.
+- **`window.AgentMC` stays.** Omniscio installs the same bridge as `window.Omniscio` and
+  `window.AgentMC`, on the desktop and on the phone. The `AgentMC` type is kept as an alias of
+  `Omniscio`.
+- **Your `sdkVersion` pins still load.** This is a minor release, so a plugin declaring
+  `^1`, `^2`, `^3` or a bare `2.0.0` keeps loading.
+
+**Moving an existing plugin over** (optional, and safe to do whenever you next touch it):
+
+1. In `package.json`, replace `@agent-mc/plugin-sdk` with `@omniscio/plugin-sdk` `^3.4.0`
+   (and `@agent-mc/plugin-cli` with `@omniscio/plugin-cli`, if you depend on it).
+2. In your source, replace `@agent-mc/plugin-sdk` with `@omniscio/plugin-sdk` in every import,
+   and `AgentMC` with `Omniscio` in type imports.
+3. In your panel, read the bridge as `window.Omniscio ?? window.AgentMC` so the plugin also runs
+   on an Omniscio released before 3.4.0, which installs only `window.AgentMC`.
+4. A classic (non-module) panel script that declares its own top-level `Omniscio` variable must
+   rename it: the global now exists, so the declaration would fail.
+
+### Added — types for 13 more capabilities
+
+The panel bridge now types `boards`, `boardLinks`, `clipboard`, `members`, `navigation`,
+`notifications`, `process`, `share` and `shell`, and the backend context types `members`,
+`channel`, `launch`, `oauth` and `rss`. Each method list is checked against Omniscio's own, so the
+types cannot drift from what the app accepts. Each has a page in the
+[API reference](docs/api/index.md).
+
+### Added — a Theming guide
+
+[Theming](docs/guide/theming.md) lists every CSS token Omniscio sets on your panel, which ones are
+always present and which need a fallback, with a starter stylesheet. `theme.get()` is documented
+as the placeholder it is; the tokens are the live theme.
+
+### Fixed — the dev shell now provides the bridge it promised
+
+`omniscio-plugin dev` installs a mock bridge as `window.Omniscio` and `window.AgentMC` before your
+page runs: `toast.show` draws a banner, `storage` and `settings` work in memory, and every other
+call logs and resolves instead of throwing. Before, the quickstart's toast failed with a
+`TypeError`.
+
+### Fixed — first-run rough edges
+
+- `omniscio-plugin package` prints one plain error when TypeScript fails, instead of a stack trace.
+- New plugins scaffold on the `@omniscio/*` names with `^3.4.0`, and read the bridge with the
+  older-app fallback.
+- The quickstart no longer suggests an icon flag that makes `validate` warn.
+- Every outsider-facing page links to omniscio.com instead of a private repository.
+- The manifest guide now documents `linkClaims`, `uploadHosts` and `usageActions`.
 
 ### Added — `session.delete` and `ctx.sessions.delete`
 

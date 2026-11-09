@@ -13,7 +13,7 @@ const MAX_NAMED_PROBLEMS = 3
 const SKIPPED_DIRS = new Set(['node_modules'])
 
 const TYPESCRIPT_REMEDY =
-  "The panel would open blank in Omniscio. Run 'amc-plugin build' (it bundles each page's script so it loads as the page declares it), then 'amc-plugin package' to rebuild the .amcplugin."
+  "The panel would open blank in Omniscio. Run 'omniscio-plugin build' (it bundles each page's script so it loads as the page declares it), then 'omniscio-plugin package' to rebuild the .amcplugin."
 const FLAT_REMEDY =
   'The panel would open blank in Omniscio. A plain-JS plugin ships its scripts as written: remove import/export from the script, or load it with <script type="module">, and make sure every script a page names is packaged.'
 
@@ -140,6 +140,6 @@ function unreadablePackage(packagePath: string): PreflightResult {
     name: 'Panel scripts',
     status: 'fail',
     message: `Could not read ${path.basename(packagePath)} to check its page scripts`,
-    suggestion: "Run 'amc-plugin package' to rebuild it."
+    suggestion: "Run 'omniscio-plugin package' to rebuild it."
   }
 }

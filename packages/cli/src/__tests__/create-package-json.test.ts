@@ -27,11 +27,11 @@ describe('buildPackageJson', () => {
       scripts: Record<string, string>
       devDependencies: Record<string, string>
     }
-    expect(pkg.scripts.build).toBe('amc-plugin build')
-    expect(pkg.scripts.dev).toBe('amc-plugin dev')
-    expect(pkg.scripts.package).toBe('amc-plugin package')
-    expect(pkg.scripts.validate).toBe('amc-plugin validate')
-    expect(pkg.devDependencies['@agent-mc/plugin-sdk']).toBe('^3.0.0')
+    expect(pkg.scripts.build).toBe('omniscio-plugin build')
+    expect(pkg.scripts.dev).toBe('omniscio-plugin dev')
+    expect(pkg.scripts.package).toBe('omniscio-plugin package')
+    expect(pkg.scripts.validate).toBe('omniscio-plugin validate')
+    expect(pkg.devDependencies['@omniscio/plugin-sdk']).toBe('^3.4.0')
     expect(pkg.devDependencies.typescript).toBe('^5.5.0')
   })
 
@@ -42,8 +42,8 @@ describe('buildPackageJson', () => {
       buildPackageJson({ ...base, hasBackend: true }),
     ] as Array<{ scripts: Record<string, string>; devDependencies: Record<string, string> }>
     for (const pkg of variants) {
-      expect(Object.values(pkg.scripts).every(cmd => cmd.startsWith('amc-plugin '))).toBe(true)
-      expect(pkg.devDependencies['@agent-mc/plugin-cli']).toBe(`^${cliVersion}`)
+      expect(Object.values(pkg.scripts).every(cmd => cmd.startsWith('omniscio-plugin '))).toBe(true)
+      expect(pkg.devDependencies['@omniscio/plugin-cli']).toBe(`^${cliVersion}`)
     }
   })
 

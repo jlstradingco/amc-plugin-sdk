@@ -15,7 +15,7 @@ The publish workflow is:
 ## Prerequisites
 
 - A [GitHub](https://github.com) account
-- A built and validated plugin (run `npx -p @agent-mc/plugin-cli amc-plugin validate` first)
+- A built and validated plugin (run `npx -p @omniscio/plugin-cli omniscio-plugin validate` first)
 
 ## Step 1: Build and Package
 
@@ -23,8 +23,8 @@ Make sure your plugin builds cleanly and passes validation:
 
 ```bash
 npm run build
-npx -p @agent-mc/plugin-cli amc-plugin validate
-npx -p @agent-mc/plugin-cli amc-plugin package
+npx -p @omniscio/plugin-cli omniscio-plugin validate
+npx -p @omniscio/plugin-cli omniscio-plugin package
 ```
 
 Expected output:
@@ -55,17 +55,17 @@ There is no listing form. Everything the marketplace page shows comes from the p
 | On the listing | Source | Limits |
 |---|---|---|
 | Name, description, author, category, license, icon, tags | `manifest.json` → `plugin.*` | see the [manifest reference](./manifest.md#plugin-block) |
-| Long description (Overview tab) | the `README.md` next to `manifest.json`, packaged automatically by `amc-plugin package` (CLI 3.1 and later) | markdown only, 64 KB; use absolute `https://` image URLs, a repo-relative path cannot load |
+| Long description (Overview tab) | the `README.md` next to `manifest.json`, packaged automatically by `omniscio-plugin package` (CLI 3.1 and later) | markdown only, 64 KB; use absolute `https://` image URLs, a repo-relative path cannot load |
 | Screenshot gallery | `plugin.screenshots`, a list of image URLs you host | up to 8 `http(s)` URLs, 2048 characters each |
 | Support tab | `plugin.links` with any of `homepage`, `support`, `privacy`, `contact`, `repository` | each an `http(s)` URL, all optional |
 | Ratings and downloads | users and the marketplace | nothing to supply |
 
-`amc-plugin preflight` (and the preflight that runs inside `publish`) prints one `Listing` line: `pass` when the README, screenshots and support links are all present, otherwise a **warning** that names what is missing. It never blocks a publish, so a plugin with nothing to show can still ship.
+`omniscio-plugin preflight` (and the preflight that runs inside `publish`) prints one `Listing` line: `pass` when the README, screenshots and support links are all present, otherwise a **warning** that names what is missing. It never blocks a publish, so a plugin with nothing to show can still ship.
 
 It also prints one `README` line, and this one **does block**: the README is the text customers read on the store page, so `preflight` and `publish` refuse a root `README.md` that contains raw HTML tags, a badge image (shields.io and similar), a `Developer notes` heading or a line of developer notes, or more than 3,000 characters. The message names each offending line (up to five). Move developer content, badges and HTML to `docs/DEVELOPMENT.md`; a one-line pointer such as "Developer notes: docs/DEVELOPMENT.md" is fine, and tags inside code fences or inline code are not counted.
 
 ::: warning Older CLIs drop the README
-Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a flat plugin's entry-point folders), so a README in your repository never reached the marketplace. Upgrade with `npm install -D @agent-mc/plugin-cli@^3.1.0`, or publish with `npx -p @agent-mc/plugin-cli@latest amc-plugin publish`, then publish a new version — the listing updates when that version is approved.
+Before CLI 3.1, `omniscio-plugin package` shipped only `dist/` and `assets/` (or a flat plugin's entry-point folders), so a README in your repository never reached the marketplace. Upgrade with `npm install -D @omniscio/plugin-cli@^3.1.0`, or publish with `npx -p @omniscio/plugin-cli@latest omniscio-plugin publish`, then publish a new version — the listing updates when that version is approved.
 :::
 
 ## Step 2: Publish
@@ -73,7 +73,7 @@ Before CLI 3.1, `amc-plugin package` shipped only `dist/` and `assets/` (or a fl
 Run the publish command from your plugin directory:
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin publish
+npx -p @omniscio/plugin-cli omniscio-plugin publish
 ```
 
 ### First-Time Authentication
@@ -93,7 +93,7 @@ After signing in, the CLI stores your token locally at `~/.amc/marketplace-token
 
 ### Upload
 
-Before it signs in, the CLI chooses the package: the one `<id>-<version>.amcplugin` in your plugin folder (it runs `amc-plugin package` if there is none). If the folder holds more than one package it stops and lists them; name the one to upload with `--package <path>`. A package whose name or inside-version is not the `manifest.json` version, or that carries a `-test.N` label, is refused. See [Choosing the package](/reference/cli#choosing-the-package).
+Before it signs in, the CLI chooses the package: the one `<id>-<version>.amcplugin` in your plugin folder (it runs `omniscio-plugin package` if there is none). If the folder holds more than one package it stops and lists them; name the one to upload with `--package <path>`. A package whose name or inside-version is not the `manifest.json` version, or that carries a `-test.N` label, is refused. See [Choosing the package](/reference/cli#choosing-the-package).
 
 After authentication, the CLI uploads that file:
 
@@ -101,7 +101,7 @@ After authentication, the CLI uploads that file:
 Uploading my-plugin-1.0.0.amcplugin (0.01 MB)...
 
 Submitted for review (submission ID: abc123)
-Run `amc-plugin status` to check progress, or use --watch to wait.
+Run `omniscio-plugin status` to check progress, or use --watch to wait.
 ```
 
 ### Adding a Changelog
@@ -109,7 +109,7 @@ Run `amc-plugin status` to check progress, or use --watch to wait.
 Include a changelog message for the marketplace listing:
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin publish --changelog "Added dark mode support and fixed sidebar badge count"
+npx -p @omniscio/plugin-cli omniscio-plugin publish --changelog "Added dark mode support and fixed sidebar badge count"
 ```
 
 ### Watch Mode
@@ -117,7 +117,7 @@ npx -p @agent-mc/plugin-cli amc-plugin publish --changelog "Added dark mode supp
 Use `--watch` to poll for the review decision instead of checking manually:
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin publish --watch
+npx -p @omniscio/plugin-cli omniscio-plugin publish --watch
 ```
 
 The CLI polls every 30 seconds for up to 3 hours:
@@ -143,7 +143,7 @@ Rejected: Plugin must handle errors in the onEnable lifecycle hook
 Check the review status of your submissions at any time:
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin status
+npx -p @omniscio/plugin-cli omniscio-plugin status
 ```
 
 Output:
@@ -183,11 +183,11 @@ After a rejection or when publishing an update:
 
 ```bash
 npm run build
-npx -p @agent-mc/plugin-cli amc-plugin validate
-npx -p @agent-mc/plugin-cli amc-plugin publish --changelog "Fixed onEnable error handling"
+npx -p @omniscio/plugin-cli omniscio-plugin validate
+npx -p @omniscio/plugin-cli omniscio-plugin publish --changelog "Fixed onEnable error handling"
 ```
 
-Each submission is tracked independently. You can see the full history with `amc-plugin status`.
+Each submission is tracked independently. You can see the full history with `omniscio-plugin status`.
 
 ## Review Process
 
@@ -207,7 +207,7 @@ The review checks for:
 - Security review of plugin behavior
 
 ::: tip You will hit the banned-import rule before review, not at it
-`amc-plugin publish` runs the same scan as part of its [preflight](/reference/cli#preflight)
+`omniscio-plugin publish` runs the same scan as part of its [preflight](/reference/cli#preflight)
 and refuses to upload on a hit, so this is not a surprise you discover days later in a
 rejection. `--skip-preflight` bypasses it deliberately, but the rule still applies at
 review — and, more to the point, at runtime: marketplace plugin backends run under Node's
@@ -215,7 +215,7 @@ review — and, more to the point, at runtime: marketplace plugin backends run u
 :::
 
 ::: warning
-The marketplace enforces a **50 MB** package size limit. The `amc-plugin package` command warns you if your archive exceeds this.
+The marketplace enforces a **50 MB** package size limit. The `omniscio-plugin package` command warns you if your archive exceeds this.
 :::
 
 ## Authentication Management
@@ -223,7 +223,7 @@ The marketplace enforces a **50 MB** package size limit. The `amc-plugin package
 ### Check Current Identity
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin whoami
+npx -p @omniscio/plugin-cli omniscio-plugin whoami
 ```
 
 Output:
@@ -235,13 +235,13 @@ Signed in as: your-github-username (uid: abc123)
 If not signed in:
 
 ```
-Not signed in. Run `amc-plugin publish` to authenticate.
+Not signed in. Run `omniscio-plugin publish` to authenticate.
 ```
 
 ### Sign Out
 
 ```bash
-npx -p @agent-mc/plugin-cli amc-plugin logout
+npx -p @omniscio/plugin-cli omniscio-plugin logout
 ```
 
 Output:
@@ -266,9 +266,9 @@ The token includes your GitHub username, Firebase UID, and an expiration timesta
 
 | Command | Description |
 |---|---|
-| `amc-plugin publish` | Upload plugin to the marketplace |
-| `amc-plugin publish --watch` | Upload and poll until approved/rejected |
-| `amc-plugin publish --changelog "..."` | Upload with a changelog message |
-| `amc-plugin status` | Check submission review status |
-| `amc-plugin whoami` | Show authenticated GitHub username |
-| `amc-plugin logout` | Clear stored authentication token |
+| `omniscio-plugin publish` | Upload plugin to the marketplace |
+| `omniscio-plugin publish --watch` | Upload and poll until approved/rejected |
+| `omniscio-plugin publish --changelog "..."` | Upload with a changelog message |
+| `omniscio-plugin status` | Check submission review status |
+| `omniscio-plugin whoami` | Show authenticated GitHub username |
+| `omniscio-plugin logout` | Clear stored authentication token |

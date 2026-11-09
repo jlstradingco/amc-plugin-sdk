@@ -16,15 +16,15 @@ export function actionableError(message: string, suggestion: string): void {
 export function manifestNotFound(): never {
   actionableError(
     'No manifest.json found in current directory',
-    "Run 'amc-plugin create <name>' to scaffold a new plugin."
+    "Run 'omniscio-plugin create <name>' to scaffold a new plugin."
   )
   process.exit(1)
 }
 
 export function notAuthenticated(): never {
   actionableError(
-    'Not authenticated with the AMC Marketplace',
-    "Run 'amc-plugin publish' to log in via GitHub."
+    'Not authenticated with the Omniscio Marketplace',
+    "Run 'omniscio-plugin publish' to log in via GitHub."
   )
   process.exit(1)
 }

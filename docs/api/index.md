@@ -1,6 +1,6 @@
 # API Reference
 
-The Omniscio Plugin SDK exposes 27 APIs to plugins. Some are available on both the frontend (via the `AgentMC` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
+The Omniscio Plugin SDK exposes 41 APIs to plugins. Some are available on both the frontend (via the `Omniscio` bridge) and the backend (via the `PluginContext`); others are backend-only or frontend-only.
 
 ## API Summary
 
@@ -33,6 +33,20 @@ The Omniscio Plugin SDK exposes 27 APIs to plugins. Some are available on both t
 | [Host Capabilities](#host-capabilities) | Feature-detect what this Omniscio supports | Both | None |
 | [Core](./core) | Read-only view of the user's sessions, projects and message text | Backend only | `coreRead` |
 | [Widget](./widget) | A live status widget in the Omniscio titlebar | Webview only | `chrome` + `chrome.widget` |
+| [Boards](./boards) | Choose and list the boards the user shares with the plugin | Webview only | `boards.read` |
+| [Board Links](./board-links) | Link board items to things your plugin owns | Webview only | `boards.link` |
+| [Channel](./channel) | Long-lived outbound WebSocket | Backend only | `channel` |
+| [Clipboard](./clipboard) | Read and write the system clipboard | Webview only | `system` (`has` needs none) |
+| [Launch](./launch) | Open links and documents, run programs the user confirms | Backend only | `launch` |
+| [Members](./members) | People in the active workspace | Both | `members.read` |
+| [Navigation](./navigation) | Move the user to a session or a teammate chat | Webview only | `navigation` |
+| [Notifications](./notifications) | System notifications with tags and Focus Mode | Webview only | None |
+| [OAuth](./oauth) | Third-party sign-in with your own client | Backend only | `oauth` |
+| [Process](./process) | Run programs listed in the manifest | Both | `system` |
+| [RSS](./rss) | Fetch feeds and read the user's collected articles | Backend only | `rss` |
+| [Share](./share) | Publish an HTML page as a public link | Webview only | `firebase` |
+| [Shell](./shell) | Open links and files, system dialogs | Webview only | None for links and dialogs; `system` for `openPath` and `showItemInFolder` |
+| [Speech to Text](./stt) | Transcribe a recording | Webview only | `stt` |
 
 ## Access Patterns
 
@@ -40,7 +54,7 @@ The Omniscio Plugin SDK exposes 27 APIs to plugins. Some are available on both t
 
 ```typescript
 // src/backend/index.ts
-import type { PluginContext } from '@agent-mc/plugin-sdk'
+import type { PluginContext } from '@omniscio/plugin-sdk'
 
 export function activate(ctx: PluginContext) {
   ctx.storage.set('initialized', true)
@@ -48,31 +62,35 @@ export function activate(ctx: PluginContext) {
 }
 ```
 
-**Frontend** -- the global `AgentMC` bridge is available in your UI code:
+**Frontend** -- the global `Omniscio` bridge is available in your UI code:
 
 ```typescript
 // src/ui/plugin.ts
-const value = await AgentMC.storage.get('initialized')
-AgentMC.toast.show({ type: 'info', message: 'Hello from the UI' })
+const value = await Omniscio.storage.get('initialized')
+Omniscio.toast.show({ type: 'info', message: 'Hello from the UI' })
 ```
+
+::: tip One bridge, two names
+The bridge is `window.Omniscio`. The same object is also installed as `window.AgentMC`, its name before SDK 3.4.0, so plugins written against the old name keep working. An Omniscio released before 3.4.0 only installs `window.AgentMC`; if your plugin should run there too, read the bridge as `const omniscio = window.Omniscio ?? window.AgentMC`.
+:::
 
 ## Backend Calls
 
-Your backend registers a handler with `ctx.rpc`, and your panel calls it with `AgentMC.backend.invoke`. The call resolves to whatever the handler returns.
+Your backend registers a handler with `ctx.rpc`, and your panel calls it with `Omniscio.backend.invoke`. The call resolves to whatever the handler returns.
 
 ```typescript
 // backend
 ctx.rpc?.handle('notes:count', async () => (await ctx.db.query('notes')).length)
 
 // panel
-const count = await AgentMC.backend?.invoke('notes:count')
+const count = await Omniscio.backend?.invoke('notes:count')
 ```
 
 | Member | Description |
 |---|---|
 | `ctx.rpc.handle(method, handler)` | Register (or replace) the handler for `method` |
 | `ctx.rpc.removeHandler(method)` | Remove it |
-| `AgentMC.backend.invoke(method, ...args)` | Call it from your panel |
+| `Omniscio.backend.invoke(method, ...args)` | Call it from your panel |
 
 - Needs Omniscio v0.1.92. Both members are `undefined` on older hosts, so check before you call.
 - Arguments and the result travel as JSON, and a thrown error reaches the panel as its message only.
@@ -81,10 +99,10 @@ const count = await AgentMC.backend?.invoke('notes:count')
 
 ## Host Capabilities
 
-`AgentMC.host.getCapabilities()` resolves to the capability tokens this Omniscio supports, such as `'ai-engine-choice'`. A missing token means no. It needs no permission and exists from Omniscio v0.1.89.
+`Omniscio.host.getCapabilities()` resolves to the capability tokens this Omniscio supports, such as `'ai-engine-choice'`. A missing token means no. It needs no permission and exists from Omniscio v0.1.89.
 
 ```typescript
-const tokens = (await AgentMC.host?.getCapabilities()) ?? []
+const tokens = (await Omniscio.host?.getCapabilities()) ?? []
 const canPickEngine = tokens.includes('ai-engine-choice')
 ```
 
@@ -92,7 +110,7 @@ The backend twin, `ctx.host.getCapabilities()`, is typed ahead of the Omniscio r
 
 ## Bridge-Only APIs
 
-The following APIs are available **only on the frontend** through the `AgentMC` bridge. They do not have backend equivalents and do not require permissions.
+The following APIs are available **only on the frontend** through the `Omniscio` bridge. They do not have backend equivalents and do not require permissions.
 
 ### Theme
 
@@ -100,12 +118,12 @@ Read and react to Omniscio's current theme.
 
 ```typescript
 // Get the current theme — this is a PROMISE
-const theme = await AgentMC.theme.get()
+const theme = await Omniscio.theme.get()
 // theme: { mode: string; accent: string; surfaces: Record<string, unknown> }
 // NOTE: static placeholder host-side — mode is always 'dark' today.
 
 // Listen for theme changes
-const unsubscribe = AgentMC.theme.onChange((theme) => {
+const unsubscribe = Omniscio.theme.onChange((theme) => {
   document.body.className = theme.mode
 })
 ```
@@ -125,7 +143,7 @@ const loc = window.__AMC_LOCALE__
 // loc: { uiLanguage: 'zh-TW', formattingLocale: 'zh-TW', dir: 'ltr', timeZone: 'Asia/Taipei' }
 
 // Later changes, without a reload
-const unsubscribe = AgentMC.locale.onChange((loc) => {
+const unsubscribe = Omniscio.locale.onChange((loc) => {
   loadCatalog(loc.uiLanguage)
   document.documentElement.dir = loc.dir
 })
@@ -150,26 +168,26 @@ Save files, generate PDFs, and interact with the user's filesystem through syste
 
 ```typescript
 // Save a text file (shows Save As dialog)
-await AgentMC.export.saveFile({
+await Omniscio.export.saveFile({
   filename: 'report.md',
   content: markdownContent,
   type: 'text/markdown',
 })
 
 // Generate and save a PDF — note the casing, and it takes HTML
-const saved = await AgentMC.export.savePdf({
+const saved = await Omniscio.export.savePdf({
   filename: 'report.pdf',
   html: renderedHtml,
 })
 if (!saved.saved) console.log('user cancelled')
 
 // Let the user pick a folder
-const folder = await AgentMC.export.pickFolder({
+const folder = await Omniscio.export.pickFolder({
   title: 'Choose output directory',
 })
 
 // Write multiple files to a directory
-await AgentMC.export.writeFiles({
+await Omniscio.export.writeFiles({
   directory: folder,
   files: [
     { name: 'index.ts', content: tsCode },
@@ -178,13 +196,13 @@ await AgentMC.export.writeFiles({
 })
 
 // Verify files exist
-await AgentMC.export.verifyFiles({
+await Omniscio.export.verifyFiles({
   directory: folder,
   files: ['index.ts', 'styles.css'],
 })
 
 // Open a folder in the system file manager
-await AgentMC.export.openFolder({ path: folder })
+await Omniscio.export.openFolder({ path: folder })
 ```
 
 | Method | Description |
@@ -202,19 +220,19 @@ Query and create Omniscio projects.
 
 ```typescript
 // List all projects
-const projects = await AgentMC.project.listAll()
+const projects = await Omniscio.project.listAll()
 
 // Find a project by folder path
-const project = await AgentMC.project.findByFolder('/path/to/repo')
+const project = await Omniscio.project.findByFolder('/path/to/repo')
 
 // Create a new project
-const newProject = await AgentMC.project.create({
+const newProject = await Omniscio.project.create({
   name: 'My App',
   folderPath: '/path/to/my-app',
 })
 
 // Open Omniscio's Add Project dialog with a folder pre-selected
-await AgentMC.project.openAddDialog({
+await Omniscio.project.openAddDialog({
   preselectedFolder: '/path/to/repo',
 })
 ```
@@ -232,10 +250,10 @@ Read files bundled with your plugin (from the `assets/` directory in your plugin
 
 ```typescript
 // Read a bundled file
-const template = await AgentMC.assets.readFile('templates/default.md')
+const template = await Omniscio.assets.readFile('templates/default.md')
 
 // List files in a directory
-const files = await AgentMC.assets.listFiles('templates')
+const files = await Omniscio.assets.listFiles('templates')
 ```
 
 | Method | Returns | Description |
@@ -249,7 +267,7 @@ Read and append to files the user picked from the OS file picker, and hand the u
 
 ```typescript
 // Ask for a file. Resolves [] if the user cancels.
-const [doc] = await AgentMC.documents.open({
+const [doc] = await Omniscio.documents.open({
   mode: 'readwrite',
   title: 'Choose a PDF',
   filters: [{ name: 'PDF', extensions: ['pdf'] }]
@@ -261,19 +279,19 @@ const bytes = await (await fetch(doc.url)).arrayBuffer()
 
 // Append. Always stat() first — expectedLength is only loosely checked.
 const base64Delta = btoa('appended text')
-const { length } = await AgentMC.documents.stat(doc.id)
-await AgentMC.documents.append(doc.id, base64Delta, { expectedLength: length })
+const { length } = await Omniscio.documents.stat(doc.id)
+await Omniscio.documents.append(doc.id, base64Delta, { expectedLength: length })
 
 // Recover Handles after a webview reload, and release when done.
-console.log(`${(await AgentMC.documents.list()).length} still open`)
-await AgentMC.documents.close(doc.id)
+console.log(`${(await Omniscio.documents.list()).length} still open`)
+await Omniscio.documents.close(doc.id)
 
 // Hand the user a NEW file. The Save window is the consent; nothing else is created.
-const one = await AgentMC.documents.saveCopy({ name: 'summary.pdf', base64 })
+const one = await Omniscio.documents.saveCopy({ name: 'summary.pdf', base64 })
 if (one.saved) console.log(one.names) // ['summary.pdf'] — a bare name, never a path
 
 // Several at once, into a folder they pick. Never replaces an existing file.
-const many = await AgentMC.documents.saveCopies({
+const many = await Omniscio.documents.saveCopies({
   title: 'Where should the parts go?',
   files: [{ name: 'part 1.pdf', base64 }, { name: 'part 2.pdf', base64 }]
 })

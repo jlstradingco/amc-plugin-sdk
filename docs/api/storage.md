@@ -2,7 +2,7 @@
 
 Simple key-value storage for persisting plugin data across sessions and restarts.
 
-**Availability:** Both (backend `ctx.storage` / frontend `AgentMC.storage`)
+**Availability:** Both (backend `ctx.storage` / frontend `Omniscio.storage`)
 **Required Permission:** `storage`
 
 ::: warning AI agents can read and write this storage
@@ -31,7 +31,7 @@ Retrieve a stored value by its key.
 
 ```typescript
 // Frontend
-const lastRun = await AgentMC.storage.get('lastRun')
+const lastRun = await Omniscio.storage.get('lastRun')
 
 // Backend
 const lastRun = await ctx.storage.get('lastRun')
@@ -56,8 +56,8 @@ Store a value under a key. Overwrites any existing value for that key.
 
 ```typescript
 // Frontend
-await AgentMC.storage.set('lastRun', Date.now())
-await AgentMC.storage.set('config', { theme: 'dark', limit: 50 })
+await Omniscio.storage.set('lastRun', Date.now())
+await Omniscio.storage.set('config', { theme: 'dark', limit: 50 })
 
 // Backend
 await ctx.storage.set('lastRun', Date.now())
@@ -82,7 +82,7 @@ Remove a key and its value from storage.
 
 ```typescript
 // Frontend
-await AgentMC.storage.delete('lastRun')
+await Omniscio.storage.delete('lastRun')
 
 // Backend
 await ctx.storage.delete('lastRun')
@@ -106,10 +106,10 @@ List all stored key-value pairs, optionally filtered by a key prefix.
 
 ```typescript
 // Frontend -- list all entries
-const all = await AgentMC.storage.list()
+const all = await Omniscio.storage.list()
 
 // Frontend -- list entries with a prefix
-const configEntries = await AgentMC.storage.list('config:')
+const configEntries = await Omniscio.storage.list('config:')
 
 // Backend
 const all = await ctx.storage.list()

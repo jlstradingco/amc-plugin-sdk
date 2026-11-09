@@ -50,7 +50,7 @@ describe('426 Upgrade Required', () => {
     await withFetch(
       async () => jsonResponse(UPGRADE_REQUIRED_STATUS, { error: true, code: 'UPGRADE_REQUIRED', message: 'Update to 2.0.0.' }),
       async () => {
-        await expect(getRegistry()).rejects.toThrow(/npm i -g @agent-mc\/plugin-cli@latest/)
+        await expect(getRegistry()).rejects.toThrow(/npm i -g @omniscio\/plugin-cli@latest/)
       }
     )
   })

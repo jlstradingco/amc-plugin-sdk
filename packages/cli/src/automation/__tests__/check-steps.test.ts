@@ -8,7 +8,7 @@ describe('checkSteps', () => {
     expect(checkSteps({ steps: [{ name: 'a', prompt: 'go' }] })).toEqual([])
   })
 
-  it('flags an empty prompt — AMC pre-flight blocks the run on this', () => {
+  it('flags an empty prompt — Omniscio pre-flight blocks the run on this', () => {
     expect(codes([{ name: 'a', prompt: '' }])).toContain('empty-prompt')
   })
 

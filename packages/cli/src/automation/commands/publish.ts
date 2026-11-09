@@ -175,7 +175,7 @@ export async function runPublish(
   const gate = evaluatePublishAccount(token.github, {
     as: opts.as,
     yes: opts.yes,
-    commandName: 'amc-automation publish'
+    commandName: 'omniscio-automation publish'
   })
   if (gate.action === 'abort') {
     actionableError(gate.message, gate.suggestion)
@@ -185,7 +185,7 @@ export async function runPublish(
     const confirmed = await (opts.confirmIdentity ?? promptForIdentity)(gate.github)
     if (!confirmed) {
       info('Cancelled — nothing was published.')
-      info("Wrong account? Run 'amc-automation publish --switch-account'.")
+      info("Wrong account? Run 'omniscio-automation publish --switch-account'.")
       return { exitCode: 1 }
     }
   }
@@ -251,7 +251,7 @@ export async function runPublish(
   try {
     const res = await uploadAutomation(token, envelope)
     ok(`Submitted for review (submission ${res.submissionId})`)
-    info('Run `amc-automation status` to follow the review.')
+    info('Run `omniscio-automation status` to follow the review.')
     return { exitCode: 0, submissionId: res.submissionId }
   } catch (err) {
     if (err instanceof MarketplaceApiError) {
@@ -296,7 +296,7 @@ function isVersionConflict(err: MarketplaceApiError): boolean {
  */
 export function createPublishCommand(): Command {
   return new Command('publish')
-    .description('Publish an automation to the AMC Marketplace for review')
+    .description('Publish an automation to the Omniscio Marketplace for review')
     .argument('[file]', 'Path to the .recipe.json')
     .option('--version <version>', 'Version for this submission', DEFAULT_PUBLISH_VERSION)
     .option(

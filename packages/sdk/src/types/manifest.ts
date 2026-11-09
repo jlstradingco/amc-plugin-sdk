@@ -449,7 +449,7 @@ export interface PluginManifest {
     }
   }
   /**
-   * Give this plugin's AI sessions (`ctx.sessions.create`, `AgentMC.session.create`) the
+   * Give this plugin's AI sessions (`ctx.sessions.create`, `Omniscio.session.create`) the
    * built-in tools: Read, Grep, Bash, Write, Edit, WebFetch and the rest.
    *
    * OFF unless declared: without `true`, a plugin session can only answer in text. The user
@@ -463,7 +463,7 @@ export interface PluginManifest {
    */
   linkClaims?: PluginLinkClaim[]
   /**
-   * The exact websites `AgentMC.http.uploadFile` may send files to, such as
+   * The exact websites `Omniscio.http.uploadFile` may send files to, such as
    * `rupload.facebook.com`. Required with the `network.upload` permission, and
    * refused without it. The person approves this list once, on the first upload.
    */

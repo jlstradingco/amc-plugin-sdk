@@ -1,9 +1,13 @@
 /**
- * Pure evaluators for `amc-plugin doctor`. Each takes already-gathered raw
+ * Pure evaluators for `omniscio-plugin doctor`. Each takes already-gathered raw
  * inputs and returns a structured result — no fs / network / process access —
  * so they are fully unit-testable. The command module (doctor.ts) does the
  * gathering and passes the values in.
  */
+
+import { SDK_PACKAGE_NAMES } from './package-names.js'
+
+const [CURRENT_SDK_PACKAGE] = SDK_PACKAGE_NAMES
 
 export type DoctorStatus = 'pass' | 'warn' | 'fail'
 
@@ -56,24 +60,37 @@ export function checkNodeVersion(version: string): DoctorResult {
   return { name: 'Node.js', status: 'pass', message: `Node ${version}` }
 }
 
-export function checkSdkVersion(installed: string | null, latest: string | null): DoctorResult {
+export interface InstalledSdk {
+  name: string
+  version: string
+}
+
+export function checkSdkVersion(installed: InstalledSdk | null, latest: string | null): DoctorResult {
   if (!installed) {
     return {
       name: 'Plugin SDK',
       status: 'warn',
-      message: '@agent-mc/plugin-sdk is not installed in this project',
-      suggestion: "Run 'pnpm add @agent-mc/plugin-sdk' inside your plugin."
+      message: `${CURRENT_SDK_PACKAGE} is not installed in this project`,
+      suggestion: `Run 'pnpm add ${CURRENT_SDK_PACKAGE}' inside your plugin.`
     }
   }
-  if (latest && compareSemver(installed, latest) < 0) {
+  if (installed.name !== CURRENT_SDK_PACKAGE) {
     return {
       name: 'Plugin SDK',
       status: 'warn',
-      message: `@agent-mc/plugin-sdk ${installed} installed — ${latest} is available`,
-      suggestion: "Run 'pnpm update @agent-mc/plugin-sdk' to upgrade."
+      message: `${installed.name} ${installed.version} installed — the SDK is now published as ${CURRENT_SDK_PACKAGE}`,
+      suggestion: `Run 'pnpm remove ${installed.name}' and 'pnpm add ${CURRENT_SDK_PACKAGE}', then change your imports to the new name. Your plugin keeps working until you do.`
     }
   }
-  return { name: 'Plugin SDK', status: 'pass', message: `@agent-mc/plugin-sdk ${installed}` }
+  if (latest && compareSemver(installed.version, latest) < 0) {
+    return {
+      name: 'Plugin SDK',
+      status: 'warn',
+      message: `${installed.name} ${installed.version} installed — ${latest} is available`,
+      suggestion: `Run 'pnpm update ${installed.name}' to upgrade.`
+    }
+  }
+  return { name: 'Plugin SDK', status: 'pass', message: `${installed.name} ${installed.version}` }
 }
 
 export function checkManifest(
@@ -85,7 +102,7 @@ export function checkManifest(
       name: 'Manifest',
       status: 'warn',
       message: 'No manifest.json in the current directory',
-      suggestion: "Run this from a plugin project, or 'amc-plugin create <name>' to scaffold one."
+      suggestion: "Run this from a plugin project, or 'omniscio-plugin create <name>' to scaffold one."
     }
   }
   if (!validation || !validation.valid) {
@@ -93,7 +110,7 @@ export function checkManifest(
       name: 'Manifest',
       status: 'fail',
       message: 'manifest.json is invalid',
-      suggestion: validation?.errors[0] ?? "Run 'amc-plugin validate' for details."
+      suggestion: validation?.errors[0] ?? "Run 'omniscio-plugin validate' for details."
     }
   }
   return { name: 'Manifest', status: 'pass', message: 'manifest.json is valid' }
@@ -101,25 +118,25 @@ export function checkManifest(
 
 export function checkHostReachable(reachable: boolean, port: number): DoctorResult {
   if (reachable) {
-    return { name: 'AMC host', status: 'pass', message: `Reachable on 127.0.0.1:${port}` }
+    return { name: 'Omniscio host', status: 'pass', message: `Reachable on 127.0.0.1:${port}` }
   }
   return {
-    name: 'AMC host',
+    name: 'Omniscio host',
     status: 'warn',
-    message: `No running AMC on 127.0.0.1:${port}`,
-    suggestion: 'Start Agent Mission Control to enable local install and hot-reload.'
+    message: `No running Omniscio on 127.0.0.1:${port}`,
+    suggestion: 'Start Omniscio to enable local install and hot-reload.'
   }
 }
 
 export function checkCliToken(exists: boolean): DoctorResult {
   if (exists) {
-    return { name: 'AMC CLI token', status: 'pass', message: 'AMC CLI token available' }
+    return { name: 'Omniscio CLI token', status: 'pass', message: 'Omniscio CLI token available' }
   }
   return {
-    name: 'AMC CLI token',
+    name: 'Omniscio CLI token',
     status: 'warn',
-    message: 'No AMC CLI token (checked ~/.amc/cli-token and $AMC_CLI_TOKEN)',
-    suggestion: 'Needed to install / hot-reload into a running AMC.'
+    message: 'No Omniscio CLI token (checked ~/.amc/cli-token and $AMC_CLI_TOKEN)',
+    suggestion: 'Needed to install / hot-reload into a running Omniscio.'
   }
 }
 

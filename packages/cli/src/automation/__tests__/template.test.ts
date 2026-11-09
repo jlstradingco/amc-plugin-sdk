@@ -67,8 +67,8 @@ describe('buildTemplateReadme', () => {
     })
     expect(readme).toContain('Daily Digest')
     expect(readme).toContain('daily-digest.recipe.json')
-    expect(readme).toContain('amc-automation validate')
-    expect(readme).toContain('amc-automation publish')
+    expect(readme).toContain('omniscio-automation validate')
+    expect(readme).toContain('omniscio-automation publish')
   })
 
   it('explains that an installed automation arrives paused', () => {

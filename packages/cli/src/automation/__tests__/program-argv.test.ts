@@ -36,7 +36,7 @@ async function parse(program: Command, args: string[], sink: string[] = []): Pro
   await configureProgramForTest(program, sink).parseAsync(args, { from: 'user' })
 }
 
-describe('amc-automation argv wiring', () => {
+describe('omniscio-automation argv wiring', () => {
   describe('the top-level --version still reports the CLI version', () => {
     let sink: string[]
 
@@ -66,7 +66,7 @@ describe('amc-automation argv wiring', () => {
         code: 'commander.helpDisplayed'
       })
       const out = sink.join('')
-      expect(out).toContain('amc-automation')
+      expect(out).toContain('omniscio-automation')
       for (const name of ['init', 'validate', 'publish', 'status']) {
         expect(out).toContain(name)
       }

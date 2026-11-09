@@ -1,7 +1,7 @@
 # Releasing the SDK
 
-How to publish `@agent-mc/plugin-sdk`, `@agent-mc/plugin-cli` and
-`@agent-mc/plugin-dev-shell`. The three are **released together** on one version
+How to publish `@omniscio/plugin-sdk`, `@omniscio/plugin-cli` and
+`@omniscio/plugin-dev-shell`. The three are **released together** on one version
 number.
 
 The three packages live in **`plugin-sdk/` inside the Omniscio repository**. That
@@ -26,7 +26,7 @@ whenever you change what the SDK's CI or docs site does.
 **Publish with `pnpm publish`, never `npm publish`.**
 
 `packages/cli` and `packages/dev-shell` both declare their SDK dependency as
-`"@agent-mc/plugin-sdk": "workspace:^"`. That is not a real npm range — pnpm
+`"@omniscio/plugin-sdk": "workspace:^"`. That is not a real npm range — pnpm
 rewrites it to a concrete version at publish time. `npm publish` ships the
 literal `workspace:^` string to the registry, and every consumer's install
 breaks.
@@ -56,7 +56,7 @@ breaks.
    then fails every later `pnpm run …` until you answer it, which also leaves
    your working tree dirty mid-release.
 3. **`npm whoami`** — you must be authenticated as a publisher for the
-   `@agent-mc` scope.
+   `@omniscio` scope (the npm organization `omniscio`).
 
 ## Cutting the release
 
@@ -82,9 +82,9 @@ depends on both, so publishing the CLI earlier ships a version that cannot
 install until its dependencies exist.
 
 ```sh
-pnpm --filter @agent-mc/plugin-sdk publish --access public
-pnpm --filter @agent-mc/plugin-dev-shell publish --access public
-pnpm --filter @agent-mc/plugin-cli publish --access public
+pnpm --filter @omniscio/plugin-sdk publish --access public
+pnpm --filter @omniscio/plugin-dev-shell publish --access public
+pnpm --filter @omniscio/plugin-cli publish --access public
 ```
 
 `pnpm publish` refuses to run off `master`/`main` or with a dirty working tree.
@@ -98,9 +98,9 @@ a stale `dist/`.
 Then verify what the registry actually serves, rather than assuming:
 
 ```sh
-npm view @agent-mc/plugin-sdk version
-npm view @agent-mc/plugin-cli dependencies      # must show a real range, NOT workspace:^
-npm view @agent-mc/plugin-dev-shell version
+npm view @omniscio/plugin-sdk version
+npm view @omniscio/plugin-cli dependencies      # must show a real range, NOT workspace:^
+npm view @omniscio/plugin-dev-shell version
 ```
 
 ## After publishing
@@ -112,7 +112,7 @@ npm view @agent-mc/plugin-dev-shell version
    push the tag to GitHub without the owner's say-so.
 2. **Sweep the version drift.** Several places pin a published SDK range and can
    only be updated once the version exists on npm:
-   - `examples/*/package.json` — the `@agent-mc/plugin-sdk` dependency range.
+   - `examples/*/package.json` — the `@omniscio/plugin-sdk` dependency range.
    - Any README or doc that names the current version.
    Land this as a follow-up commit (`docs: sweep SDK version drift after the
    X.Y.Z release`). Doing it *before* publishing would point the examples at a
@@ -130,12 +130,45 @@ npm view @agent-mc/plugin-dev-shell version
    file) is the value that follows this package: raise it in the release commit
    of a new major, before publishing, or the published CLI scaffolds plugins that
    resolve to the previous major.
-3. **Reconcile the AMC host, if permissions changed.** The AMC app keeps an
+3. **Reconcile the Omniscio host, if permissions changed.** The Omniscio app keeps an
    acknowledgement fixture at `tests/unit/lint/fixtures/sdk-permission-support.ts`
    (a path at the Omniscio repository root, above this folder) listing which
    permissions the published SDK understands, guarded by
    `plugin-sdk-permission-parity`. If this release added a permission, move it
    out of `SDK_PENDING_PERMISSIONS` and bump `SDK_RECONCILED_VERSION` there.
+
+## Never bump the SDK to a new major without the host
+
+The host's plugin-SDK contract (`AMC_PLUGIN_SDK_VERSION`, generated into
+`packages/sdk/src/generated/sdk-facts.ts`) is read from `packages/sdk/package.json`. A plugin
+declaring `sdkVersion: "^3.0.0"` loads only while that constant is on major 3, so moving the
+package to `4.0.0` hides every caret-pinned plugin until the host's relabel rule covers it. Ship
+a rename or an additive change as a minor; raise the major only together with the host's
+compatibility rule, and run the plugin-compatibility tests with `^1`, `^2`, `^3` and bare pins.
+
+## The old `@agent-mc/*` names
+
+The packages were published as `@agent-mc/plugin-sdk`, `@agent-mc/plugin-cli` and
+`@agent-mc/plugin-dev-shell` up to 3.3.0. Those versions stay on npm, untouched, so every plugin
+pinned to them keeps installing. Once 3.4.0 is live under `@omniscio`, an `@agent-mc` maintainer
+marks the old packages as moved (this changes no installed plugin, it only prints a notice on
+install):
+
+```sh
+npm deprecate "@agent-mc/plugin-sdk@*" "Renamed to @omniscio/plugin-sdk — the same SDK; 3.3.0 keeps working"
+npm deprecate "@agent-mc/plugin-cli@*" "Renamed to @omniscio/plugin-cli (it still answers to amc-plugin)"
+npm deprecate "@agent-mc/plugin-dev-shell@*" "Renamed to @omniscio/plugin-dev-shell"
+```
+
+Never publish a new version under the old names: a forwarding package would be picked up by every
+existing `^3` plugin on its next install, swapping its code for something it never asked for.
+
+## Reserve the plain command names
+
+Nobody may publish an unscoped package called `omniscio-plugin` or `amc-plugin`: an author who
+types `npx omniscio-plugin` without the CLI installed would otherwise run a stranger's code.
+Once, from the account that owns `@omniscio`, publish a placeholder under each name whose README
+says "install `@omniscio/plugin-cli`" and whose `bin` prints that and exits 1.
 
 ## Version numbering
 

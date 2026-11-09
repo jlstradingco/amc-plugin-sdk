@@ -44,8 +44,8 @@ describe('plugin icon: scaffold default and validate', () => {
     JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'))
 
   beforeAll(() => {
-    execSync('pnpm --filter @agent-mc/plugin-sdk build', { cwd: monorepoRoot, stdio: 'pipe' })
-    execSync('pnpm --filter @agent-mc/plugin-cli build', { cwd: monorepoRoot, stdio: 'pipe' })
+    execSync('pnpm --filter @omniscio/plugin-sdk build', { cwd: monorepoRoot, stdio: 'pipe' })
+    execSync('pnpm --filter @omniscio/plugin-cli build', { cwd: monorepoRoot, stdio: 'pipe' })
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-icon-'))
   }, BUILD_HOOK_TIMEOUT_MS)
 

@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { createMockContext } from '../mock-context'
-import { createTestContext } from '@agent-mc/plugin-sdk/testing'
+import { createTestContext } from '@omniscio/plugin-sdk/testing'
 
 describe('createMockContext', () => {
   let ctx: ReturnType<typeof createMockContext>
@@ -55,7 +55,7 @@ describe('createMockContext', () => {
   it('events on returns NOTHING — the host has no unsubscribe', () => {
     // The host's backend `on` has no return statement, and there is no
     // unsubscribe message in the worker protocol. The shell used to hand back a
-    // working `off()`, which would let a plugin clean up here and crash in AMC.
+    // working `off()`, which would let a plugin clean up here and crash in Omniscio.
     const received: unknown[] = []
     const unsub = ctx.events.on('test', (data) => received.push(data))
     expect(unsub).toBeUndefined()
@@ -499,7 +499,7 @@ describe('ctx.workspace refuses to fake a capability it cannot model', () => {
 
   it('does not tell the author the host is missing the namespace', async () => {
     // The shell said exactly that for six days after the host shipped it.
-    await expect(ws().listProjects()).rejects.toThrow(/implemented by the AMC host/i)
+    await expect(ws().listProjects()).rejects.toThrow(/implemented by the Omniscio host/i)
   })
 
   it('exposes the SAME workspace method set as the SDK test harness', () => {

@@ -50,8 +50,8 @@ describe('checkStrippedFields', () => {
       expect(checkStrippedFields({ a: 1, b: 2 })[0]?.message).toContain('carry them')
     })
 
-    it('stays silent about the local fields AMC itself drops on purpose', () => {
-      // Every one of these is present on a recipe exported from AMC. Naming them would
+    it('stays silent about the local fields Omniscio itself drops on purpose', () => {
+      // Every one of these is present on a recipe exported from Omniscio. Naming them would
       // put advisory lines in front of an author who did nothing wrong.
       expect(
         checkStrippedFields({

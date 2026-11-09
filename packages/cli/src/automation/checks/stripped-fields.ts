@@ -10,7 +10,7 @@ import { collectStrippedStepFields } from '../lib/portable-step.js'
  * `portable-step.ts` — drop silently by design, and silence is the right default for
  * a SAFETY mechanism. It is the wrong default for an authoring tool: a field that
  * vanishes between the file on disk and the published automation leaves the author
- * debugging its absence against a catalog they cannot see into. AMC shows the same
+ * debugging its absence against a catalog they cannot see into. Omniscio shows the same
  * thing as its "removed" list at share time.
  *
  * INFO severity throughout. Nothing here blocks a publish — being dropped is the
@@ -18,10 +18,10 @@ import { collectStrippedStepFields } from '../lib/portable-step.js'
  */
 
 /**
- * Top-level fields AMC itself documents as intentionally dropped, mirrored from
+ * Top-level fields Omniscio itself documents as intentionally dropped, mirrored from
  * `DROPPED_CONFIG_FIELDS` in the host's automation-share.ts.
  *
- * Kept SILENT. Every one of these is present on any recipe exported from AMC, so
+ * Kept SILENT. Every one of these is present on any recipe exported from Omniscio, so
  * naming them would put four or five advisory lines in front of an author who did
  * nothing wrong — and an advisory that always fires is one nobody reads. What is
  * worth naming is the field nobody expected, which is usually a typo.

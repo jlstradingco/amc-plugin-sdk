@@ -1,7 +1,7 @@
 {
-  "name": "@agent-mc/plugin-sdk",
-  "version": "3.3.0",
-  "description": "SDK for building Agent Mission Control plugins",
+  "name": "@omniscio/plugin-sdk",
+  "version": "3.4.0",
+  "description": "SDK for building Omniscio plugins",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jlstradingco/amc-plugin-sdk.git",

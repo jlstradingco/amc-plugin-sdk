@@ -11,20 +11,20 @@ A tiny "Hello World" plugin: a sidebar panel that greets you and pops a toast wh
 You need two things:
 
 - **[Node.js](https://nodejs.org/) v18+** — check with `node --version`
-- **[Omniscio](https://github.com/jlstradingco/agent-mission-control)** — only required for the final "install for real" step; the dev shell runs without it
+- **[Omniscio](https://omniscio.com)** — only required for the final "install for real" step; the dev shell runs without it
 
 That's it. No accounts, no config.
 
 ## 1. Install the CLI (1 min)
 
 ```bash
-npm install -g @agent-mc/plugin-cli
+npm install -g @omniscio/plugin-cli
 ```
 
 Confirm it's on your PATH:
 
 ```bash
-amc-plugin --version
+omniscio-plugin --version
 ```
 
 ## 2. Scaffold the plugin (1 min)
@@ -32,11 +32,10 @@ amc-plugin --version
 Skip the interactive prompts — generate everything in one line:
 
 ```bash
-amc-plugin create hello-world \
+omniscio-plugin create hello-world \
   --display-name "Hello World" \
   --description "My first Omniscio plugin" \
-  --author "Your Name" \
-  --icon smile
+  --author "Your Name"
 ```
 
 Then step in:
@@ -69,13 +68,13 @@ Open `src/ui/index.html` and replace the `<body>` with a heading and a button:
 </body>
 ```
 
-Now open `src/ui/plugin.ts` and make it talk to Omniscio through the `AgentMC` bridge:
+Now open `src/ui/plugin.ts` and make it talk to Omniscio through the `Omniscio` bridge:
 
 ```typescript
-import type { AgentMC } from '@agent-mc/plugin-sdk/browser'
+import type { Omniscio } from '@omniscio/plugin-sdk/browser'
 
 // The bridge is injected on `window` by Omniscio (and by the dev shell).
-const amc = (window as unknown as { AgentMC: AgentMC }).AgentMC
+const amc = window.Omniscio ?? window.AgentMC
 
 const greeting = document.getElementById('greeting') as HTMLHeadingElement
 const button = document.getElementById('hello-btn') as HTMLButtonElement
@@ -91,7 +90,7 @@ That's the whole plugin. `amc.toast.show()` needs **no permission** — it's ava
 
 ## 4. See it run (30 sec)
 
-Launch the dev shell. It builds your plugin, opens it in an Electron window with a mock `AgentMC`, and hot-reloads on every save:
+Launch the dev shell. It builds your plugin, opens it in an Electron window with a mock `Omniscio`, and hot-reloads on every save:
 
 ```bash
 npm run dev
@@ -100,7 +99,7 @@ npm run dev
 Click **Say hello** — a success toast appears. Edit the greeting text, save, and watch the window refresh instantly.
 
 ::: tip The dev shell mocks the APIs
-`npm run dev` doesn't need Omniscio installed — it stubs the `AgentMC` bridge so you can iterate fast. See [Dev Shell](./dev-shell) for what's mocked.
+`npm run dev` doesn't need Omniscio installed — it stubs the `Omniscio` bridge so you can iterate fast. See [Dev Shell](./dev-shell) for what's mocked.
 :::
 
 ## 5. Install it in Omniscio for real (optional, 1 min)
@@ -117,13 +116,13 @@ Then in **Omniscio**: **Settings → Plugins → Install from file**, pick the `
 
 - **`manifest.json`** declared your plugin to Omniscio (id, name, permissions, UI entry).
 - **`src/ui/`** is your panel — plain HTML + TypeScript, no framework required.
-- **`window.AgentMC`** is the bridge: the typed gateway to every Omniscio API. `toast` is free; other APIs are unlocked by [permissions](./permissions).
-- **`amc-plugin dev`** gave you a mock-backed, hot-reloading loop; **`package`** produced the installable artifact.
+- **`window.Omniscio`** is the bridge: the typed gateway to every Omniscio API. `toast` is free; other APIs are unlocked by [permissions](./permissions).
+- **`omniscio-plugin dev`** gave you a mock-backed, hot-reloading loop; **`package`** produced the installable artifact.
 
 ## Next steps
 
 - [Getting Started](./getting-started) — the full walkthrough (templates, validate, publish)
 - [Project Structure](./project-structure) — every file, explained
 - [Permissions](./permissions) — unlock storage, sessions, AI, HTTP, and more
-- [API Reference](/api/) — the complete `AgentMC` surface
+- [API Reference](/api/) — the complete `Omniscio` surface
 - [Examples](/examples/) — eight runnable plugins to learn from
