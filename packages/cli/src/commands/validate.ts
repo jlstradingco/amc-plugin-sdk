@@ -4,9 +4,42 @@ import * as fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import { validateManifest, classifyPluginIcon } from '@agent-mc/plugin-sdk'
 import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
-import { isTypeScriptProject, resolveBannedScanDirs, collectPackageEntries, entryPointShips } from '../lib/project.js'
+import {
+  isTypeScriptProject,
+  resolveBannedScanDirs,
+  collectPackageEntries,
+  entryPointShips,
+  entryPointState,
+} from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 import { reportCommandTables } from '../lib/command-tables.js'
+
+function reportEntryPoint(
+  cwd: string,
+  label: string,
+  entryPoint: string,
+  compiledFromTs = false
+): 'built' | 'unbuilt' | 'error' {
+  const { state, source, buildDir } = entryPointState(cwd, entryPoint, compiledFromTs)
+  if (state === 'missing') {
+    fail(`${label} not found: ${entryPoint}`)
+    return 'error'
+  }
+  if (state === 'stale') {
+    fail(
+      `${label} ${entryPoint} is missing from ${buildDir}/ although its source ${source} exists. ` +
+        `Your build is out of date: run amc-plugin build.`
+    )
+    return 'error'
+  }
+  if (state === 'unbuilt') {
+    warn(
+      `${label} ${entryPoint} is not built yet, so validate checked its source ${source} instead. ` +
+        `Run amc-plugin build before you package or publish.`
+    )
+  }
+  return state
+}
 
 export const validateCommand = new Command('validate')
   .description('Run all validation checks without building (CI-friendly)')
@@ -29,11 +62,6 @@ export const validateCommand = new Command('validate')
       ok('Manifest schema')
     }
 
-    // WARN, never fail: a stock glyph is a legitimate choice, just rarely the one a developer
-    // meant to make. `icon` accepts a Lucide NAME (a generic glyph) or a PATH into your
-    // package (your actual logo), the schema is `z.string().min(1)`, and nothing distinguished
-    // them -- so 16 of the 17 plugins on the live registry shipped a stock glyph, several
-    // while carrying a perfectly good logo in their own package. Exit code is unchanged.
     const iconKind = classifyPluginIcon(manifest.plugin?.icon)
     if (iconKind === 'lucide-name') {
       warn(
@@ -53,8 +81,6 @@ export const validateCommand = new Command('validate')
       hasErrors = true
     } else if (iconKind === 'packaged-path') {
       const iconFile = path.join(cwd, manifest.plugin.icon)
-      // `package` ships only a fixed set of top-level entries, so a file that exists in the
-      // project folder can still never reach the marketplace.
       const shipped = collectPackageEntries(cwd, manifest)
       if (fs.existsSync(iconFile) && !shipped.includes(manifest.plugin.icon.split('/')[0])) {
         fail(
@@ -65,8 +91,6 @@ export const validateCommand = new Command('validate')
       } else if (fs.existsSync(iconFile)) {
         ok(`Icon file present (${manifest.plugin.icon})`)
       } else {
-        // The marketplace's extractor silently skips a missing icon and publishes anyway, so
-        // catching it here is the only place it is ever visible.
         fail(`Icon file not found in the package: ${manifest.plugin.icon}`)
         hasErrors = true
       }
@@ -81,21 +105,15 @@ export const validateCommand = new Command('validate')
 
     const uiPages: Array<{ label: string; entryPoint: string | undefined }> = [
       { label: 'UI entry point', entryPoint: manifest.ui?.entryPoint },
-      // The titlebar widget's popover page. Without it on disk the popover opens blank.
       { label: 'Widget entry point', entryPoint: manifest.ui?.widget?.entryPoint },
     ]
     for (const { label, entryPoint } of uiPages) {
       if (!entryPoint) continue
-      const srcPath = path.join(cwd, 'src', entryPoint.replace('dist/', ''))
-      const distPath = path.join(cwd, entryPoint)
-      if (!fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-        fail(`${label} not found: ${entryPoint}`)
+      const found = reportEntryPoint(cwd, label, entryPoint)
+      if (found === 'error') {
         hasErrors = true
         continue
       }
-      // A TypeScript plugin ships only `dist/` (plus `assets/`), so a page that exists in the
-      // project folder can still be absent from the archive and open blank. Same rule as the
-      // icon check above: the declared path's top segment has to be something `package` ships.
       const { ships, entries: shipped } = entryPointShips(cwd, manifest, entryPoint)
       if (!ships) {
         fail(
@@ -103,25 +121,19 @@ export const validateCommand = new Command('validate')
             `${shipped.join(', ')}.`
         )
         hasErrors = true
-      } else {
-        ok(`${label} exists`)
+      } else if (found === 'built') {
+        ok(`${label} exists (${entryPoint})`)
       }
     }
 
     if (manifest.backend?.entryPoint) {
-      const srcPath = path.join(cwd, 'src', manifest.backend.entryPoint.replace('dist/', '').replace('.js', '.ts'))
-      const distPath = path.join(cwd, manifest.backend.entryPoint)
-      if (!fs.existsSync(srcPath) && !fs.existsSync(distPath)) {
-        fail(`Backend entry point not found: ${manifest.backend.entryPoint}`)
-        hasErrors = true
-      } else {
-        ok('Backend entry point exists')
-      }
+      const found = reportEntryPoint(cwd, 'Backend entry point', manifest.backend.entryPoint, true)
+      if (found === 'error') hasErrors = true
+      else if (found === 'built') ok(`Backend entry point exists (${manifest.backend.entryPoint})`)
     }
 
     const flat = !isTypeScriptProject(cwd)
 
-    // Flat-JS / webview plugins have no compile step — running tsc would hang.
     if (!flat) {
       try {
         execSync('npx tsc --noEmit', { cwd, stdio: 'pipe' })
@@ -132,9 +144,6 @@ export const validateCommand = new Command('validate')
       }
     }
 
-    // Scan for banned imports: TS plugins in dist/, flat plugins in their
-    // as-authored entry dirs. Shared with `build` and publish's preflight so all
-    // three look in the same place.
     const scanDirs = resolveBannedScanDirs(cwd, manifest)
     if (scanDirs.length > 0) {
       const banned = scanDirs.flatMap(scanBannedImports)
@@ -147,7 +156,6 @@ export const validateCommand = new Command('validate')
       }
     }
 
-    // A table that can hold a runnable command fails here, in preflight and in publish alike.
     if (reportCommandTables(manifest, scanDirs, cwd)) hasErrors = true
 
     if (hasErrors) {

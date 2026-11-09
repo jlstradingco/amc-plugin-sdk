@@ -139,13 +139,14 @@ npx -p @agent-mc/plugin-cli amc-plugin validate
 Expected output:
 
 ```
-PASS: Manifest schema
-PASS: SDK version declared (2.0.0)
-PASS: UI entry point exists
-PASS: TypeScript compilation
-
-All checks PASSED
+✓ Manifest schema
+✓ SDK version declared (2.0.0)
+✓ UI entry point exists (dist/ui/index.html)
+✓ TypeScript compilation
+✓ All checks passed
 ```
+
+Run it after `npm run build`. Before a build there is no `dist/`, so `validate` checks your `src/` files instead and prints a `⚠ ... is not built yet` warning for each entry point.
 
 ::: warning
 The `validate` command also scans compiled output for banned imports (`electron`, `better-sqlite3`, `worker_threads`, `child_process` — the last two in both their bare and `node:`-prefixed spellings) and **fails** on a hit. `build` runs the same scan but only warns, so you catch it earlier, and `publish` runs it again and refuses to upload — the same rule at all three points. Marketplace plugin backends run under Node's `--permission` and cannot access these modules directly.

@@ -2,12 +2,6 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { isBannedScanTarget } from './banned-imports.js'
 
-/**
- * A flat-JS / webview plugin has no TypeScript compile step — its files ship
- * as-authored at the archive root. We key off the presence of tsconfig.json,
- * which is the definitive signal for "should `tsc` run here". Running tsc in a
- * flat plugin hangs (nothing to compile / interactive install prompt).
- */
 export function isTypeScriptProject(cwd: string): boolean {
   return fs.existsSync(path.join(cwd, 'tsconfig.json'))
 }
@@ -21,11 +15,6 @@ const CONVENTIONAL_DIRS = ['assets', 'prompts']
 
 const README_RE = /^readme\.md$/i
 
-/**
- * The marketplace renders the package's README on the plugin's detail page and
- * finds it with the same case-insensitive match, so the file ships under its
- * real on-disk name.
- */
 export function findRootReadme(cwd: string): string | null {
   for (const entry of fs.readdirSync(cwd, { withFileTypes: true })) {
     if (entry.isFile() && README_RE.test(entry.name)) return entry.name
@@ -33,12 +22,6 @@ export function findRootReadme(cwd: string): string | null {
   return null
 }
 
-/**
- * Top-level entries a flat plugin's `.amcplugin` should contain (besides
- * manifest.json, which the packager adds at the root itself). Derived from the
- * manifest's entry points plus conventional `assets/`/`prompts/` dirs, filtered
- * to what actually exists on disk. Entries may be directories or single files.
- */
 export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLike): string[] {
   const names = new Set<string>()
 
@@ -49,7 +32,6 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   }
 
   addTopSegment(manifest.ui?.entryPoint)
-  // The titlebar widget's popover page ships too, wherever the author put it.
   addTopSegment(manifest.ui?.widget?.entryPoint)
   addTopSegment(manifest.backend?.entryPoint)
   for (const dir of CONVENTIONAL_DIRS) names.add(dir)
@@ -57,16 +39,6 @@ export function collectFlatPackageEntries(cwd: string, manifest: FlatManifestLik
   return [...names].filter((name) => fs.existsSync(path.join(cwd, name)))
 }
 
-/**
- * The top-level entries (besides manifest.json) that make up a plugin's
- * shippable payload — the single source of truth shared by `package` and
- * `install` so both agree on exactly what a plugin consists of. A TypeScript
- * plugin ships its compiled `dist/` tree (plus an optional top-level `assets/`);
- * a flat-JS plugin ships its as-authored folders. A root README.md ships in
- * both cases (when present) so the marketplace listing can render it. It is
- * added here rather than in `collectFlatPackageEntries`, because that list also
- * feeds the banned-import scan, and the README is packaged but holds no code.
- */
 export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): string[] {
   const typeScript = isTypeScriptProject(cwd)
   const entries = typeScript ? ['dist'] : collectFlatPackageEntries(cwd, manifest)
@@ -76,11 +48,6 @@ export function collectPackageEntries(cwd: string, manifest: FlatManifestLike): 
   return entries
 }
 
-/**
- * Whether `package` would actually ship the file a manifest entry point names. A TypeScript
- * plugin ships only `dist/` (plus `assets/`), so a page that exists in the project folder can
- * still be absent from the archive and open blank at runtime.
- */
 export function entryPointShips(
   cwd: string,
   manifest: FlatManifestLike,
@@ -91,22 +58,26 @@ export function entryPointShips(
   return { ships: entries.includes(top), entries }
 }
 
-/**
- * The paths a banned-import scan should walk for this plugin: a TypeScript
- * plugin's compiled `dist/`, or a flat plugin's as-authored entry dirs and code files. Returns
- * ABSOLUTE paths, and only ones that exist — so an empty result genuinely means
- * "there is nothing built to inspect", which callers must not mistake for "clean".
- *
- * Single source of truth for `build`, `validate` and `publish`'s preflight. It is
- * shared rather than repeated on purpose: `build` used to carry its own copy of the
- * whole scanner, which silently stayed require-only after the shared one learned the
- * ESM form tsc emits — the drift that let a `child_process` plugin pass every check
- * and ship unrunnable.
- */
+export type EntryPointState = 'built' | 'unbuilt' | 'stale' | 'missing'
+
+export function entryPointState(
+  cwd: string,
+  entryPoint: string,
+  compiledFromTs = false
+): { state: EntryPointState; source: string; buildDir: string } {
+  const segments = entryPoint.split(/[/\\]/).filter(s => s !== '' && s !== '.')
+  const buildDir = segments[0] ?? ''
+  const sourceSegments = buildDir === 'dist' ? segments.slice(1) : segments
+  const mapped = ['src', ...sourceSegments].join('/')
+  const source = compiledFromTs ? mapped.replace(/\.js$/, '.ts') : mapped
+  const exists = (rel: string) => fs.existsSync(path.join(cwd, rel))
+  if (exists(entryPoint)) return { state: 'built', source, buildDir }
+  if (!exists(source)) return { state: 'missing', source, buildDir }
+  return { state: exists(buildDir) ? 'stale' : 'unbuilt', source, buildDir }
+}
+
 export function resolveBannedScanDirs(cwd: string, manifest: FlatManifestLike): string[] {
   if (!isTypeScriptProject(cwd)) {
-    // A flat entry can be a single file, and the README or an index.html is packaged but
-    // holds nothing to scan — counting it would turn "nothing was scanned" into a pass.
     return collectFlatPackageEntries(cwd, manifest)
       .map((entry) => path.join(cwd, entry))
       .filter(isBannedScanTarget)
@@ -114,7 +85,6 @@ export function resolveBannedScanDirs(cwd: string, manifest: FlatManifestLike): 
   return [path.join(cwd, 'dist')].filter((dir) => fs.existsSync(dir))
 }
 
-/** Recursively copy every non-`.ts` file from `src` into `dest`. */
 export function copyNonTsFiles(src: string, dest: string): void {
   if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true })
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {

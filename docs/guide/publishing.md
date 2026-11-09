@@ -34,13 +34,12 @@ Manifest validated
 Compiling TypeScript...
 Build complete
 
-PASS: Manifest schema
-PASS: SDK version declared (2.0.0)
-PASS: UI entry point exists
-PASS: TypeScript compilation
-PASS: No banned imports
-
-All checks PASSED
+✓ Manifest schema
+✓ SDK version declared (2.0.0)
+✓ UI entry point exists (dist/ui/index.html)
+✓ TypeScript compilation
+✓ No banned imports
+✓ All checks passed
 
 Packaged: my-plugin-1.0.0.amcplugin (0.01 MB)
 ```

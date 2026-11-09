@@ -114,11 +114,13 @@ amc-plugin validate
 | Manifest schema | Validates `manifest.json` against the SDK schema |
 | Command tables | Fails on a table that can hold a runnable command; warns on fuzzier shapes — see [Command tables](#command-tables) |
 | SDK version | Ensures `sdkVersion` field is present |
-| UI entry point | Verifies the declared UI entry file exists |
+| UI entry point | Verifies the declared UI entry file exists (see [Entry points before a build](#entry-points-before-a-build)) |
 | Widget entry point | Verifies the file declared as `ui.widget.entryPoint` exists (only when declared) |
 | Backend entry point | Verifies the declared backend entry file exists |
 | TypeScript | Runs `tsc --noEmit` to check for type errors |
 | Banned imports | Scans `dist/` for disallowed Node/Electron imports — see below |
+
+**Entry points before a build.** Each entry point is checked at the path the manifest declares, and the pass line names it (`✓ UI entry point exists (dist/ui/index.html)`). When there is no `dist/` folder yet, `validate` checks the source the build would compile instead (`src/ui/index.html`, or `src/backend/index.ts` for `dist/backend/index.js`) and prints a warning saying so; the exit code stays 0, because `package` builds a missing `dist/` first. When `dist/` exists but lacks the declared file, `validate` fails: your build is out of date, and `package` would ship that `dist/` as it is. Run `amc-plugin build` and validate again.
 
 **Banned imports, in detail.** The scan reads every `.js`, `.mjs` and `.cjs` file under `dist/` (for a flat plugin: the entry folders and single entry files you ship as authored) and rejects
 `electron`, `better-sqlite3`, `worker_threads` and `child_process`, matching all four

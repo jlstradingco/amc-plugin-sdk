@@ -152,6 +152,8 @@ describe('Plugin lifecycle E2E', () => {
     })
     expect(output).toContain('All checks passed')
     expect(output).not.toContain('✗')
+    expect(output).toContain('UI entry point exists (dist/ui/index.html)')
+    expect(output).toContain('Backend entry point exists (dist/backend/index.js)')
   }, SHELL_OUT_TIMEOUT_MS)
 
   it('info lists the declared discoverability tags', () => {
@@ -190,6 +192,27 @@ describe('Plugin lifecycle E2E', () => {
     } finally {
       fs.writeFileSync(panel, bundled)
     }
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('fails validate when dist/ is present but out of date, since package would ship it as-is', () => {
+    fs.rmSync(path.join(pluginDir, 'dist', 'backend', 'index.js'))
+    const run = spawnSync(process.execPath, [cliDist, 'validate'], { cwd: pluginDir, encoding: 'utf-8' })
+    expect(run.status).toBe(1)
+    expect(run.stderr).toContain('Backend entry point dist/backend/index.js is missing from dist/')
+    expect(run.stdout).not.toContain('Backend entry point exists')
+    expect(run.stdout).not.toContain('All checks passed')
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('warns, and never claims the entry points exist, when validate runs with no dist/', () => {
+    fs.rmSync(path.join(pluginDir, 'dist'), { recursive: true, force: true })
+    const run = spawnSync(process.execPath, [cliDist, 'validate'], { cwd: pluginDir, encoding: 'utf-8' })
+    expect(run.status).toBe(0)
+    expect(run.stderr).toContain('UI entry point dist/ui/index.html is not built yet')
+    expect(run.stderr).toContain('checked its source src/ui/index.html instead')
+    expect(run.stderr).toContain('Backend entry point dist/backend/index.js is not built yet')
+    expect(run.stderr).toContain('checked its source src/backend/index.ts instead')
+    expect(run.stdout).not.toContain('UI entry point exists')
+    expect(run.stdout).not.toContain('Backend entry point exists')
   }, SHELL_OUT_TIMEOUT_MS)
 })
 

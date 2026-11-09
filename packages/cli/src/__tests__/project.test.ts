@@ -7,6 +7,7 @@ import {
   collectFlatPackageEntries,
   collectPackageEntries,
   entryPointShips,
+  entryPointState,
   findRootReadme,
   resolveBannedScanDirs,
 } from '../lib/project.js'
@@ -162,9 +163,6 @@ describe('findRootReadme', () => {
   })
 })
 
-// One resolver, three callers. `build`, `validate` and `preflight` must all decide
-// WHERE to look the same way — the drift between two hand-rolled copies is exactly
-// what let a child_process plugin through the scan in the first place.
 describe('resolveBannedScanDirs', () => {
   it('resolves a TypeScript project to its dist/ directory', () => {
     fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
@@ -184,8 +182,6 @@ describe('resolveBannedScanDirs', () => {
     expect(dirs).toEqual([path.join(tmp, 'ui')])
   })
 
-  // The README ships in the package, but it is not code: listed here it would count
-  // as something scanned and turn preflight's nothing-to-scan warning into a pass.
   it('leaves the packaged README out of a flat plugin\'s scan dirs', () => {
     fs.writeFileSync(path.join(tmp, 'manifest.json'), '{}')
     fs.writeFileSync(path.join(tmp, 'README.md'), '# Hi')
@@ -240,5 +236,62 @@ describe('entryPointShips', () => {
     fs.writeFileSync(path.join(tmp, 'tsconfig.json'), '{}')
     fs.mkdirSync(path.join(tmp, 'dist'))
     expect(entryPointShips(tmp, { ui: { widget: { entryPoint: 'dist/ui/widget.html' } } }, 'dist/ui/widget.html').ships).toBe(true)
+  })
+})
+
+describe('entryPointState', () => {
+  const write = (rel: string) => {
+    fs.mkdirSync(path.dirname(path.join(tmp, rel)), { recursive: true })
+    fs.writeFileSync(path.join(tmp, rel), '')
+  }
+
+  it('reports the built state, its source and its build folder when the declared file is on disk', () => {
+    write('dist/ui/index.html')
+    write('src/ui/index.html')
+    expect(entryPointState(tmp, 'dist/ui/index.html')).toEqual({
+      state: 'built',
+      source: 'src/ui/index.html',
+      buildDir: 'dist',
+    })
+  })
+
+  it('is unbuilt, not built, when dist/ is absent and only the source exists', () => {
+    write('src/ui/index.html')
+    expect(entryPointState(tmp, 'dist/ui/index.html').state).toBe('unbuilt')
+  })
+
+  it('maps a backend .js entry point to its .ts source', () => {
+    write('src/backend/index.ts')
+    expect(entryPointState(tmp, 'dist/backend/index.js', true).source).toBe('src/backend/index.ts')
+  })
+
+  it('is stale when dist/ exists but lacks the declared file, because package will not rebuild it', () => {
+    write('dist/backend/index.js')
+    write('src/ui/index.html')
+    expect(entryPointState(tmp, 'dist/ui/index.html').state).toBe('stale')
+  })
+
+  it('reads a ./-prefixed entry point the same as a plain one', () => {
+    write('src/ui/index.html')
+    expect(entryPointState(tmp, './dist/ui/index.html')).toEqual({
+      state: 'unbuilt',
+      source: 'src/ui/index.html',
+      buildDir: 'dist',
+    })
+  })
+
+  it('is missing when neither the declared file nor its source exists', () => {
+    fs.mkdirSync(path.join(tmp, 'dist'))
+    expect(entryPointState(tmp, 'dist/ui/index.html').state).toBe('missing')
+  })
+
+  it('treats a flat plugin page as built when the declared path itself exists', () => {
+    write('ui/widget.html')
+    expect(entryPointState(tmp, 'ui/widget.html').state).toBe('built')
+  })
+
+  it('reports a flat plugin page that is not on disk as missing', () => {
+    fs.mkdirSync(path.join(tmp, 'ui'))
+    expect(entryPointState(tmp, 'ui/widget.html').state).toBe('missing')
   })
 })
