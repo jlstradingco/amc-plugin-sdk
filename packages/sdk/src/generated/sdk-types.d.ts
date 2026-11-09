@@ -329,6 +329,10 @@ export interface AgentMC {
     "importCancel": (...args: unknown[]) => Promise<unknown>
     "importCommit": (...args: unknown[]) => Promise<unknown>
     "importParse": (...args: unknown[]) => Promise<unknown>
+    "leechApply": (...args: unknown[]) => Promise<unknown>
+    "leechDismiss": (...args: unknown[]) => Promise<unknown>
+    "leechList": (...args: unknown[]) => Promise<unknown>
+    "leechRewrite": (...args: unknown[]) => Promise<unknown>
     "mediaDelete": (...args: unknown[]) => Promise<unknown>
     "mediaGet": (...args: unknown[]) => Promise<unknown>
     "mediaList": (...args: unknown[]) => Promise<unknown>
@@ -382,6 +386,7 @@ export interface AgentMC {
     "applyCourseProposal": (...args: unknown[]) => Promise<unknown>
     "cancelImport": (...args: unknown[]) => Promise<unknown>
     "completeLesson": (...args: unknown[]) => Promise<unknown>
+    "copyCourseFromShareLink": (...args: unknown[]) => Promise<unknown>
     "copyLibraryListingToDraft": (...args: unknown[]) => Promise<unknown>
     "createAssignment": (...args: unknown[]) => Promise<unknown>
     "createConcept": (...args: unknown[]) => Promise<unknown>
@@ -414,6 +419,7 @@ export interface AgentMC {
     "getConcept": (...args: unknown[]) => Promise<unknown>
     "getCourse": (...args: unknown[]) => Promise<unknown>
     "getCourseDeckStatus": (...args: unknown[]) => Promise<unknown>
+    "getCourseShareLink": (...args: unknown[]) => Promise<unknown>
     "getEnrollment": (...args: unknown[]) => Promise<unknown>
     "getImportStatus": (...args: unknown[]) => Promise<unknown>
     "getLearnerCourse": (...args: unknown[]) => Promise<unknown>
@@ -424,6 +430,7 @@ export interface AgentMC {
     "getManagerDashboardAgg": (...args: unknown[]) => Promise<unknown>
     "getMedia": (...args: unknown[]) => Promise<unknown>
     "getMediaUrl": (...args: unknown[]) => Promise<unknown>
+    "getQuizMisses": (...args: unknown[]) => Promise<unknown>
     "getTeamProgress": (...args: unknown[]) => Promise<unknown>
     "glossaryTermsForLesson": (...args: unknown[]) => Promise<unknown>
     "helperAsk": (...args: unknown[]) => Promise<unknown>
@@ -472,6 +479,7 @@ export interface AgentMC {
     "setMemberManagers": (...args: unknown[]) => Promise<unknown>
     "startImport": (...args: unknown[]) => Promise<unknown>
     "submitQuizAttempt": (...args: unknown[]) => Promise<unknown>
+    "turnOffCourseShareLink": (...args: unknown[]) => Promise<unknown>
     "unpublishLibraryListing": (...args: unknown[]) => Promise<unknown>
     "updateAssignmentDueAt": (...args: unknown[]) => Promise<unknown>
     "updateConcept": (...args: unknown[]) => Promise<unknown>
