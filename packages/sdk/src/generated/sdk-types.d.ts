@@ -500,6 +500,9 @@ export interface AgentMC {
   "members": {
     "list": (...args: unknown[]) => Promise<unknown>
   }
+  "modelPicker": {
+    "open": (...args: unknown[]) => Promise<unknown>
+  }
   "navigation": {
     "goToSession": (...args: unknown[]) => Promise<unknown>
     "openTeamChat": (...args: unknown[]) => Promise<unknown>

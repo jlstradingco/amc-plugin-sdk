@@ -108,6 +108,21 @@ const canPickEngine = tokens.includes('ai-engine-choice')
 
 The backend twin, `ctx.host.getCapabilities()`, is typed ahead of the Omniscio release that adds it, and is `undefined` until then.
 
+## Model Picker
+
+`Omniscio.modelPicker.open(request)` opens Omniscio's own model picker over your button and resolves to the row picked (`''` = the default row) or `null` when dismissed. Never draw your own engine or model picker. It needs no permission: check for the `'model-picker'` token first, and show a plain select on an older host or when the call rejects.
+
+```typescript
+const picked = await Omniscio.modelPicker.open({
+  value: stored,
+  defaultLabel: 'Claude, Sonnet',
+  options: [{ value: 'deepseek:v4', label: 'V4', group: 'DeepSeek' }],
+  anchor: button.getBoundingClientRect().toJSON()
+})
+```
+
+Every row needs a `group` (its heading); `disabled` + `reason` shows a row that cannot be picked yet. Only `''`, `null` or one of your enabled values ever comes back.
+
 ## Bridge-Only APIs
 
 The following APIs are available **only on the frontend** through the `Omniscio` bridge. They do not have backend equivalents and do not require permissions.

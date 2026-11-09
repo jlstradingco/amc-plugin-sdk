@@ -25,6 +25,19 @@ A sign-in that succeeds but cannot write the credential is now reported as exact
 the file, instead of being retried for two minutes and then reported as "Authentication timed
 out". See [the login command](docs/reference/cli.md#login).
 
+### Fixed — sign-in waits fifteen minutes instead of two
+
+The browser sign-in behind `publish` and `login` gave up after 120 one-second polls, so an author
+on a headless machine — a CI runner, a remote server, a container — had two minutes from the moment
+the CLI printed the link to carry it to another device and finish GitHub OAuth and any two-factor
+step. Miss the window and the command had to be started again. The CLI now polls for fifteen
+minutes, and prints the link, the wait, a dot every ten seconds and the time left every two
+minutes, so the wait is visible and `Ctrl+C` cancels it.
+
+`getAuthSession` is rate-limited at 120 requests a minute, so the poll interval moved from one
+second to two for margin. A sign-in that succeeds but cannot save the credential still reports
+exactly that, naming the file, rather than timing out.
+
 ### Fixed — a scaffolded plugin's panel no longer opens blank
 
 `tsc` leaves `export {};` at the end of `dist/ui/plugin.js`, and a page that loads it with a plain

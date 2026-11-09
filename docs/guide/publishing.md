@@ -83,11 +83,16 @@ You can sign in ahead of time with [`omniscio-plugin login`](/reference/cli#logi
 ```
 Opening browser for GitHub sign-in...
 If the browser doesn't open, visit: https://amc-marketplace-jls.web.app?session=A1B2C3
+On a machine without a browser, open that link on any device — the CLI waits up to 15m 00s.
 
-Waiting for sign-in...
-.....
+Waiting for sign-in... (press Ctrl+C to cancel)
+............
+Still waiting for sign-in — 13m 00s left.
+............
 Signed in as your-github-username
 ```
+
+On a headless machine — a CI runner, a remote server, a container — nothing opens a browser, and that is fine: copy the printed link to any device with a browser and finish GitHub sign-in there, including any two-factor step. The CLI keeps polling for fifteen minutes, so there is no rush and no need to restart the publish or `login`.
 
 After signing in, the CLI stores your token locally at `~/.amc/marketplace-token`. Subsequent publishes reuse it, and when it expires the CLI renews it silently in the background using the stored refresh token — so you should only see the browser flow again if you sign out or your access is revoked.
 

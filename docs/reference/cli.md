@@ -352,7 +352,7 @@ omniscio-plugin publish [options]
 **What it does:**
 
 1. Chooses the package to upload ([how](#choosing-the-package)); refuses before anything is sent if it cannot pick exactly one right one.
-2. Checks for a stored auth token; prompts GitHub OAuth if missing.
+2. Checks for a stored auth token; prompts GitHub OAuth if missing. The browser sign-in waits **15 minutes** for you, so a headless machine is no obstacle: copy the printed link to any device with a browser and finish GitHub sign-in there, two-factor step included.
 3. **Confirms the uploading identity** before upload (see the account trap below).
 4. Runs [`preflight`](#preflight) readiness checks (unless `--skip-preflight`); aborts on any failure.
 5. Uploads the archive to the marketplace.

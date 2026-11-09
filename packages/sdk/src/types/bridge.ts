@@ -782,6 +782,37 @@ export interface BridgeHttp {
   uploadFile(request: BridgeUploadFileRequest): Promise<BridgeHttpResponse>
 }
 
+/** One row of the host model menu. `group` is required and becomes the row's heading. */
+export interface ModelPickOption {
+  value: string
+  label: string
+  group: string
+  disabled?: boolean
+  reason?: string
+  description?: string
+}
+
+/** What a plugin asks the host model menu to show. The default row is drawn by the host. */
+export interface ModelPickRequest {
+  /** The stored value, `''` for the default. */
+  value: string
+  /** What the default resolves to; the host shows "Use default (…)" around it. */
+  defaultLabel: string
+  options: ModelPickOption[]
+  /** The trigger's rect in the plugin page's CSS pixels (its getBoundingClientRect). */
+  anchor?: { x: number; y: number; width: number; height: number }
+  title?: string
+}
+
+/**
+ * The app's one model picker, drawn by the host over the plugin's own button. Resolves to the
+ * picked row (`''` = the default row) or `null` when dismissed; rejects where the host
+ * cannot draw it. Feature-detect with the `'model-picker'` token from `host.getCapabilities()`.
+ */
+export interface BridgeModelPicker {
+  open(request: ModelPickRequest): Promise<{ value: string } | null>
+}
+
 /** One board the person has shared with this plugin. */
 export interface BridgeGrantedBoard {
   id: string
@@ -1145,6 +1176,8 @@ export interface Omniscio {
   shell: BridgeShell
   /** Optional: absent on hosts that predate plugin usage counts. See {@link PluginUsage}. */
   usage?: PluginUsage
+  /** Optional: absent on hosts without the 'model-picker' token. See {@link BridgeModelPicker}. */
+  modelPicker?: BridgeModelPicker
 }
 
 /** @deprecated Renamed to {@link Omniscio} in 3.4.0. The same type; kept so existing plugins compile. */

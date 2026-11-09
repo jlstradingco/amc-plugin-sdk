@@ -132,10 +132,10 @@ describe('omniscio-plugin login', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })))
 
     const pending = runLogin()
-    await vi.advanceTimersByTimeAsync(121_000)
+    await vi.advanceTimersByTimeAsync(901_000)
     await pending
 
-    expect(errored.join('\n')).toContain('Authentication timed out')
+    expect(errored.join('\n')).toContain('Sign-in was not completed within')
     expect(errored.join('\n')).toContain("omniscio-plugin login' again")
     expect(tokenOnDisk()).toBeNull()
     expect(process.exitCode).toBe(1)
@@ -162,7 +162,7 @@ describe('omniscio-plugin login', () => {
     )
 
     const pending = runLogin()
-    await vi.advanceTimersByTimeAsync(121_000)
+    await vi.advanceTimersByTimeAsync(901_000)
     await pending
 
     const said = errored.join('\n')

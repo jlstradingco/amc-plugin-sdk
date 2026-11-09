@@ -6,34 +6,8 @@ import { spawnSync } from 'node:child_process'
 
 const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
 
-// Marketplace API base URL — override with the AMC_MARKETPLACE_API_URL env var.
-//
-// The API moved off Firebase Cloud Functions into amc-back, where it is mounted on the shared
-// `amc-backend` Cloud Run service at /marketplace. Every Cloud Function name is preserved verbatim
-// as a path segment (`/marketplace/getAuthSession`), so this constant is the whole cutover and no
-// call site below changed.
-//
-// The Cloud Functions are still deployed against the same Firestore, so an older published CLI
-// pointing at the previous URL keeps working until they are switched off.
 const DEFAULT_BASE_URL = 'https://amcback.jls.dev/marketplace'
 
-/**
- * The marketplace base URL, with the `AMC_MARKETPLACE_API_URL` override validated.
- *
- * Every authed call sends `Authorization: Bearer <id-token>` to this host, and the
- * auth poll receives a freshly-minted token back from it — so an `http://` override
- * would put a reusable marketplace credential on the wire in cleartext (F076). The
- * override is refused unless it is `https://`, with one carve-out: plain `http://` to
- * localhost / a loopback address, because that is how a developer points the CLI at a
- * local emulator and the token never leaves the machine.
- *
- * Fails CLOSED: an insecure or malformed override throws here rather than silently
- * falling back to the default, so a misconfigured environment can never quietly ship
- * the token to the wrong place. The default path (no override) never parses and never
- * throws.
- *
- * @throws if the override is set but is not a valid https URL (or http to localhost).
- */
 export function resolveBaseUrl(raw: string | undefined = process.env.AMC_MARKETPLACE_API_URL): string {
   if (raw === undefined || raw.trim() === '') return DEFAULT_BASE_URL
 
@@ -62,7 +36,6 @@ export function resolveBaseUrl(raw: string | undefined = process.env.AMC_MARKETP
     )
   }
 
-  // Strip a single trailing slash so call sites' `${getBaseUrl()}/route` never doubles it.
   return value.replace(/\/+$/, '')
 }
 
@@ -77,54 +50,27 @@ export interface StoredToken {
   expiresAt: string
 }
 
-// The marketplace project's Firebase Web API key. NOT a secret: Firebase web API
-// keys are public project identifiers (this exact value is served to every
-// visitor of the sign-in page in public/assets/auth.js). Access control is
-// enforced by Firebase Auth + the functions' own `authenticate` middleware, not
-// by keeping this string private.
 const FIREBASE_WEB_API_KEY =
   process.env.AMC_MARKETPLACE_WEB_API_KEY ?? 'AIzaSyByrpH7y4nm0ZxLKNkZZD9gIMO19rJ_220'
 
 const SECURE_TOKEN_URL = 'https://securetoken.googleapis.com/v1/token'
 
-/** Clock-skew allowance applied by `isTokenFresh`, in seconds. */
 const TOKEN_FRESHNESS_BUFFER_SECONDS = 5 * 60
 
-/**
- * Shortest lifetime a renewed token is allowed to claim. A token that expires
- * inside the freshness buffer is born unusable, so anything shorter is treated
- * as a bad server response rather than honoured literally.
- */
 const MIN_TOKEN_TTL_SECONDS = TOKEN_FRESHNESS_BUFFER_SECONDS + 60
 
-/**
- * Read the token file as-is, ignoring expiry. Returns null when absent/corrupt.
- *
- * For callers that need the stored IDENTITY rather than a usable credential:
- * `whoami` reports who you are (a local fact, no network), and `logout` must be
- * able to delete a credential precisely when it has gone stale. Anything that
- * calls the marketplace API wants `getStoredTokenOrRefresh()` instead.
- */
 export function getStoredTokenIgnoringExpiry(): StoredToken | null {
   return readStoredTokenRaw()
 }
 
-/** Read the token file as-is, ignoring expiry. Returns null when absent/corrupt. */
 function readStoredTokenRaw(): StoredToken | null {
   if (!fs.existsSync(TOKEN_PATH)) return null
   try {
     const raw = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8')) as Record<string, unknown>
-    // Type-checked, not merely truthy. A half-written or hand-edited file could carry
-    // an object or a number where a string belongs, and the cast below would let it
-    // through to `Authorization: Bearer [object Object]` — a 401 whose real cause is a
-    // corrupt local file, which is the least debuggable form of this failure. Treating
-    // it as "no token" instead sends the user through sign-in, which repairs it.
     if (typeof raw?.token !== 'string' || raw.token.length === 0) return null
     if (typeof raw.expiresAt !== 'string' || raw.expiresAt.length === 0) return null
     return {
       token: raw.token,
-      // The optional fields degrade rather than reject: an old file written before
-      // refresh tokens existed is still a usable credential until it expires.
       refreshToken: typeof raw.refreshToken === 'string' ? raw.refreshToken : '',
       uid: typeof raw.uid === 'string' ? raw.uid : '',
       github: typeof raw.github === 'string' ? raw.github : 'unknown',
@@ -135,7 +81,6 @@ function readStoredTokenRaw(): StoredToken | null {
   }
 }
 
-/** True when `token` is still valid, allowing a 5-minute clock-skew buffer. */
 export function isTokenFresh(token: StoredToken, now: number = Date.now()): boolean {
   const expiresAt = new Date(token.expiresAt).getTime()
   if (Number.isNaN(expiresAt)) return false
@@ -148,18 +93,6 @@ export function getStoredToken(): StoredToken | null {
   return isTokenFresh(raw) ? raw : null
 }
 
-/**
- * Exchange the stored refresh token for a fresh ID token.
- *
- * Without this the CLI made you re-authenticate through the browser roughly
- * every hour, even though the refresh token needed to avoid that has been
- * saved since the first sign-in and simply went unused. Publishing a few
- * versions over an afternoon meant several trips through GitHub OAuth.
- *
- * Returns null (never throws) when there is nothing to refresh, the network is
- * down, or the refresh token has been revoked — every caller then falls back to
- * the interactive browser flow, which is the correct recovery for all three.
- */
 export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
   const stored = readStoredTokenRaw()
   if (!stored?.refreshToken) return null
@@ -182,10 +115,6 @@ export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
     }
     if (!data.id_token) return null
 
-    // expires_in is seconds-as-string; default to Firebase's standard hour.
-    // Floored at the freshness buffer: a zero/negative/absurdly-short TTL would
-    // mint a token `isTokenFresh` rejects on sight, so every later command would
-    // burn a refresh round trip and still consider itself signed out.
     const parsedTtl = Number.parseInt(data.expires_in ?? '3600', 10)
     const ttlSeconds = Number.isFinite(parsedTtl)
       ? Math.max(parsedTtl, MIN_TOKEN_TTL_SECONDS)
@@ -193,7 +122,6 @@ export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
     const refreshed: StoredToken = {
       ...stored,
       token: data.id_token,
-      // Google may rotate the refresh token — keep the new one when offered.
       refreshToken: data.refresh_token ?? stored.refreshToken,
       expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString()
     }
@@ -204,15 +132,6 @@ export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
   }
 }
 
-/**
- * The stored token, silently renewed if it has expired. Never opens a browser.
- *
- * The read-only commands cannot call `authenticate()` — that would hijack, say,
- * `omniscio-plugin info` into an interactive sign-in — but reading the file directly
- * meant they reported "Not signed in" the moment the hour-long ID token lapsed,
- * even though the refresh token beside it was still good. Returns null only when
- * there is genuinely nothing usable, which is the honest "signed out" answer.
- */
 export async function getStoredTokenOrRefresh(): Promise<StoredToken | null> {
   const existing = getStoredToken()
   if (existing) return existing
@@ -221,31 +140,15 @@ export async function getStoredTokenOrRefresh(): Promise<StoredToken | null> {
 
 export function saveToken(token: StoredToken): void {
   const dir = path.dirname(TOKEN_PATH)
-  // 0700/0600: the file holds a refresh token, which silent renewal turns into
-  // an indefinitely reusable marketplace credential — anyone who can read it can
-  // publish as you. Default modes leave it world-readable on POSIX. `mode` on
-  // mkdir/writeFile only applies at CREATE time, so chmod the file as well to
-  // tighten one written by an older CLI. No-op on Windows, which ignores mode.
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 })
   fs.writeFileSync(TOKEN_PATH, JSON.stringify(token, null, 2), { encoding: 'utf-8', mode: 0o600 })
   try {
     fs.chmodSync(TOKEN_PATH, 0o600)
   } catch {
-    // Filesystems without POSIX modes (Windows, some network mounts) — the
-    // credential is still written, which is what the caller asked for.
+    return
   }
 }
 
-/**
- * Delete the stored credential. Returns false when a file was there and could not be
- * removed, so the caller can say so rather than claiming a sign-out that did not happen.
- *
- * The unlink is guarded because it genuinely fails: on Windows a file held open by
- * another Omniscio process raises EBUSY, and a read-only home raises EPERM. Unguarded, that
- * turned `logout` — the command a user reaches for when they are worried about a
- * credential — into an unhandled exception and a stack trace, with the token still on
- * disk and no clear statement that it still was.
- */
 export function clearToken(): boolean {
   if (!fs.existsSync(TOKEN_PATH)) return true
   try {
@@ -256,40 +159,39 @@ export function clearToken(): boolean {
   }
 }
 
-/**
- * Authenticate via GitHub OAuth. Opens browser, polls for token.
- */
-export async function authenticate(): Promise<StoredToken> {
-  // Check for existing valid token
-  const existing = getStoredToken()
-  if (existing) return existing
+export const SIGN_IN_TIMEOUT_MS = 15 * 60 * 1000
 
-  // Expired, but a refresh token may still be good — try that before sending the
-  // user through the browser again. Silent on failure: falling through to the
-  // interactive flow is the right recovery for an expired, revoked, or
-  // unreachable refresh token alike.
-  const refreshed = await tryRefreshStoredToken()
-  if (refreshed) return refreshed
+export const SIGN_IN_POLL_INTERVAL_MS = 2 * 1000
 
-  // Generate session ID for polling. The server's getAuthSession endpoint
-  // (RT-F008 hardening) rejects any id that doesn't match /^[A-Za-z0-9_-]{20,200}$/,
-  // so mint 24 hex chars — matching the length the endpoint documents as expected.
-  const sessionId = randomBytes(12).toString('hex')
-  const authUrl = buildAuthUrl(sessionId)
+const SIGN_IN_DOT_INTERVAL_MS = 10 * 1000
+const SIGN_IN_REMINDER_INTERVAL_MS = 2 * 60 * 1000
 
-  console.log('\nOpening browser for GitHub sign-in...')
-  console.log(`If the browser doesn't open, visit: ${authUrl}\n`)
+export interface SignInTick {
+  elapsedMs: number
+  remainingMs: number
+}
 
-  openInBrowser(authUrl)
+export interface SignInOptions {
+  timeoutMs?: number
+  intervalMs?: number
+  openBrowser?: (url: string) => void
+  onWait?: (tick: SignInTick) => void
+}
 
-  // Poll Firestore for token via a lightweight HTTP endpoint
-  console.log('Waiting for sign-in...')
+export async function waitForSignIn(
+  sessionId: string,
+  options: SignInOptions = {}
+): Promise<StoredToken> {
+  const timeoutMs = options.timeoutMs ?? SIGN_IN_TIMEOUT_MS
+  const intervalMs = options.intervalMs ?? SIGN_IN_POLL_INTERVAL_MS
+  const onWait = options.onWait ?? signInProgress()
   const pollUrl = `${BASE_URL}/getAuthSession?session=${sessionId}`
-
+  const startedAt = Date.now()
+  const deadline = startedAt + timeoutMs
   let saveError: Error | null = null
 
-  for (let i = 0; i < 120; i++) { // 2 minutes max
-    await sleep(1000)
+  while (Date.now() < deadline) {
+    await sleep(Math.max(0, Math.min(intervalMs, deadline - Date.now())))
 
     try {
       const res = await globalThis.fetch(pollUrl)
@@ -305,47 +207,79 @@ export async function authenticate(): Promise<StoredToken> {
           }
           try {
             saveToken(storedToken)
+            return storedToken
           } catch (err) {
-            // A write can fail for a reason that clears on its own (the app holds
-            // this same file open on Windows), so keep polling rather than failing
-            // the sign-in that just succeeded — and remember WHY if the wait ends.
             saveError = err instanceof Error ? err : new Error(String(err))
-            continue
           }
-          console.log(`\nSigned in as ${storedToken.github}`)
-          return storedToken
         }
       }
     } catch {
-      // Network error — keep polling
     }
 
-    // Print a dot every 5 seconds
-    if (i % 5 === 0 && i > 0) process.stdout.write('.')
+    onWait({ elapsedMs: Date.now() - startedAt, remainingMs: Math.max(0, deadline - Date.now()) })
   }
 
   if (saveError) {
     throw new Error(`Signed in, but the credential could not be saved to ${TOKEN_PATH}: ${saveError.message}`)
   }
-  throw new Error('Authentication timed out. Please try again.')
+
+  throw new Error(
+    `Sign-in was not completed within ${formatWait(timeoutMs)}. ` +
+      'Run the command again for a fresh link, and open it on any device that has a browser.'
+  )
 }
 
-/**
- * Build the sign-in URL, normalized so it is safe to hand to a command line.
- *
- * `AUTH_PAGE_URL` comes from `AMC_MARKETPLACE_AUTH_URL`, and the value used to be
- * interpolated straight into a shell string (`start "" "<url>"`). A value containing a
- * quote would close that quote and run whatever followed. Setting the variable already
- * implies a good deal of access, so this was never the weakest link — but "the attacker
- * needed some access already" is not a reason to leave a shell injection in the one
- * command that opens a browser and mints a credential.
- *
- * Parsing through `URL` fixes it at the source: the constructor rejects a value that is
- * not a URL at all, and `toString()` percent-encodes quotes, spaces and newlines, so
- * nothing that survives can terminate an argument.
- *
- * @throws if the configured auth URL is not a valid http(s) URL.
- */
+export async function authenticate(options: SignInOptions = {}): Promise<StoredToken> {
+  const existing = getStoredToken()
+  if (existing) return existing
+
+  const refreshed = await tryRefreshStoredToken()
+  if (refreshed) return refreshed
+
+  const sessionId = randomBytes(12).toString('hex')
+  const authUrl = buildAuthUrl(sessionId)
+  const timeoutMs = options.timeoutMs ?? SIGN_IN_TIMEOUT_MS
+
+  console.log('\nOpening browser for GitHub sign-in...')
+  console.log(`If the browser doesn't open, visit: ${authUrl}`)
+  console.log(
+    `On a machine without a browser, open that link on any device — the CLI waits up to ${formatWait(timeoutMs)}.\n`
+  )
+
+  const openBrowser = options.openBrowser ?? openInBrowser
+  openBrowser(authUrl)
+
+  console.log('Waiting for sign-in... (press Ctrl+C to cancel)')
+  const storedToken = await waitForSignIn(sessionId, options)
+  console.log(`\nSigned in as ${storedToken.github}`)
+  return storedToken
+}
+
+function signInProgress(): (tick: SignInTick) => void {
+  let dotsAt = 0
+  let reminderAt = 0
+
+  return ({ elapsedMs, remainingMs }) => {
+    if (elapsedMs - reminderAt >= SIGN_IN_REMINDER_INTERVAL_MS) {
+      reminderAt = elapsedMs
+      dotsAt = elapsedMs
+      process.stdout.write(`\nStill waiting for sign-in — ${formatWait(remainingMs)} left.\n`)
+      return
+    }
+    if (elapsedMs - dotsAt >= SIGN_IN_DOT_INTERVAL_MS) {
+      dotsAt = elapsedMs
+      process.stdout.write('.')
+    }
+  }
+}
+
+function formatWait(ms: number): string {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return minutes === 0 ? `${seconds}s` : `${minutes}m ${String(seconds).padStart(2, '0')}s`
+}
+
 export function buildAuthUrl(sessionId: string, base: string = AUTH_PAGE_URL): string {
   let url: URL
   try {
@@ -364,23 +298,10 @@ export function buildAuthUrl(sessionId: string, base: string = AUTH_PAGE_URL): s
   return url.toString()
 }
 
-/**
- * Hand a URL to the platform's browser opener. Never throws: a machine with no
- * graphical browser is an ordinary case, and the URL was printed above for the user to
- * open by hand.
- *
- * Arguments are passed as an ARGV array rather than a shell string wherever the
- * platform allows it, so the URL is never re-parsed by a shell. `start` is a `cmd`
- * builtin and cannot be spawned directly, so Windows still goes through `cmd /c` — with
- * a URL that `buildAuthUrl` has already normalized past the characters that would
- * matter there.
- */
 function openInBrowser(url: string): void {
   try {
     const platform = os.platform()
     if (platform === 'win32') {
-      // The empty string is `start`'s title argument; without it a quoted URL is
-      // treated as the window title and no browser opens.
       spawnSync('cmd', ['/c', 'start', '', url], { stdio: 'ignore' })
     } else if (platform === 'darwin') {
       spawnSync('open', [url], { stdio: 'ignore' })
@@ -388,11 +309,10 @@ function openInBrowser(url: string): void {
       spawnSync('xdg-open', [url], { stdio: 'ignore' })
     }
   } catch {
-    // No browser, no display, or the opener is missing — the URL is on screen.
+    return
   }
 }
 
-/** Where the credential lives, for messages that ask the user to act on the file. */
 export function getTokenPath(): string {
   return TOKEN_PATH
 }
