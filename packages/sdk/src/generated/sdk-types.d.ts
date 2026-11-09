@@ -314,11 +314,16 @@ export interface AgentMC {
     "startLogin": (...args: unknown[]) => Promise<unknown>
   }
   "flashcards": {
+    "aiDraftCards": (...args: unknown[]) => Promise<unknown>
+    "aiSaveCards": (...args: unknown[]) => Promise<unknown>
     "cardCreate": (...args: unknown[]) => Promise<unknown>
     "cardDelete": (...args: unknown[]) => Promise<unknown>
     "cardList": (...args: unknown[]) => Promise<unknown>
+    "cardSnooze": (...args: unknown[]) => Promise<unknown>
+    "cardStats": (...args: unknown[]) => Promise<unknown>
     "cardUpdate": (...args: unknown[]) => Promise<unknown>
     "gradeCard": (...args: unknown[]) => Promise<unknown>
+    "gradeUndo": (...args: unknown[]) => Promise<unknown>
     "importCancel": (...args: unknown[]) => Promise<unknown>
     "importCommit": (...args: unknown[]) => Promise<unknown>
     "importParse": (...args: unknown[]) => Promise<unknown>
@@ -335,6 +340,8 @@ export interface AgentMC {
     "pickApkgFile": (...args: unknown[]) => Promise<unknown>
     "reviewEnd": (...args: unknown[]) => Promise<unknown>
     "reviewStart": (...args: unknown[]) => Promise<unknown>
+    "sessionList": (...args: unknown[]) => Promise<unknown>
+    "sessionOpen": (...args: unknown[]) => Promise<unknown>
     "sessionStartOnCard": (...args: unknown[]) => Promise<unknown>
     "sessionStartOnPack": (...args: unknown[]) => Promise<unknown>
     "settingsGet": (...args: unknown[]) => Promise<unknown>
