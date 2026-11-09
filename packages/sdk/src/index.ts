@@ -155,6 +155,7 @@ export type {
   // Titlebar widget (`chrome.widget`)
   WidgetShape,
   WidgetTone,
+  WidgetIconName,
   WidgetSpec,
   BridgeWidget,
   // Backend types

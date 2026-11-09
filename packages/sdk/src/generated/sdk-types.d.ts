@@ -322,6 +322,7 @@ export interface AgentMC {
     "cardSnooze": (...args: unknown[]) => Promise<unknown>
     "cardStats": (...args: unknown[]) => Promise<unknown>
     "cardUpdate": (...args: unknown[]) => Promise<unknown>
+    "cramStart": (...args: unknown[]) => Promise<unknown>
     "dailyGoalGet": (...args: unknown[]) => Promise<unknown>
     "dailyGoalUpdate": (...args: unknown[]) => Promise<unknown>
     "gradeCard": (...args: unknown[]) => Promise<unknown>

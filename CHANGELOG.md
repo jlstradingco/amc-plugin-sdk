@@ -11,6 +11,14 @@ which are released together.
 
 ## [Unreleased]
 
+### Changed — a titlebar widget's `icon` only accepts a name the titlebar can draw
+
+`WidgetSpec.icon` is now typed `WidgetIconName`, the exact allow-list Omniscio draws in the titlebar,
+instead of any string. A name off the list used to compile and then show the generic `Puzzle` glyph;
+it is now a type error when you build. `WidgetShape`, `WidgetTone` and the new `WidgetIconName` are
+generated from Omniscio's own lists, so the SDK can no longer offer a value the app rejects. See
+[the widget API](docs/api/widget.md#icons).
+
 ### Added — `omniscio-plugin login`
 
 Signing in was only reachable as a side effect of `publish`, so an author who needed the

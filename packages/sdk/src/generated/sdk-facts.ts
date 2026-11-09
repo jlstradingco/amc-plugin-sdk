@@ -4,6 +4,7 @@
 // PROCESS_INTERPRETER_DENYLIST ← src/shared/plugin-manifest-schema.ts
 // AMC_PLUGIN_SDK_VERSION       ← plugin-sdk/packages/sdk/package.json
 // PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER ← src/shared/plugin-permissions.ts
+// WIDGET_SHAPES / WIDGET_TONES / WIDGET_ICON_NAMES ← src/shared/push-event-schemas/plugin.ts
 
 export const PLUGIN_PERMISSIONS = [
   "storage",
@@ -117,3 +118,48 @@ export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 export const AMC_PLUGIN_SDK_VERSION = "3.4.0"
 
 export const PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER = "{{unsubscribe_url}}"
+
+export const WIDGET_SHAPES = [
+  "stat",
+  "pill",
+  "dot",
+  "gauge",
+  "sparkline"
+] as const
+
+export const WIDGET_TONES = [
+  "neutral",
+  "running",
+  "needs-you",
+  "error",
+  "ember",
+  "accent"
+] as const
+
+export const WIDGET_ICON_NAMES = [
+  "Puzzle",
+  "Bookmark",
+  "Star",
+  "Bell",
+  "Folder",
+  "FileText",
+  "Search",
+  "Zap",
+  "Heart",
+  "Tag",
+  "Calendar",
+  "Clock",
+  "Code",
+  "Terminal",
+  "Package",
+  "ListChecks",
+  "Wand2",
+  "Sparkles",
+  "ShieldCheck"
+] as const
+
+export type WidgetShape = (typeof WIDGET_SHAPES)[number]
+
+export type WidgetTone = (typeof WIDGET_TONES)[number]
+
+export type WidgetIconName = (typeof WIDGET_ICON_NAMES)[number]

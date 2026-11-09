@@ -46,7 +46,7 @@ interface WidgetSpec {
   label?: string      // at most 16 characters
   tooltip?: string    // at most 120 characters
   tone?: 'neutral' | 'running' | 'needs-you' | 'error' | 'ember' | 'accent'
-  icon?: string       // an icon name from Omniscio's allow-list
+  icon?: WidgetIconName // an icon name from Omniscio's allow-list (see Icons)
   progress?: number   // 0 to 1, for the gauge shape
   series?: number[]   // up to 32 finite numbers, for the sparkline shape
   panel?: 'popover' | 'none'
@@ -90,7 +90,7 @@ You pick a **meaning**; Omniscio picks the colour, so a plugin cannot paint itse
 
 `Puzzle`, `Bookmark`, `Star`, `Bell`, `Folder`, `FileText`, `Search`, `Zap`, `Heart`, `Tag`, `Calendar`, `Clock`, `Code`, `Terminal`, `Package`, `ListChecks`, `Wand2`, `Sparkles`, `ShieldCheck`
 
-The list is small on purpose. It excludes the icons Omniscio uses for its own account and settings controls so a plugin cannot sit its icon next to those and pass for the app. It can only change in an Omniscio release, so treat this list as a snapshot and check the release you target.
+The list is small on purpose. It excludes the icons Omniscio uses for its own account and settings controls so a plugin cannot sit its icon next to those and pass for the app. It can only change in an Omniscio release. The SDK's `WidgetIconName` type is generated from the same list, so an icon name the titlebar cannot draw is a type error when you build.
 
 ## Clicking the widget
 

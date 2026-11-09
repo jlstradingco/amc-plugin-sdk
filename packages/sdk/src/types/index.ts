@@ -44,7 +44,7 @@ export type {
 } from './context.js'
 
 // Titlebar widget (`chrome.widget`) — webview-only, declared with the bridge types
-export type { WidgetShape, WidgetTone, WidgetSpec, BridgeWidget } from './bridge.js'
+export type { WidgetShape, WidgetTone, WidgetIconName, WidgetSpec, BridgeWidget } from './bridge.js'
 
 export type { ModelPickOption, ModelPickRequest, BridgeModelPicker } from './bridge.js'
 

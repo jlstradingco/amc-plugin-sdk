@@ -641,15 +641,13 @@ export interface BridgeStt {
   isConfigured(): Promise<boolean>
 }
 
-/** The five shapes Omniscio can draw for a titlebar widget. A closed set: you pick one, the host draws it. */
-export type WidgetShape = 'stat' | 'pill' | 'dot' | 'gauge' | 'sparkline'
-
 /**
- * What a widget MEANS, never what colour it is. Omniscio maps each tone to its
- * own palette, so a plugin cannot paint itself the shade of red the app reserves
- * for real errors.
+ * The widget vocabulary — the shapes Omniscio can draw, what a widget can MEAN
+ * (never a colour), and the icon names the titlebar can draw. Generated from
+ * the host's own lists, so the SDK cannot offer a value the app rejects.
  */
-export type WidgetTone = 'neutral' | 'running' | 'needs-you' | 'error' | 'ember' | 'accent'
+import type { WidgetShape, WidgetTone, WidgetIconName } from '../generated/sdk-facts.js'
+export type { WidgetShape, WidgetTone, WidgetIconName }
 
 /**
  * The data for one titlebar widget, passed to {@link BridgeWidget.set}.
@@ -675,15 +673,11 @@ export interface WidgetSpec {
   /** The widget's meaning. Defaults to the host's neutral look. */
   tone?: WidgetTone
   /**
-   * A Lucide icon NAME from Omniscio's allow-list, 1-50 characters of
-   * `A-Z a-z 0-9 -`. Never a URL, data URI or markup. A name that is not on the
-   * list draws the generic `Puzzle` glyph, and the allow-list is deliberately
-   * small: `Puzzle`, `Bookmark`, `Star`, `Bell`, `Folder`, `FileText`,
-   * `Search`, `Zap`, `Heart`, `Tag`, `Calendar`, `Clock`, `Code`, `Terminal`,
-   * `Package`, `ListChecks`, `Wand2`, `Sparkles`, `ShieldCheck`. Names are
-   * case-sensitive.
+   * A Lucide icon NAME from Omniscio's titlebar allow-list ({@link WidgetIconName},
+   * case-sensitive). Never a URL, data URI or markup. The list is deliberately
+   * small so a plugin cannot borrow the app's own account or settings glyphs.
    */
-  icon?: string
+  icon?: WidgetIconName
   /** 0 to 1, for the `gauge` shape. */
   progress?: number
   /** Up to 32 finite numbers, for the `sparkline` shape. */
