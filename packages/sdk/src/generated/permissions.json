@@ -134,9 +134,9 @@
   },
   {
     "name": "auth",
-    "label": "Identity",
-    "description": "See who is signed in to Omniscio (your name and email).",
-    "tier": "standard",
+    "label": "Identity & Sign-In",
+    "description": "See who is signed in to Omniscio (your name and email), and get a sign-in key that lets it act as you in the app's shared cloud services - it can read and send anything you can, including your private channels and direct messages.",
+    "tier": "elevated",
     "namespaces": [
       "auth"
     ]

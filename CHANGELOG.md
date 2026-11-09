@@ -11,6 +11,23 @@ which are released together.
 
 ## [Unreleased]
 
+### Fixed — `omniscio-plugin test` runs your plugin's own tests inside a bigger repo
+
+`test` handed vitest no root and no config, so vitest searched the plugin folder *and every folder
+above it* for a config. A plugin kept inside a bigger repo therefore picked up the **parent repo's**
+`vitest.config.*` / `vite.config.*`, ran that config's suites, and never ran its own — ending in
+`No test files found` and exit 1.
+
+`test` now pins vitest's project root to the plugin folder and names the config explicitly: the
+plugin's own `vitest.config.*` (or `vite.config.*`) when it has one, otherwise an empty built-in
+config written to a fresh temporary folder for that run and removed afterwards. `--watch`, pattern
+filters, the local-vitest-over-`npx` choice and the exit code are unchanged.
+
+**Migration:** nothing to do for a plugin that already has its own vitest/vite config. If a plugin
+was relying on inheriting its parent repo's config, add a `vitest.config.ts` in the plugin that
+imports it — a `root` set inside a config is now replaced by the plugin folder. See
+[the test command](docs/reference/cli.md#test).
+
 ### Changed — a titlebar widget's `icon` only accepts a name the titlebar can draw
 
 `WidgetSpec.icon` is now typed `WidgetIconName`, the exact allow-list Omniscio draws in the titlebar,

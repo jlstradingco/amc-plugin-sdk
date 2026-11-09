@@ -589,6 +589,20 @@ omniscio-plugin update
 Run the plugin test suite with [vitest](https://vitest.dev). Uses the plugin's
 local vitest if installed, otherwise falls back to `npx vitest`.
 
+The plugin folder is always vitest's project root, and the command always names the config it
+runs with:
+
+- a `vitest.config.*` (or, failing that, a `vite.config.*`) in the plugin folder is used as-is;
+- otherwise the command writes an empty config into a fresh temporary folder for that run and
+  deletes it afterwards.
+
+That is what keeps a plugin that lives inside a bigger repo on its own tests. Without it, vitest
+searches the plugin folder **and every folder above it** for a config, finds the parent repo's, and
+runs that config's suites — so the plugin's own tests never run and the command exits with "No test
+files found". To share a config deliberately, put a `vitest.config.ts` in the plugin that imports
+it. A `root` written inside your own config is replaced by the plugin folder, so make its `include`
+patterns relative to the plugin root.
+
 **Usage:**
 
 ```bash
@@ -661,7 +675,9 @@ omniscio-plugin test --watch
 omniscio-plugin test src/backend
 ```
 
-**Exit codes:** propagates vitest's exit code (`0` all passed, `1` failures), `1` if vitest can't run.
+**Exit codes:** propagates vitest's exit code (`0` all passed, `1` failures), `1` if vitest can't run,
+and `128 + <signal number>` when vitest itself was killed (a killed run is never reported as a
+passing one).
 
 ---
 
