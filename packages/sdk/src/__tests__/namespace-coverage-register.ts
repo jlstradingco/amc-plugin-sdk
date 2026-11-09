@@ -9,13 +9,6 @@ export interface PublishedMethodGap {
 export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = [
   {
     surface: 'backend',
-    namespace: 'sessions',
-    generatedOnly: ['reveal'],
-    publishedOnly: [],
-    reason: 'A real host action the published PluginSessions has yet to declare'
-  },
-  {
-    surface: 'backend',
     namespace: 'email',
     generatedOnly: [],
     publishedOnly: ['sender'],

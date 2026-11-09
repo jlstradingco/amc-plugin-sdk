@@ -678,6 +678,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       stop: (sessionId) => { sessionStatus.set(sessionId, 'ended'); return Promise.resolve() },
       archive: (sessionId) => { sessionStatus.set(sessionId, 'archived'); return Promise.resolve() },
       delete: (sessionId) => { sessionStatus.delete(sessionId); sessionMessages.delete(sessionId); return Promise.resolve() },
+      reveal: () => Promise.resolve(),
       onStatusChange: () => () => {},
       fanout: (fanoutOpts) => {
         const launched = fanoutOpts.targets.map((target) => {

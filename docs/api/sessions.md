@@ -160,7 +160,13 @@ ctx.log.info(`Latest reply: ${lastReply?.text ?? '(none yet)'}`)
 
 ### `stop(sessionId: string): Promise<void>`
 
-Stop a running session.
+Stop a session your plugin owns and END it, exactly as the user's own Stop button does. The row does
+not linger: a session that has finished its turn and is sitting at *needs you* is ended too, not
+just its process.
+
+Only a session your plugin owns can be stopped — one in your plugin's own sandbox, or one you
+launched into a real project. Any other id is refused (`does not belong to plugin`) and nothing is
+stopped.
 
 **Parameters:**
 
@@ -395,6 +401,10 @@ await Omniscio.session.rename(sessionId, 'Security Audit - Round 2')
 ```
 
 ### `stop(sessionId: string): Promise<void>`
+
+End a session your plugin owns — the same stop the user's own Stop button makes, so a session
+waiting on the user is ended rather than left open. Only your own sessions can be stopped: any
+other id is refused. The same call is `ctx.sessions.stop(sessionId)` on the backend.
 
 ```typescript
 await Omniscio.session.stop(sessionId)

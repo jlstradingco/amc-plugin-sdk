@@ -521,6 +521,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         sessionMessages.delete(sid)
         return Promise.resolve()
       },
+      reveal: (sid) => {
+        if (shouldLog) console.log(`${prefix} [sessions] reveal(${sid})`)
+        return Promise.resolve()
+      },
       onStatusChange: () => () => {},
       fanout: (fanoutOpts) => {
         const launched = fanoutOpts.targets.map((target) => {

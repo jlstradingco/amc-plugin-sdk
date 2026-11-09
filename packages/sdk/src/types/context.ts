@@ -352,6 +352,7 @@ export interface PluginSessions {
   getMessages(sessionId: string): Promise<SessionMessage[]>
   stop(sessionId: string): Promise<void>
   archive(sessionId: string): Promise<void>
+  reveal(sessionId: string): Promise<void>
   /**
    * Permanently erase a hidden background session your plugin created in its own
    * sandbox and never revealed: the host stops it, then deletes the session and

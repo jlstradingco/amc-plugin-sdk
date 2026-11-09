@@ -50,10 +50,10 @@ function tokenOnDisk(): Record<string, unknown> | null {
   }
 }
 
-async function runLogin(): Promise<void> {
+async function importLogin(): Promise<() => Promise<void>> {
   vi.resetModules()
   const { runLogin: login } = await import('../commands/login.js')
-  await login()
+  return login
 }
 
 describe('omniscio-plugin login', () => {
@@ -93,7 +93,8 @@ describe('omniscio-plugin login', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    await runLogin()
+    const login = await importLogin()
+    await login()
 
     expect(logged.join('\n')).toContain('Signed in as janedoe')
     expect(logged.join('\n')).toContain('marketplace-token')
@@ -116,7 +117,8 @@ describe('omniscio-plugin login', () => {
     }))
     vi.stubGlobal('fetch', fetchMock)
 
-    const pending = runLogin()
+    const login = await importLogin()
+    const pending = login()
     await vi.advanceTimersByTimeAsync(5000)
     await pending
 
@@ -131,7 +133,8 @@ describe('omniscio-plugin login', () => {
   it('fails with a plain sentence and a non-zero exit when the sign-in never completes', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })))
 
-    const pending = runLogin()
+    const login = await importLogin()
+    const pending = login()
     await vi.advanceTimersByTimeAsync(901_000)
     await pending
 
@@ -161,7 +164,8 @@ describe('omniscio-plugin login', () => {
       }))
     )
 
-    const pending = runLogin()
+    const login = await importLogin()
+    const pending = login()
     await vi.advanceTimersByTimeAsync(901_000)
     await pending
 
