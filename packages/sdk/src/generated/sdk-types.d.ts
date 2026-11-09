@@ -344,6 +344,7 @@ export interface AgentMC {
     "packList": (...args: unknown[]) => Promise<unknown>
     "packRename": (...args: unknown[]) => Promise<unknown>
     "packSessionAttribution": (...args: unknown[]) => Promise<unknown>
+    "packSetTypeAnswerMode": (...args: unknown[]) => Promise<unknown>
     "pickApkgFile": (...args: unknown[]) => Promise<unknown>
     "reviewEnd": (...args: unknown[]) => Promise<unknown>
     "reviewStart": (...args: unknown[]) => Promise<unknown>
