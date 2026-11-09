@@ -316,6 +316,7 @@ export interface AgentMC {
   "flashcards": {
     "aiDraftCards": (...args: unknown[]) => Promise<unknown>
     "aiSaveCards": (...args: unknown[]) => Promise<unknown>
+    "cardBulk": (...args: unknown[]) => Promise<unknown>
     "cardCreate": (...args: unknown[]) => Promise<unknown>
     "cardDelete": (...args: unknown[]) => Promise<unknown>
     "cardList": (...args: unknown[]) => Promise<unknown>
@@ -323,12 +324,11 @@ export interface AgentMC {
     "cardSetTags": (...args: unknown[]) => Promise<unknown>
     "cardSnooze": (...args: unknown[]) => Promise<unknown>
     "cardStats": (...args: unknown[]) => Promise<unknown>
-    "cardSnooze": (...args: unknown[]) => Promise<unknown>
-    "cardStats": (...args: unknown[]) => Promise<unknown>
     "cardUpdate": (...args: unknown[]) => Promise<unknown>
     "cramStart": (...args: unknown[]) => Promise<unknown>
     "dailyGoalGet": (...args: unknown[]) => Promise<unknown>
     "dailyGoalUpdate": (...args: unknown[]) => Promise<unknown>
+    "exportCsv": (...args: unknown[]) => Promise<unknown>
     "gradeCard": (...args: unknown[]) => Promise<unknown>
     "gradeUndo": (...args: unknown[]) => Promise<unknown>
     "importCancel": (...args: unknown[]) => Promise<unknown>
@@ -355,14 +355,16 @@ export interface AgentMC {
     "reviewStartByTag": (...args: unknown[]) => Promise<unknown>
     "sessionList": (...args: unknown[]) => Promise<unknown>
     "sessionOpen": (...args: unknown[]) => Promise<unknown>
-    "sessionList": (...args: unknown[]) => Promise<unknown>
-    "sessionOpen": (...args: unknown[]) => Promise<unknown>
     "sessionStartOnCard": (...args: unknown[]) => Promise<unknown>
     "sessionStartOnPack": (...args: unknown[]) => Promise<unknown>
     "settingsGet": (...args: unknown[]) => Promise<unknown>
     "settingsUpdate": (...args: unknown[]) => Promise<unknown>
     "stats": (...args: unknown[]) => Promise<unknown>
     "tagList": (...args: unknown[]) => Promise<unknown>
+    "trashEmpty": (...args: unknown[]) => Promise<unknown>
+    "trashList": (...args: unknown[]) => Promise<unknown>
+    "trashPurge": (...args: unknown[]) => Promise<unknown>
+    "trashRestore": (...args: unknown[]) => Promise<unknown>
     "trickleDismiss": (...args: unknown[]) => Promise<unknown>
     "trickleEnqueue": (...args: unknown[]) => Promise<unknown>
   }
