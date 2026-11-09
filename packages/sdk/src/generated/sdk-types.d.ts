@@ -319,6 +319,10 @@ export interface AgentMC {
     "cardCreate": (...args: unknown[]) => Promise<unknown>
     "cardDelete": (...args: unknown[]) => Promise<unknown>
     "cardList": (...args: unknown[]) => Promise<unknown>
+    "cardListByTag": (...args: unknown[]) => Promise<unknown>
+    "cardSetTags": (...args: unknown[]) => Promise<unknown>
+    "cardSnooze": (...args: unknown[]) => Promise<unknown>
+    "cardStats": (...args: unknown[]) => Promise<unknown>
     "cardSnooze": (...args: unknown[]) => Promise<unknown>
     "cardStats": (...args: unknown[]) => Promise<unknown>
     "cardUpdate": (...args: unknown[]) => Promise<unknown>
@@ -348,6 +352,9 @@ export interface AgentMC {
     "pickApkgFile": (...args: unknown[]) => Promise<unknown>
     "reviewEnd": (...args: unknown[]) => Promise<unknown>
     "reviewStart": (...args: unknown[]) => Promise<unknown>
+    "reviewStartByTag": (...args: unknown[]) => Promise<unknown>
+    "sessionList": (...args: unknown[]) => Promise<unknown>
+    "sessionOpen": (...args: unknown[]) => Promise<unknown>
     "sessionList": (...args: unknown[]) => Promise<unknown>
     "sessionOpen": (...args: unknown[]) => Promise<unknown>
     "sessionStartOnCard": (...args: unknown[]) => Promise<unknown>
@@ -355,6 +362,7 @@ export interface AgentMC {
     "settingsGet": (...args: unknown[]) => Promise<unknown>
     "settingsUpdate": (...args: unknown[]) => Promise<unknown>
     "stats": (...args: unknown[]) => Promise<unknown>
+    "tagList": (...args: unknown[]) => Promise<unknown>
     "trickleDismiss": (...args: unknown[]) => Promise<unknown>
     "trickleEnqueue": (...args: unknown[]) => Promise<unknown>
   }
