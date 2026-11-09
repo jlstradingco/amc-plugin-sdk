@@ -457,12 +457,20 @@ page keeps the left of the panel and the chat takes a strip on the right (360-56
 ### Locking down pane chats (`ui.sessions.lockDown`)
 
 Set `"lockDown": true` under `ui.sessions` to give every chat the person starts from your pane the
-plugin safety floor: its own folder, none of the person's setup, a short tool list, and a prompt for
-every command and web request. Two things are easier than for other floored sessions: one plain
-`curl` to your own actions at `http://127.0.0.1:<port>/plugins/<your id>/cli/<path>` runs without a
-prompt (keep it to one command, headers, one inline JSON body with no `$` variables), and file tools
-reach only the chat's folder and the projects the person granted your plugin. Actions you did not
-mark `safe` still ask the person through the inbox.
+plugin safety floor: a room of its own, none of the person's setup, a short tool list, and a prompt
+for every command and web request.
+
+**The chat's folder is its own room**, not your plugin's installed folder:
+`<user data folder>/../amc-plugin-rooms/<user data folder name>/<your id>/<chat id>/`. The chat's
+file tools can read and write freely there, and reach the projects the person granted your plugin —
+and nothing else. It cannot touch the app's data folder at all, so it cannot read or write your
+plugin's installed files (`<user data folder>/plugins/<your id>/`), `manifest.json` included: your
+manifest and code are trusted and run outside the floor, so nothing running under the floor may
+rewrite them. Two things are easier than for other floored sessions: one plain `curl` to your own
+actions at `http://127.0.0.1:<port>/plugins/<your id>/cli/<path>` runs without a prompt (keep it to
+one command, headers, one inline JSON body with no `$` variables), and file tools reach only that
+room and the projects the person granted your plugin. Actions you did not mark `safe` still ask the
+person through the inbox.
 
 ### `sessionsPane.setContext(context: { key: string; label: string } | null): Promise<void>`
 
