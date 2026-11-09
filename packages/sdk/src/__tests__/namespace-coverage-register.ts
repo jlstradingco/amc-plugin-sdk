@@ -10,9 +10,9 @@ export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = [
   {
     surface: 'backend',
     namespace: 'sessions',
-    generatedOnly: ['fanout', 'reveal'],
+    generatedOnly: ['reveal'],
     publishedOnly: [],
-    reason: 'Both are real host actions the published PluginSessions has yet to declare'
+    reason: 'A real host action the published PluginSessions has yet to declare'
   },
   {
     surface: 'backend',
@@ -20,13 +20,6 @@ export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = [
     generatedOnly: [],
     publishedOnly: ['sender'],
     reason: "The backend context builds email.sender, but the worker proxy forwards only the five send-schedule actions, so the generated sheet omits it"
-  },
-  {
-    surface: 'backend',
-    namespace: 'rss',
-    generatedOnly: ['fetchFeed', 'getRecentEntries', 'listFeeds'],
-    publishedOnly: [],
-    reason: 'The whole rss namespace is still untyped on the published backend context'
   },
   {
     surface: 'webview',

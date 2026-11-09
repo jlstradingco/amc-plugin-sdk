@@ -42,6 +42,8 @@ export type {
   PluginSessionImage,
   PluginSessionCreateOptions,
   PluginSessionCreateResult,
+  PluginSessionFanoutOptions,
+  PluginSessionFanoutResult,
   SessionStatus,
   SessionPendingAction,
   SessionStatusInfo,
@@ -158,6 +160,9 @@ export type {
   WidgetIconName,
   WidgetSpec,
   BridgeWidget,
+  ModelPickOption,
+  ModelPickRequest,
+  BridgeModelPicker,
   // Backend types
   PluginBackend,
   PluginActivate,
