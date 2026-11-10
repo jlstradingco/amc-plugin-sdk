@@ -1,6 +1,5 @@
 import { Command } from 'commander'
 import * as fs from 'node:fs'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { validateManifest } from '@omniscio/plugin-sdk'
 import { getBaseUrl } from '../lib/auth.js'
@@ -9,22 +8,29 @@ import {
   checkNodeVersion,
   checkSdkVersion,
   checkManifest,
-  checkHostReachable,
-  checkCliToken,
+  checkHostProbe,
   checkMarketplaceReachable,
   summarizeDoctor,
   type DoctorResult,
   type InstalledSdk
 } from '../lib/doctor-checks.js'
 import { SDK_PACKAGE_NAMES, firstResolved } from '../lib/package-names.js'
+import { readCliToken } from '../lib/amc-host.js'
 
 const DEFAULT_CLI_PORT = 19519
 
-async function fetchWithTimeout(url: string, ms: number): Promise<Response | null> {
+async function fetchWithTimeout(
+  url: string,
+  ms: number,
+  token?: string
+): Promise<Response | null> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), ms)
   try {
-    return await globalThis.fetch(url, { signal: controller.signal })
+    return await globalThis.fetch(url, {
+      signal: controller.signal,
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
+    })
   } catch {
     return null
   } finally {
@@ -77,25 +83,29 @@ export const doctorCommand = new Command('doctor')
       }
     }
 
-    // Host reachability (any HTTP response — even 401 — means it is listening)
-    const hostRes = await fetchWithTimeout(`http://127.0.0.1:${port}/`, 1500)
-    const hostReachable = hostRes !== null
+    const token = readCliToken()
+    const hostRes = await fetchWithTimeout(
+      `http://127.0.0.1:${port}/projects`,
+      1500,
+      token ?? undefined
+    )
+    const hostProbe = {
+      reachable: hostRes !== null,
+      status: hostRes ? hostRes.status : null,
+      hasToken: Boolean(token)
+    }
 
     // Marketplace reachability
     const mktRes = await fetchWithTimeout(`${getBaseUrl()}/getRegistry`, 3000)
     const marketplaceReachable = mktRes !== null && mktRes.ok
 
-    const tokenExists =
-      fs.existsSync(path.join(os.homedir(), '.amc', 'cli-token')) ||
-      Boolean(process.env.AMC_CLI_TOKEN)
     const latestSdk = await fetchLatestSdkVersion()
 
     const results: DoctorResult[] = [
       checkNodeVersion(process.version),
       checkSdkVersion(readInstalledSdk(cwd), latestSdk),
       checkManifest(manifest, validation),
-      checkHostReachable(hostReachable, port),
-      checkCliToken(tokenExists),
+      checkHostProbe(hostProbe, port),
       checkMarketplaceReachable(marketplaceReachable)
     ]
 

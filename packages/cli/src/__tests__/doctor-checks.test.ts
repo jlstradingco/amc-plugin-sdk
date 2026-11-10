@@ -3,8 +3,7 @@ import {
   checkNodeVersion,
   checkSdkVersion,
   checkManifest,
-  checkHostReachable,
-  checkCliToken,
+  checkHostProbe,
   checkMarketplaceReachable,
   summarizeDoctor,
   type DoctorResult,
@@ -82,25 +81,42 @@ describe('checkManifest', () => {
   })
 })
 
-describe('checkHostReachable', () => {
-  it('passes when Omniscio is reachable', () => {
-    expect(checkHostReachable(true, 19519).status).toBe('pass')
+describe('checkHostProbe', () => {
+  it('passes only when the authenticated probe answered 2xx', () => {
+    expect(checkHostProbe({ reachable: true, status: 200, hasToken: true }, 19519).status).toBe(
+      'pass'
+    )
   })
 
   it('warns (never fails) when Omniscio is not running', () => {
-    const r = checkHostReachable(false, 19519)
+    const r = checkHostProbe({ reachable: false, status: null, hasToken: true }, 19519)
     expect(r.status).toBe('warn')
     expect(r.message).toContain('19519')
   })
-})
 
-describe('checkCliToken', () => {
-  it('passes when the token file exists', () => {
-    expect(checkCliToken(true).status).toBe('pass')
+  it('fails on a 401 with a token rather than reporting a green host [S056]', () => {
+    const r = checkHostProbe({ reachable: true, status: 401, hasToken: true }, 19519)
+    expect(r.status).toBe('fail')
+    expect(r.message).toContain('401')
+    expect(r.suggestion).toContain('Settings -> CLI Control')
   })
 
-  it('warns when the token file is missing', () => {
-    expect(checkCliToken(false).status).toBe('warn')
+  it('fails on a 403 too', () => {
+    expect(checkHostProbe({ reachable: true, status: 403, hasToken: true }, 19519).status).toBe(
+      'fail'
+    )
+  })
+
+  it('fails when no CLI token was found at all', () => {
+    const r = checkHostProbe({ reachable: true, status: 401, hasToken: false }, 19519)
+    expect(r.status).toBe('fail')
+    expect(r.message).toContain('no CLI token')
+  })
+
+  it('warns on an unexpected status, keeping the raw number', () => {
+    const r = checkHostProbe({ reachable: true, status: 500, hasToken: true }, 19519)
+    expect(r.status).toBe('warn')
+    expect(r.message).toContain('500')
   })
 })
 

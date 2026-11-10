@@ -116,27 +116,50 @@ export function checkManifest(
   return { name: 'Manifest', status: 'pass', message: 'manifest.json is valid' }
 }
 
-export function checkHostReachable(reachable: boolean, port: number): DoctorResult {
-  if (reachable) {
-    return { name: 'Omniscio host', status: 'pass', message: `Reachable on 127.0.0.1:${port}` }
+export interface HostProbe {
+  reachable: boolean
+  status: number | null
+  hasToken: boolean
+}
+
+export function checkHostProbe(probe: HostProbe, port: number): DoctorResult {
+  if (!probe.reachable) {
+    return {
+      name: 'Omniscio host',
+      status: 'warn',
+      message: `No running Omniscio on 127.0.0.1:${port}`,
+      suggestion: 'Start Omniscio to enable local install and hot-reload.'
+    }
+  }
+  if (!probe.hasToken) {
+    return {
+      name: 'Omniscio host',
+      status: 'fail',
+      message: `Reachable on 127.0.0.1:${port}, but no CLI token was found (checked ~/.amc/cli-token and $AMC_CLI_TOKEN)`,
+      suggestion:
+        'Open Settings -> CLI Control, copy the token, and save it to ~/.amc/cli-token or export AMC_CLI_TOKEN.'
+    }
+  }
+  if (probe.status !== null && probe.status >= 200 && probe.status < 300) {
+    return {
+      name: 'Omniscio host',
+      status: 'pass',
+      message: `Reachable on 127.0.0.1:${port} and the CLI token was accepted`
+    }
+  }
+  if (probe.status === 401 || probe.status === 403) {
+    return {
+      name: 'Omniscio host',
+      status: 'fail',
+      message: `Reachable on 127.0.0.1:${port}, but the CLI token was rejected (HTTP ${probe.status})`,
+      suggestion: 'Re-run Settings -> CLI Control -> Regenerate and save the new token.'
+    }
   }
   return {
     name: 'Omniscio host',
     status: 'warn',
-    message: `No running Omniscio on 127.0.0.1:${port}`,
-    suggestion: 'Start Omniscio to enable local install and hot-reload.'
-  }
-}
-
-export function checkCliToken(exists: boolean): DoctorResult {
-  if (exists) {
-    return { name: 'Omniscio CLI token', status: 'pass', message: 'Omniscio CLI token available' }
-  }
-  return {
-    name: 'Omniscio CLI token',
-    status: 'warn',
-    message: 'No Omniscio CLI token (checked ~/.amc/cli-token and $AMC_CLI_TOKEN)',
-    suggestion: 'Needed to install / hot-reload into a running Omniscio.'
+    message: `Reachable on 127.0.0.1:${port}, but the token check answered HTTP ${probe.status ?? 'nothing'}`,
+    suggestion: 'Retry in a moment; if it persists, check the Omniscio log.'
   }
 }
 
