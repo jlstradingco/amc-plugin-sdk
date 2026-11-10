@@ -10,7 +10,7 @@
     "license": { "type": "free" }
   },
   "sdkVersion": "2.0.0",
-  "permissions": ["auth", "auth.session", "network"],
+  "permissions": ["auth", "auth.actAsUser", "auth.session", "network"],
   "settings": [],
   "storage": { "collections": {} },
   "migrations": [],

@@ -11,6 +11,16 @@ which are released together.
 
 ## [Unreleased]
 
+### Changed — `AgentMC.auth.getWebAuth()` needs the new `auth.actAsUser` permission
+
+`getWebAuth()` returns a Firebase custom token for the signed-in person, which reads and writes
+their whole account in the shared project (Team Chat channels and direct messages included). It was
+gated on `auth`, the same permission that only shows the person's name and email. It now requires
+the new elevated permission `auth.actAsUser`, and `auth` alone refuses the call. A plugin that uses
+`getWebAuth()` must add `"auth.actAsUser"` to its manifest; the consent screen then asks for full
+account access in its own, clearly worded row instead of hiding it inside Identity. See
+[the permissions guide](docs/guide/permissions.md#authactususer).
+
 ### Fixed — `omniscio-plugin test` runs your plugin's own tests inside a bigger repo
 
 `test` handed vitest no root and no config, so vitest searched the plugin folder *and every folder

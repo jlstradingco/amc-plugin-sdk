@@ -340,6 +340,26 @@ This is a distinct, higher-trust permission from `auth`. Declare it only if you 
 
 ---
 
+### `auth.actAsUser`
+
+**Grants access to:** `AgentMC.auth.getWebAuth()` (webview only)
+
+Sign in to the shared account Omniscio's Team Chat lives in as the signed-in person, so your webview
+can use the Firebase Web SDK without running its own sign-in flow:
+
+```typescript
+const { config, customToken } = await AgentMC.auth.getWebAuth()
+// firebase.initializeApp(config); await signInWithCustomToken(auth, customToken)
+```
+
+This is **elevated** and separate from `auth` on purpose. The custom token carries the person's own
+identity, so it reads and writes everything that account can reach -- Team Chat channels and direct
+messages included -- and it lasts as long as the sign-in does. `auth` alone only reveals who is
+signed in and never mints a token. Declare `auth.actAsUser` only in a plugin that genuinely needs to
+sign in as the person, and say so in your listing so the consent screen's warning makes sense.
+
+---
+
 ### `navigation`
 
 **Grants:** the ability to navigate Omniscio to your sessions, projects, and views
@@ -749,6 +769,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
+| `auth.actAsUser` | `AgentMC.auth.getWebAuth()` (**webview**) | Sign in to the shared account as the person -- **elevated**; reads and sends as them |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
 | `chrome.widget` | `Omniscio.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |
 | `firebase` | `PluginFirebase` (**webview**) | List the user's Firebase accounts/projects; start a login |
