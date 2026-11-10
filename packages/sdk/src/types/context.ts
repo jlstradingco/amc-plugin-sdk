@@ -1,3 +1,17 @@
+/**
+ * Options for `ctx.db.query` (also published as `PluginDbQueryOptions`).
+ *
+ * **The default row order is INSERTION order, and the host declares it.** Omit
+ * `orderBy` and the host appends `ORDER BY "rowid" ASC`, so paginating with
+ * `limit` + `offset` is deterministic. Do not infer this from SQLite: without
+ * an `ORDER BY`, SQLite may return rows in any order, and it only holds among
+ * SURVIVING rows because every plugin collection has a TEXT primary key — a
+ * `VACUUM` may renumber those rowids. Pass `orderBy` explicitly when the
+ * ordering matters to your data, not to its arrival.
+ *
+ * `limit` becomes the SQL `LIMIT` (how many rows come back); pair it with
+ * `offset` to page through a collection.
+ */
 export interface QueryOptions {
   where?: Record<string, unknown>
   orderBy?: Record<string, 'asc' | 'desc'>
