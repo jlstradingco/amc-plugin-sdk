@@ -41,8 +41,8 @@ overrides:
   #                        esbuild `^0.21.3`; the fix is 0.25.x, which that range rejects.
   #   vite@5.4.21        — moderate advisories fixed only in the 6.x line; vitepress pins
   #                        vite `^5.4.14`, so a 6.x pin is a breaking major bump.
-  #   extract-zip@2.0.1  — high symlink path-traversal via electron; no 2.0.2 is published,
-  #                        so there is no patched version to pin to yet.
+  # The Electron dev-shell used to add extract-zip@2.0.1 (high); electron ^44 in
+  # packages/dev-shell ships @electron-internal/extract-zip instead, so it is gone.
 
 # pnpm 10 blocks dependency build scripts by default. Electron's postinstall is
 # what downloads the platform binary, so without this allow-list a fresh clone

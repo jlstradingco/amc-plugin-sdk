@@ -191,6 +191,9 @@ const collectionSchema = z
     // Host `z.boolean().optional()` (plugin-manifest-validator.ts, storage.collections):
     // opts the table IN to control-server writes. See PluginCollectionSchema.agentWritable.
     agentWritable: z.boolean().optional(),
+    // Host `z.boolean().optional()` (plugin-manifest-schema.ts, storage.collections):
+    // opts the table OUT of control-server reads. See PluginCollectionSchema.agentReadable.
+    agentReadable: z.boolean().optional(),
     // SDK-only: the ship check reads it, the host strips it. Same bounds as
     // isWrittenWaiver in ./command-tables.ts, so validate and the check agree.
     commandTableWaiver: z

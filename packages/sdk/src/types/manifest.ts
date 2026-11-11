@@ -58,6 +58,23 @@ export interface PluginCollectionSchema {
    */
   agentWritable?: boolean
   /**
+   * Keep this table's rows away from the AI agents running on the person's
+   * computer. `false` makes the host refuse `GET /plugins/:id/db/<table>` and the
+   * single-row read with a 403 for every caller but the person's own install-wide
+   * key — and, because a write answers with the row it wrote, it refuses outside
+   * writes too. Absent or `true` (the default) leaves reads open, as they have
+   * always been. Your own backend and panel read normally either way.
+   *
+   * Use it for rows that are not the person's to share with every agent: access
+   * tokens, AI session ids, private notes and drafts.
+   *
+   * This is the one manifest key whose stripped form fails OPEN: a host that
+   * predates it drops the key and serves the rows to agents anyway, so never rely
+   * on it for safety on an older host. Mirrors the host's
+   * `PluginCollectionSchema.agentReadable` (plugin-command-trust-contract.md).
+   */
+  agentReadable?: boolean
+  /**
    * A written reason why this table is safe even though `amc-plugin validate`
    * flags it as a command table (an instruction column, an argument column and a
    * status column). 20 to 500 characters. The CLI's ship check and marketplace

@@ -26,7 +26,7 @@
   "dependencies": {
     "@omniscio/plugin-sdk": "workspace:^",
     "chokidar": "^4.0.0",
-    "electron": "^39.0.0"
+    "electron": "^44.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

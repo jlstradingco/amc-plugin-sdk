@@ -377,13 +377,39 @@ On Omniscio builds that carry the plugin-table fence, those writes are refused (
 - **Opt in only plain data an agent may freely edit** — never a table your plugin acts on: a command
   queue, a job list, a rule it runs.
 - **Your own backend and panel write every table as before.** The fence covers only the outside door.
-- **Reads stay open.** Agents can still read every table.
+- **Reads are a separate fence** — see [`agentReadable`](#private-rows-agentreadable) below.
 - **Older Omniscio builds ignore the key** and leave every table writable from outside, so never rely
   on it for safety: take commands through the [command channel](./commands) instead.
 
 The same key on a setting (`settings[].agentWritable`) lets an outside settings change apply at
 once. Without it the change waits for the person's approval card, and a `password` setting can never
 be changed from outside.
+
+### Private rows: `agentReadable`
+
+The same control server has generic routes that READ plugin tables. Those reads are open by
+default, so every AI agent session on the computer can list a plugin's rows. Mark a table
+`agentReadable: false` when its rows are not the person's to hand to every agent — access tokens, AI
+session ids, private notes, unpublished drafts:
+
+```json
+"pull_requests": {
+  "columns": { "title": "text", "detailJson": "json" },
+  "agentReadable": false
+}
+```
+
+- **What it refuses.** `GET /plugins/:id/db/:table` and the single-row read answer `403`
+  (`PLUGIN_COLLECTION_NOT_AGENT_READABLE`) to every caller but the person's own install-wide key.
+  It refuses outside writes too: a caller that may not read the rows may not change them.
+- **Your panel and backend read normally** — they use the in-process bridge, never those routes.
+- **This key is the one that fails OPEN on an older host.** A build that predates it drops the key
+  and serves the rows to agents anyway; `agentWritable` fails the other way (closed). So never rely
+  on it for safety on an older Omniscio — keep what must stay private out of tables that older
+  builds read, or gate it behind your own endpoints.
+- **It does not cover your own CLI endpoints.** Rows you serve through
+  `/plugins/:id/cli/…` are yours to decide, and it does not cover the key-value store, whose reads
+  stay open.
 
 ### Read-only columns: `cliReadOnlyColumns`
 
