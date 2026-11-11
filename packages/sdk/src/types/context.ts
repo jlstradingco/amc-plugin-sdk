@@ -493,9 +493,28 @@ export interface PluginAi {
   generateStructured(opts: PluginAiStructuredRequest): Promise<unknown>
 }
 
+/**
+ * How a file's bytes are spelled in the string you pass or receive. `'utf8'` (the default) is
+ * text; `'base64'` is the raw bytes, so binary files (images, PDFs, zips) survive intact.
+ */
+export type PluginFileEncoding = 'utf8' | 'base64'
+
 export interface PluginFs {
-  readFile(relativePath: string): Promise<string>
-  writeFile(relativePath: string, content: string): Promise<void>
+  /**
+   * With `{ encoding: 'base64' }` resolves the file's raw bytes as base64 (no text
+   * extraction, up to the host's 64 MiB read cap). Without it, text, as before.
+   */
+  readFile(relativePath: string, opts?: { encoding?: PluginFileEncoding }): Promise<string>
+  /**
+   * With `{ encoding: 'base64' }`, `content` is decoded and the raw bytes are written. A
+   * malformed base64 string, or one that decodes to over 20 MiB, is refused and nothing is
+   * written. Without it, `content` is written as UTF-8 text, as before.
+   */
+  writeFile(
+    relativePath: string,
+    content: string,
+    opts?: { encoding?: PluginFileEncoding }
+  ): Promise<void>
   exists(relativePath: string): Promise<boolean>
   listDir(relativePath?: string): Promise<string[]>
   deleteFile(relativePath: string): Promise<void>
@@ -1464,22 +1483,26 @@ export interface WorkspaceApi {
    * The token is a float, not an integer: `mtimeMs` carries sub-millisecond
    * precision on some filesystems and rounding it will spuriously fail the CAS.
    *
-   * `encoding` is RESERVED, exactly as on {@link readFile}: v1 is UTF-8 text
-   * only, and the option exists so binary support can be additive later rather
-   * than a breaking signature change.
+   * `encoding` defaults to UTF-8 text. Pass `'base64'` and `content` is the base64 of
+   * the raw bytes, which the host decodes and writes exactly (binary files). The 8 MiB
+   * cap applies to the DECODED bytes, and malformed base64 (anything but `A-Z a-z 0-9
+   * + /` padded with `=` to a multiple of 4 characters) is refused with nothing
+   * written. {@link readFile} is still text only.
    */
   writeFile(
     h: WorkspaceHandle,
     content: string,
     expectedMtimeMs: number | null,
-    o?: { encoding?: 'utf-8' }
+    o?: { encoding?: 'utf-8' | 'utf8' | 'base64' }
   ): Promise<void>
   /** Up to 64 entries, 16 MiB total. Per-entry outcomes; NOT atomic across the
    *  batch. Every entry carries its own CAS token on the same terms as
-   *  {@link writeFile} — there is no batch-wide opt-out. */
+   *  {@link writeFile} — there is no batch-wide opt-out. `o.encoding` applies to
+   *  EVERY entry's `content`; a malformed or over-cap base64 entry refuses the
+   *  whole call before anything is written. */
   writeFiles(
     batch: Array<{ handle: WorkspaceHandle; content: string; expectedMtimeMs: number | null }>,
-    o?: { encoding?: 'utf-8' }
+    o?: { encoding?: 'utf-8' | 'utf8' | 'base64' }
   ): Promise<WorkspaceWriteFilesResult[]>
   /** Creates ONE directory. Not recursive — the parent must already exist. */
   mkdir(h: WorkspaceHandle): Promise<void>

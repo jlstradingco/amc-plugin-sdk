@@ -327,10 +327,17 @@ export interface BridgeExport {
     defaultPath?: string
     title?: string
   }): Promise<{ selected: true; path: string } | { selected: false }>
-  /** 1-256 files. Resolves how many were written. */
+  /**
+   * 1-256 files. Resolves how many were written.
+   *
+   * Each file's `encoding` is `'utf8'` (the default: `content` is text) or `'base64'` (`content`
+   * is the base64 of the raw bytes, written exactly, so images, PDFs and zips survive). A file
+   * over 20,000,000 bytes after decoding, or a `content` that is not strict base64, refuses the
+   * WHOLE call and writes nothing.
+   */
   writeFiles(opts: {
     directory: string
-    files: { name: string; content: string }[]
+    files: { name: string; content: string; encoding?: 'utf8' | 'base64' }[]
   }): Promise<{ written: number; directory: string }>
   /** The whole point is the result — `verified`, plus which files were `missing`. */
   verifyFiles(opts: {
