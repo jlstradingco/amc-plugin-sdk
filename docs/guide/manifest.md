@@ -554,6 +554,26 @@ correct dev-loaded and un-full-widthed itself once packaged. If you worked aroun
 giving up on full width, you can stop.
 :::
 
+### The Sessions pane and the `[list | Sessions]` toggle
+
+Omniscio shows your plugin's AI sessions beside its screen when the manifest declares at least one
+`cli.endpoints` entry **or** a `ui.sessions` block. The `ui.sessions` block alone is enough, so a
+plugin whose AI actions live in Omniscio's own control server rather than in its own `cli` block
+still gets the pane. `ui.hideSessionsPane: true` turns the pane off either way.
+
+A plugin that also shows its own sidebar list (`ui.sidebar`, with no `hideProjectPanel`) never gets
+two columns. Omniscio puts both in **one** column with the standard tab switch at the top,
+`[<sidebar.title> | Sessions]`, the same toggle Mind Maps and Mission Control use:
+
+- The list tab comes first and is the default. It is labelled with `sidebar.title`, or your plugin's
+  name when the sidebar has no title.
+- The Sessions tab carries the live running / needs-you / error count for your plugin's sessions.
+- Omniscio remembers the chosen tab for each plugin until the app restarts.
+- While one of your plugin's chats has the screen, the column shows the Sessions tab, so the
+  "Show <plugin>" way back stays in view. Picking the list tab then brings your plugin back.
+
+A plugin with only a sidebar list, or only sessions, keeps a single column exactly as before.
+
 `contextTemplate` supports single-pass `{{placeholder}}` substitution. Available variables are
 `date`, `projectName`, `sessionName`, `workDir` and `pluginName`. A whitespace-only template is
 treated as absent rather than rejected.
