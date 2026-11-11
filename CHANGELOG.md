@@ -38,6 +38,8 @@ the new elevated permission `auth.actAsUser`, and `auth` alone refuses the call.
 account access in its own, clearly worded row instead of hiding it inside Identity. See
 [the permissions guide](docs/guide/permissions.md#authactususer).
 
+## [3.5.0] - 2026-11-09
+
 ### Fixed — `omniscio-plugin test` runs your plugin's own tests inside a bigger repo
 
 `test` handed vitest no root and no config, so vitest searched the plugin folder *and every folder

@@ -52,8 +52,9 @@ GitHub reads workflows only at a repository's root, so the two files in `.github
   manual start: install, build, typecheck, test, then `node scripts/publish-unreleased.mjs`.
   - It never runs on a pull request, and two runs never publish at once.
   - Its only credential is the short-lived token GitHub issues to that run (`id-token: write`).
-  - A manual start defaults to a **dry run**: every package is packed and rehearsed with
-    `npm publish --dry-run`, and nothing is published.
+  - A manual start defaults to a **dry run**: every package is packed and checked, each version
+    npm lacks is rehearsed with `npm publish --dry-run` (npm refuses even a rehearsal of a version
+    it already has), and nothing is published.
 
 ## How a version is published
 

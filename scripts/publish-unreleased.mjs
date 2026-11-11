@@ -1,4 +1,4 @@
-// @script what="Publishes each Omniscio SDK package whose version npm does not have yet, in dependency order, from its packed tarball; --dry-run packs and rehearses every package and publishes nothing." kind="entrypoint" owner="plugin-sdk"
+// @script what="Publishes each Omniscio SDK package whose version npm does not have yet, in dependency order, from its packed tarball; --dry-run packs and checks every package, rehearses publishing the versions npm lacks, and publishes nothing." kind="entrypoint" owner="plugin-sdk"
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, realpathSync } from 'node:fs'
 import os from 'node:os'
@@ -82,13 +82,19 @@ export function publishUnreleased({
   const missing = packages.filter((pkg) => !isPublished(run('npm', ['view', `${pkg.name}@${pkg.version}`, 'version'], root), pkg))
   log(`npm lacks: ${missing.map((pkg) => `${pkg.name}@${pkg.version}`).join(', ') || 'nothing'}`)
   const targets = dryRun ? packages : missing
+  const handled = []
   for (const pkg of targets) {
     const tarball = packAndCheck(pkg, { root, run, outDir, read })
+    if (!missing.includes(pkg)) {
+      log(`packed and checked ${pkg.name}@${pkg.version} (npm already has it, so there is nothing to rehearse)`)
+      continue
+    }
     const args = ['publish', tarball, '--access', 'public', ...(dryRun ? ['--dry-run'] : [])]
     mustSucceed(run('npm', args, root), `npm publish ${pkg.name}@${pkg.version}`)
     log(`${dryRun ? 'rehearsed' : 'published'} ${pkg.name}@${pkg.version}`)
+    handled.push(pkg.name)
   }
-  return { missing: missing.map((pkg) => pkg.name), handled: targets.map((pkg) => pkg.name) }
+  return { missing: missing.map((pkg) => pkg.name), packed: targets.map((pkg) => pkg.name), handled }
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(THIS_FILE)) {
