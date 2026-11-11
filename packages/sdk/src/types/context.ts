@@ -1618,6 +1618,155 @@ export interface PluginMembers {
   list(): Promise<PluginMember[]>
 }
 
+export type PluginWriteCode =
+  | 'FEATURE_OFF'
+  | 'NOT_FOUND'
+  | 'FORBIDDEN'
+  | 'INVALID'
+  | 'CONFLICT'
+  | 'RATE_LIMITED'
+  | 'DECLINED'
+  | 'BUSY'
+  | 'FAILED'
+
+export type PluginWriteResult<T> = { ok: true; value: T } | { ok: false; code: PluginWriteCode }
+
+export interface PluginGrantedBoard {
+  id: string
+  name: string
+}
+
+export interface PluginBoardGroup {
+  id: string
+  name: string
+}
+
+export interface PluginBoardColumn {
+  id: string
+  title: string
+  type: string
+}
+
+export interface PluginBoardView {
+  id: string
+  name: string
+  groups: PluginBoardGroup[]
+  columns: PluginBoardColumn[]
+}
+
+export interface PluginBoardItem {
+  id: string
+  name: string
+  groupId: string
+  values: Record<string, unknown>
+}
+
+export interface PluginBoardItemsPage {
+  items: PluginBoardItem[]
+  nextCursor: string | null
+}
+
+export interface PluginBoardItemsQuery {
+  groupId?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface PluginBoardItemInput {
+  name: string
+  groupId?: string
+  values?: Record<string, unknown>
+}
+
+export interface PluginBoardItemPatch {
+  name?: string
+  groupId?: string
+}
+
+export interface PluginBoardCreatedItem {
+  id: string
+  unsavedColumnIds?: string[]
+}
+
+export interface PluginBoards {
+  list(): Promise<PluginGrantedBoard[]>
+  getBoard(boardId: string): Promise<PluginBoardView>
+  listItems(boardId: string, query?: PluginBoardItemsQuery): Promise<PluginBoardItemsPage>
+  createItem(boardId: string, input: PluginBoardItemInput): Promise<PluginWriteResult<PluginBoardCreatedItem>>
+  updateItem(itemId: string, patch: PluginBoardItemPatch): Promise<PluginWriteResult<{ id: string }>>
+  setValue(itemId: string, columnId: string, value: unknown): Promise<PluginWriteResult<{ id: string }>>
+  comment(itemId: string, text: string): Promise<PluginWriteResult<{ id: string }>>
+}
+
+export interface PluginTaskListView {
+  id: string
+  name: string
+}
+
+export interface PluginTaskView {
+  id: string
+  listId: string | null
+  text: string
+  done: boolean
+  dueAt: string | null
+  dueIsDateOnly: boolean
+  archived: boolean
+  parentId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PluginTasksQuery {
+  listId?: string
+  done?: boolean
+  archived?: boolean
+  dueBefore?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface PluginTasksPage {
+  tasks: PluginTaskView[]
+  nextCursor: string | null
+}
+
+export interface PluginTaskInput {
+  listId: string | null
+  text: string
+  dueAt?: string
+  dueIsDateOnly?: boolean
+}
+
+export interface PluginTaskPatch {
+  text?: string
+  dueAt?: string | null
+  listId?: string | null
+}
+
+export interface PluginTaskReorder {
+  afterId?: string
+  beforeId?: string
+}
+
+export interface PluginTaskAccessOutcome {
+  cancelled: boolean
+  lists: { id: string; name: string }[]
+  allLists: boolean
+}
+
+export interface PluginTasks {
+  listLists(): Promise<PluginTaskListView[]>
+  list(query?: PluginTasksQuery): Promise<PluginTasksPage>
+  get(id: string): Promise<PluginTaskView>
+  create(input: PluginTaskInput): Promise<PluginWriteResult<{ id: string }>>
+  update(id: string, patch: PluginTaskPatch): Promise<PluginWriteResult<{ id: string }>>
+  complete(id: string, done: boolean): Promise<PluginWriteResult<{ id: string }>>
+  reorder(id: string, place: PluginTaskReorder): Promise<PluginWriteResult<{ id: string }>>
+  archive(id: string): Promise<PluginWriteResult<{ id: string }>>
+  restore(id: string): Promise<PluginWriteResult<{ id: string }>>
+  delete(id: string): Promise<PluginWriteResult<{ id: string }>>
+}
+
 /** What `ctx.channel.connect` needs to open one outbound WebSocket. */
 export interface PluginChannelConnectOptions {
   /** Only `'ws'` (an outbound WebSocket) is supported. `'webhook'` is refused by the host. */
@@ -1924,4 +2073,6 @@ export interface PluginContext {
   oauth?: PluginOAuth
   /** Requires `rss`. See {@link PluginRss}. Optional for the same reason as `members`. */
   rss?: PluginRss
+  boards?: PluginBoards
+  tasks?: PluginTasks
 }

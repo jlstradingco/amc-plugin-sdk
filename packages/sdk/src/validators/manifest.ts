@@ -15,6 +15,8 @@ export const REQUIRED_PERMISSION_PARTNERS = [
   ['sessions.images', 'sessions'],
   ['email.fromName', 'email.send'],
   ['boards.link', 'boards.read'],
+  ['boards.write', 'boards.read'],
+  ['tasks.write', 'tasks.read'],
 ] as const
 
 const pluginIdRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/

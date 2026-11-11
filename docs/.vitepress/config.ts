@@ -94,7 +94,8 @@ export default defineConfig({
             { text: 'RSS', link: '/api/rss' },
             { text: 'Share', link: '/api/share' },
             { text: 'Shell', link: '/api/shell' },
-            { text: 'Speech to Text', link: '/api/stt' }
+            { text: 'Speech to Text', link: '/api/stt' },
+            { text: 'Tasks', link: '/api/tasks' }
           ]
         }
       ]

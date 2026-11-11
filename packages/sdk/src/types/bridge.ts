@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -7,6 +7,8 @@ import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSideb
  * would hand back a `status` whose type could not be written down.
  */
 export type { SessionStatus, SessionPendingAction } from './context.js'
+
+export type { PluginTaskListView, PluginTaskAccessOutcome } from './context.js'
 
 /**
  * The `err.code` a bridge call rejects with when the computer or the share service refuses it.
@@ -838,6 +840,11 @@ export interface BridgeBoards {
   requestAccess(): Promise<BridgeBoardAccessOutcome>
 }
 
+export interface BridgeTasks {
+  listLists(): Promise<PluginTaskListView[]>
+  requestAccess(): Promise<PluginTaskAccessOutcome>
+}
+
 /** A board item a plugin may link to, as returned by `Omniscio.boardLinks.searchItems()`. */
 export interface BridgeBoardLinkItem {
   id: string
@@ -1154,6 +1161,7 @@ export interface Omniscio {
   boards: BridgeBoards
   /** Requires `boards.link`. See {@link BridgeBoardLinks}. */
   boardLinks: BridgeBoardLinks
+  tasks: BridgeTasks
   /** See {@link BridgeClipboard}. */
   clipboard: BridgeClipboard
   /** Requires `members.read`. See {@link BridgeMembers}. */

@@ -57,6 +57,18 @@ was relying on inheriting its parent repo's config, add a `vitest.config.ts` in 
 imports it — a `root` set inside a config is now replaced by the plugin folder. See
 [the test command](docs/reference/cli.md#test).
 
+### Added — read and change boards and tasks from the backend
+
+A plugin's backend can now read the boards and task lists the person shared with it, and change them.
+New permissions: `boards.write` (needs `boards.read`), `tasks.read` and `tasks.write` (needs
+`tasks.read`). `ctx.boards` gains `getBoard`, `listItems`, `createItem`, `updateItem`, `setValue` and
+`comment`; the new `ctx.tasks` has `listLists`, `list`, `get`, `create`, `update`, `complete`,
+`reorder`, `archive`, `restore` and `delete`; and `Omniscio.tasks` lists the shared task lists and
+opens the picker. A refused change resolves `{ ok: false, code }` instead of throwing. Assigning a
+person, commenting on a board item and deleting a task ask the person first. Available when the person
+has turned on Plugin access to boards and tasks in Labs. See [Boards](docs/api/boards.md) and
+[Tasks](docs/api/tasks.md).
+
 ### Changed — a titlebar widget's `icon` only accepts a name the titlebar can draw
 
 `WidgetSpec.icon` is now typed `WidgetIconName`, the exact allow-list Omniscio draws in the titlebar,

@@ -37,6 +37,12 @@ export type {
   // Core read (`coreRead`)
   CoreSession, CoreProject, CoreMessage, PluginCore,
   PluginMember, PluginMembers,
+  PluginWriteCode, PluginWriteResult,
+  PluginGrantedBoard, PluginBoardGroup, PluginBoardColumn, PluginBoardView, PluginBoardItem,
+  PluginBoardItemsPage, PluginBoardItemsQuery, PluginBoardItemInput, PluginBoardItemPatch,
+  PluginBoardCreatedItem, PluginBoards,
+  PluginTaskListView, PluginTaskView, PluginTasksQuery, PluginTasksPage, PluginTaskInput,
+  PluginTaskPatch, PluginTaskReorder, PluginTaskAccessOutcome, PluginTasks,
   PluginChannelConnectOptions, PluginChannelEvent, PluginChannelSendResult, PluginChannelHandle, PluginChannel,
   PluginLaunchRequest, PluginLaunchResult, PluginLaunch,
   PluginOAuthRequest, PluginOAuthTokens, PluginOAuthResult, PluginOAuth,

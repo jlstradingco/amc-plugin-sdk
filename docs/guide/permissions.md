@@ -492,14 +492,17 @@ See the [Spend API](../api/spend).
 
 ### `boards.read`
 
-**Grants access to:** the webview's `Omniscio.boards` namespace — `requestAccess()` and `list()`
+**Grants access to:** the webview's `Omniscio.boards` namespace — `requestAccess()` and `list()` — and, from the plugin's background program, `ctx.boards` reads: `list`, `getBoard` and `listItems`
 
 Read the full contents of the boards the person grants your plugin: every item, column value and
 status. The person chooses which boards — `requestAccess()` asks them — and nothing is shared until
-they do.
+they do. Reading board content from the background program is available when the person has turned
+on Plugin access to boards and tasks in Labs.
 
 Accepted by the SDK since 3.2.0, so a manifest declaring it passes `omniscio-plugin validate` and
 preflight. Typed since 3.4.0 — see [Boards](../api/boards).
+
+Standard tier: it only reads.
 
 ---
 
@@ -614,6 +617,45 @@ one, and `searchItems({ query, limit? })` finds tasks to link to (up to 50 resul
 
 **Elevated**: it writes on the person's task list. Pair it with [`boards.read`](#boardsread) to show
 the boards themselves.
+
+---
+
+### `boards.write`
+
+**Grants access to:** `ctx.boards` changes (**backend** — `createItem`, `updateItem`, `setValue`, `comment`), on the boards the person picked
+
+Add, move and update items and post comments on the boards the person picked for your plugin. Nothing
+is shared until they pick, and a plugin can never change more than the person could change
+themselves. Assigning a person or posting a comment asks the person first, every time.
+
+**Elevated**: it changes the person's boards. It **requires** [`boards.read`](#boardsread) in the same
+manifest, so the install card says exactly what the plugin holds. See [Boards](../api/boards).
+
+---
+
+### `tasks.read`
+
+**Grants access to:** the webview's `Omniscio.tasks` namespace (`requestAccess()` and `listLists()`) and `ctx.tasks` reads (**backend** — `listLists`, `list`, `get`), on the task lists the person picked
+
+Read the task lists the person picked for your plugin, including each task, its due date and its
+status. The person chooses the lists, or "all lists, including new ones", and nothing is shared until
+they do.
+
+Standard tier: it only reads. Available when the person has turned on Plugin access to boards and
+tasks in Labs. See [Tasks](../api/tasks).
+
+---
+
+### `tasks.write`
+
+**Grants access to:** `ctx.tasks` changes (**backend** — `create`, `update`, `complete`, `reorder`, `archive`, `restore`, `delete`), on the task lists the person picked
+
+Add, edit, complete, move, archive and restore tasks in the task lists the person picked. Moving a
+task needs both the list it leaves and the list it enters to be picked. Deleting a task asks the
+person first, every time.
+
+**Elevated**: it changes the person's tasks. It **requires** [`tasks.read`](#tasksread) in the same
+manifest. See [Tasks](../api/tasks).
 
 ---
 
@@ -779,8 +821,11 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
-| `boards.read` | `Omniscio.boards` (**webview**, untyped) | Read the boards the person grants: items, column values and statuses |
+| `boards.read` | `Omniscio.boards` (**webview**); `ctx.boards` reads (**backend**) | Read the boards the person grants: items, column values and statuses |
 | `boards.link` | `Omniscio.boardLinks` (**webview**) | Attach and detach your own content on a task the person granted — elevated |
+| `boards.write` | `ctx.boards` changes (**backend**) | Add, move and update items on the boards the person picked; assigning a person and commenting ask first (**requires `boards.read`**) — elevated |
+| `tasks.read` | `Omniscio.tasks` (**webview**); `ctx.tasks` reads (**backend**) | Read the task lists the person picked: tasks, due dates and status |
+| `tasks.write` | `ctx.tasks` changes (**backend**) | Add, edit, complete, move, archive and restore tasks in the lists the person picked; deleting asks first (**requires `tasks.read`**) — elevated |
 | `coreRead` | `PluginCore` (`ctx.core`, backend only) | Elevated, blanket read of sessions, projects and message text |
 | `workspace.read` | `WorkspaceApi` (read half) | Enumerate and read the user's real project files and worktrees |
 | `workspace.write` | `WorkspaceApi.writeFile` / `writeFiles` / `mkdir` / `deleteFile` | Write to the user's real project files (does NOT imply `workspace.read` — declare both) |

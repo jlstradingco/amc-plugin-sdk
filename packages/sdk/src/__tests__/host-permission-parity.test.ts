@@ -73,6 +73,9 @@ describe('SDK <-> host permission parity', () => {
     oauth: null,
     channel: null,
     'boards.link': null,
+    'boards.write': null,
+    'tasks.read': null,
+    'tasks.write': null,
     webassembly: null,
   }
 
@@ -145,7 +148,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(43)
+    expect(HOST_PERMISSIONS.length).toBe(46)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

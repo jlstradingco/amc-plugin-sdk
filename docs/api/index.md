@@ -27,13 +27,14 @@ The Omniscio Plugin SDK exposes 41 APIs to plugins. Some are available on both t
 | [Text to Speech](./tts) | Speak text with the user's configured voice | Webview only | `tts` |
 | [Session History](./session-history) | Read past sessions the user has granted | Webview only | `sessions.readHistory` |
 | [Firebase](./firebase) | The user's Firebase accounts and projects | Webview only | `firebase` |
+| [Tasks](./tasks) | Choose the task lists the user shares with the plugin, then read and change their tasks | Both | `tasks.read` / `tasks.write` |
 | [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
 | [Workspace](./workspace) | The user's real project checkouts and worktrees | Backend only | `workspace.read` / `.write` / `.exec` |
 | [Backend Calls](#backend-calls) | Call your backend's handlers from your panel | Both | None |
 | [Host Capabilities](#host-capabilities) | Feature-detect what this Omniscio supports | Both | None |
 | [Core](./core) | Read-only view of the user's sessions, projects and message text | Backend only | `coreRead` |
 | [Widget](./widget) | A live status widget in the Omniscio titlebar | Webview only | `chrome` + `chrome.widget` |
-| [Boards](./boards) | Choose and list the boards the user shares with the plugin | Webview only | `boards.read` |
+| [Boards](./boards) | Choose the boards the user shares with the plugin, then read and change them | Both | `boards.read` / `boards.write` |
 | [Board Links](./board-links) | Link board items to things your plugin owns | Webview only | `boards.link` |
 | [Channel](./channel) | Long-lived outbound WebSocket | Backend only | `channel` |
 | [Clipboard](./clipboard) | Read and write the system clipboard | Webview only | `system` (`has` needs none) |
