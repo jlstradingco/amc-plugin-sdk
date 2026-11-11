@@ -70,9 +70,10 @@ function jsonSchemaPaths(node: JsonSchemaNode, prefix = ''): string[] {
 }
 
 function unwrapZod(schema: z.ZodTypeAny): z.ZodTypeAny {
-  if (schema instanceof z.ZodEffects) return unwrapZod(schema.innerType())
-  if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) return unwrapZod(schema.unwrap())
-  if (schema instanceof z.ZodDefault) return unwrapZod(schema.removeDefault())
+  if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
+    return unwrapZod(schema.unwrap() as z.ZodTypeAny)
+  }
+  if (schema instanceof z.ZodDefault) return unwrapZod(schema.removeDefault() as z.ZodTypeAny)
   return schema
 }
 
@@ -84,8 +85,8 @@ function zodPaths(schema: z.ZodTypeAny, prefix = ''): string[] {
       return [keyPath, ...zodPaths(child, keyPath)]
     })
   }
-  if (inner instanceof z.ZodArray) return zodPaths(inner.element, `${prefix}[]`)
-  if (inner instanceof z.ZodRecord) return zodPaths(inner.valueSchema, `${prefix}.*`)
+  if (inner instanceof z.ZodArray) return zodPaths(inner.element as z.ZodTypeAny, `${prefix}[]`)
+  if (inner instanceof z.ZodRecord) return zodPaths(inner.valueType as z.ZodTypeAny, `${prefix}.*`)
   return []
 }
 

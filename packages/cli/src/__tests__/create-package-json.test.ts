@@ -47,6 +47,19 @@ describe('buildPackageJson', () => {
     }
   })
 
+  it('pins the scaffold test runner to a vitest the audit does not flag', () => {
+    const withBackend = buildPackageJson({ ...base, hasBackend: true }) as {
+      devDependencies: Record<string, string>
+    }
+    expect(withBackend.devDependencies.vitest).toBe('^5.1.0')
+  })
+
+  it('adds no test runner to a template that ships no tests', () => {
+    for (const pkg of [buildPackageJson(base), buildPackageJson({ ...base, isWebview: true })]) {
+      expect('vitest' in (pkg.devDependencies as Record<string, string>)).toBe(false)
+    }
+  })
+
   it('omits description/author keys when not provided', () => {
     const pkg = buildPackageJson({ id: 'bare', description: '', author: '' })
     expect('description' in pkg).toBe(false)

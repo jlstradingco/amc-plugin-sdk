@@ -215,7 +215,7 @@ export function buildPackageJson(opts: {
     : { '@omniscio/plugin-cli': `^${CLI_VERSION}`, '@omniscio/plugin-sdk': SCAFFOLD_SDK_RANGE, typescript: '^5.5.0' }
   if (hasBackend) {
     scripts.test = 'omniscio-plugin test'
-    devDependencies['vitest'] = '^3.0.0'
+    devDependencies['vitest'] = '^5.1.0'
   }
   pkg.scripts = scripts
   pkg.devDependencies = devDependencies

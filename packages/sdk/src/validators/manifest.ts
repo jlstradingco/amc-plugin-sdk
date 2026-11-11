@@ -407,12 +407,14 @@ const allowedCommandSchema = z
   .min(1)
   .max(100)
   .regex(SAFE_COMMAND_NAME, SAFE_COMMAND_MESSAGE)
-  .refine(
-    (entry) => !interpreterDenylist.has(normalizeCommandName(entry)),
-    (entry) => ({
-      message: `process.allowedCommands may not include the general-purpose interpreter "${normalizeCommandName(entry)}" — it would let the plugin run arbitrary code`,
+  .superRefine((entry, ctx) => {
+    const name = normalizeCommandName(entry)
+    if (!interpreterDenylist.has(name)) return
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `process.allowedCommands may not include the general-purpose interpreter "${name}" — it would let the plugin run arbitrary code`,
     })
-  )
+  })
 
 const pinnedProgramSchema = z
   .object({

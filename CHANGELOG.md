@@ -11,6 +11,23 @@ which are released together.
 
 ## [Unreleased]
 
+### Security — a fresh scaffold installs without critical advisories
+
+`amc-plugin create` wrote `vitest: "^3.0.0"` into every template that ships tests, and the SDK
+declared `zod: "^3.23.0"`. A new plugin's very first `npm install` therefore reported audit
+advisories before its author had written a line of code — two of them critical, from the test
+runner itself — the worst possible first impression, and one an outside author cannot be expected
+to read past.
+
+The scaffold now pins `vitest: "^5.1.0"` and the SDK depends on `zod: "^4.6.6"`, both of which
+install clean. Nothing changes for the plugin author: the same scripts, the same imports, the same
+manifest. `PluginManifest` validation behaves as before, including the message naming a refused
+general-purpose interpreter in `process.allowedCommands` — zod 4 stopped accepting a function as
+`.refine()`'s second argument, so that one check is now a `superRefine` that adds the same issue.
+
+**Migration:** nothing to do for a plugin you have already built. If your plugin pins `vitest` or
+`zod` itself, move it to `^5.1.0` / `^4.6.6` to clear the same advisories.
+
 ### Changed — `AgentMC.auth.getWebAuth()` needs the new `auth.actAsUser` permission
 
 `getWebAuth()` returns a Firebase custom token for the signed-in person, which reads and writes
