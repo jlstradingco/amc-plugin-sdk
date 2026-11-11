@@ -444,6 +444,20 @@ Pictures reach **only a session that has no tools**: any session of a plugin tha
 
 ---
 
+### `ai.images`
+
+**Grants access to:** `AgentMC.ai.estimateImage` and `AgentMC.ai.generateImage` (**panel only**)
+
+Make pictures with Image Studio, paid from the user's own Omniscio credit. It is a separate, **elevated** permission: holding `ai` grants nothing here, and you do not need `ai` to use it.
+
+- One picture per request. The worker backend is refused.
+- Omniscio prices the picture with its own estimate (its service fee included) and shows the user its own confirmation before every spend. Only the user's **Generate** spends; a cancel, a close or a two-minute wait makes nothing and charges nothing. You cannot pass a price.
+- Each plugin has its own daily picture limit on the user's computer, $2 unless the user changes it in Cost Control.
+- A refusal resolves `{ ok: false, code, message }` instead of rejecting — see the [AI API](../api/ai).
+- Check `AgentMC.host.getCapabilities()` for `ai-images` before you offer a picture button.
+
+---
+
 ### `sessions.readHistory`
 
 **Grants access to:** `PluginSessionHistory` (read past sessions and projects)
@@ -788,6 +802,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `secrets` | `PluginSecrets` | Store credentials encrypted by the OS keychain |
 | `sessions` | `PluginSessions` | Create/manage Claude Code sessions |
 | `sessions.images` | `PluginSessions.sendMessage` `images` option | Send pictures to your own tool-less AI session (needs `sessions` too) |
+| `ai.images` | `AgentMC.ai.estimateImage` / `generateImage` (**webview**) | Make one Image Studio picture per request on the user's credit, after Omniscio's own price confirmation (**elevated**) |
 | `sessions.readHistory` | `PluginSessionHistory` (**webview**) | Read PAST sessions/projects the user explicitly grants |
 | `sessions.launchAny` | `ctx.sessions.fanout` (**backend**) | Start a batch of sessions across any project — built-in and first-party plugins only, and it does not need `sessions` |
 | `sessions.observeStatus` | *(session-status feed; no namespace)* | See when sessions start, finish or need the person — never their text |

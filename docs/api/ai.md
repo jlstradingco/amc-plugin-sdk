@@ -195,8 +195,49 @@ if (!model) {
 }
 ```
 
+---
+
+### `estimateImage(request): Promise<BridgeImageEstimate | BridgeImageRefusal>` (panel only)
+
+Omniscio's own price for **one** Image Studio picture, its service fee included. Free. Needs the `ai.images` permission.
+
+### `generateImage(request): Promise<BridgeImageResult | BridgeImageRefusal>` (panel only)
+
+Make **one** picture with Image Studio, paid from the user's Omniscio credit. Needs the `ai.images` permission. Omniscio prices it, checks the user's balance and this plugin's daily picture limit, then shows the user its own confirmation; only their **Generate** spends.
+
+**`request`:**
+
+| Field | Type | Description |
+|---|---|---|
+| `subject` | `string` | What to draw, 1 to 4,000 characters |
+| `model` | `string` | An Image Studio model id |
+| `aspectRatio` | `'1:1' \| '4:3' \| '3:4' \| '16:9' \| '9:16'` | The picture's shape |
+| `style` | `string?` | Optional style notes |
+| `imageSize` | `'0.5K' \| '1K' \| '2K' \| '4K'?` | Optional size |
+| `transparentBackground` | `boolean?` | Ask for a transparent background |
+
+Any other field (a picture count, a price) is refused.
+
+**Returns:** `{ ok: true, imageId, url?, base64?, model, costUsd }`, or a refusal `{ ok: false, code, message }` — it does not reject for these. `code` is `plugin-images-off`, `signed-out`, `plugin-image-daily-cap`, `insufficient-credit` (Omniscio already offered the user **Add credit**), `declined`, `busy` or `image-service-error`.
+
+**Example:**
+
+```typescript
+const caps = await AgentMC.host.getCapabilities()
+if (caps.includes('ai-images')) {
+  const result = await AgentMC.ai.generateImage({
+    subject: 'A watercolor fox reading a map in the snow',
+    model: 'gemini-3.1-flash-lite-image',
+    aspectRatio: '1:1'
+  })
+  if (result.ok) showPicture(result.base64 ?? result.url)
+  else if (result.code !== 'declined') showMessage(result.message)
+}
+```
+
 ## Notes
 
+- `estimateImage` / `generateImage` work only from the plugin's panel, and their spend has its own per-plugin daily limit (Cost Control → **Plugin pictures**, $2 unless changed), separate from the text-AI limit.
 - `generateTextViaSubscription` runs on the person's Claude plan; every other method here goes through Omniscio's AI service on a stored key.
 - These key calls go through Omniscio's AI service, which requires an API key account. OAuth/login accounts cannot make direct AI calls. If no API key account is available, the call will fail with a descriptive error.
 - Call `isConfigured` first when you are about to show a Generate control — it is the difference between a disabled button and a failed click.

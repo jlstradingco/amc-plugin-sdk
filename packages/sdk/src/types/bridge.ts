@@ -82,6 +82,61 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
     userPrompt: string,
     opts?: { model?: string }
   ): Promise<string | null>
+  /**
+   * Omniscio's own price for ONE picture, from Image Studio. Free. Needs the
+   * `ai.images` permission; panel only (the worker is refused).
+   */
+  estimateImage(request: BridgeImageRequest): Promise<BridgeImageEstimate | BridgeImageRefusal>
+  /**
+   * Make ONE picture through Image Studio, paid from the user's Omniscio
+   * credit. Omniscio prices it, shows the user its own confirmation and spends
+   * only on their yes, inside this plugin's daily picture limit. Needs the
+   * `ai.images` permission; panel only (the worker is refused). Check
+   * `host.getCapabilities()` for `ai-images` before offering the action.
+   */
+  generateImage(request: BridgeImageRequest): Promise<BridgeImageResult | BridgeImageRefusal>
+}
+
+/** What `AgentMC.ai.estimateImage` / `generateImage` take. Extra fields are refused. */
+export interface BridgeImageRequest {
+  /** What to draw, up to 4,000 characters. */
+  subject: string
+  /** An Image Studio model id. */
+  model: string
+  aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16'
+  style?: string
+  imageSize?: '0.5K' | '1K' | '2K' | '4K'
+  transparentBackground?: boolean
+}
+
+export interface BridgeImageEstimate {
+  ok: true
+  model: string
+  /** What the user's credit would be charged at most, Omniscio's fee included. */
+  priceUsd: number
+}
+
+export interface BridgeImageResult {
+  ok: true
+  imageId: string
+  url?: string
+  base64?: string
+  model: string
+  costUsd: number
+}
+
+/** Why a picture was not made. Branch on `code`; `message` is a sentence for the user. */
+export interface BridgeImageRefusal {
+  ok: false
+  code:
+    | 'plugin-images-off'
+    | 'signed-out'
+    | 'plugin-image-daily-cap'
+    | 'insufficient-credit'
+    | 'declined'
+    | 'busy'
+    | 'image-service-error'
+  message: string
 }
 
 export type BridgeInbox = Pick<PluginInbox, 'setItems' | 'postAlert'>
