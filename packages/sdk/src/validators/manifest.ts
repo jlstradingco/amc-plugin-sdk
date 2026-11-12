@@ -388,6 +388,10 @@ const cliEndpointSchema = z.object({
   safe: z.boolean().optional(),
   preview: z.enum(['two-step', 'card']).optional(),
   previewPath: z.string().min(1).max(200).optional(),
+  // Host `z.boolean().optional()` (plugin-manifest-schema.ts, cli.endpoints):
+  // opts the action OUT of control-server calls by agent credentials.
+  // See PluginCliEndpoint.agentReadable (plugin-command-trust-contract.md).
+  agentReadable: z.boolean().optional(),
 }).refine((e) => !(e.safe === true && e.requiresConfirmation === true), {
   message: 'an endpoint cannot be both "safe" and "requiresConfirmation"',
 }).refine((e) => e.preview === undefined || e.requiresConfirmation === true, {
@@ -655,7 +659,16 @@ export const manifestSchema = z.object({
   storage: z
     .object({
       collections: z.record(sqlIdent(), collectionSchema),
-      kv: z.object({ agentWritable: z.boolean().optional() }).optional(),
+      kv: z
+        .object({
+          agentWritable: z.boolean().optional(),
+          // Host `z.boolean().optional()` (plugin-manifest-schema.ts, storage.kv).
+          agentReadable: z.boolean().optional(),
+          // Host `z.array(z.string().min(1).max(256)).max(64)` (plugin-manifest-schema.ts,
+          // storage.kv). A trailing `*` matches a key prefix.
+          agentHidden: z.array(z.string().min(1).max(256)).max(64).optional(),
+        })
+        .optional(),
     })
     .default({ collections: {} }),
   migrations: z.unknown().optional(),

@@ -163,15 +163,57 @@ export function checkHostProbe(probe: HostProbe, port: number): DoctorResult {
   }
 }
 
-export function checkMarketplaceReachable(reachable: boolean): DoctorResult {
+const MARKETPLACE_FAILURE_SUGGESTIONS: { match: RegExp; suggestion: string }[] = [
+  {
+    match: /timed out/i,
+    suggestion:
+      'The request timed out — a proxy, VPN or firewall is likely holding it. Publishing requires this API.'
+  },
+  {
+    match: /CERT_|SELF_SIGNED|UNABLE_TO_VERIFY|EPROTO|ERR_TLS/i,
+    suggestion:
+      'TLS verification failed — a corporate proxy or antivirus HTTPS scanner is likely intercepting the request. Ask IT for the proxy certificate; publishing requires this API.'
+  },
+  {
+    match: /ENOTFOUND|EAI_AGAIN/i,
+    suggestion:
+      'The hostname did not resolve — DNS or the network is the problem, not your plugin. Publishing requires this API.'
+  },
+  {
+    match: /ECONNREFUSED|ECONNRESET|EHOSTUNREACH|ENETUNREACH/i,
+    suggestion:
+      'The connection was refused or dropped — a firewall or proxy is blocking it. Publishing requires this API.'
+  },
+  {
+    match: /^HTTP 5\d\d$/,
+    suggestion:
+      'The marketplace API answered with a server error — retry shortly; nothing on your side needs to change.'
+  },
+  {
+    match: /^HTTP 4\d\d$/,
+    suggestion:
+      'The marketplace API answered with a client error — check that OMNISCIO_PLUGIN_REGISTRY (or the configured base URL) points at the right host.'
+  }
+]
+
+export function checkMarketplaceReachable(
+  reachable: boolean,
+  failureCause?: string | null
+): DoctorResult {
   if (reachable) {
     return { name: 'Marketplace API', status: 'pass', message: 'Reachable' }
   }
+  const cause = failureCause?.trim()
+  const matched = cause
+    ? MARKETPLACE_FAILURE_SUGGESTIONS.find((entry) => entry.match.test(cause))
+    : undefined
   return {
     name: 'Marketplace API',
     status: 'warn',
-    message: 'Could not reach the marketplace API',
-    suggestion: 'Check your network connection; publishing requires it.'
+    message: cause ? `Could not reach the marketplace API (${cause})` : 'Could not reach the marketplace API',
+    suggestion:
+      matched?.suggestion ??
+      'Check your network connection; publishing requires it.'
   }
 }
 

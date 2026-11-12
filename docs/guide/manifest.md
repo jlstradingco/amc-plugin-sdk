@@ -408,8 +408,9 @@ session ids, private notes, unpublished drafts:
   on it for safety on an older Omniscio — keep what must stay private out of tables that older
   builds read, or gate it behind your own endpoints.
 - **It does not cover your own CLI endpoints.** Rows you serve through
-  `/plugins/:id/cli/…` are yours to decide, and it does not cover the key-value store, whose reads
-  stay open.
+  `/plugins/:id/cli/…` are fenced by the endpoint's own `agentReadable` key (see
+  [Actions an agent may not call](#actions-an-agent-may-not-call-agentreadable)), and the
+  key-value store has its own fence below.
 
 ### Read-only columns: `cliReadOnlyColumns`
 
@@ -433,11 +434,41 @@ On a table that is `agentWritable`, list the columns an outside write must never
 ### The key-value store: `storage.kv`
 
 `ctx.storage` keys are refused to outside writes (`PUT` and `DELETE /plugins/:id/kv/...`, HTTP 403)
-unless the store opts in. Reads stay open.
+unless the store opts in:
 
 ```json
 "storage": { "collections": {}, "kv": { "agentWritable": true } }
 ```
+
+Reads are open unless you fence them. A plugin keeps more than preferences in `ctx.storage` — a
+GitHub session, unpublished review drafts, private notes — and every AI agent session on the
+computer can reach the read routes. Two keys keep that data to the person:
+
+```json
+"storage": {
+  "collections": {},
+  "kv": {
+    "agentReadable": false,
+    "agentHidden": ["connection", "draft:*"]
+  }
+}
+```
+
+| Key | What it does |
+|---|---|
+| `agentReadable` | `false` refuses BOTH read routes for the whole store to every caller but the person's own install-wide key. Absent or `true` leaves the store readable. |
+| `agentHidden` | Up to 64 keys, each 1 to 256 characters, hidden while the rest of the store stays readable. A trailing `*` matches a key PREFIX (`draft:*` hides every `draft:` key). |
+
+- **The single-key read is refused** (`403`, `PLUGIN_KV_NOT_AGENT_READABLE`). The key is not
+  fetched, so the refusal is no existence signal.
+- **A hidden key is not writable from outside either**, even on a store that opted writes in with
+  `agentWritable` (`403`, `PLUGIN_KV_NOT_AGENT_WRITABLE`) — otherwise an agent could erase the value
+  it may not read.
+- **The list omits hidden keys** and returns every other key with its value.
+- **Your own backend and panel read normally** — they use the in-process bridge.
+- **These keys fail OPEN on an older Omniscio**, like every `agentReadable` key: the key is stripped
+  and the values are served to agents anyway. `ctx.secrets` remains the encrypted store for a real
+  secret.
 
 ### Command tables: `commandTableWaiver`
 
@@ -760,8 +791,36 @@ Declare CLI endpoints that external tools can call through Omniscio's control se
 | `safe` | boolean | A write that may run without asking; cannot be combined with `requiresConfirmation` |
 | `preview` | `"two-step"` or `"card"` | Lets the approval card show what the action will do; only with `requiresConfirmation`, and only together with `previewPath` |
 | `previewPath` | string | The read-only endpoint Omniscio asks for the preview: another endpoint of this plugin with the same method, marked `safe`, not `requiresConfirmation` |
+| `agentReadable` | boolean | Keep this action's answers away from AI agents. `false` refuses every call that carries an agent credential (HTTP 403, `PLUGIN_CLI_NOT_AGENT_READABLE`); the person's own install-wide key still runs it. See [Actions an agent may not call](#actions-an-agent-may-not-call-agentreadable) |
 
 Requires the `cli` permission.
+
+### Actions an agent may not call: `agentReadable`
+
+An action that returns what a private table holds — or any other data that is not the person's to
+hand to every agent — can be kept away from agent credentials:
+
+```json
+{
+  "method": "GET",
+  "path": "secret-report",
+  "description": "The personal report this plugin keeps",
+  "auth": true,
+  "agentReadable": false
+}
+```
+
+- **What it refuses.** A call carrying any credential except the person's own install-wide key is
+  answered `403` with the machine-readable code `PLUGIN_CLI_NOT_AGENT_READABLE`, before Omniscio
+  replays a queued request or reaches your handler. A call the person approves is unaffected: their
+  approval runs on their own key.
+- **It covers the whole PATH, whatever the verb.** Your backend's handler is reached by path, so a
+  fenced path called with another method is refused too rather than running the same handler. Use it
+  for an action whose answer is private, not only for `GET`s.
+- **Your own panel is unaffected** — it reaches your backend over the in-process bridge, never the
+  control-server route, so a fenced action still works there.
+- **It fails OPEN on an older Omniscio.** A build that predates the key strips it and serves the
+  action to agents anyway. The same is true of every `agentReadable` key.
 
 ### Previews on the approval card
 

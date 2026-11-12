@@ -19,20 +19,43 @@ import { readCliToken } from '../lib/amc-host.js'
 
 const DEFAULT_CLI_PORT = 19519
 
-async function fetchWithTimeout(
-  url: string,
-  ms: number,
-  token?: string
-): Promise<Response | null> {
+interface FetchOutcome {
+  res: Response | null
+  failure: string | null
+}
+
+function errorCode(err: unknown): string | null {
+  const seen = new Set<unknown>()
+  let current: unknown = err
+  while (current && typeof current === 'object' && !seen.has(current)) {
+    seen.add(current)
+    const code = (current as { code?: unknown }).code
+    if (typeof code === 'string' && code.length > 0) return code
+    current = (current as { cause?: unknown }).cause
+  }
+  return null
+}
+
+function describeFetchFailure(err: unknown, ms: number): string {
+  if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+    return `timed out after ${ms}ms`
+  }
+  const code = errorCode(err)
+  if (code) return err instanceof Error ? `${code} (${err.message})` : code
+  return err instanceof Error ? err.message : String(err)
+}
+
+async function fetchWithTimeout(url: string, ms: number, token?: string): Promise<FetchOutcome> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), ms)
   try {
-    return await globalThis.fetch(url, {
+    const res = await globalThis.fetch(url, {
       signal: controller.signal,
       ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
     })
-  } catch {
-    return null
+    return { res, failure: null }
+  } catch (err) {
+    return { res: null, failure: describeFetchFailure(err, ms) }
   } finally {
     clearTimeout(timer)
   }
@@ -53,7 +76,10 @@ function readInstalledSdk(cwd: string): InstalledSdk | null {
 }
 
 async function fetchLatestSdkVersion(): Promise<string | null> {
-  const res = await fetchWithTimeout(`https://registry.npmjs.org/${SDK_PACKAGE_NAMES[0]}/latest`, 3000)
+  const { res } = await fetchWithTimeout(
+    `https://registry.npmjs.org/${SDK_PACKAGE_NAMES[0]}/latest`,
+    3000
+  )
   if (!res || !res.ok) return null
   try {
     return (await res.json() as { version?: string }).version ?? null
@@ -84,20 +110,23 @@ export const doctorCommand = new Command('doctor')
     }
 
     const token = readCliToken()
-    const hostRes = await fetchWithTimeout(
+    const hostFetch = await fetchWithTimeout(
       `http://127.0.0.1:${port}/projects`,
       1500,
       token ?? undefined
     )
     const hostProbe = {
-      reachable: hostRes !== null,
-      status: hostRes ? hostRes.status : null,
+      reachable: hostFetch.res !== null,
+      status: hostFetch.res ? hostFetch.res.status : null,
       hasToken: Boolean(token)
     }
 
     // Marketplace reachability
-    const mktRes = await fetchWithTimeout(`${getBaseUrl()}/getRegistry`, 3000)
-    const marketplaceReachable = mktRes !== null && mktRes.ok
+    const mktFetch = await fetchWithTimeout(`${getBaseUrl()}/getRegistry`, 3000)
+    const marketplaceReachable = mktFetch.res !== null && mktFetch.res.ok
+    const marketplaceFailure =
+      mktFetch.failure ??
+      (mktFetch.res && !mktFetch.res.ok ? `HTTP ${mktFetch.res.status}` : null)
 
     const latestSdk = await fetchLatestSdkVersion()
 
@@ -106,7 +135,7 @@ export const doctorCommand = new Command('doctor')
       checkSdkVersion(readInstalledSdk(cwd), latestSdk),
       checkManifest(manifest, validation),
       checkHostProbe(hostProbe, port),
-      checkMarketplaceReachable(marketplaceReachable)
+      checkMarketplaceReachable(marketplaceReachable, marketplaceFailure)
     ]
 
     const summary = summarizeDoctor(results)

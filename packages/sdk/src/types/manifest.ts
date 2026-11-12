@@ -268,6 +268,21 @@ export interface PluginCliEndpoint {
   safe?: boolean
   preview?: 'two-step' | 'card'
   previewPath?: string
+  /**
+   * Keep this action's answers away from the AI agents running on the person's computer. `false`
+   * makes the host refuse the call with a 403 (`PLUGIN_CLI_NOT_AGENT_READABLE`) to every caller
+   * but the person's own install-wide key, so a control-server request from an agent session never
+   * reaches your handler. Absent or `true` (the default) leaves the action open, as it has always
+   * been. The person and your own panel reach it normally either way.
+   *
+   * Use it for an action that returns what a table marked `agentReadable: false` holds, or other
+   * data that is not the person's to hand to every agent.
+   *
+   * Like the table key, this one fails OPEN on a host that predates it: the key is stripped and
+   * the action is served to agents anyway. Mirrors the host's
+   * `PluginCliEndpoint.agentReadable` (plugin-command-trust-contract.md).
+   */
+  agentReadable?: boolean
 }
 
 /**
@@ -365,9 +380,27 @@ export interface PluginManifest {
     collections: Record<string, PluginCollectionSchema>
     /**
      * Opt the plugin's key-value store IN to control-server writes. Absent or `false`,
-     * every outside PUT or DELETE is refused with a 403; reads stay open.
+     * every outside PUT or DELETE is refused with a 403.
      */
-    kv?: { agentWritable?: boolean }
+    kv?: {
+      agentWritable?: boolean
+      /**
+       * Keep the WHOLE key-value store away from AI agents. `false` makes the host refuse
+       * `GET /plugins/:id/kv` and the single-key read with a 403
+       * (`PLUGIN_KV_NOT_AGENT_READABLE`) to every caller but the person's own install-wide
+       * key. Absent or `true` (the default) leaves reads open. Your own backend and panel
+       * read normally either way.
+       */
+      agentReadable?: boolean
+      /**
+       * Keys (or `prefix*` entries) to keep away from AI agents when the store as a whole
+       * stays readable. A hidden key is refused on the single-key read and left out of the
+       * list. Up to 64 entries, each 1 to 256 characters; a trailing `*` matches a prefix.
+       *
+       * Use it for the keys a plugin keeps the person's credentials or drafts under.
+       */
+      agentHidden?: string[]
+    }
   }
   /**
    * Kept optional here even though the host requires the block, so this SDK
