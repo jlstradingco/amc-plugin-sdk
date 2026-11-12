@@ -570,7 +570,7 @@ two columns. Omniscio puts both in **one** column with the standard tab switch a
 - The Sessions tab carries the live running / needs-you / error count for your plugin's sessions.
 - Omniscio remembers the chosen tab for each plugin until the app restarts.
 - While one of your plugin's chats has the screen, the column shows the Sessions tab, so the
-  "Show <plugin>" way back stays in view. Picking the list tab then brings your plugin back.
+  `Show <plugin>` way back stays in view. Picking the list tab then brings your plugin back.
 
 A plugin with only a sidebar list, or only sessions, keeps a single column exactly as before.
 
