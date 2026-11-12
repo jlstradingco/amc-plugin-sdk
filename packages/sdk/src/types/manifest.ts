@@ -1,4 +1,4 @@
-import type { PluginPermission } from '../generated/sdk-facts.js'
+import type { PluginPermission, SidebarWidgetKind, WidgetFaceName } from '../generated/sdk-facts.js'
 
 export type { PluginPermission }
 
@@ -304,6 +304,27 @@ export interface PluginSupportLinks {
   repository?: string
 }
 
+/**
+ * One widget a plugin offers for the widget sidebar, declared in `ui.widgets`.
+ * The user adds it from the sidebar's Add picker, under your plugin's name.
+ */
+export interface PluginManifestWidget {
+  /** Unique in the plugin: lowercase letters, digits and hyphens, up to 32 characters. Pass it to `widget.set(spec, { widgetId })`. */
+  id: string
+  /** The name the picker and the widget's frame show, 1 to 60 characters. */
+  title: string
+  /**
+   * `'tile'` draws the data you send with `widget.set`. `'panel'` shows your
+   * plugin's own panel page inside the widget, with exactly your plugin's
+   * permissions.
+   */
+  kind: SidebarWidgetKind
+  /** The grid size it starts at: `w` 1 to 4 columns, `h` 1 to 40 rows. */
+  defaultSize: { w: number; h: number }
+  /** For a tile, the shapes it may send. A panel declares none. */
+  faces?: WidgetFaceName[]
+}
+
 export interface PluginManifest {
   plugin: {
     id: string
@@ -373,6 +394,12 @@ export interface PluginManifest {
      * `/`, no drive letter, no `..` segment.
      */
     widget?: { entryPoint: string }
+    /**
+     * The widgets this plugin offers for the widget sidebar, 1 to 8. Without it
+     * the plugin offers one tile named after the plugin. Cannot be combined
+     * with `widget`. See {@link PluginManifestWidget}.
+     */
+    widgets?: PluginManifestWidget[]
     /**
      * Pop-out surfaces the plugin may open in their own OS window, keyed by the
      * name it passes to `window.open(key)`. At most 4; keys are lowercase

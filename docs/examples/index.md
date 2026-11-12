@@ -62,6 +62,14 @@ Draws a live widget in the Omniscio titlebar. Pick a shape and a tone and watch 
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/widget-demo)
 
+### Sidebar Widgets Demo
+
+**APIs:** `widget.set`, `widget.clear`, `widget.action`, `ui.widgets`
+
+Offers two widgets for the widget sidebar: an Agenda tile that switches between a rich list and a compact number and carries an Open inbox button, and a Demo controls panel that is the plugin's own page shown inside the sidebar. Plain JavaScript with no build step. The dev shell has no widget sidebar, so try it inside Omniscio.
+
+[View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/sidebar-widgets-demo)
+
 ## Full Example
 
 ### GitHub Issues

@@ -1,0 +1,25 @@
+{
+  "plugin": {
+    "id": "sidebar-widgets-demo",
+    "name": "Sidebar Widgets Demo",
+    "version": "1.0.0",
+    "author": "Omniscio Team",
+    "description": "Offers two widgets for the Omniscio widget sidebar: a live list with a button, and the plugin's own page as a panel",
+    "icon": "sparkles",
+    "category": "other",
+    "license": { "type": "free" }
+  },
+  "sdkVersion": "2.0.0",
+  "permissions": ["chrome", "chrome.widget"],
+  "settings": [],
+  "storage": { "collections": {} },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "ui/index.html",
+    "sidebar": { "title": "Sidebar Widgets Demo", "icon": "sparkles" },
+    "widgets": [
+      { "id": "agenda", "title": "Agenda", "kind": "tile", "defaultSize": { "w": 4, "h": 3 }, "faces": ["list", "stat"] },
+      { "id": "controls", "title": "Demo controls", "kind": "panel", "defaultSize": { "w": 4, "h": 5 } }
+    ]
+  }
+}

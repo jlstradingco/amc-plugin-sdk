@@ -1,5 +1,16 @@
 import { z } from 'zod'
-import { PLUGIN_PERMISSIONS, PROCESS_INTERPRETER_DENYLIST } from '../generated/sdk-facts.js'
+import {
+  PLUGIN_PERMISSIONS,
+  PROCESS_INTERPRETER_DENYLIST,
+  SIDEBAR_GRID_COLUMNS,
+  SIDEBAR_MAX_WIDGET_ROWS,
+  SIDEBAR_WIDGET_ID_MAX,
+  SIDEBAR_WIDGET_ID_PATTERN,
+  SIDEBAR_WIDGET_KINDS,
+  SIDEBAR_WIDGET_TITLE_MAX,
+  SIDEBAR_WIDGETS_MAX,
+  WIDGET_FACE_NAMES,
+} from '../generated/sdk-facts.js'
 import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
 import { classifyPluginIcon } from './plugin-icon-kind.js'
 import {
@@ -235,6 +246,32 @@ const PLUGIN_WINDOW_SIZE_MAX = 10000
 const NO_CONTEXT_TEXT_MAX = 200
 const pluginWindowKeyRegex = /^[a-z0-9][a-z0-9-]*$/
 
+const sidebarWidgetSchema = z
+  .object({
+    id: z.string().min(1).max(SIDEBAR_WIDGET_ID_MAX).regex(SIDEBAR_WIDGET_ID_PATTERN),
+    title: z.string().trim().min(1).max(SIDEBAR_WIDGET_TITLE_MAX),
+    kind: z.enum(SIDEBAR_WIDGET_KINDS),
+    defaultSize: z
+      .object({
+        w: z.number().int().min(1).max(SIDEBAR_GRID_COLUMNS),
+        h: z.number().int().min(1).max(SIDEBAR_MAX_WIDGET_ROWS),
+      })
+      .strict(),
+    faces: z.array(z.enum(WIDGET_FACE_NAMES)).min(1).max(WIDGET_FACE_NAMES.length).optional(),
+  })
+  .strict()
+  .refine((widget) => widget.kind === 'tile' || widget.faces === undefined, {
+    message: 'a panel widget draws the plugin page, so it declares no faces',
+  })
+
+const sidebarWidgetsSchema = z
+  .array(sidebarWidgetSchema)
+  .min(1)
+  .max(SIDEBAR_WIDGETS_MAX)
+  .refine((widgets) => new Set(widgets.map((widget) => widget.id)).size === widgets.length, {
+    message: 'each declared widget needs its own id',
+  })
+
 // Every bound below is copied from the host validator
 // (plugin-manifest-validator.ts, its `ui` block) so this SDK accepts exactly what the
 // host does inside a `ui` block. A stricter SDK rejects manifests that install
@@ -265,6 +302,7 @@ const uiSchema = z.object({
   // `ui.widget.entryPoint` of `../other-plugin/x.html` that the host refuses.
   settingsPanel: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
   widget: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
+  widgets: sidebarWidgetsSchema.optional(),
   windows: z
     .record(
       z.string().min(1).max(PLUGIN_WINDOW_KEY_MAX).regex(pluginWindowKeyRegex),
@@ -311,6 +349,10 @@ const uiSchema = z.object({
         .optional(),
     })
     .optional(),
+}).refine((ui) => ui.widget === undefined || ui.widgets === undefined, {
+  message:
+    'declare widgets in ui.widgets only: ui.widget is the older single-widget form and the two cannot both be set',
+  path: ['widgets'],
 })
 
 // The `ctx.workspace` manifest block. `args` may legitimately be EMPTY — the

@@ -1,0 +1,13 @@
+{
+  "name": "sidebar-widgets-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "package": "omniscio-plugin package",
+    "validate": "omniscio-plugin validate"
+  },
+  "devDependencies": {
+    "@omniscio/plugin-cli": "^3.5.0"
+  }
+}

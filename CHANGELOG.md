@@ -11,6 +11,26 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — widgets for the widget sidebar
+
+A plugin can now offer widgets for Omniscio's widget sidebar, and the SDK types and checks all of it:
+
+- `ui.widgets` declares up to 8 widgets, each a `tile` (draws the data you send) or a `panel` (shows your
+  plugin's own page). `PluginManifestWidget` types one entry, and `omniscio-plugin validate` checks it
+  with the app's own limits instead of silently dropping the block.
+- `widget.set(spec, { widgetId })` and `widget.clear({ widgetId })` update one declared widget.
+- Four rich shapes for the sidebar — `list`, `chart`, `note` and `progress` (`RichWidgetSpec`) — beside
+  the five compact ones (`CompactWidgetSpec`).
+- `buttons` on any spec: up to 3 Omniscio-drawn buttons (`WidgetButton`) that run through the app's
+  action door and ask the user first unless the action only opens a place.
+- `widget.action(request)` asks Omniscio to act from inside your page and resolves to a
+  `WidgetActionResult`.
+- A new `sidebar-widgets-demo` example offers a tile and a panel.
+
+**Migration:** nothing to do. `ui.widget` and `widget.set(spec)` without a `widgetId` keep working;
+`WidgetSpec` is now the union of the compact and rich specs, so code that built one compact spec still
+compiles.
+
 ### Fixed — `npm run build` works on a copied example, and the scaffold README stops lying
 
 The eight example plugins ran `omniscio-plugin build` in their scripts but none of them declared

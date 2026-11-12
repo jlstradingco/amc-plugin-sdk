@@ -707,45 +707,50 @@ export interface BridgeStt {
 
 /**
  * The widget vocabulary — the shapes Omniscio can draw, what a widget can MEAN
- * (never a colour), and the icon names the titlebar can draw. Generated from
- * the host's own lists, so the SDK cannot offer a value the app rejects.
+ * (never a colour), the icon names it can draw and the actions a button can ask
+ * for. Generated from the host's own lists, so the SDK cannot offer a value the
+ * app rejects.
  */
-import type { WidgetShape, WidgetTone, WidgetIconName } from '../generated/sdk-facts.js'
-export type { WidgetShape, WidgetTone, WidgetIconName }
+import type {
+  WidgetShape,
+  WidgetTone,
+  WidgetIconName,
+  RichWidgetShape,
+  WidgetActionId,
+} from '../generated/sdk-facts.js'
+export type { WidgetShape, WidgetTone, WidgetIconName, RichWidgetShape, WidgetActionId }
 
 /**
- * The data for one titlebar widget, passed to {@link BridgeWidget.set}.
- *
- * You supply DATA; Omniscio draws every pixel. There is deliberately no way to
- * pass markup, a colour or an image. The host re-validates the spec and a
- * spec that breaks any bound below is rejected, not truncated.
+ * A button Omniscio draws under a sidebar widget, at most 3 per widget. The host
+ * draws it and runs it through its own action door: a button that changes
+ * something or costs money asks the user first, every time unless they tick
+ * "Don't ask again for this button".
  */
-export interface WidgetSpec {
-  /** Which of the five host-drawn shapes to render. */
-  shape: WidgetShape
-  /**
-   * The headline text, at most 8 characters. The cap is an anti-phishing
-   * control, not a layout one: 8 + 16 characters cannot hold a sentence such as
-   * "Session expired, sign in", so a plugin cannot impersonate the app in its
-   * own titlebar.
-   */
-  value?: string
-  /** A short caption, at most 16 characters. See `value` for why it is capped. */
-  label?: string
+export interface WidgetButton {
+  /** Lowercase letters, digits and hyphens, 1 to 32 characters, unique in the widget. */
+  id: string
+  /** The button text, 1 to 24 characters. */
+  label: string
+  /** What the button asks Omniscio to do. */
+  action: WidgetActionId
+  /** What the action acts on (a place, a quick reply, an automation, a recipe or a project), 1 to 200 characters. */
+  target: string
+}
+
+/** The fields every widget shape shares. */
+export interface WidgetChrome {
   /** Hover text, at most 120 characters. */
   tooltip?: string
   /** The widget's meaning. Defaults to the host's neutral look. */
   tone?: WidgetTone
   /**
-   * A Lucide icon NAME from Omniscio's titlebar allow-list ({@link WidgetIconName},
+   * A Lucide icon NAME from Omniscio's allow-list ({@link WidgetIconName},
    * case-sensitive). Never a URL, data URI or markup. The list is deliberately
    * small so a plugin cannot borrow the app's own account or settings glyphs.
    */
   icon?: WidgetIconName
-  /** 0 to 1, for the `gauge` shape. */
-  progress?: number
-  /** Up to 32 finite numbers, for the `sparkline` shape. */
-  series?: number[]
+  /** Buttons drawn under the widget in the sidebar. See {@link WidgetButton}. */
+  buttons?: WidgetButton[]
   /**
    * `'popover'` (the default) opens a 320x256 popover on click: your
    * `ui.widget.entryPoint` page if the manifest declares one, otherwise your
@@ -756,18 +761,122 @@ export interface WidgetSpec {
 }
 
 /**
- * `Omniscio.widget` — a live status widget in Omniscio's titlebar. Webview only:
- * the host builds no `ctx.widget` for backends. Requires BOTH the `chrome` and
- * `chrome.widget` permissions.
+ * One of the five compact shapes, drawn in the titlebar and in the sidebar.
  *
- * Each `set` REPLACES the previous spec. Calls coalesce to at most one update
- * per 250 ms (the last one wins) and re-sending an identical spec is a no-op, so
- * it is safe to call on every state change. A plugin has at most one widget.
+ * You supply DATA; Omniscio draws every pixel. There is deliberately no way to
+ * pass markup, a colour or an image. The host re-validates the spec and a
+ * spec that breaks any bound below is rejected, not truncated.
+ */
+export interface CompactWidgetSpec extends WidgetChrome {
+  /** Which of the five compact host-drawn shapes to render. */
+  shape: WidgetShape
+  /**
+   * The headline text, at most 8 characters. The cap is an anti-phishing
+   * control, not a layout one: 8 + 16 characters cannot hold a sentence such as
+   * "Session expired, sign in", so a plugin cannot impersonate the app in its
+   * own titlebar.
+   */
+  value?: string
+  /** A short caption, at most 16 characters. See `value` for why it is capped. */
+  label?: string
+  /** 0 to 1, for the `gauge` shape. */
+  progress?: number
+  /** Up to 32 finite numbers, for the `sparkline` shape. */
+  series?: number[]
+}
+
+/** The fields every rich sidebar shape shares. */
+export interface RichWidgetChrome extends WidgetChrome {
+  /** A heading drawn above the widget in the sidebar, 1 to 24 characters. */
+  title?: string
+}
+
+/** A short list: 1 to 8 rows, each a label (up to 40 characters) and an optional detail (up to 60). */
+export interface ListWidgetSpec extends RichWidgetChrome {
+  shape: 'list'
+  items: { label: string; detail?: string; tone?: WidgetTone }[]
+}
+
+/** A line chart of 2 to 32 finite numbers. */
+export interface ChartWidgetSpec extends RichWidgetChrome {
+  shape: 'chart'
+  series: number[]
+}
+
+/** A short note of 1 to 280 characters of plain text. */
+export interface NoteWidgetSpec extends RichWidgetChrome {
+  shape: 'note'
+  text: string
+}
+
+/** A progress bar from 0 to 1, with an optional caption (up to 16) and value (up to 8). */
+export interface ProgressWidgetSpec extends RichWidgetChrome {
+  shape: 'progress'
+  progress: number
+  label?: string
+  value?: string
+}
+
+/**
+ * A rich shape. The sidebar draws it in full; the titlebar, which has room for
+ * only a compact face, draws a compact version of it.
+ */
+export type RichWidgetSpec = ListWidgetSpec | ChartWidgetSpec | NoteWidgetSpec | ProgressWidgetSpec
+
+/** The data for one widget, passed to {@link BridgeWidget.set}. */
+export type WidgetSpec = CompactWidgetSpec | RichWidgetSpec
+
+/**
+ * Which of your declared widgets a call is about: the `id` of one entry in the
+ * manifest's `ui.widgets`. Leave it out to mean the first declared widget, or
+ * your only widget when you declare none.
+ */
+export interface WidgetSelector {
+  widgetId: string
+}
+
+/** What your page asks Omniscio to do through {@link BridgeWidget.action}. */
+export interface WidgetActionRequest {
+  action: WidgetActionId
+  /** What the action acts on, 1 to 200 characters. */
+  target: string
+}
+
+/**
+ * What became of an action request. `needs-confirmation` means Omniscio is
+ * asking the user in its own dialog; your page is not told their answer.
+ */
+export type WidgetActionResult =
+  | { status: 'ran'; action: WidgetActionId; summary: string }
+  | { status: 'needs-confirmation'; confirmation: { action: WidgetActionId; target: string; canRemember: boolean } }
+  | {
+      status: 'refused'
+      reason: 'unknown-widget' | 'unknown-action' | 'rate-limited' | 'busy' | 'bad-target' | 'refused'
+      message: string
+    }
+  | { status: 'expired' }
+
+/**
+ * `Omniscio.widget` — your plugin's live widgets, drawn by Omniscio in the
+ * titlebar and in the widget sidebar. Webview only: the host builds no
+ * `ctx.widget` for backends. Requires BOTH the `chrome` and `chrome.widget`
+ * permissions.
+ *
+ * Each `set` REPLACES that widget's previous spec. Calls coalesce to at most one
+ * update per 250 ms per widget (the last one wins) and re-sending an identical
+ * spec is a no-op, so it is safe to call on every state change.
  */
 export interface BridgeWidget {
-  set(spec: WidgetSpec): Promise<void>
-  /** Remove the widget from the titlebar. */
-  clear(): Promise<void>
+  set(spec: WidgetSpec, selector?: WidgetSelector): Promise<void>
+  /** Remove the widget's data. */
+  clear(selector?: WidgetSelector): Promise<void>
+  /**
+   * Ask Omniscio to do something for the user — the same actions a button can
+   * ask for. It goes through Omniscio's action door and is asked of the user
+   * every time, except opening a place. Only a page whose widget is in the
+   * user's sidebar can ask.
+   */
+  action(request: WidgetActionRequest): Promise<WidgetActionResult>
 }
 
 /**

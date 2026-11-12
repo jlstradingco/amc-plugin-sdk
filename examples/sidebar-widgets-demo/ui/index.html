@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidebar Widgets Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
+    h1 { font-size: 1rem; margin-bottom: 8px; }
+    p { color: var(--surface-500, #666); font-size: 0.875rem; margin-bottom: 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    button { padding: 6px 12px; font: inherit; font-size: 0.875rem; }
+    #status { font-size: 0.875rem; color: var(--surface-500, #666); }
+  </style>
+</head>
+<body>
+  <h1>Sidebar Widgets Demo</h1>
+  <p>Add the Agenda and Demo controls widgets from the widget sidebar's Add button. This page is the Demo controls widget.</p>
+
+  <div class="row">
+    <button id="btn-list">Show the agenda as a list</button>
+    <button id="btn-stat">Show the agenda as a number</button>
+    <button id="btn-clear">Clear the agenda</button>
+  </div>
+  <div class="row">
+    <button id="btn-inbox">Ask Omniscio to open the inbox</button>
+  </div>
+  <p id="status"></p>
+
+  <script src="plugin.js"></script>
+</body>
+</html>

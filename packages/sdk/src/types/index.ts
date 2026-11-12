@@ -4,7 +4,7 @@ export type {
   PluginSettingOption, PluginSettingDefinition,
   PluginSuggestedPrompt,
   PluginPermission, PluginCliEndpoint, PluginCronDefinition,
-  PluginManifest, PluginSupportLinks, PluginRegistryEntry, PluginRuntimeStatus,
+  PluginManifest, PluginManifestWidget, PluginSupportLinks, PluginRegistryEntry, PluginRuntimeStatus,
   // Workspace manifest block (`workspace.read` / `.write` / `.exec`)
   PluginWorkspaceCommandSlot, PluginWorkspaceBinding, PluginWorkspace,
 } from './manifest.js'
@@ -49,8 +49,13 @@ export type {
   PluginRssParsedEntry, PluginRssFeedResult, PluginRssFeed, PluginRssEntry, PluginRssRecentOptions, PluginRss,
 } from './context.js'
 
-// Titlebar widget (`chrome.widget`) — webview-only, declared with the bridge types
-export type { WidgetShape, WidgetTone, WidgetIconName, WidgetSpec, BridgeWidget } from './bridge.js'
+// Titlebar and sidebar widgets (`chrome.widget`) — webview-only, declared with the bridge types
+export type {
+  WidgetShape, WidgetTone, WidgetIconName, RichWidgetShape, WidgetActionId,
+  WidgetButton, WidgetChrome, RichWidgetChrome, CompactWidgetSpec, RichWidgetSpec, ListWidgetSpec, ChartWidgetSpec,
+  NoteWidgetSpec, ProgressWidgetSpec, WidgetSpec, WidgetSelector, WidgetActionRequest,
+  WidgetActionResult, BridgeWidget,
+} from './bridge.js'
 
 export type { ModelPickOption, ModelPickRequest, BridgeModelPicker } from './bridge.js'
 
