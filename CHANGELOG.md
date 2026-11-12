@@ -11,6 +11,17 @@ which are released together.
 
 ## [Unreleased]
 
+### Fixed — `npm run build` works on a copied example, and the scaffold README stops lying
+
+The eight example plugins ran `omniscio-plugin build` in their scripts but none of them declared
+`@omniscio/plugin-cli`, so the documented `cd examples/<name> && npm install && npm run build`
+failed with `omniscio-plugin: not found` unless the CLI happened to be installed globally. Each
+example now declares the CLI, and a guard test keeps it that way.
+
+The `webview` and `widget` scaffolds ship plain JavaScript with no build step, yet their generated
+README listed `npm run build`, a `dist/` folder and a TypeScript `src/ui/` layout. Their README now
+describes the layout they actually have.
+
 ### Security — a fresh scaffold installs without critical advisories
 
 `amc-plugin create` wrote `vitest: "^3.0.0"` into every template that ships tests, and the SDK

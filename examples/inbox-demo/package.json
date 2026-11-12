@@ -10,6 +10,7 @@
     "validate": "omniscio-plugin validate"
   },
   "devDependencies": {
+    "@omniscio/plugin-cli": "^3.5.0",
     "@omniscio/plugin-sdk": "^3.4.0",
     "typescript": "^5.5.0"
   }

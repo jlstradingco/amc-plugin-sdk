@@ -8,6 +8,7 @@ const base = {
   category: 'productivity',
   tags: ['productivity', 'linter'],
   hasBackend: true,
+  isWebview: false,
 }
 
 describe('buildReadme', () => {
@@ -37,5 +38,26 @@ describe('buildReadme', () => {
   it('lists the backend directory only when the plugin has a backend', () => {
     expect(buildReadme(base)).toContain('src/backend/')
     expect(buildReadme({ ...base, hasBackend: false })).not.toContain('src/backend/')
+  })
+
+  it('does not advertise a build step or dist/ for a plain-JS webview plugin', () => {
+    const readme = buildReadme({ ...base, hasBackend: false, isWebview: true })
+    expect(readme).not.toContain('npm run build')
+    expect(readme).not.toContain('dist/')
+    expect(readme).not.toContain('+ TypeScript')
+    expect(readme).toContain('ui/')
+    expect(readme).toContain('plugin.js')
+  })
+
+  it('keeps the build step for a TypeScript plugin', () => {
+    expect(buildReadme({ ...base, isWebview: false })).toContain('npm run build')
+  })
+
+  it('runs the publish command through npx, since a bare omniscio-plugin is not on the shell PATH', () => {
+    for (const isWebview of [false, true]) {
+      const readme = buildReadme({ ...base, isWebview })
+      expect(readme).toContain('npx omniscio-plugin publish')
+      expect(readme).not.toContain('\nomniscio-plugin publish')
+    }
   })
 })

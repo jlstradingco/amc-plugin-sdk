@@ -77,11 +77,14 @@ Standard npm project file. The scaffolder generates it with the build, dev, pack
     "validate": "omniscio-plugin validate"
   },
   "devDependencies": {
+    "@omniscio/plugin-cli": "^3.5.0",
     "@omniscio/plugin-sdk": "^3.4.0",
     "typescript": "^5.5.0"
   }
 }
 ```
+
+`@omniscio/plugin-cli` is what puts the `omniscio-plugin` command on the project's PATH, so the scripts above — and `npx omniscio-plugin …` in a shell — run the CLI that installed with your plugin.
 
 The `@omniscio/plugin-sdk` package provides TypeScript types for both the backend (`PluginContext`, `PluginActivate`, `PluginBackend`) and the frontend (`Omniscio` bridge). It is a dev dependency only -- it is not bundled into your plugin at runtime.
 

@@ -129,6 +129,33 @@ const SCAFFOLD_GITIGNORE = [
   ''
 ].join('\n')
 
+function gettingStartedBlock(isWebview: boolean): string[] {
+  const commands = [
+    'npm install       # install the SDK, the omniscio-plugin CLI' + (isWebview ? '' : ' + TypeScript'),
+    'npm run dev       # launch the dev shell with hot reload',
+    ...(isWebview ? [] : ['npm run build     # compile src/ to dist/']),
+    'npm run validate  # check the manifest',
+    'npm run package   # bundle a distributable .amcplugin',
+  ]
+  return ['```bash', ...commands, '```']
+}
+
+function layoutBlock(opts: { hasBackend: boolean; isWebview: boolean }): string[] {
+  const { hasBackend, isWebview } = opts
+  if (isWebview) {
+    return [
+      'manifest.json   plugin metadata, permissions, settings',
+      'ui/             webview UI (index.html + plugin.js) — no build step, edit and reload',
+    ]
+  }
+  return [
+    'manifest.json   plugin metadata, permissions, settings',
+    'src/ui/         webview UI (index.html + plugin.ts)',
+    ...(hasBackend ? ['src/backend/    backend entry (onEnable / onDisable lifecycle)'] : []),
+    'dist/           build output (gitignored)',
+  ]
+}
+
 export function buildReadme(opts: {
   displayName: string
   description: string
@@ -136,8 +163,9 @@ export function buildReadme(opts: {
   category: string
   tags: string[]
   hasBackend: boolean
+  isWebview: boolean
 }): string {
-  const { displayName, description, id, category, tags, hasBackend } = opts
+  const { displayName, description, id, category, tags, hasBackend, isWebview } = opts
   return [
     `# ${displayName}`,
     '',
@@ -149,21 +177,12 @@ export function buildReadme(opts: {
     '',
     '## Getting started',
     '',
-    '```bash',
-    'npm install       # install the SDK, the omniscio-plugin CLI + TypeScript',
-    'npm run dev       # launch the dev shell with hot reload',
-    'npm run build     # compile src/ to dist/',
-    'npm run validate  # check the manifest',
-    'npm run package   # bundle a distributable .amcplugin',
-    '```',
+    ...gettingStartedBlock(isWebview),
     '',
     '## Project layout',
     '',
     '```',
-    'manifest.json   plugin metadata, permissions, settings',
-    'src/ui/         webview UI (index.html + plugin.ts)',
-    ...(hasBackend ? ['src/backend/    backend entry (onEnable / onDisable lifecycle)'] : []),
-    'dist/           build output (gitignored)',
+    ...layoutBlock({ hasBackend, isWebview }),
     '```',
     '',
     '## Publishing',
@@ -172,7 +191,7 @@ export function buildReadme(opts: {
     '',
     '```bash',
     'npm run package',
-    'omniscio-plugin publish',
+    'npx omniscio-plugin publish',
     '```',
     '',
     'See the [Omniscio Plugin SDK docs](https://docs.omniscio.com/sdk/) for the full guide.',
@@ -556,6 +575,7 @@ describe('${displayName} backend', () => {
         category,
         tags,
         hasBackend,
+        isWebview,
       }),
     )
 

@@ -74,11 +74,12 @@ Full-stack plugin with backend. Syncs GitHub issues via cron, caches them locall
 
 ## Running Examples
 
-Each example is a standalone plugin project:
+Each example is a standalone plugin project, and every one declares `@omniscio/plugin-cli`, so
+`npm install` puts the `omniscio-plugin` command on the project's PATH:
 
 ```bash
 cd examples/<example-name>
-npm install
+npm install    # installs the SDK and the omniscio-plugin CLI
 npm run build
 npm run dev    # launches dev shell
 ```
