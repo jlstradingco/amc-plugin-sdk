@@ -3,25 +3,11 @@ import { createRequire } from 'node:module'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { rangeAccepts } from './fixtures/range-accepts.js'
 
 const cliVersion: string = createRequire(import.meta.url)('../../package.json').version
 const EXAMPLES_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../examples')
 const CLI_COMMAND = 'omniscio-plugin'
-
-function rangeAccepts(range: string, version: string): boolean {
-  const parsed = /^([\^~]?)(\d+)\.(\d+)\.(\d+)$/.exec(range)
-  if (!parsed) return false
-  const [, operator, major, minor, patch] = parsed
-  const [specMajor, specMinor, specPatch] = [major, minor, patch].map(Number)
-  const [vMajor, vMinor, vPatch] = version.split('.').map(Number)
-  if (operator === '^') {
-    if (specMajor !== vMajor) return false
-    if (vMinor !== specMinor) return vMinor > specMinor
-    return vPatch >= specPatch
-  }
-  if (operator === '~') return specMajor === vMajor && specMinor === vMinor && vPatch >= specPatch
-  return specMajor === vMajor && specMinor === vMinor && specPatch === vPatch
-}
 
 function examplePackages(): Array<{ name: string; pkg: { scripts?: Record<string, string>; devDependencies?: Record<string, string> } }> {
   return fs
@@ -42,6 +28,7 @@ describe('plugin-sdk examples', () => {
       'inbox-demo',
       'recording-demo',
       'sessions-demo',
+      'sidebar-widgets-demo',
       'storage-demo',
       'toasts-demo',
       'widget-demo',

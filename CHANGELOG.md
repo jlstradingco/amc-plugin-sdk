@@ -42,6 +42,21 @@ The `webview` and `widget` scaffolds ship plain JavaScript with no build step, y
 README listed `npm run build`, a `dist/` folder and a TypeScript `src/ui/` layout. Their README now
 describes the layout they actually have.
 
+### Fixed — a copied example says which kit version it needs, and the examples check knows it
+
+`examples/auth-demo` declares `auth.actAsUser` for `getWebAuth()`, a permission no published kit
+carries yet, and it pins a published `@omniscio/plugin-sdk` range like every example does (that pin
+is what keeps an example copyable). A fresh copy therefore installed the published 3.5.0 kit and
+stopped at `Manifest validation failed`, with nothing telling the author what to do.
+
+The example's README now states the minimum kit version it needs and why, and the examples guard in
+`packages/cli` checks every example against **the SDK release its `package.json` resolves**, not only
+against the workspace source: the record `src/__tests__/fixtures/published-sdk-surface.ts` carries
+the last published kit version and that release's permission list, and any permission the workspace
+has that the published list lacks counts as unpublished — an example that needs one must state the
+minimum kit version in its README and name the permission, or the guard fails. The record is swept
+in the release commit that publishes those permissions, so it cannot drift.
+
 ### Security — a fresh scaffold installs without critical advisories
 
 `amc-plugin create` wrote `vitest: "^3.0.0"` into every template that ships tests, and the SDK

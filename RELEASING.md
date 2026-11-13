@@ -123,10 +123,30 @@ Each of the three packages names one trusted publisher: GitHub Actions, `jlstrad
    `packages/cli/src/__tests__/host-sdk-contract.test.ts` in the same change. The scaffold's npm
    range (`buildPackageJson` in the same file) follows this package: raise it in the release
    commit of a new major.
-3. **Reconcile the Omniscio host if permissions changed.** The app's acknowledgement fixture
-   `tests/unit/lint/fixtures/sdk-permission-support.ts` lists which permissions the published SDK
-   understands, guarded by `plugin-sdk-permission-parity`. If this release added one, move it out
-   of `SDK_PENDING_PERMISSIONS` and bump `SDK_RECONCILED_VERSION` there.
+3. **Reconcile the published surface the examples are checked against.** The SDK's permission list
+   is generated from the host's `src/shared/plugin-permissions.ts`, so the workspace builds with a
+   permission the moment the host gains one — while every example pins a PUBLISHED range and a
+   copier's `npm install` brings the published kit. The record
+   `packages/cli/src/__tests__/fixtures/published-sdk-surface.ts` bridges the two: it carries the
+   last published kit version and **that release's** permission list. Every permission the
+   workspace has and that list does not is treated as unpublished, so a permission the host gains
+   is covered the day it lands rather than when someone remembers to record it. **In the release
+   commit itself** (the version bump the mirror publishes afterwards), set `PUBLISHED_PERMISSIONS`
+   to the workspace SDK's `PLUGIN_PERMISSIONS` — the list that release ships — and bump
+   `PUBLISHED_SDK_VERSION`. Do not wait for the published tarball: the examples spec holds the
+   record to the SDK's own `package.json` version and fails the release commit until both move.
+   **The record follows the published ARTIFACT, never the changelog.** Measured 2026-11-13: the
+   `3.5.0` section above lists `boards.write`, `tasks.read` and `tasks.write` as added, while the
+   published `@omniscio/plugin-sdk@3.5.0` tarball's `dist/generated/sdk-facts.js` carries 43
+   permissions and none of those three. A kit an author installs is the truth here — those three are
+   correctly treated as unpublished until a release really ships them, so check
+   `npm pack @omniscio/plugin-sdk@<version>` when the record and this file disagree.
+   In that same commit, rewrite the **Requirements** paragraph of every example whose permission
+   just became published: drop the "no published kit carries it yet" wording, keep the
+   `Requires @omniscio/plugin-sdk X.Y.Z or newer` line. An example that needs a permission no
+   published kit carries keeps that line in its README and names the permission; that is what makes
+   a fresh copy honest about the version it needs instead of dying at
+   `Manifest validation failed`.
 
 ## Never bump the SDK to a new major without the host
 
