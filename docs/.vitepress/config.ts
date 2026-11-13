@@ -83,6 +83,7 @@ export default defineConfig({
             { text: 'Widget', link: '/api/widget' },
             { text: 'Boards', link: '/api/boards' },
             { text: 'Board Links', link: '/api/board-links' },
+            { text: 'Calendar', link: '/api/calendar' },
             { text: 'Channel', link: '/api/channel' },
             { text: 'Clipboard', link: '/api/clipboard' },
             { text: 'Launch', link: '/api/launch' },

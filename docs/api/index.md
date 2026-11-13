@@ -30,6 +30,7 @@ The Omniscio Plugin SDK exposes 41 APIs to plugins. Some are available on both t
 | [Tasks](./tasks) | Choose the task lists the user shares with the plugin, then read and change their tasks | Both | `tasks.read` / `tasks.write` |
 | [Session Control](./session-control) | Choose the sessions and projects the user lets the plugin manage, then message, pause, snooze and archive them | Both | `sessions.control` |
 | [Vault](./vault) | Choose the Vault folders the user shares with the plugin, then search, read and change their notes | Both | `vault.read` / `vault.write` |
+| [Calendar](./calendar) | Choose the Google and Outlook calendars the user shares with the plugin, then read their events and free time and change events | Both | `calendar.read` / `calendar.write` |
 | [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
 | [Workspace](./workspace) | The user's real project checkouts and worktrees | Backend only | `workspace.read` / `.write` / `.exec` |
 | [Backend Calls](#backend-calls) | Call your backend's handlers from your panel | Both | None |

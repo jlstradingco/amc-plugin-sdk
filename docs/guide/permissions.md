@@ -765,6 +765,35 @@ access to your inbox in Labs. See [Inbox](../api/inbox).
 
 ---
 
+### `calendar.read`
+
+**Grants access to:** the webview's `Omniscio.calendar` namespace (`requestAccess()`) and `ctx.calendar` reads (**backend** — `calendars.list`, `events.list`, `freeBusy`), on the calendars the person picked
+
+Read the events, guests, meeting links and free or busy time on the Google and Outlook calendars the
+person picked for your plugin, or on all their calendars including ones they add later. Nothing is
+shared until they pick. A calendar they can only see as free or busy is never listed, and its events
+are never returned. A read covers at most 90 days and returns at most 250 events. 60 reads a minute
+per plugin.
+
+Elevated: it reads the person's calendars. Available when the person has turned on Plugin access to
+your calendars in Labs and a calendar is connected. See [Calendar](../api/calendar).
+
+---
+
+### `calendar.write`
+
+**Grants access to:** `ctx.calendar.events` changes (**backend** — `create`, `update`, `delete`), on the calendars the person picked
+
+Add, edit and delete events on the picked calendars the person can change. Inviting or removing
+guests, and every delete, asks the person first. Google guests are emailed only when your plugin asks
+for it and the person agrees; Outlook always emails guests. Outlook calendars stay view only until the
+person turns on "Let plugins change Outlook calendars". 10 changes a minute per plugin.
+
+**Elevated**: it changes the person's calendars. It **requires** [`calendar.read`](#calendarread) in
+the same manifest. See [Calendar](../api/calendar).
+
+---
+
 ### `launch`
 
 **Grants access to:** `ctx.launch.open(url | path)` (**backend only**)
@@ -893,6 +922,8 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `sessions.control` | `Omniscio.sessionControl` (**webview**); `ctx.sessionControl` (**backend**) | Message, pause, unpause, snooze, archive and unarchive the sessions and projects the person picked; never their text; most changes ask first — elevated |
 | `vault.read` | `Omniscio.vault` (**webview**); `ctx.vault` reads (**backend**) | Search, list and open the notes in the Vault folders the person picked; never hidden notes, the trash or the app's own folders — elevated |
 | `vault.write` | `ctx.vault.notes` changes (**backend**) | Add, edit, rename and move notes in the Vault folders the person picked; deleting asks first (**requires `vault.read`**) — elevated |
+| `calendar.read` | `Omniscio.calendar` (**webview**); `ctx.calendar` reads (**backend**) | Read events, guests, meeting links and free or busy time on the calendars the person picked — elevated |
+| `calendar.write` | `ctx.calendar.events` changes (**backend**) | Add, edit and delete events on the picked calendars the person can change; guests and deletes ask first (**requires `calendar.read`**) — elevated |
 | `ai` | `PluginAi` | Direct AI text generation |
 | `tts` | `PluginTts` (**webview**, `Omniscio.tts`) | Read text aloud with the user's configured voice (metered) |
 | `stt` | `Omniscio.stt` (**webview**) | Turn a recording into text with the configured speech service (metered) |

@@ -36,6 +36,8 @@ export const HOST_PERMISSIONS = [
   'vault.read',
   'vault.write',
   'inbox.read',
+  'calendar.read',
+  'calendar.write',
   'inbox',
   'navigation',
   'chrome',

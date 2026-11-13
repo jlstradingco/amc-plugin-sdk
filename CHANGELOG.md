@@ -106,6 +106,21 @@ agent crew, items any plugin posted, and private, hidden, review or remote sessi
 by default. Available when the person has turned on Plugin access to your inbox in Labs. See
 [Inbox](docs/api/inbox.md).
 
+### Added — read calendars and change events from the backend
+
+A plugin's backend can now read the events and free or busy time on the Google and Outlook calendars
+the person picked for it, and add, edit and delete events on the ones they can change. New
+permissions: `calendar.read` and `calendar.write` (both elevated; `calendar.write` requires
+`calendar.read` in the same manifest). The new `ctx.calendar` has `calendars.list`, `events.list`,
+`freeBusy`, `events.create`, `events.update` and `events.delete`, and `Omniscio.calendar.requestAccess()`
+opens the picker. The person can pick calendars or "All your calendars", which also covers calendars
+they add later. Inviting or removing guests and every delete ask the person first; Google guests are
+emailed only when the plugin asks and the person agrees, and Outlook always emails guests. Outlook
+calendars are view only until the person turns on "Let plugins change Outlook calendars". A read
+covers at most 90 days. A refused change resolves `{ ok: false, code }` instead of throwing.
+Available when the person has turned on Plugin access to your calendars in Labs and a calendar is
+connected. See [Calendar](docs/api/calendar.md).
+
 ### Added — read and change Vault notes from the backend
 
 A plugin's backend can now search, list and open the notes in the Vault folders the person picked for

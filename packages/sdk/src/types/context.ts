@@ -1936,6 +1936,113 @@ export interface PluginPeople {
   timeOff: PluginPeopleTimeOff
 }
 
+export type PluginCalendarProvider = 'google' | 'outlook'
+
+export interface PluginCalendarView {
+  id: string
+  name: string
+  provider: PluginCalendarProvider
+  primary: boolean
+  canWrite: boolean
+  readOnlyReason: string | null
+}
+
+export interface PluginCalendarPerson {
+  name: string | null
+  email: string
+}
+
+export interface PluginCalendarAttendee extends PluginCalendarPerson {
+  response: 'accepted' | 'declined' | 'tentative' | 'needsAction'
+}
+
+export interface PluginCalendarEvent {
+  id: string
+  calendarId: string
+  title: string
+  description: string | null
+  location: string | null
+  start: string
+  end: string
+  allDay: boolean
+  status: string
+  organizer: PluginCalendarPerson | null
+  attendees: PluginCalendarAttendee[]
+  meetingLink: string | null
+  recurringEventId: string | null
+  link: string | null
+}
+
+export interface PluginCalendarEventsQuery {
+  calendarId: string
+  from: string
+  to: string
+}
+
+export interface PluginCalendarEventsPage {
+  events: PluginCalendarEvent[]
+  truncated: boolean
+}
+
+export interface PluginCalendarFreeBusyQuery {
+  calendarIds: string[]
+  from: string
+  to: string
+}
+
+export interface PluginCalendarFreeBusy {
+  calendars: { calendarId: string; busy: { start: string; end: string }[] }[]
+}
+
+export interface PluginCalendarEventInput {
+  title: string
+  description?: string
+  location?: string
+  start: string
+  end: string
+  allDay?: boolean
+  attendees?: { email: string; name?: string }[]
+  requestId?: string
+}
+
+export type PluginCalendarEventPatch = Partial<Omit<PluginCalendarEventInput, 'requestId'>>
+
+export interface PluginCalendarWriteOptions {
+  notifyGuests?: boolean
+}
+
+export interface PluginCalendarAccessOutcome {
+  cancelled: boolean
+  allCalendars: boolean
+  calendars: { id: string; name: string; provider: PluginCalendarProvider }[]
+}
+
+export interface PluginCalendarList {
+  list(): Promise<PluginCalendarView[]>
+}
+
+export interface PluginCalendarEvents {
+  list(query: PluginCalendarEventsQuery): Promise<PluginCalendarEventsPage>
+  create(
+    calendarId: string,
+    event: PluginCalendarEventInput,
+    options?: PluginCalendarWriteOptions
+  ): Promise<PluginWriteResult<PluginCalendarEvent>>
+  update(
+    calendarId: string,
+    eventId: string,
+    patch: PluginCalendarEventPatch,
+    options?: PluginCalendarWriteOptions
+  ): Promise<PluginWriteResult<PluginCalendarEvent>>
+  delete(calendarId: string, eventId: string): Promise<PluginWriteResult<{ id: string }>>
+}
+
+export interface PluginCalendar {
+  calendars: PluginCalendarList
+  events: PluginCalendarEvents
+  freeBusy(query: PluginCalendarFreeBusyQuery): Promise<PluginCalendarFreeBusy>
+}
+
 /** What `ctx.channel.connect` needs to open one outbound WebSocket. */
 export interface PluginChannelConnectOptions {
   /** Only `'ws'` (an outbound WebSocket) is supported. `'webhook'` is refused by the host. */
@@ -2247,4 +2354,5 @@ export interface PluginContext {
   sessionControl?: PluginSessionControl
   vault?: PluginVault
   people?: PluginPeople
+  calendar?: PluginCalendar
 }
