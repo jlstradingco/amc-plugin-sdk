@@ -586,8 +586,10 @@ omniscio-plugin update
 
 ### `test`
 
-Run the plugin test suite with [vitest](https://vitest.dev). Uses the plugin's
-local vitest if installed, otherwise falls back to `npx vitest`.
+Run the plugin test suite with [vitest](https://vitest.dev). Uses the nearest installed vitest —
+the plugin's own `node_modules/.bin/vitest`, or one in a parent folder (npm and yarn install a
+workspace's dependencies at the workspace root) — and falls back to `npx vitest` only when no
+folder above the plugin has one.
 
 The plugin folder is always vitest's project root, and the command always names the config it
 runs with:

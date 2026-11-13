@@ -64,6 +64,12 @@ function linkVitestInto(pluginDir: string): void {
   writeFile(path.join(binDir, 'vitest.CMD'), `@ECHO off\r\n"${process.execPath}" "${VITEST_ENTRY}" %*\r\n`)
 }
 
+function writeMarkerVitest(dir: string, markerFile: string): void {
+  const binDir = path.join(dir, 'node_modules', '.bin')
+  fs.mkdirSync(binDir, { recursive: true })
+  fs.writeFileSync(path.join(binDir, 'vitest'), `#!/bin/sh\necho ran > "${markerFile}"\n`, { mode: 0o755 })
+}
+
 function writeSpec(pluginDir: string, relativePath: string, markerFile: string, passing: boolean): void {
   writeFile(
     path.join(pluginDir, relativePath),
@@ -121,6 +127,46 @@ describe('a plugin nested inside a bigger repo', { timeout: NESTED_TEST_TIMEOUT_
 
     expect(result.code).toBe(0)
     expect(fs.readFileSync(marker, 'utf-8')).toBe('ran')
+  })
+})
+
+describe('a plugin whose vitest is hoisted to a parent folder', { timeout: NESTED_TEST_TIMEOUT_MS }, () => {
+  it('runs that hoisted vitest instead of reaching for npx', () => {
+    const repoRoot = makeTempDir('amc-test-command-hoisted-')
+    const pluginDir = path.join(repoRoot, 'packages', 'plugin')
+    writeManifest(pluginDir, 'hoisted-demo')
+    writeSpec(pluginDir, 'own.test.mjs', 'hoisted-ran.txt', true)
+    linkVitestInto(repoRoot)
+    const marker = path.join(pluginDir, 'hoisted-ran.txt')
+    const npxMarker = path.join(repoRoot, 'npx-ran.txt')
+    const fakeBin = path.join(repoRoot, 'fake-bin')
+    fs.mkdirSync(fakeBin, { recursive: true })
+    fs.writeFileSync(path.join(fakeBin, 'npx'), `#!/bin/sh\necho ran > "${npxMarker}"\n`, { mode: 0o755 })
+    process.env.PATH = `${fakeBin}${path.delimiter}${originalPath}`
+    process.chdir(pluginDir)
+
+    const result = runTestCommand([])
+
+    expect(result.code).toBe(0)
+    expect(fs.readFileSync(marker, 'utf-8')).toBe('ran')
+    expect(fs.existsSync(npxMarker)).toBe(false)
+  })
+
+  it('runs the plugin own vitest when a parent has one too', () => {
+    const repoRoot = makeTempDir('amc-test-command-nearest-')
+    const pluginDir = path.join(repoRoot, 'packages', 'plugin')
+    writeManifest(pluginDir, 'nearest-demo')
+    const ownMarker = path.join(repoRoot, 'own-ran.txt')
+    const hoistedMarker = path.join(repoRoot, 'hoisted-ran.txt')
+    writeMarkerVitest(pluginDir, ownMarker)
+    writeMarkerVitest(repoRoot, hoistedMarker)
+    process.chdir(pluginDir)
+
+    const result = runTestCommand([])
+
+    expect(result.code).toBe(0)
+    expect(fs.existsSync(ownMarker)).toBe(true)
+    expect(fs.existsSync(hoistedMarker)).toBe(false)
   })
 })
 
@@ -288,10 +334,7 @@ describe('the test command', () => {
     writeFile(path.join(pluginDir, 'vitest.config.mjs'), 'export default {}\n')
     const localMarker = path.join(repoRoot, 'local-ran.txt')
     const npxMarker = path.join(repoRoot, 'npx-ran.txt')
-    fs.mkdirSync(path.join(pluginDir, 'node_modules', '.bin'), { recursive: true })
-    fs.writeFileSync(path.join(pluginDir, 'node_modules', '.bin', 'vitest'), `#!/bin/sh\necho ran > "${localMarker}"\n`, {
-      mode: 0o755
-    })
+    writeMarkerVitest(pluginDir, localMarker)
     const fakeBin = path.join(repoRoot, 'fake-bin')
     fs.mkdirSync(fakeBin, { recursive: true })
     fs.writeFileSync(path.join(fakeBin, 'npx'), `#!/bin/sh\necho ran > "${npxMarker}"\n`, { mode: 0o755 })

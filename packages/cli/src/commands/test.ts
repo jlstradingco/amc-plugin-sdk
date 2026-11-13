@@ -33,8 +33,14 @@ export interface VitestInvocation {
 
 function findLocalVitest(cwd: string): string | null {
   const bin = process.platform === 'win32' ? 'vitest.CMD' : 'vitest'
-  const candidate = path.join(cwd, 'node_modules', '.bin', bin)
-  return fs.existsSync(candidate) ? candidate : null
+  let dir = path.resolve(cwd)
+  for (;;) {
+    const candidate = path.join(dir, 'node_modules', '.bin', bin)
+    if (fs.existsSync(candidate)) return candidate
+    const parent = path.dirname(dir)
+    if (parent === dir) return null
+    dir = parent
+  }
 }
 
 export function findPluginConfig(pluginDir: string): string | null {

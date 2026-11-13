@@ -31,6 +31,21 @@ A plugin can now offer widgets for Omniscio's widget sidebar, and the SDK types 
 `WidgetSpec` is now the union of the compact and rich specs, so code that built one compact spec still
 compiles.
 
+### Fixed — `omniscio-plugin test` finds a workspace-hoisted vitest
+
+`test` looked for vitest in the plugin's own `node_modules/.bin` only, so a plugin kept inside a
+bigger repo missed a vitest that lives in a parent folder — an npm or yarn workspace installs a
+workspace's dependencies at the workspace root rather than in each package — and fell back to
+`npx vitest`. That ran a different (usually slower, possibly downloaded) vitest than the author
+installed, and often a different version from the one the plugin's own `import 'vitest'` resolves
+to.
+
+`test` now walks up from the plugin folder to the nearest `node_modules/.bin/vitest` — the same chain
+Node walks to resolve the plugin's imports. A plugin with its own install still uses it, and `npx` is
+used only when no folder above the plugin has vitest.
+
+**Migration:** nothing to do.
+
 ### Fixed — `npm run build` works on a copied example, and the scaffold README stops lying
 
 The eight example plugins ran `omniscio-plugin build` in their scripts but none of them declared
