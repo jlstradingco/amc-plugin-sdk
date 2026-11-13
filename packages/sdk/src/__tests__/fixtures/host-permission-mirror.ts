@@ -1,8 +1,8 @@
 export const HOST_MIRROR_PROVENANCE = {
-  reconciledAt: '2026-11-05',
-  sourceCommit: 'b43330913baa785894f22ba13a6d278897d67e71',
-  sourceBranch: 'feat/thumbnail-studio-file-01-plugin-session-20261104-153945',
-  onOriginMaster: false,
+  reconciledAt: '2026-11-13',
+  sourceCommit: '4325148db05c08e259151c69c97859505fa32aa8',
+  sourceBranch: 'master',
+  onOriginMaster: true,
 } as const
 
 export const HOST_PERMISSIONS = [
@@ -56,6 +56,9 @@ export const HOST_PERMISSIONS = [
   'email.send',
   'webassembly',
   'email.fromName',
+  'auth.actAsUser',
+  'ai.images',
+  'coaching-profile',
 ] as const
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
