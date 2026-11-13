@@ -630,6 +630,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         return Promise.resolve()
       },
       onDismiss: () => () => {},
+      listMine: () => {
+        if (shouldLog) console.log(`${prefix} [inbox] listMine`)
+        return Promise.resolve({ items: [], truncated: false })
+      },
     },
 
     auth: {

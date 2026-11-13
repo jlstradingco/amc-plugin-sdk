@@ -311,9 +311,11 @@ See the [Inbox API](../api/inbox) for the full `InboxItem` shape.
 
 ### `auth`
 
-**Grants access to:** `PluginAuth` identity methods
+**Grants access to:** `PluginAuth` identity methods, plus `AgentMC.auth.getWebAuth()` (**webview**)
 
-See who is signed in to Omniscio (name and email) and react to sign-in state:
+This is a Tier-1 **elevated** permission, and the consent card says so. Besides seeing who is signed in, it lets your panel call `AgentMC.auth.getWebAuth()`, which hands the plugin a real sign-in credential for the person's account. A plugin holding it can read and send Team Chat messages as that person, and the sign-in keeps working after Omniscio closes.
+
+See who is signed in (name and email) and react to sign-in state:
 
 ```typescript
 const user = await ctx.auth.getUser()
@@ -697,6 +699,72 @@ indicator. It never sees a session's text, and it grants nothing over a session.
 
 ---
 
+### `sessions.control`
+
+**Grants access to:** the webview's `Omniscio.sessionControl` namespace (`requestAccess()`) and `ctx.sessionControl` (**backend** — `list`, `message`, `pause`, `unpause`, `snooze`, `archive`, `unarchive`), on the sessions and projects the person picked
+
+Message, pause, unpause, snooze, archive and unarchive the sessions the person picked for your
+plugin, including sessions your plugin did not start. A picked project covers its later sessions too.
+Nothing is shared until they pick. It never sees what a session says, it never reaches private AI
+Coaching or Journal sessions, hidden or review sessions, or another plugin's sessions, and it never
+changes a session running on another computer.
+
+Messaging, pausing, archiving, unpausing and unarchiving ask the person first, unless they turned that
+ask off in Settings → Plugins; unpausing or unarchiving a session they closed themselves always asks.
+Snoozing never asks. A session with an answer the person has not read is never archived by a plugin.
+10 changes and 60 reads a minute per plugin.
+
+**Elevated**: it changes the person's sessions. It does not need `sessions`. Available when the person
+has turned on Plugin control of your sessions in Labs. See [Session Control](../api/session-control).
+
+---
+
+### `vault.read`
+
+**Grants access to:** the webview's `Omniscio.vault` namespace (`requestAccess()`) and `ctx.vault` reads (**backend** — `search`, `notes.list`, `notes.get`), on the Vault folders the person picked
+
+Search, list and open the notes in the Vault folders the person picked for your plugin. A folder covers
+its subfolders and notes added later, and matches by whole name, so `Work` never covers `Workshop`. The
+person can also pick "All your notes, including new ones". Nothing is shared until they pick. Notes they
+hid, the Vault trash, the assets folder and the app's own folders are never returned. Search is the plain
+word search: no AI summaries, no meaning-based search. 60 reads a minute per plugin.
+
+Elevated: it reads the person's notes. Available when the person has turned on Plugin access to your
+Vault in Labs and the Vault is on. See [Vault](../api/vault).
+
+---
+
+### `vault.write`
+
+**Grants access to:** `ctx.vault.notes` changes (**backend** — `create`, `update`, `rename`, `move`, `delete`), on the Vault folders the person picked
+
+Add, edit, rename and move notes in the Vault folders the person picked. An edit must carry the time
+your plugin last read the note; if the note changed since, the edit is refused as a conflict and nothing
+changes. A move needs both the folder it leaves and the folder it enters to be picked. Deleting a note
+asks the person first, every time, and the note goes to the Vault trash where they can restore it.
+10 changes a minute per plugin.
+
+**Elevated**: it changes the person's notes. It **requires** [`vault.read`](#vaultread) in the same
+manifest. See [Vault](../api/vault).
+
+---
+
+### `inbox.read`
+
+**Grants access to:** `ctx.inbox.listMine()` (**backend** only)
+
+See the titles of the person's open inbox items and of the sessions waiting on them, newest first,
+with each item's kind, time and whether it is asking them something. Never an item's text, links,
+files, prompts, forms, fields, sender or source session. Snoozed and answered items, items filed for
+an agent crew, items any plugin posted, and private, hidden, review or remote sessions never appear.
+1 to 100 items a call (25 by default). 60 reads a minute per plugin, shared with the other work-data
+reads. It is separate from [`inbox`](#inbox): neither needs the other.
+
+Elevated: it reads what is waiting for the person. Available when the person has turned on Plugin
+access to your inbox in Labs. See [Inbox](../api/inbox).
+
+---
+
 ### `launch`
 
 **Grants access to:** `ctx.launch.open(url | path)` (**backend only**)
@@ -806,6 +874,9 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `sessions.readHistory` | `PluginSessionHistory` (**webview**) | Read PAST sessions/projects the user explicitly grants |
 | `sessions.launchAny` | `ctx.sessions.fanout` (**backend**) | Start a batch of sessions across any project — built-in and first-party plugins only, and it does not need `sessions` |
 | `sessions.observeStatus` | *(session-status feed; no namespace)* | See when sessions start, finish or need the person — never their text |
+| `sessions.control` | `Omniscio.sessionControl` (**webview**); `ctx.sessionControl` (**backend**) | Message, pause, unpause, snooze, archive and unarchive the sessions and projects the person picked; never their text; most changes ask first — elevated |
+| `vault.read` | `Omniscio.vault` (**webview**); `ctx.vault` reads (**backend**) | Search, list and open the notes in the Vault folders the person picked; never hidden notes, the trash or the app's own folders — elevated |
+| `vault.write` | `ctx.vault.notes` changes (**backend**) | Add, edit, rename and move notes in the Vault folders the person picked; deleting asks first (**requires `vault.read`**) — elevated |
 | `ai` | `PluginAi` | Direct AI text generation |
 | `tts` | `PluginTts` (**webview**, `Omniscio.tts`) | Read text aloud with the user's configured voice (metered) |
 | `stt` | `Omniscio.stt` (**webview**) | Turn a recording into text with the configured speech service (metered) |
@@ -817,7 +888,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `notifications` | `PluginToast.notify()` | Native OS desktop notifications |
 | `system` | Host launcher / clipboard / file-open | Open paths and read the clipboard from your UI, and run an allow-listed or pinned program through `ctx.process` (backend) or `window.Omniscio.process` (UI); a backend's own `child_process` is refused by the sandbox |
 | `rss` | `ctx.rss` (`fetchFeed`, `listFeeds`, `getRecentEntries`) | Read RSS feeds and articles from Omniscio's Channels |
-| `auth` | `PluginAuth` (identity) | See who is signed in; react to sign-in state |
+| `auth` | `PluginAuth` (identity) + `AgentMC.auth.getWebAuth()` (**webview**) | See who is signed in, and take a real sign-in credential the plugin can use to read and send Team Chat as that person, still valid after Omniscio closes — elevated |
 | `auth.session` | `PluginAuth.getSession()` | Scoped Google/GitHub access tokens on the user's behalf |
 | `auth.sharedSignIn` | *(shared webview sign-in session)* | Sign in once across the plugins the person grouped — elevated |
 | `oauth` | `ctx.oauth.authorize` (**backend**) | Sign the person in to another service they choose — elevated |
@@ -834,6 +905,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated; `ctx.email.sender()` reads which address that is, and sends nothing (backend only) |
 | `email.fromName` | `PluginEmail` (`fromName` on `send`) | Put a display name beside the agent address; cleaned, capped at 64 characters, never the app's own name; needs `email.send` (backend only) |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
+| `inbox.read` | `ctx.inbox.listMine()` (**backend**) | See the titles of the person's open inbox items and waiting sessions, never their contents — elevated |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
 | `spend` | `PluginSpend` | Read-only AI cost/usage totals for spend reports |
 | `boards.read` | `Omniscio.boards` (**webview**); `ctx.boards` reads (**backend**) | Read the boards the person grants: items, column values and statuses |

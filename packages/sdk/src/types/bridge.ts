@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -9,6 +9,10 @@ import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSideb
 export type { SessionStatus, SessionPendingAction } from './context.js'
 
 export type { PluginTaskListView, PluginTaskAccessOutcome } from './context.js'
+
+export type { PluginSessionControlAccessOutcome } from './context.js'
+
+export type { PluginVaultAccessOutcome } from './context.js'
 
 /**
  * The `err.code` a bridge call rejects with when the computer or the share service refuses it.
@@ -1016,6 +1020,14 @@ export interface BridgeTasks {
   requestAccess(): Promise<PluginTaskAccessOutcome>
 }
 
+export interface BridgeSessionControl {
+  requestAccess(): Promise<PluginSessionControlAccessOutcome>
+}
+
+export interface BridgeVault {
+  requestAccess(): Promise<PluginVaultAccessOutcome>
+}
+
 /** A board item a plugin may link to, as returned by `Omniscio.boardLinks.searchItems()`. */
 export interface BridgeBoardLinkItem {
   id: string
@@ -1333,6 +1345,8 @@ export interface Omniscio {
   /** Requires `boards.link`. See {@link BridgeBoardLinks}. */
   boardLinks: BridgeBoardLinks
   tasks: BridgeTasks
+  sessionControl: BridgeSessionControl
+  vault: BridgeVault
   /** See {@link BridgeClipboard}. */
   clipboard: BridgeClipboard
   /** Requires `members.read`. See {@link BridgeMembers}. */

@@ -52,6 +52,7 @@ describe('SDK <-> host permission parity', () => {
     firebase: { surface: BRIDGE, key: 'firebase' },
     recording: { surface: CTX, key: 'recording' },
     inbox: { surface: CTX, key: 'inbox' },
+    'inbox.read': { surface: CTX, key: 'inbox' },
     spend: { surface: CTX, key: 'spend' },
     'boards.read': null,
     coreRead: { surface: CTX, key: 'core' },
@@ -76,6 +77,9 @@ describe('SDK <-> host permission parity', () => {
     'boards.write': null,
     'tasks.read': null,
     'tasks.write': null,
+    'sessions.control': null,
+    'vault.read': null,
+    'vault.write': null,
     webassembly: null,
   }
 
@@ -148,7 +152,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(46)
+    expect(HOST_PERMISSIONS.length).toBe(50)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

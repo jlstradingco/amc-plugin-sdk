@@ -658,6 +658,23 @@ export interface InboxDismissal {
   dismissed: boolean
 }
 
+export interface PluginMyInboxItem {
+  id: string
+  kind: 'alert' | 'session'
+  title: string
+  createdAt: string
+  asksYou: boolean
+}
+
+export interface PluginMyInboxQuery {
+  limit?: number
+}
+
+export interface PluginMyInboxPage {
+  items: PluginMyInboxItem[]
+  truncated: boolean
+}
+
 export interface PluginInbox {
   /** At most 500 items. Replaces this plugin's whole set. */
   setItems(items: InboxItem[]): Promise<void>
@@ -677,6 +694,7 @@ export interface PluginInbox {
     inboxVisible?: boolean
   }): Promise<void>
   onDismiss(handler: (dismissal: InboxDismissal) => void): () => void
+  listMine(query?: PluginMyInboxQuery): Promise<PluginMyInboxPage>
 }
 
 /**
@@ -1790,6 +1808,98 @@ export interface PluginTasks {
   delete(id: string): Promise<PluginWriteResult<{ id: string }>>
 }
 
+export interface PluginControlledSession {
+  id: string
+  name: string
+  projectId: string
+  projectName: string | null
+  status: string
+  lastActiveAt: string
+}
+
+export interface PluginSessionControlAccessOutcome {
+  cancelled: boolean
+  sessions: { id: string; name: string }[]
+  projects: { id: string; name: string }[]
+}
+
+export interface PluginSessionControl {
+  list(): Promise<PluginControlledSession[]>
+  message(sessionId: string, text: string): Promise<PluginWriteResult<{ id: string }>>
+  pause(sessionId: string): Promise<PluginWriteResult<{ id: string }>>
+  unpause(sessionId: string): Promise<PluginWriteResult<{ id: string }>>
+  snooze(sessionId: string, untilIso: string): Promise<PluginWriteResult<{ id: string }>>
+  archive(sessionId: string): Promise<PluginWriteResult<{ id: string }>>
+  unarchive(sessionId: string): Promise<PluginWriteResult<{ id: string }>>
+}
+
+export interface PluginVaultSearchHit {
+  noteId: string
+  title: string
+  path: string
+  snippet: string
+}
+
+export interface PluginVaultNoteSummary {
+  id: string
+  title: string
+  path: string
+  updatedAt: string
+}
+
+export interface PluginVaultNotesQuery {
+  folder?: string
+  limit?: number
+  cursor?: string
+}
+
+export interface PluginVaultNotesPage {
+  notes: PluginVaultNoteSummary[]
+  nextCursor: string | null
+}
+
+export interface PluginVaultNote {
+  id: string
+  title: string
+  path: string
+  body: string | null
+  bodyTooLarge: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PluginVaultNoteInput {
+  folder: string
+  name: string
+  body: string
+}
+
+export interface PluginVaultNotePatch {
+  body: string
+  expectedUpdatedAt: string
+}
+
+export interface PluginVaultAccessOutcome {
+  cancelled: boolean
+  allNotes: boolean
+  folders: string[]
+}
+
+export interface PluginVaultNotes {
+  list(options?: PluginVaultNotesQuery): Promise<PluginVaultNotesPage>
+  get(id: string): Promise<PluginVaultNote>
+  create(input: PluginVaultNoteInput): Promise<PluginWriteResult<{ id: string; path: string; updatedAt: string }>>
+  update(id: string, patch: PluginVaultNotePatch): Promise<PluginWriteResult<{ id: string; updatedAt: string }>>
+  rename(id: string, name: string): Promise<PluginWriteResult<{ id: string; path: string; updatedAt: string }>>
+  move(id: string, folder: string): Promise<PluginWriteResult<{ id: string; path: string; updatedAt: string }>>
+  delete(id: string): Promise<PluginWriteResult<{ id: string }>>
+}
+
+export interface PluginVault {
+  search(query: string, options?: { limit?: number }): Promise<{ hits: PluginVaultSearchHit[] }>
+  notes: PluginVaultNotes
+}
+
 /** What `ctx.channel.connect` needs to open one outbound WebSocket. */
 export interface PluginChannelConnectOptions {
   /** Only `'ws'` (an outbound WebSocket) is supported. `'webhook'` is refused by the host. */
@@ -2098,4 +2208,6 @@ export interface PluginContext {
   rss?: PluginRss
   boards?: PluginBoards
   tasks?: PluginTasks
+  sessionControl?: PluginSessionControl
+  vault?: PluginVault
 }

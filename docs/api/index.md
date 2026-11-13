@@ -20,7 +20,7 @@ The Omniscio Plugin SDK exposes 41 APIs to plugins. Some are available on both t
 | [Settings](./settings) | Read plugin settings | Both | None |
 | [Events](./events) | Messaging between your UI and backend | Both | None |
 | [Logging](./logging) | Structured log output | Backend only | None |
-| [Inbox](./inbox) | Surface items in Omniscio's inbox | Both | `inbox` |
+| [Inbox](./inbox) | Surface items in Omniscio's inbox, and see the titles of what is waiting for the user | Both | `inbox` / `inbox.read` |
 | [Auth](./auth) | Signed-in identity and scoped account tokens | Both | `auth` (`auth.session` for tokens) |
 | [Recording](./recording) | Screen recording, host-mediated | Backend only | `recording` |
 | [Email](./email) | Send one email from the user's agent address | Backend only | `email.send` |
@@ -28,6 +28,8 @@ The Omniscio Plugin SDK exposes 41 APIs to plugins. Some are available on both t
 | [Session History](./session-history) | Read past sessions the user has granted | Webview only | `sessions.readHistory` |
 | [Firebase](./firebase) | The user's Firebase accounts and projects | Webview only | `firebase` |
 | [Tasks](./tasks) | Choose the task lists the user shares with the plugin, then read and change their tasks | Both | `tasks.read` / `tasks.write` |
+| [Session Control](./session-control) | Choose the sessions and projects the user lets the plugin manage, then message, pause, snooze and archive them | Both | `sessions.control` |
+| [Vault](./vault) | Choose the Vault folders the user shares with the plugin, then search, read and change their notes | Both | `vault.read` / `vault.write` |
 | [Spend](./spend) | Read-only AI cost and usage totals | Backend only | `spend` |
 | [Workspace](./workspace) | The user's real project checkouts and worktrees | Backend only | `workspace.read` / `.write` / `.exec` |
 | [Backend Calls](#backend-calls) | Call your backend's handlers from your panel | Both | None |

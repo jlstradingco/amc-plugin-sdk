@@ -3,7 +3,7 @@
 Surface items in Omniscio's inbox -- the unified list where the user reviews things that need their attention.
 
 **Availability:** Both (backend `ctx.inbox` / frontend `Omniscio.inbox`)
-**Required Permission:** `inbox`
+**Required Permission:** `inbox` (`inbox.read` for `listMine`)
 
 Use the inbox to raise plugin-owned items the user should look at: a finished report, a review request, a detected problem. Items you set replace the plugin's previous set, so you always publish the current list rather than appending one at a time.
 
@@ -69,6 +69,48 @@ ctx.inbox.onDismiss(({ itemId, dismissed }) => {
 ```
 
 A handler only hears about your own rows, never another plugin's. A timed "remind me later" snooze is not a dismissal and does not call it. In tests, `createTestContext()` returns `dismissInboxItem(itemId, dismissed = true)` to simulate one.
+
+### `listMine(query?: PluginMyInboxQuery): Promise<PluginMyInboxPage>`
+
+**Availability:** backend only (`ctx.inbox`); a panel call is refused.
+
+See the titles of what is waiting for the user: their open inbox items and the sessions waiting on them, newest first. Each item carries its title, its kind, when it arrived and whether it is asking the user something, and never its contents.
+
+**Requires the `inbox.read` permission** (elevated). It is separate from `inbox`: `inbox` alone cannot list, and `inbox.read` alone cannot post. Available when the user has turned on Plugin access to your inbox in Labs; otherwise the call rejects.
+
+| Name | Type | Description |
+|---|---|---|
+| `query.limit` | `number` | Optional. A whole number from 1 to 100; 25 when left out |
+
+**Returns:** `Promise<PluginMyInboxPage>`
+
+```typescript
+interface PluginMyInboxItem {
+  id: string
+  kind: 'alert' | 'session'
+  title: string       // a session reads "<session name> - <project name>"
+  createdAt: string   // ISO time it arrived, or the session started waiting
+  asksYou: boolean    // true only when whoever raised it said it asks the user something
+}
+
+interface PluginMyInboxPage {
+  items: PluginMyInboxItem[]
+  truncated: boolean  // true when more items were left out
+}
+```
+
+```typescript
+const { items, truncated } = await ctx.inbox.listMine({ limit: 10 })
+const questions = items.filter((item) => item.asksYou)
+```
+
+What is never returned:
+
+- an item's text, links, files, the prompt or form it carries, its fields, where it would take the user, who sent it, or which session raised it
+- snoozed or answered items, items filed for an agent crew, and items any plugin posted (your own included)
+- private sessions (such as AI Coaching), hidden or background plugin sessions, review sessions, and sessions running on another computer
+
+At most 60 reads a minute per plugin, shared with the other work-data reads; a faster call rejects with `RATE_LIMITED`. Every read is written to the host's read log. In tests, `createTestContext()` answers an empty page.
 
 ## The `InboxItem` type
 

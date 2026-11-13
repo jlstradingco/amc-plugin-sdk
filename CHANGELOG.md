@@ -69,6 +69,32 @@ the new elevated permission `auth.actAsUser`, and `auth` alone refuses the call.
 account access in its own, clearly worded row instead of hiding it inside Identity. See
 [the permissions guide](docs/guide/permissions.md#authactususer).
 
+### Added — see the titles of what is waiting in the person's inbox
+
+A plugin's backend can now call `ctx.inbox.listMine({ limit })` to see the titles of the person's open
+inbox items and of the sessions waiting on them, newest first, with each item's kind, time and whether
+it is asking the person something. It never returns an item's text, links, files, prompts, forms,
+fields, sender or source session, and it leaves out snoozed and answered items, items filed for an
+agent crew, items any plugin posted, and private, hidden, review or remote sessions. New permission:
+`inbox.read` (elevated; separate from `inbox`, and neither needs the other). 1 to 100 items a call, 25
+by default. Available when the person has turned on Plugin access to your inbox in Labs. See
+[Inbox](docs/api/inbox.md).
+
+### Added — read and change Vault notes from the backend
+
+A plugin's backend can now search, list and open the notes in the Vault folders the person picked for
+it, and add, edit, rename, move and delete them. New permissions: `vault.read` and `vault.write` (both
+elevated; `vault.write` requires `vault.read` in the same manifest). The new `ctx.vault` has `search`
+and `notes.list`, `notes.get`, `notes.create`, `notes.update`, `notes.rename`, `notes.move` and
+`notes.delete`, and `Omniscio.vault.requestAccess()` opens the picker. The person can pick folders or
+"All your notes, including new ones". A folder matches by whole name and covers its subfolders and
+later notes. A plugin never reaches hidden notes, the Vault trash or the app's own folders. An edit
+must carry `expectedUpdatedAt` from the last read, and a note that changed since is refused as
+`CONFLICT`. A refused change resolves `{ ok: false, code }` instead of throwing. Deleting a note asks
+the person first, every time, and moves it to the Vault trash; adding, editing, renaming and moving
+never ask. Available when the person has turned on Plugin access to your Vault in Labs and the Vault is
+on. See [Vault](docs/api/vault.md).
+
 ## [3.5.0] - 2026-11-09
 
 ### Fixed — `omniscio-plugin test` runs your plugin's own tests inside a bigger repo
@@ -87,6 +113,19 @@ filters, the local-vitest-over-`npx` choice and the exit code are unchanged.
 was relying on inheriting its parent repo's config, add a `vitest.config.ts` in the plugin that
 imports it — a `root` set inside a config is now replaced by the plugin folder. See
 [the test command](docs/reference/cli.md#test).
+
+### Added — manage the person's sessions from the backend
+
+A plugin's backend can now message, pause, unpause, snooze, archive and unarchive the sessions and
+projects the person picked for it, including sessions it did not start. New permission:
+`sessions.control` (elevated). The new `ctx.sessionControl` has `list`, `message`, `pause`, `unpause`,
+`snooze`, `archive` and `unarchive`, and `Omniscio.sessionControl.requestAccess()` opens the picker. A
+picked project covers its later sessions. A plugin never sees what a session says, and never reaches
+private AI Coaching or Journal sessions, hidden or review sessions, or another plugin's sessions. A
+refused change resolves `{ ok: false, code }` instead of throwing. Messaging, pausing, archiving,
+unpausing and unarchiving ask the person first unless they turned that ask off in Settings → Plugins;
+snoozing never asks. Available when the person has turned on Plugin control of your sessions in Labs.
+See [Session Control](docs/api/session-control.md).
 
 ### Added — read and change boards and tasks from the backend
 

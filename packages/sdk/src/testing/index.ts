@@ -802,7 +802,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       onDismiss: (handler) => {
         inboxDismissHandlers.add(handler)
         return () => { inboxDismissHandlers.delete(handler) }
-      }
+      },
+      listMine: () => Promise.resolve({ items: [], truncated: false })
     },
 
     auth: {

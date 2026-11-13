@@ -92,10 +92,12 @@ export default defineConfig({
             { text: 'OAuth', link: '/api/oauth' },
             { text: 'Process', link: '/api/process' },
             { text: 'RSS', link: '/api/rss' },
+            { text: 'Session Control', link: '/api/session-control' },
             { text: 'Share', link: '/api/share' },
             { text: 'Shell', link: '/api/shell' },
             { text: 'Speech to Text', link: '/api/stt' },
-            { text: 'Tasks', link: '/api/tasks' }
+            { text: 'Tasks', link: '/api/tasks' },
+            { text: 'Vault', link: '/api/vault' }
           ]
         }
       ]

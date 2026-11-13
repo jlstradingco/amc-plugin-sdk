@@ -28,6 +28,7 @@ export const REQUIRED_PERMISSION_PARTNERS = [
   ['boards.link', 'boards.read'],
   ['boards.write', 'boards.read'],
   ['tasks.write', 'tasks.read'],
+  ['vault.write', 'vault.read'],
 ] as const
 
 const pluginIdRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/

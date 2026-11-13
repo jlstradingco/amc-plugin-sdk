@@ -48,6 +48,5 @@ export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
   { namespace: 'scan', reason: 'Security scanning — no AgentMC type yet' },
   { namespace: 'secrets', reason: 'Encrypted credential storage — no AgentMC type yet' },
   { namespace: 'shotflow', reason: 'Owned by the ShotFlow plugin alone — no AgentMC type yet' },
-  { namespace: 'tray', reason: 'Tray menu contributions — no AgentMC type yet' },
-  { namespace: 'writer', reason: 'Document editing — no AgentMC type yet' }
+  { namespace: 'tray', reason: 'Tray menu contributions — no AgentMC type yet' }
 ]
