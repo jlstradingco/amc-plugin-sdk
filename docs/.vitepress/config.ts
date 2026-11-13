@@ -90,6 +90,7 @@ export default defineConfig({
             { text: 'Navigation', link: '/api/navigation' },
             { text: 'Notifications', link: '/api/notifications' },
             { text: 'OAuth', link: '/api/oauth' },
+            { text: 'People', link: '/api/people' },
             { text: 'Process', link: '/api/process' },
             { text: 'RSS', link: '/api/rss' },
             { text: 'Session Control', link: '/api/session-control' },

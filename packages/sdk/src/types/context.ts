@@ -1900,6 +1900,42 @@ export interface PluginVault {
   notes: PluginVaultNotes
 }
 
+export interface PluginPersonSchedule {
+  memberId: string
+  name: string
+  weekdays: number[]
+  hoursPerDay: number
+}
+
+export interface PluginTimeOffQuery {
+  from: string
+  to: string
+}
+
+export type PluginTimeOffReason = 'vacation' | 'leave' | 'sick' | 'other'
+
+export interface PluginPersonTimeOff {
+  memberId: string
+  name: string
+  startDate: string
+  endDate: string
+  shareAway: 100 | 50
+  reason: PluginTimeOffReason | null
+}
+
+export interface PluginPeopleSchedules {
+  list(): Promise<PluginPersonSchedule[]>
+}
+
+export interface PluginPeopleTimeOff {
+  list(query: PluginTimeOffQuery): Promise<PluginPersonTimeOff[]>
+}
+
+export interface PluginPeople {
+  schedules: PluginPeopleSchedules
+  timeOff: PluginPeopleTimeOff
+}
+
 /** What `ctx.channel.connect` needs to open one outbound WebSocket. */
 export interface PluginChannelConnectOptions {
   /** Only `'ws'` (an outbound WebSocket) is supported. `'webhook'` is refused by the host. */
@@ -2210,4 +2246,5 @@ export interface PluginContext {
   tasks?: PluginTasks
   sessionControl?: PluginSessionControl
   vault?: PluginVault
+  people?: PluginPeople
 }

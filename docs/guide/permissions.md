@@ -834,6 +834,22 @@ email addresses, and it grants nothing about their sessions or their content.
 
 ---
 
+### `people.read`
+
+**Grants access to:** `ctx.people.schedules.list()` and `ctx.people.timeOff.list({ from, to })`
+(**backend** only)
+
+See the working days and hours of the people in the workspace, and the days they are away, never more
+than the person could see in Mission Control: an admin or a project lead sees everyone's hours, anyone
+else only their own. Why someone is away is shown only for the person's own days, or for everyone's
+when the person is an admin, and never when it was kept private. Never an email address or a role. 60
+reads a minute per plugin, shared with the other work-data reads, and every read is logged.
+
+It **requires** [`members.read`](#membersread) in the same manifest. Available when the person has
+turned on Plugin access to people's schedules in Labs. See [People](../api/people).
+
+---
+
 ### `workspace.read`, `workspace.write`, `workspace.exec`
 
 **Grants access to:** `ctx.workspace` (**backend**) — three separate grants over the projects the
@@ -897,6 +913,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
+| `people.read` | `ctx.people.schedules.list()` / `ctx.people.timeOff.list()` (**backend**) | See when the workspace's people work and when they are away, never more than the person could see (**requires `members.read`**) |
 | `auth.actAsUser` | `AgentMC.auth.getWebAuth()` (**webview**) | Sign in to the shared account as the person -- **elevated**; reads and sends as them |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
 | `chrome.widget` | `Omniscio.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |

@@ -331,6 +331,30 @@ describe('host-parity rules', () => {
     })
   })
 
+  describe("people's schedules permission pairing", () => {
+    it('rejects people.read declared without members.read, naming the fix', () => {
+      const result = validateManifest({ ...validManifest, permissions: ['people.read'] })
+      expect(result.valid).toBe(false)
+      expect(result.errors.join(' ')).toContain(
+        '"people.read" requires an explicit "members.read" permission in the same manifest: add members.read to permissions'
+      )
+    })
+
+    it('accepts people.read when members.read is declared alongside', () => {
+      const result = validateManifest({
+        ...validManifest,
+        permissions: ['members.read', 'people.read'],
+      })
+      expect(result.valid).toBe(true)
+      expect(result.errors).toEqual([])
+    })
+
+    it('accepts members.read on its own', () => {
+      const result = validateManifest({ ...validManifest, permissions: ['members.read'] })
+      expect(result.valid).toBe(true)
+    })
+  })
+
   describe('sdkVersion with a backend', () => {
     // The host's authoring rule (authorManifestProblems, shared/plugin-manifest-schema.ts @
     // 113b4d5): sdkVersion selects the worker loader, so a backend without it never starts.

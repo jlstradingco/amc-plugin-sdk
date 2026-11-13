@@ -84,6 +84,17 @@ the new elevated permission `auth.actAsUser`, and `auth` alone refuses the call.
 account access in its own, clearly worded row instead of hiding it inside Identity. See
 [the permissions guide](docs/guide/permissions.md#authactususer).
 
+### Added — see when the workspace's people work and when they are away
+
+A plugin's backend can now call `ctx.people.schedules.list()` to see the working days and hours of the
+people in the workspace, and `ctx.people.timeOff.list({ from, to })` to see the days they are away
+between two `YYYY-MM-DD` days (at most 366 days). It never sees more than the person could in Mission
+Control: an admin or a project lead sees everyone's hours, anyone else only their own, and why someone
+is away is shown only for the person's own days or, for an admin, everyone's, and never when it was
+kept private. No email address or role is ever returned. New permission: `people.read` (standard; it
+**requires** `members.read`). Available when the person has turned on Plugin access to people's
+schedules in Labs. See [People](docs/api/people.md).
+
 ### Added — see the titles of what is waiting in the person's inbox
 
 A plugin's backend can now call `ctx.inbox.listMine({ limit })` to see the titles of the person's open

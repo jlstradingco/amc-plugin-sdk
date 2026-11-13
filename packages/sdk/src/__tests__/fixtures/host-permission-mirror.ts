@@ -53,6 +53,7 @@ export const HOST_PERMISSIONS = [
   'documents.read',
   'documents.write',
   'members.read',
+  'people.read',
   'email.send',
   'webassembly',
   'email.fromName',

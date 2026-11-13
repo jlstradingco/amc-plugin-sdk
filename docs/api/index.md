@@ -42,6 +42,7 @@ The Omniscio Plugin SDK exposes 41 APIs to plugins. Some are available on both t
 | [Clipboard](./clipboard) | Read and write the system clipboard | Webview only | `system` (`has` needs none) |
 | [Launch](./launch) | Open links and documents, run programs the user confirms | Backend only | `launch` |
 | [Members](./members) | People in the active workspace | Both | `members.read` |
+| [People](./people) | When the people in the workspace work and when they are away | Backend only | `people.read` (with `members.read`) |
 | [Navigation](./navigation) | Move the user to a session or a teammate chat | Webview only | `navigation` |
 | [Notifications](./notifications) | System notifications with tags and Focus Mode | Webview only | None |
 | [OAuth](./oauth) | Third-party sign-in with your own client | Backend only | `oauth` |

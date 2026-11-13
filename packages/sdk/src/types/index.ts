@@ -47,6 +47,8 @@ export type {
   PluginVaultSearchHit, PluginVaultNoteSummary, PluginVaultNotesQuery, PluginVaultNotesPage,
   PluginVaultNote, PluginVaultNoteInput, PluginVaultNotePatch, PluginVaultAccessOutcome,
   PluginVaultNotes, PluginVault,
+  PluginPersonSchedule, PluginTimeOffQuery, PluginTimeOffReason, PluginPersonTimeOff,
+  PluginPeopleSchedules, PluginPeopleTimeOff, PluginPeople,
   PluginChannelConnectOptions, PluginChannelEvent, PluginChannelSendResult, PluginChannelHandle, PluginChannel,
   PluginLaunchRequest, PluginLaunchResult, PluginLaunch,
   PluginOAuthRequest, PluginOAuthTokens, PluginOAuthResult, PluginOAuth,
