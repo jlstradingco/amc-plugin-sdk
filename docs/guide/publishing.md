@@ -223,6 +223,27 @@ review — and, more to the point, at runtime: marketplace plugin backends run u
 The marketplace enforces a **50 MB** package size limit. The `omniscio-plugin package` command warns you if your archive exceeds this.
 :::
 
+## Who Can Publish, and the Newest Powers
+
+Every upload passes four steps before it reaches anyone's computer:
+
+1. **Approved publishers only.** Your account must be approved to publish. Your first upload asks for approval and is refused until the Omniscio team says yes.
+2. **The automatic check.** The marketplace checks your package the moment it arrives: the manifest, the permissions, the entry points, the size and the banned imports above.
+3. **The AI review.** An AI reviewer reads your code and writes a report for the person who decides.
+4. **A person's approval.** Someone on the Omniscio team reads that report, looks at your plugin and approves or rejects it. Nothing is published without that.
+
+The newest powers are **not open to outside developers yet**. Until Omniscio turns them on, an upload that declares any of these is refused at the automatic check, with a message that names the power:
+
+`tasks.read`, `tasks.write`, `boards.write`, `vault.read`, `vault.write`, `calendar.read`, `calendar.write`, `inbox.read`, `people.read`, `sessions.control`, `teamChat.read`, `teamChat.write`
+
+```
+This power isn't open to outside developers yet: tasks.read.
+```
+
+Remove those permissions to publish now, or wait until Omniscio opens them. Plugins made by the Omniscio team are not affected. Reviewers see these powers first on every submission that declares them.
+
+When the powers are open and someone installs your plugin, Omniscio still installs it even if a power is switched off on that person's computer. The install screen tells them that those parts won't work until it is turned on, so your plugin should handle a refused call gracefully.
+
 ## Authentication Management
 
 ### Sign In

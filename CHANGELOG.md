@@ -72,6 +72,14 @@ has that the published list lacks counts as unpublished — an example that need
 minimum kit version in its README and name the permission, or the guard fails. The record is swept
 in the release commit that publishes those permissions, so it cannot drift.
 
+### Changed — the newest powers are not open to outside developers yet
+
+Until Omniscio turns them on, the marketplace refuses an upload from an outside developer that
+declares `tasks.read`, `tasks.write`, `boards.write`, `vault.read`, `vault.write`, `calendar.read`,
+`calendar.write`, `inbox.read`, `people.read`, `sessions.control`, `teamChat.read` or
+`teamChat.write`, with a message naming the power. Plugins made by the Omniscio team are not
+affected. See [Publishing](docs/guide/publishing.md#who-can-publish-and-the-newest-powers).
+
 ### Added — Pocket PM example plugin
 
 `examples/pocket-pm` is a small project manager built on the new work-data powers: its panel opens
