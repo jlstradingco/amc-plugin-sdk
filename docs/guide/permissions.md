@@ -907,6 +907,20 @@ turned on Plugin access to people's schedules in Labs. See [People](../api/peopl
 
 ---
 
+### `teamChat.emoji`
+
+**Grants access to:** `Omniscio.teamChat.offerCustomEmoji()`, `Omniscio.teamChat.listCustomEmoji()` and `Omniscio.teamChat.getCustomEmojiImage()` (**webview**)
+
+Offer a picture to Team Chat as a custom emoji, and read the custom emoji the workspace already has. It is not elevated, because the person is always in the loop:
+
+- `offerCustomEmoji` never adds anything by itself. Omniscio opens its own dialog with the picture and a suggested name, and only the person's **Add** puts the emoji in the workspace. A close or a cancel resolves `{ ok: true, outcome: 'dismissed' }`.
+- A plugin can offer at most 5 emoji a minute, and one offer at a time; past that the call resolves a refusal with the code `rate-limited` or `busy`.
+- `listCustomEmoji` returns the workspace's shortcodes and image links, and nothing about who made them or who uses them.
+- `getCustomEmojiImage` returns one of those emoji as picture bytes (at most 256 KB), downloaded by Omniscio from its own storage, so a panel can draw it on a canvas.
+- A refusal resolves `{ ok: false, code, message }` instead of rejecting. See the [Team Chat API](../api/team-chat).
+
+---
+
 ### `workspace.read`, `workspace.write`, `workspace.exec`
 
 **Grants access to:** `ctx.workspace` (**backend**) — three separate grants over the projects the
@@ -975,6 +989,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
 | `people.read` | `ctx.people.schedules.list()` / `ctx.people.timeOff.list()` (**backend**) | See when the workspace's people work and when they are away, never more than the person could see (**requires `members.read`**) |
+| `teamChat.emoji` | `Omniscio.teamChat` (**webview**) | Offer a custom emoji to Team Chat (the person confirms every add), list the workspace's custom emoji, and read one emoji's picture |
 | `auth.actAsUser` | `AgentMC.auth.getWebAuth()` (**webview**) | Sign in to the shared account as the person -- **elevated**; reads and sends as them |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
 | `chrome.widget` | `Omniscio.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |

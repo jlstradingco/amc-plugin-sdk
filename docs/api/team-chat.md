@@ -3,14 +3,14 @@
 Read the Team Chat channels and direct messages the user picks for your plugin, search inside them, and post, reply, react and send direct messages there after the user approves each one.
 
 **Availability:** The picker is in the panel (`Omniscio.teamChat.requestAccess()`); every read is backend only (`ctx.teamChat`). A panel read is refused; reach it from your UI through `backend.invoke`.
-**Required Permission:** `teamChat.read` for reads; `teamChat.write` for posting, which **requires** `teamChat.read` in the same manifest.
+**Required Permission:** `teamChat.read` for reads; `teamChat.write` for posting, which **requires** `teamChat.read` in the same manifest; `teamChat.emoji` for the [custom emoji methods](#custom-emoji-panel), which need neither of the others.
 
 ::: tip Your plugin reads as the user
 Every read runs with the user's own sign-in, so your plugin never sees a conversation the user is not in. It sees only the conversations the user picked, or every conversation they are in when they chose "All, including new ones".
 :::
 
 ::: tip Available when the person turns it on
-The Team Chat API is available when the person has turned on **Plugin access to Team Chat** in Labs, Team Chat is on and they are signed in. Until then, every call rejects with "This feature is not available."
+Choosing conversations, reading and posting are available when the person has turned on **Plugin access to Team Chat** in Labs, Team Chat is on and they are signed in. Until then, each of those calls rejects with "This feature is not available." The custom emoji methods do not need that switch.
 :::
 
 ## Permissions
@@ -120,6 +120,74 @@ removes it. `value.id` is the message's id.
 Sends a direct message to a teammate, in the conversation between the user and `memberUid`. It is
 refused with `NOT_FOUND` unless the user picked that conversation or chose "All, including new
 ones". Use the `authorUid` of a message you read to find the uid.
+
+## Custom emoji (panel)
+
+Offer a picture to the workspace as a custom emoji, read the custom emoji it already has, and get one emoji's picture as bytes. These three methods are in the panel only (`Omniscio.teamChat`) and need only `teamChat.emoji`:
+
+```json
+{
+  "permissions": ["teamChat.emoji"]
+}
+```
+
+### `Omniscio.teamChat.offerCustomEmoji(offer: BridgeEmojiOffer): Promise<BridgeEmojiOfferResult>`
+
+Ask the person to add a picture as a custom emoji. Omniscio opens its own dialog with the picture and the suggested name; only the person's **Add** puts anything in the workspace.
+
+**`offer`:**
+
+| Field | Type | Description |
+|---|---|---|
+| `imageBase64` | `string` | The picture as plain base64, with no `data:` prefix |
+| `contentType` | `string` | The picture's type, such as `image/png` |
+| `suggestedShortcode` | `string` | The name to suggest; the person can change it |
+
+Any other field is refused.
+
+**Returns:** `{ ok: true, outcome: 'added', shortcode }` once the person adds it, `{ ok: true, outcome: 'dismissed' }` when they close or cancel, or a refusal `{ ok: false, code, message }`. It does not reject for these. `code` is `unsupported-type`, `too-large`, `invalid-image`, `invalid-shortcode`, `busy`, `rate-limited` (at most 5 offers a minute) or `team-chat-unavailable`. (`not-found` is only ever returned by `getCustomEmojiImage`.)
+
+---
+
+### `Omniscio.teamChat.listCustomEmoji(): Promise<BridgeCustomEmojiList>`
+
+The custom emoji of the workspace the person is using.
+
+**Returns:** `{ ok: true, workspaceName, emoji: [{ shortcode, imageUrl, animated }] }`, or the same refusal shape as above.
+
+---
+
+### `Omniscio.teamChat.getCustomEmojiImage(request: BridgeCustomEmojiImageRequest): Promise<BridgeCustomEmojiImage>`
+
+The picture of one custom emoji in the workspace the person is using, as bytes you can draw on a canvas. Omniscio downloads it from its own storage, so the panel never loads the address itself.
+
+**`request`:** `{ shortcode }`, a valid emoji name (2 to 32 lowercase letters, numbers, hyphens or underscores). Any other field is refused.
+
+**Returns:** `{ ok: true, base64, contentType, animated }`, where `base64` is plain base64 with no `data:` prefix, `contentType` is `image/png`, `image/gif` or `image/webp`, and the picture is at most 256 KB. Or a refusal: `not-found` when the workspace has no emoji with that name, `team-chat-unavailable` when Team Chat is not signed in or has no workspace open, and `invalid-image` when the picture could not be downloaded or is not an allowed type or size.
+
+### Custom emoji example
+
+```typescript
+const offered = await Omniscio.teamChat.offerCustomEmoji({
+  imageBase64: pngBase64,
+  contentType: 'image/png',
+  suggestedShortcode: 'party-fox'
+})
+if (offered.ok && offered.outcome === 'added') {
+  Omniscio.toast.show({ type: 'success', message: `Added :${offered.shortcode}:` })
+} else if (!offered.ok) {
+  Omniscio.toast.show({ type: 'info', message: offered.message })
+}
+
+const list = await Omniscio.teamChat.listCustomEmoji()
+if (list.ok) console.log(`${list.emoji.length} emoji in ${list.workspaceName}`)
+
+const picture = await Omniscio.teamChat.getCustomEmojiImage({ shortcode: 'party-fox' })
+if (picture.ok) {
+  const image = new Image()
+  image.src = `data:${picture.contentType};base64,${picture.base64}`
+}
+```
 
 ## Types
 

@@ -36,6 +36,7 @@ describe('SDK <-> host permission parity', () => {
     sessions: { surface: CTX, key: 'sessions' },
     'sessions.readHistory': { surface: BRIDGE, key: 'sessionHistory' },
     ai: { surface: CTX, key: 'ai' },
+    'ai.images': { surface: BRIDGE, key: 'ai' },
     tts: { surface: BRIDGE, key: 'tts' },
     stt: { surface: BRIDGE, key: 'stt' },
     microphone: null,
@@ -64,9 +65,11 @@ describe('SDK <-> host permission parity', () => {
     'sessions.launchAny': { surface: CTX, key: 'sessions' },
     'sessions.observeStatus': { surface: CTX, key: 'sessions' },
     'auth.sharedSignIn': { surface: CTX, key: 'auth' },
+    'auth.actAsUser': { surface: BRIDGE, key: 'auth' },
     'documents.read': { surface: BRIDGE, key: 'documents' },
     'documents.write': { surface: BRIDGE, key: 'documents' },
     'members.read': null,
+    'teamChat.emoji': { surface: BRIDGE, key: 'teamChat' },
     'email.send': { surface: CTX, key: 'email' },
     'email.fromName': null,
     'network.upload': { surface: BRIDGE, key: 'http' },
@@ -157,7 +160,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(58)
+    expect(HOST_PERMISSIONS.length).toBe(59)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

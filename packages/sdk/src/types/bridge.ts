@@ -103,6 +103,8 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
    * `host.getCapabilities()` for `ai-images` before offering the action.
    */
   generateImage(request: BridgeImageRequest): Promise<BridgeImageResult | BridgeImageRefusal>
+  estimateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetEstimate | BridgeImageRefusal>
+  generateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetResult | BridgeImageRefusal>
 }
 
 /** What `AgentMC.ai.estimateImage` / `generateImage` take. Extra fields are refused. */
@@ -115,6 +117,19 @@ export interface BridgeImageRequest {
   style?: string
   imageSize?: '0.5K' | '1K' | '2K' | '4K'
   transparentBackground?: boolean
+  referenceImages?: string[]
+}
+
+export interface BridgeImageSetEstimate {
+  ok: true
+  items: { model: string; priceUsd: number }[]
+  priceUsd: number
+}
+
+export interface BridgeImageSetResult {
+  ok: true
+  items: (BridgeImageResult | BridgeImageRefusal)[]
+  costUsd: number
 }
 
 export interface BridgeImageEstimate {
@@ -145,6 +160,56 @@ export interface BridgeImageRefusal {
     | 'busy'
     | 'image-service-error'
   message: string
+}
+
+export interface BridgeEmojiOffer {
+  imageBase64: string
+  contentType: string
+  suggestedShortcode: string
+}
+
+export interface BridgeTeamChatEmojiRefusal {
+  ok: false
+  code:
+    | 'unsupported-type'
+    | 'too-large'
+    | 'invalid-image'
+    | 'invalid-shortcode'
+    | 'busy'
+    | 'rate-limited'
+    | 'team-chat-unavailable'
+    | 'not-found'
+  message: string
+}
+
+export type BridgeEmojiOfferResult =
+  | { ok: true; outcome: 'added'; shortcode: string }
+  | { ok: true; outcome: 'dismissed' }
+  | BridgeTeamChatEmojiRefusal
+
+export interface BridgeCustomEmojiEntry {
+  shortcode: string
+  imageUrl: string
+  animated: boolean
+}
+
+export type BridgeCustomEmojiList =
+  | { ok: true; workspaceName: string; emoji: BridgeCustomEmojiEntry[] }
+  | BridgeTeamChatEmojiRefusal
+
+export interface BridgeCustomEmojiImageRequest {
+  shortcode: string
+}
+
+export type BridgeCustomEmojiImage =
+  | { ok: true; base64: string; contentType: string; animated: boolean }
+  | BridgeTeamChatEmojiRefusal
+
+export interface BridgeTeamChat {
+  requestAccess(): Promise<PluginTeamChatAccessOutcome>
+  offerCustomEmoji(offer: BridgeEmojiOffer): Promise<BridgeEmojiOfferResult>
+  listCustomEmoji(): Promise<BridgeCustomEmojiList>
+  getCustomEmojiImage(request: BridgeCustomEmojiImageRequest): Promise<BridgeCustomEmojiImage>
 }
 
 export type BridgeInbox = Pick<PluginInbox, 'setItems' | 'postAlert'>
@@ -1034,10 +1099,6 @@ export interface BridgeVault {
 
 export interface BridgeCalendar {
   requestAccess(): Promise<PluginCalendarAccessOutcome>
-}
-
-export interface BridgeTeamChat {
-  requestAccess(): Promise<PluginTeamChatAccessOutcome>
 }
 
 /** A board item a plugin may link to, as returned by `Omniscio.boardLinks.searchItems()`. */

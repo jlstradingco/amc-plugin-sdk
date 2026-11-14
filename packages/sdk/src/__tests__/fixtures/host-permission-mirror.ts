@@ -58,6 +58,7 @@ export const HOST_PERMISSIONS = [
   'documents.write',
   'members.read',
   'people.read',
+  'teamChat.emoji',
   'email.send',
   'webassembly',
   'email.fromName',

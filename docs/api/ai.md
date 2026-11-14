@@ -215,10 +215,13 @@ Make **one** picture with Image Studio, paid from the user's Omniscio credit. Ne
 | `style` | `string?` | Optional style notes |
 | `imageSize` | `'0.5K' \| '1K' \| '2K' \| '4K'?` | Optional size |
 | `transparentBackground` | `boolean?` | Ask for a transparent background |
+| `referenceImages` | `string[]?` | Up to 2 reference pictures as `data:image/png;base64,...` (or `jpeg` / `webp`) strings, each up to 1,500,000 characters |
 
 Any other field (a picture count, a price) is refused.
 
-**Returns:** `{ ok: true, imageId, url?, base64?, model, costUsd }`, or a refusal `{ ok: false, code, message }` — it does not reject for these. `code` is `plugin-images-off`, `signed-out`, `plugin-image-daily-cap`, `insufficient-credit` (Omniscio already offered the user **Add credit**), `declined`, `busy` or `image-service-error`.
+**Returns:** `{ ok: true, imageId, base64, model, costUsd }`, or a refusal `{ ok: false, code, message }` — it does not reject for these. `code` is `plugin-images-off`, `signed-out`, `plugin-image-daily-cap`, `insufficient-credit` (Omniscio already offered the user **Add credit**), `declined`, `busy` or `image-service-error`.
+
+The picture always arrives as `base64` bytes, so a canvas that draws it is never tainted. When Image Studio stores the picture instead of returning it, Omniscio downloads it for you; if that download fails you get `image-service-error`.
 
 **Example:**
 
@@ -235,9 +238,35 @@ if (caps.includes('ai-images')) {
 }
 ```
 
+### `estimateImageSet(requests): Promise<BridgeImageSetEstimate | BridgeImageRefusal>` (panel only)
+
+Omniscio's own price for a **set** of pictures, Omniscio's fee included. Free. Needs the `ai.images` permission.
+
+### `generateImageSet(requests): Promise<BridgeImageSetResult | BridgeImageRefusal>` (panel only)
+
+Make a set of pictures with Image Studio, paid from the user's Omniscio credit, behind **one** confirmation for the whole set. Needs the `ai.images` permission.
+
+**`requests`:** an array of 1 to 8 `request` objects, each shaped as above. The `referenceImages` across the whole set may add up to at most 6,000,000 characters; a set over that, or over 8 pictures, is refused.
+
+**Returns:** `{ ok: true, items, costUsd }`, where `items` holds one picture result or refusal per request, in order. `estimateImageSet` returns `{ ok: true, items: [{ model, priceUsd }], priceUsd }` instead. A refusal for the whole set is `{ ok: false, code, message }` with the same codes as `generateImage`.
+
+**Example:**
+
+```typescript
+const result = await AgentMC.ai.generateImageSet([
+  { subject: 'A watercolor fox, front view', model: 'gemini-3.1-flash-lite-image', aspectRatio: '1:1' },
+  { subject: 'The same fox, side view', model: 'gemini-3.1-flash-lite-image', aspectRatio: '1:1' }
+])
+if (result.ok) {
+  result.items.forEach((item) => {
+    if (item.ok) showPicture(item.base64 ?? item.url)
+  })
+} else if (result.code !== 'declined') showMessage(result.message)
+```
+
 ## Notes
 
-- `estimateImage` / `generateImage` work only from the plugin's panel, and their spend has its own per-plugin daily limit (Cost Control → **Plugin pictures**, $2 unless changed), separate from the text-AI limit.
+- `estimateImage` / `generateImage` / `estimateImageSet` / `generateImageSet` work only from the plugin's panel, and their spend has its own per-plugin daily limit (Cost Control → **Plugin pictures**, $2 unless changed), separate from the text-AI limit.
 - `generateTextViaSubscription` runs on the person's Claude plan; every other method here goes through Omniscio's AI service on a stored key.
 - These key calls go through Omniscio's AI service, which requires an API key account. OAuth/login accounts cannot make direct AI calls. If no API key account is available, the call will fail with a descriptive error.
 - Call `isConfigured` first when you are about to show a Generate control — it is the difference between a disabled button and a failed click.
