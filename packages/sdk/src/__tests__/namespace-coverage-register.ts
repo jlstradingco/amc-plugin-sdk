@@ -20,6 +20,14 @@ export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = [
     generatedOnly: ['forget', 'grants', 'reopen'],
     publishedOnly: [],
     reason: 'The published BridgeDocuments declares only the picker half of the documents namespace'
+  },
+  {
+    surface: 'backend',
+    namespace: 'coachingProfile',
+    generatedOnly: ['read'],
+    publishedOnly: [],
+    reason:
+      'The generated backend surface carries coachingProfile.read (permission `coaching-profile`), but the published PluginContext does not declare the namespace yet'
   }
 ]
 

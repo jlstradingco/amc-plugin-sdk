@@ -685,8 +685,7 @@ export const manifestSchema = z.object({
     resourceLimits: resourceLimitsSchema.optional(),
     timeouts: backendTimeoutsSchema.optional(),
   }).optional(),
-  // `.max(50)` mirrors the host's cap on the array length.
-  permissions: z.array(permissionSchema).max(50).optional(),
+  permissions: z.array(permissionSchema).max(PLUGIN_PERMISSIONS.length).optional(),
   cli: z.object({ endpoints: cliEndpointsSchema }).optional(),
   cron: z.unknown().optional(),
   // Host-real (plugin-manifest-schema.ts): without it zod strips the one switch that gives a

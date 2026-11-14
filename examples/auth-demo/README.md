@@ -6,26 +6,10 @@ Minimal Omniscio plugin demonstrating the **auth** identity API and the **auth.s
 
 Requires `@omniscio/plugin-sdk` 3.6.0 or newer.
 
-This example declares `auth.actAsUser` for `getWebAuth()`. No published kit carries that permission
-yet: `npm install` today brings 3.5.0, so the published CLI refuses this manifest with
-`Manifest validation failed` and `Invalid enum value … received 'auth.actAsUser'` — for `build`,
-`validate`, `dev` and `package` alike. Until 3.6.0 is published, run this example with the CLI from
-a checkout of this SDK repository instead of the published one:
-
-```bash
-# from the root of the repo that holds this SDK workspace
-cd plugin-sdk && pnpm install && pnpm build
-
-# then, in this example
-cd examples/auth-demo
-npm install                    # the published SDK's types; the pinned range stays copyable
-node ../../packages/cli/dist/index.js build
-node ../../packages/cli/dist/index.js dev     # or validate / package
-```
-
-Those paths are this checkout's layout — the workspace is `plugin-sdk/` inside the Omniscio repo and
-the repo root in the published SDK repo. A folder you copy OUT of this repo cannot reach the workspace
-CLI or SDK, so a copied-out copy of this example needs the published 3.6.0 kit (or newer).
+This example declares `auth.actAsUser` for `getWebAuth()`, a permission the 3.6.0 kit introduced.
+On an older kit the CLI refuses this manifest with `Manifest validation failed` and
+`Invalid enum value … received 'auth.actAsUser'` — for `build`, `validate`, `dev` and `package`
+alike. `npm install` here brings 3.6.0 or newer, so a fresh copy runs as documented.
 
 ## What It Shows
 

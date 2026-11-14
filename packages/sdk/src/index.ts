@@ -54,6 +54,7 @@ export type {
   PluginAiStructuredRequest,
   PluginEngineCatalog,
   PluginFs,
+  PluginFileEncoding,
   PluginHttp,
   PluginHttpInit,
   PluginHttpResponse,

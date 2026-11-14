@@ -9,7 +9,34 @@ Versions listed here cover the published packages `@omniscio/plugin-sdk`,
 `@omniscio/plugin-cli`, and `@omniscio/plugin-dev-shell` (named `@agent-mc/*` before 3.4.0),
 which are released together.
 
-## [Unreleased]
+## [3.6.0] - 2026-11-14
+
+### Added — fifteen permissions the published kit lacked now ship
+
+This is the first published kit that carries these permissions. A manifest may declare any of them
+from 3.6.0 on, and the consent screen asks for each in its own, plainly worded row:
+
+- `ai.images` — ask to make pictures with Image Studio, paid from the person's Omniscio credit.
+- `auth.actAsUser` — sign a webview into the person's own account through `getWebAuth()` (below).
+- `boards.write` — add, move and update items and post comments on boards the person picks.
+- `tasks.read` — read the task lists the person picks, with their due dates and status.
+- `tasks.write` — add, edit, complete, move, archive and restore tasks in those lists.
+- `sessions.control` — message, pause, unpause, snooze, archive and unarchive the person's sessions.
+- `vault.read` / `vault.write` — search, list, open and change notes in the Vault folders the
+  person picks (below).
+- `inbox.read` — see the titles of the person's open inbox items and the sessions waiting on them
+  (below).
+- `calendar.read` / `calendar.write` — read the calendars the person picks and add, edit or delete
+  their events (below).
+- `teamChat.read` / `teamChat.write` — read the Team Chat conversations the person picks, and post,
+  reply, react and send direct messages after they say yes (below).
+- `people.read` — see when the workspace's people work and when they are away (below).
+- `coaching-profile` — read the parts of the person's coaching profile they chose to share.
+
+**Read the 3.5.0 section below as well.** It described `boards.write`, `tasks.read`, `tasks.write`
+and `sessions.control` as added, but the `@omniscio/plugin-sdk@3.5.0` tarball on npm carried 43
+permissions and none of those four. If you tried one of them against 3.5.0 and were refused,
+nothing was wrong with your manifest — 3.6.0 is the kit that ships them.
 
 ### Added — widgets for the widget sidebar
 
@@ -60,9 +87,9 @@ describes the layout they actually have.
 ### Fixed — a copied example says which kit version it needs, and the examples check knows it
 
 `examples/auth-demo` declares `auth.actAsUser` for `getWebAuth()`, a permission no published kit
-carries yet, and it pins a published `@omniscio/plugin-sdk` range like every example does (that pin
-is what keeps an example copyable). A fresh copy therefore installed the published 3.5.0 kit and
-stopped at `Manifest validation failed`, with nothing telling the author what to do.
+carried at the time, and it pins a published `@omniscio/plugin-sdk` range like every example does
+(that pin is what keeps an example copyable). A fresh copy therefore installed the published 3.5.0
+kit and stopped at `Manifest validation failed`, with nothing telling the author what to do.
 
 The example's README now states the minimum kit version it needs and why, and the examples guard in
 `packages/cli` checks every example against **the SDK release its `package.json` resolves**, not only

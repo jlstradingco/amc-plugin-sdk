@@ -81,6 +81,7 @@ describe('SDK <-> host permission parity', () => {
     'tasks.read': null,
     'tasks.write': null,
     'sessions.control': null,
+    'coaching-profile': null,
     'vault.read': null,
     'vault.write': null,
     'people.read': null,
