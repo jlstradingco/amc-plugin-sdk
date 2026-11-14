@@ -2043,6 +2043,106 @@ export interface PluginCalendar {
   freeBusy(query: PluginCalendarFreeBusyQuery): Promise<PluginCalendarFreeBusy>
 }
 
+export type PluginTeamChatChannelKind = 'channel' | 'dm'
+
+export type PluginTeamChatPostAs = 'agent' | 'card'
+
+export interface PluginTeamChatChannel {
+  id: string
+  name: string
+  kind: PluginTeamChatChannelKind
+}
+
+export interface PluginTeamChatMessage {
+  id: string
+  authorUid: string
+  authorName?: string
+  text: string
+  createdAt: string
+  parentId?: string
+  isAgent: boolean
+  pluginLabel?: string
+}
+
+export interface PluginTeamChatMessagesQuery {
+  before?: string
+  limit?: number
+}
+
+export interface PluginTeamChatMessagesPage {
+  messages: PluginTeamChatMessage[]
+  nextBefore: string | null
+}
+
+export interface PluginTeamChatThreadPage {
+  replies: PluginTeamChatMessage[]
+  capped: boolean
+}
+
+export interface PluginTeamChatUnread {
+  unreadCount: number
+  lastReadAt: string | null
+}
+
+export interface PluginTeamChatSearchOptions {
+  limit?: number
+}
+
+export interface PluginTeamChatSearchHit {
+  messageId: string
+  channelId: string
+  authorUid: string
+  text: string
+  createdAt: string
+}
+
+export interface PluginTeamChatAccessOutcome {
+  cancelled: boolean
+  allChannels: boolean
+  channels: PluginTeamChatChannel[]
+  postAs: PluginTeamChatPostAs
+}
+
+export interface PluginTeamChatChannels {
+  list(): Promise<PluginTeamChatChannel[]>
+}
+
+export interface PluginTeamChatPostOptions {
+  threadId?: string
+}
+
+export interface PluginTeamChatWritten {
+  id: string
+}
+
+export interface PluginTeamChatMessages {
+  list(channelId: string, query?: PluginTeamChatMessagesQuery): Promise<PluginTeamChatMessagesPage>
+  post(
+    channelId: string,
+    text: string,
+    options?: PluginTeamChatPostOptions
+  ): Promise<PluginWriteResult<PluginTeamChatWritten>>
+  react(channelId: string, messageId: string, emoji: string): Promise<PluginWriteResult<PluginTeamChatWritten>>
+  unreact(channelId: string, messageId: string, emoji: string): Promise<PluginWriteResult<PluginTeamChatWritten>>
+}
+
+export interface PluginTeamChatDirectMessages {
+  send(memberUid: string, text: string): Promise<PluginWriteResult<PluginTeamChatWritten>>
+}
+
+export interface PluginTeamChatThreads {
+  list(channelId: string, messageId: string): Promise<PluginTeamChatThreadPage>
+}
+
+export interface PluginTeamChat {
+  channels: PluginTeamChatChannels
+  messages: PluginTeamChatMessages
+  threads: PluginTeamChatThreads
+  dm: PluginTeamChatDirectMessages
+  unread(channelId: string): Promise<PluginTeamChatUnread>
+  search(query: string, options?: PluginTeamChatSearchOptions): Promise<PluginTeamChatSearchHit[]>
+}
+
 /** What `ctx.channel.connect` needs to open one outbound WebSocket. */
 export interface PluginChannelConnectOptions {
   /** Only `'ws'` (an outbound WebSocket) is supported. `'webhook'` is refused by the host. */
@@ -2355,4 +2455,5 @@ export interface PluginContext {
   vault?: PluginVault
   people?: PluginPeople
   calendar?: PluginCalendar
+  teamChat?: PluginTeamChat
 }

@@ -31,6 +31,7 @@ export const REQUIRED_PERMISSION_PARTNERS = [
   ['vault.write', 'vault.read'],
   ['people.read', 'members.read'],
   ['calendar.write', 'calendar.read'],
+  ['teamChat.write', 'teamChat.read'],
 ] as const
 
 const pluginIdRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/

@@ -99,6 +99,7 @@ export default defineConfig({
             { text: 'Shell', link: '/api/shell' },
             { text: 'Speech to Text', link: '/api/stt' },
             { text: 'Tasks', link: '/api/tasks' },
+            { text: 'Team Chat', link: '/api/team-chat' },
             { text: 'Vault', link: '/api/vault' }
           ]
         }

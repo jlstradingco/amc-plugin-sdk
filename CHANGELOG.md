@@ -72,6 +72,30 @@ has that the published list lacks counts as unpublished — an example that need
 minimum kit version in its README and name the permission, or the guard fails. The record is swept
 in the release commit that publishes those permissions, so it cannot drift.
 
+### Added — post, reply, react and send direct messages in Team Chat, after the person says yes
+
+With `teamChat.write`, a plugin's backend can post in a picked channel
+(`ctx.teamChat.messages.post(channelId, text, { threadId })`), add or remove a reaction
+(`ctx.teamChat.messages.react` / `unreact(channelId, messageId, emoji)`) and send a direct message in a
+picked conversation (`ctx.teamChat.dm.send(memberUid, text)`). Omniscio asks the person first every
+time, showing the whole text and how it will appear; each answers a typed result
+(`{ ok: true, value: { id } }` or `{ ok: false, code }`), never a thrown error for an expected refusal.
+Posts show under the person's name labeled "sent by" the plugin, or as the plugin's own card,
+whichever the person picked; a card cannot reply in a thread. See [Team Chat](docs/api/team-chat.md).
+
+### Added — read the Team Chat conversations the person picks
+
+A plugin's backend can now read the Team Chat channels and direct messages the person picked for it:
+`ctx.teamChat.channels.list()`, `ctx.teamChat.messages.list(channelId, { before, limit })`,
+`ctx.teamChat.threads.list(channelId, messageId)`, `ctx.teamChat.unread(channelId)` and
+`ctx.teamChat.search(query, { limit })`. `Omniscio.teamChat.requestAccess()` opens the picker, where
+the person picks single conversations or "All, including new ones", and chooses whether the plugin's
+posts will show under their name labeled "sent by" the plugin or as the plugin's own card. Reads run
+as the person, so a plugin never sees a conversation they are not in, and search drops hits from
+unpicked conversations. New permissions: `teamChat.read` and `teamChat.write` (both elevated;
+`teamChat.write` requires `teamChat.read`). Available when the person has
+turned on Plugin access to Team Chat in Labs. See [Team Chat](docs/api/team-chat.md).
+
 ### Security — a fresh scaffold installs without critical advisories
 
 `amc-plugin create` wrote `vitest: "^3.0.0"` into every template that ships tests, and the SDK

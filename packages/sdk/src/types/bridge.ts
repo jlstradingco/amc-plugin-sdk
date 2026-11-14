@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -15,6 +15,8 @@ export type { PluginSessionControlAccessOutcome } from './context.js'
 export type { PluginVaultAccessOutcome } from './context.js'
 
 export type { PluginCalendarAccessOutcome } from './context.js'
+
+export type { PluginTeamChatAccessOutcome } from './context.js'
 
 /**
  * The `err.code` a bridge call rejects with when the computer or the share service refuses it.
@@ -1034,6 +1036,10 @@ export interface BridgeCalendar {
   requestAccess(): Promise<PluginCalendarAccessOutcome>
 }
 
+export interface BridgeTeamChat {
+  requestAccess(): Promise<PluginTeamChatAccessOutcome>
+}
+
 /** A board item a plugin may link to, as returned by `Omniscio.boardLinks.searchItems()`. */
 export interface BridgeBoardLinkItem {
   id: string
@@ -1354,6 +1360,7 @@ export interface Omniscio {
   sessionControl: BridgeSessionControl
   vault: BridgeVault
   calendar: BridgeCalendar
+  teamChat: BridgeTeamChat
   /** See {@link BridgeClipboard}. */
   clipboard: BridgeClipboard
   /** Requires `members.read`. See {@link BridgeMembers}. */

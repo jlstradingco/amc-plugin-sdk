@@ -83,6 +83,8 @@ describe('SDK <-> host permission parity', () => {
     'people.read': null,
     'calendar.read': null,
     'calendar.write': null,
+    'teamChat.read': null,
+    'teamChat.write': null,
     webassembly: null,
   }
 
@@ -155,7 +157,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(56)
+    expect(HOST_PERMISSIONS.length).toBe(58)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

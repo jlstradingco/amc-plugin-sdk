@@ -355,6 +355,38 @@ describe('host-parity rules', () => {
     })
   })
 
+  describe('Team Chat permission pairing', () => {
+    it('rejects teamChat.write declared without teamChat.read, naming the fix', () => {
+      const result = validateManifest({ ...validManifest, permissions: ['teamChat.write'] })
+      expect(result.valid).toBe(false)
+      expect(result.errors.join(' ')).toContain(
+        '"teamChat.write" requires an explicit "teamChat.read" permission in the same manifest: add teamChat.read to permissions'
+      )
+    })
+
+    it('accepts teamChat.write when teamChat.read is declared alongside', () => {
+      const result = validateManifest({
+        ...validManifest,
+        permissions: ['teamChat.read', 'teamChat.write'],
+      })
+      expect(result.valid).toBe(true)
+      expect(result.errors).toEqual([])
+    })
+
+    it('accepts teamChat.read on its own', () => {
+      const result = validateManifest({ ...validManifest, permissions: ['teamChat.read'] })
+      expect(result.valid).toBe(true)
+    })
+
+    it('does not let another read permission stand in for teamChat.read', () => {
+      const result = validateManifest({
+        ...validManifest,
+        permissions: ['calendar.read', 'teamChat.write'],
+      })
+      expect(result.valid).toBe(false)
+    })
+  })
+
   describe('sdkVersion with a backend', () => {
     // The host's authoring rule (authorManifestProblems, shared/plugin-manifest-schema.ts @
     // 113b4d5): sdkVersion selects the worker loader, so a backend without it never starts.

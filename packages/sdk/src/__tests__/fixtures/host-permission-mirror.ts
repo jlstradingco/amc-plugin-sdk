@@ -38,6 +38,8 @@ export const HOST_PERMISSIONS = [
   'inbox.read',
   'calendar.read',
   'calendar.write',
+  'teamChat.read',
+  'teamChat.write',
   'inbox',
   'navigation',
   'chrome',
