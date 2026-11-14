@@ -1,0 +1,40 @@
+{
+  "plugin": {
+    "id": "pocket-pm",
+    "name": "Pocket PM",
+    "version": "1.0.0",
+    "author": "Omniscio Team",
+    "description": "A small project manager: builds a short update from a picked board, task list and calendar, checks who is away, nudges stuck sessions, and posts to Team Chat after you approve",
+    "icon": "clipboard-list",
+    "category": "planning",
+    "license": {
+      "type": "free"
+    }
+  },
+  "sdkVersion": "2.0.0",
+  "permissions": [
+    "boards.read",
+    "tasks.read",
+    "members.read",
+    "people.read",
+    "calendar.read",
+    "sessions.control",
+    "teamChat.read",
+    "teamChat.write"
+  ],
+  "settings": [],
+  "storage": {
+    "collections": {}
+  },
+  "migrations": [],
+  "ui": {
+    "entryPoint": "dist/ui/index.html",
+    "sidebar": {
+      "title": "Pocket PM",
+      "icon": "clipboard-list"
+    }
+  },
+  "backend": {
+    "entryPoint": "dist/backend/index.js"
+  }
+}

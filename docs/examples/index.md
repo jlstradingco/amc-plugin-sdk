@@ -1,6 +1,6 @@
 # Examples
 
-Eight example plugins ship with the SDK, demonstrating progressively more complex patterns.
+Ten example plugins ship with the SDK, demonstrating progressively more complex patterns.
 
 ## Minimal Examples
 
@@ -70,7 +70,7 @@ Offers two widgets for the widget sidebar: an Agenda tile that switches between 
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/sidebar-widgets-demo)
 
-## Full Example
+## Full Examples
 
 ### GitHub Issues
 
@@ -79,6 +79,14 @@ Offers two widgets for the widget sidebar: an Agenda tile that switches between 
 Full-stack plugin with backend. Syncs GitHub issues via cron, caches them locally, renders with filters and search. Demonstrates the complete plugin lifecycle.
 
 [View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/github-issues)
+
+### Pocket PM
+
+**APIs:** `boards.requestAccess/listItems`, `tasks.requestAccess/list`, `people.timeOff.list`, `calendar.requestAccess/events.list`, `sessionControl.requestAccess/list/message`, `teamChat.requestAccess/channels.list/messages.post`, `backend.invoke`, `rpc.handle`
+
+A small project manager. The panel opens Omniscio's own pickers one at a time, then asks its backend to build a short update from the picked board and task list, who is away this week, today's calendar and the picked sessions. It never posts by itself: nudging a stuck session and posting the update to Team Chat each ask the person first, and every refusal (such as `DECLINED` or `NOT_FOUND`) comes back as a plain sentence. Needs `boards.read`, `tasks.read`, `members.read`, `people.read`, `calendar.read`, `sessions.control`, `teamChat.read` and `teamChat.write`.
+
+[View source on GitHub](https://github.com/jlstradingco/amc-plugin-sdk/tree/master/examples/pocket-pm)
 
 ## Running Examples
 

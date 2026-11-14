@@ -26,6 +26,7 @@ describe('plugin-sdk examples', () => {
       'auth-demo',
       'github-issues',
       'inbox-demo',
+      'pocket-pm',
       'recording-demo',
       'sessions-demo',
       'sidebar-widgets-demo',

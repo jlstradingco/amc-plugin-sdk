@@ -72,6 +72,15 @@ has that the published list lacks counts as unpublished — an example that need
 minimum kit version in its README and name the permission, or the guard fails. The record is swept
 in the release commit that publishes those permissions, so it cannot drift.
 
+### Added — Pocket PM example plugin
+
+`examples/pocket-pm` is a small project manager built on the new work-data powers: its panel opens
+the board, task list, calendar, session and Team Chat pickers, and its backend builds a short update
+from the picked board's items, the tasks due today, who is away this week (`ctx.people`), today's
+events and the stuck sessions. Nudging a session (`ctx.sessionControl.message`) and posting the
+update (`ctx.teamChat.messages.post`) each ask the person first, and every refusal code is shown as
+a plain sentence. See [Examples](docs/examples/index.md).
+
 ### Added — post, reply, react and send direct messages in Team Chat, after the person says yes
 
 With `teamChat.write`, a plugin's backend can post in a picked channel

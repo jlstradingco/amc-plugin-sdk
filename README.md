@@ -358,7 +358,7 @@ published at **[docs.omniscio.com/sdk/](https://docs.omniscio.com/sdk/)**, cover
 - **[Getting Started](https://docs.omniscio.com/sdk/guide/getting-started)** — scaffold, build, and install your first plugin
 - **[API Reference](https://docs.omniscio.com/sdk/api/)** — all 41 APIs documented
 - **[Publishing](https://docs.omniscio.com/sdk/guide/publishing)** — submit to the Omniscio Marketplace
-- **[Examples](https://docs.omniscio.com/sdk/examples/)** — four reference plugins with full source
+- **[Examples](https://docs.omniscio.com/sdk/examples/)** — ten reference plugins with full source
 
 ## License
 

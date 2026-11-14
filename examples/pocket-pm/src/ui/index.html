@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pocket PM</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        padding: 24px;
+        background: var(--surface-50, #fafafa);
+        color: var(--surface-900, #111);
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+      h2 {
+        font-size: 1rem;
+        margin: 20px 0 8px;
+      }
+      .subtitle {
+        color: var(--surface-500, #666);
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      button {
+        padding: 10px 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #fff;
+        background: rgb(var(--accent-rgb, 37 99 235));
+      }
+      button.secondary {
+        background: #475569;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      select,
+      textarea {
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 8px;
+        border: 1px solid var(--surface-200, #ddd);
+        border-radius: 6px;
+        background: var(--surface-0, #fff);
+        color: inherit;
+      }
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        resize: vertical;
+        margin-bottom: 12px;
+      }
+      .status,
+      .note {
+        font-size: 0.85rem;
+        color: var(--surface-600, #444);
+        margin-bottom: 12px;
+      }
+      ul {
+        list-style: none;
+      }
+      .session {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--surface-200, #eee);
+        border-radius: 8px;
+        background: var(--surface-0, #fff);
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+      }
+      .empty {
+        color: var(--surface-400, #999);
+        font-size: 0.85rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pocket PM</h1>
+    <p class="subtitle">A short update from your board, tasks, calendar and team. Nothing is sent until you say yes.</p>
+
+    <h2>1. Choose what Pocket PM may see</h2>
+    <div class="row">
+      <button id="pick-boards" class="secondary">Pick a board</button>
+      <button id="pick-tasks" class="secondary">Pick a task list</button>
+      <button id="pick-calendars" class="secondary">Pick calendars</button>
+      <button id="pick-sessions" class="secondary">Pick sessions</button>
+      <button id="pick-team-chat" class="secondary">Pick Team Chat channels</button>
+    </div>
+
+    <h2>2. Build your update</h2>
+    <div class="row">
+      <button id="build-btn">Build my update</button>
+    </div>
+    <textarea id="draft" readonly placeholder="Your update will show here."></textarea>
+
+    <h2>3. Post it</h2>
+    <div class="row">
+      <select id="channel-select" aria-label="Team Chat channel"></select>
+      <button id="post-btn" disabled>Post to Team Chat</button>
+    </div>
+    <p class="note" id="channel-note"></p>
+
+    <h2>Stuck sessions</h2>
+    <ul id="stuck-list"><li class="empty">Build your update to see stuck sessions.</li></ul>
+
+    <p class="status" id="status" role="status"></p>
+
+    <script src="plugin.js"></script>
+  </body>
+</html>

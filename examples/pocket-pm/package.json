@@ -1,0 +1,17 @@
+{
+  "name": "pocket-pm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "omniscio-plugin build",
+    "dev": "omniscio-plugin dev",
+    "package": "omniscio-plugin package",
+    "validate": "omniscio-plugin validate"
+  },
+  "devDependencies": {
+    "@omniscio/plugin-cli": "^3.5.0",
+    "@omniscio/plugin-sdk": "^3.4.0",
+    "typescript": "^5.5.0"
+  }
+}
