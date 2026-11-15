@@ -181,6 +181,12 @@ export interface PluginRpc {
  */
 export interface PluginHost {
   getCapabilities(): Promise<string[]>
+  /**
+   * Ask the host to show the other half of this plugin's own surface: its screen (`'items'`) or
+   * its AI sessions (`'sessions'`). The plugin can only move ITSELF, and the host owns the
+   * result, so do not treat this call as having won.
+   */
+  setSurfaceTab(input: { tab: 'items' | 'sessions' }): Promise<void>
 }
 
 export interface PluginUsage {

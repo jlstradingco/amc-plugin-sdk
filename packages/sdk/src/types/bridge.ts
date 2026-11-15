@@ -976,6 +976,13 @@ export interface BridgeBackend {
  */
 export interface BridgeHost {
   getCapabilities(): Promise<string[]>
+  /**
+   * Ask the host to show the other half of this plugin's own surface: its screen (`'items'`) or
+   * its AI sessions (`'sessions'`), for a plugin that draws the switch inside its own webview.
+   * The plugin can only move ITSELF, and the host owns the result — it pushes the tab back under
+   * the `surfaceTab` command, so render the host's answer rather than assuming this call won.
+   */
+  setSurfaceTab(input: { tab: 'items' | 'sessions' }): Promise<void>
 }
 
 /** A site's answer to {@link BridgeHttp.uploadFile}, as plain data. */

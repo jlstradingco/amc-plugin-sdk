@@ -63,6 +63,7 @@ export type {
   PluginSidebar,
   PluginToast,
   PluginContext,
+  PluginBackendWidget,
   // The panel-to-backend request channel (`ctx.rpc`) and feature detection (`ctx.host`)
   PluginRpc,
   PluginHost,

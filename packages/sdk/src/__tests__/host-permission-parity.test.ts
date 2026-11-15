@@ -27,6 +27,14 @@ import {
 describe('SDK <-> host permission parity', () => {
   const CTX = 'ctx' as const
   const BRIDGE = 'bridge' as const
+
+  const SHARED_SURFACE_KEYS: ReadonlyArray<{ key: string; reason: string }> = [
+    {
+      key: 'widget',
+      reason:
+        'chrome.widget gates the header widget on BOTH surfaces under one name: ctx.widget.set/clear draws it from the backend, and the webview widget namespace draws it in the chrome. Delete this row the moment either surface renames its own.',
+    },
+  ]
   const namespaceForPermission: Record<
     string,
     { surface: typeof CTX | typeof BRIDGE; key: string } | null
@@ -186,8 +194,11 @@ describe('SDK <-> host permission parity', () => {
     const bridgeEntries = entries.filter((n) => n.surface === BRIDGE)
     expect(bridgeEntries.filter((n) => !bridgeKeys.has(n.key)).map((n) => n.key)).toEqual([])
     const ctxEntryKeys = new Set(entries.filter((n) => n.surface === CTX).map((n) => n.key))
+    const sharedKeys = new Set(SHARED_SURFACE_KEYS.map((entry) => entry.key))
     expect(
-      bridgeEntries.filter((n) => ctxKeys.has(n.key) && !ctxEntryKeys.has(n.key)).map((n) => n.key)
+      bridgeEntries
+        .filter((n) => ctxKeys.has(n.key) && !ctxEntryKeys.has(n.key) && !sharedKeys.has(n.key))
+        .map((n) => n.key)
     ).toEqual([])
   })
 

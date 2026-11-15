@@ -331,7 +331,7 @@ describe('Widget plugin lifecycle E2E', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true })
   })
 
-  it('scaffolds a flat widget plugin with a popover page and the two permissions', () => {
+  it('scaffolds a flat widget plugin with two sidebar widgets and the two permissions', () => {
     execSync(
       [
         `node "${cliDist}" create widget-e2e-plugin`,
@@ -348,24 +348,27 @@ describe('Widget plugin lifecycle E2E', () => {
 
     expect(fs.existsSync(path.join(pluginDir, 'ui', 'index.html'))).toBe(true)
     expect(fs.existsSync(path.join(pluginDir, 'ui', 'plugin.js'))).toBe(true)
-    expect(fs.existsSync(path.join(pluginDir, 'ui', 'widget.html'))).toBe(true)
+    expect(fs.existsSync(path.join(pluginDir, 'ui', 'widget.html'))).toBe(false)
     expect(fs.existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(false)
 
     const manifest = JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'))
     expect(manifest.permissions).toEqual(['chrome', 'chrome.widget'])
-    expect(manifest.ui.widget.entryPoint).toBe('ui/widget.html')
+    expect(manifest.ui.widget).toBeUndefined()
+    expect(manifest.ui.widgets.map((widget: { id: string }) => widget.id)).toEqual(['status', 'panel'])
+    expect(manifest.ui.widgets.map((widget: { kind: string }) => widget.kind)).toEqual(['tile', 'panel'])
 
     const script = fs.readFileSync(path.join(pluginDir, 'ui', 'plugin.js'), 'utf-8')
     expect(script).toContain('amc.widget.set')
   }, SHELL_OUT_TIMEOUT_MS)
 
-  it('passes validate, including the widget entry point check', () => {
+  it('passes validate, including the UI page the panel widget draws', () => {
     const out = execSync(`node "${cliDist}" validate`, { cwd: pluginDir, stdio: 'pipe' }).toString()
-    expect(out).toContain('Widget entry point exists')
+    expect(out).toContain('Manifest schema')
+    expect(out).toContain('ui/index.html')
   }, SHELL_OUT_TIMEOUT_MS)
 
-  it('fails validate when the widget page is missing from disk', () => {
-    const page = path.join(pluginDir, 'ui', 'widget.html')
+  it('fails validate when the panel page is missing from disk', () => {
+    const page = path.join(pluginDir, 'ui', 'index.html')
     const saved = fs.readFileSync(page)
     fs.rmSync(page)
     try {
@@ -375,12 +378,13 @@ describe('Widget plugin lifecycle E2E', () => {
     }
   }, SHELL_OUT_TIMEOUT_MS)
 
-  it('packages ui/widget.html into the archive', () => {
+  it('packages the panel page and the widget script into the archive', () => {
     execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })
 
     const files = fs.readdirSync(pluginDir).filter((f) => f.endsWith('.amcplugin'))
     expect(files).toEqual(['widget-e2e-plugin-1.0.0.amcplugin'])
     const archive = fs.readFileSync(path.join(pluginDir, files[0]!))
-    expect(archive.includes('ui/widget.html')).toBe(true)
+    expect(archive.includes('ui/index.html')).toBe(true)
+    expect(archive.includes('ui/plugin.js')).toBe(true)
   }, SHELL_OUT_TIMEOUT_MS)
 })
