@@ -420,6 +420,7 @@ export interface AgentMC {
   }
   "host": {
     "getCapabilities": (...args: unknown[]) => Promise<unknown>
+    "setSurfaceTab": (...args: unknown[]) => Promise<unknown>
   }
   "http": {
     "fetch": (...args: unknown[]) => Promise<unknown>
@@ -466,6 +467,7 @@ export interface AgentMC {
     "doceboListCourses": (...args: unknown[]) => Promise<unknown>
     "enrollInWorkspaceCourse": (...args: unknown[]) => Promise<unknown>
     "enrollUser": (...args: unknown[]) => Promise<unknown>
+    "ensureSampleCourse": (...args: unknown[]) => Promise<unknown>
     "flushProgressOutbox": (...args: unknown[]) => Promise<unknown>
     "generateOutline": (...args: unknown[]) => Promise<unknown>
     "getCertificate": (...args: unknown[]) => Promise<unknown>
@@ -886,6 +888,7 @@ export interface PluginContext {
   }
   "host": {
     "getCapabilities": (...args: unknown[]) => Promise<unknown>
+    "setSurfaceTab": (...args: unknown[]) => Promise<unknown>
   }
   "http": {
     "fetch": (...args: unknown[]) => Promise<unknown>
@@ -1038,6 +1041,10 @@ export interface PluginContext {
       "update": (...args: unknown[]) => Promise<unknown>
     }
     "search": (...args: unknown[]) => Promise<unknown>
+  }
+  "widget": {
+    "clear": (...args: unknown[]) => Promise<unknown>
+    "set": (...args: unknown[]) => Promise<unknown>
   }
   "workspace": {
     "deleteFile": (...args: unknown[]) => Promise<unknown>

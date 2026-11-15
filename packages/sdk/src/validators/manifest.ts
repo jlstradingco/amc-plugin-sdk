@@ -144,6 +144,7 @@ const pluginInfoSchema = z.object({
     .max(128)
     .regex(/^[A-Za-z0-9_-]+$/)
     .optional(),
+  platforms: z.array(z.enum(['win32', 'darwin', 'linux'])).min(1).optional(),
 })
 
 const settingOptionSchema = z.object({

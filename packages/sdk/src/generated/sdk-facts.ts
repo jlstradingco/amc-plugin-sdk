@@ -7,6 +7,9 @@
 // WIDGET_SHAPES / WIDGET_TONES / WIDGET_ICON_NAMES ← src/shared/push-event-schemas/plugin.ts
 // RICH_WIDGET_SHAPES           ← src/shared/push-event-schemas/plugin-rich-widgets.ts
 // WIDGET_ACTION_IDS / WIDGET_BUTTONS_MAX ← src/shared/widget-sidebar/
+// WIDGET_BUTTON_* (id pattern, label and target bounds) ← src/shared/widget-sidebar/widget-buttons.ts
+// WIDGET_* text, icon, progress, series, list, note and title bounds, WIDGET_PANEL_MODES ← src/shared/push-event-schemas/plugin-rich-widgets.ts, plugin.ts
+// SIDEBAR_ITEM_* / SIDEBAR_ITEMS_MAX ← src/shared/push-event-schemas/plugin.ts
 // SIDEBAR_WIDGET_* / WIDGET_FACE_NAMES ← src/shared/plugin-manifest-widgets.ts, src/shared/widget-sidebar/
 
 export const PLUGIN_PERMISSIONS = [
@@ -231,3 +234,49 @@ export const SIDEBAR_WIDGET_ID_MAX = 32
 export const SIDEBAR_WIDGET_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 export const SIDEBAR_GRID_COLUMNS = 4
 export const SIDEBAR_MAX_WIDGET_ROWS = 40
+
+export const WIDGET_VALUE_MAX = 8
+export const WIDGET_LABEL_MAX = 16
+export const WIDGET_TOOLTIP_MAX = 120
+export const WIDGET_TITLE_MIN = 1
+export const WIDGET_TITLE_MAX = 24
+export const WIDGET_ICON_MIN = 1
+export const WIDGET_ICON_MAX = 50
+export const WIDGET_ICON_NAME_PATTERN_SOURCE = "^[A-Za-z0-9-]+$"
+export const WIDGET_PANEL_MODES = [
+  "popover",
+  "none"
+] as const
+
+export const WIDGET_PROGRESS_MIN = 0
+export const WIDGET_PROGRESS_MAX = 1
+export const WIDGET_SPARKLINE_SERIES_MAX = 32
+export const WIDGET_CHART_SERIES_MIN = 2
+export const WIDGET_CHART_SERIES_MAX = 32
+export const WIDGET_LIST_ITEMS_MIN = 1
+export const WIDGET_LIST_ITEMS_MAX = 8
+export const WIDGET_LIST_LABEL_MIN = 1
+export const WIDGET_LIST_LABEL_MAX = 40
+export const WIDGET_LIST_DETAIL_MAX = 60
+export const WIDGET_NOTE_MIN = 1
+export const WIDGET_NOTE_MAX = 280
+
+export const WIDGET_BUTTON_ID_PATTERN_SOURCE = "^[a-z0-9][a-z0-9-]{0,31}$"
+export const WIDGET_BUTTON_LABEL_MIN = 1
+export const WIDGET_BUTTON_LABEL_MAX = 24
+export const WIDGET_BUTTON_TARGET_MIN = 1
+export const WIDGET_BUTTON_TARGET_MAX = 200
+
+export const SIDEBAR_ITEMS_MAX = 200
+export const SIDEBAR_ITEM_ID_MIN = 1
+export const SIDEBAR_ITEM_ID_MAX = 500
+export const SIDEBAR_ITEM_TITLE_MAX = 500
+export const SIDEBAR_ITEM_SUBTITLE_MAX = 500
+export const SIDEBAR_ITEM_STATUS_MAX = 200
+export const SIDEBAR_ITEM_PROGRESS_MIN = 0
+export const SIDEBAR_ITEM_PROGRESS_MAX = 100
+export const SIDEBAR_ITEM_STEP_MIN = 0
+export const SIDEBAR_ITEM_GRADE_MAX = 5
+export const SIDEBAR_ITEM_SCORE_MIN = 0
+export const SIDEBAR_ITEM_SCORE_MAX = 100
+export const SIDEBAR_ITEM_LAST_SCAN_DATE_MAX = 100

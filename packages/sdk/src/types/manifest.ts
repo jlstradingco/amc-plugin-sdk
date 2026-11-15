@@ -374,6 +374,12 @@ export interface PluginManifest {
      * plugin reads on your own server.
      */
     requiresOrganization?: string
+    /**
+     * Operating systems this plugin runs on. Absent means every platform; an
+     * empty list fails validation. Mirrors the host validator's enum in
+     * `src/shared/plugin-manifest-schema.ts`.
+     */
+    platforms?: Array<'win32' | 'darwin' | 'linux'>
   }
   settings: PluginSettingDefinition[]
   storage: {

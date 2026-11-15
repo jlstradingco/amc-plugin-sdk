@@ -23,6 +23,9 @@ const SHIPPED_ICON_ROOTS: Record<Template, string[]> = {
 }
 
 const CATEGORIES = ['planning', 'development', 'testing', 'devops', 'productivity', 'other'] as const
+type Category = typeof CATEGORIES[number]
+
+const isCategory = (value: string): value is Category => (CATEGORIES as readonly string[]).includes(value)
 
 function escapeHtml(str: string): string {
   return str
@@ -408,15 +411,16 @@ export const createCommand = new Command('create')
     let displayName: string
     let description: string
     let author: string
-    let category: string
+    let category: Category
     let tags: string[]
     let icon: string
 
-    if (!CATEGORIES.includes((opts.category ?? 'other') as typeof CATEGORIES[number])) {
+    const requestedCategory = opts.category ?? 'other'
+    if (!isCategory(requestedCategory)) {
       actionableError(`Invalid category: ${opts.category}`, `Choose from: ${CATEGORIES.join(', ')}`)
       process.exit(1)
     }
-    category = opts.category ?? 'other'
+    category = requestedCategory
     const needsPrompt = !opts.displayName || !opts.description || !opts.author
     if (!needsPrompt) {
       displayName = opts.displayName!
