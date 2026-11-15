@@ -20,6 +20,7 @@ import type {
   CliRequest,
   CliResponse,
   SidebarItem,
+  WidgetSpec,
   InboxItem,
   InboxDismissal,
   PluginAuthUser,
@@ -162,6 +163,10 @@ export interface TestHarness {
   sidebarBadge: number | string | null
   /** Latest ctx.sidebar.setItems value. */
   sidebarItems: SidebarItem[]
+  /** Latest ctx.widget.set spec per widget, keyed by widgetId (`''` for the default widget). A clear removes it; a clear with no selector removes every one. */
+  widgetSpecs: Record<string, WidgetSpec>
+  /** Every ctx.widget.clear call in order, as the widgetId cleared (`''` for the default widget). */
+  widgetCleared: string[]
   /** Latest ctx.inbox.setItems value. */
   inboxItems: InboxItem[]
   sentEmails: PluginEmailMessage[]
@@ -408,6 +413,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     emittedEvents: [],
     sidebarBadge: null,
     sidebarItems: [],
+    widgetSpecs: {},
+    widgetCleared: [],
     inboxItems: [],
     inboxAlerts: [],
     sentEmails: [],
@@ -789,6 +796,20 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     sidebar: {
       setBadge: (count) => { harness.sidebarBadge = count },
       setItems: (items) => { harness.sidebarItems = items }
+    },
+
+    widget: {
+      set: (spec, selector) => {
+        harness.widgetSpecs[selector?.widgetId ?? ''] = spec
+        return Promise.resolve()
+      },
+      clear: (selector) => {
+        const widgetId = selector?.widgetId ?? ''
+        if (selector) delete harness.widgetSpecs[widgetId]
+        else harness.widgetSpecs = {}
+        harness.widgetCleared.push(widgetId)
+        return Promise.resolve()
+      }
     },
 
     toast: {

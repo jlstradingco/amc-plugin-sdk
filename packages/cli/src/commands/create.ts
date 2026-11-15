@@ -4,7 +4,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { createRequire } from 'node:module'
 import { execSync } from 'node:child_process'
-import { classifyPluginIcon } from '@omniscio/plugin-sdk'
+import { classifyPluginIcon, SIDEBAR_WIDGET_TITLE_MAX } from '@omniscio/plugin-sdk'
 import { ok, fail, info, actionableError } from '../lib/output.js'
 
 const CLI_VERSION: string = createRequire(import.meta.url)('../../package.json').version
@@ -51,60 +51,118 @@ export function parseTagsInput(raw: string | undefined, fallbackCategory: string
   return out.length > 0 ? out : [fallbackCategory]
 }
 
-const WIDGET_PLUGIN_JS = `// Plain-JS webview plugin that draws a titlebar widget. No build step.
-//
-// You send DATA; Omniscio draws it. Pick a shape, a short value (8 characters
-// max), a short label (16 max), a tone (a MEANING, not a colour) and an icon
-// NAME from Omniscio's allow-list. Updates coalesce to one per 250 ms, and
-// sending an identical spec again does nothing, so push whenever your state changes.
+export const WIDGET_PLUGIN_JS = `// Plain-JS sidebar plugin: sends data to a sidebar tile and switches it from the panel page.
 const amc = window.Omniscio ?? window.AgentMC
+const TILE = { widgetId: 'status' }
+const OPEN_INBOX = { id: 'open-inbox', label: 'Open inbox', action: 'open-place', target: 'omniscio://inbox' }
+const ROWS = [
+  { label: 'Write the first widget', detail: 'done' },
+  { label: 'Try the number face', detail: 'next', tone: 'needs-you' },
+]
+const toggleButton = document.getElementById('toggle')
+const statusEl = document.getElementById('status')
+let showingList = true
 
-// The dev shell (omniscio-plugin dev) has no titlebar, so this API is missing there.
-// Widgets can only be tried inside Omniscio itself.
-if (!amc || !amc.widget || !amc.widget.set) {
-  console.log('Omniscio.widget is not available here. Load this plugin inside Omniscio to see it.')
+function say(text) {
+  statusEl.textContent = text
+}
+
+function listSpec() {
+  return { shape: 'list', title: 'Today', icon: 'Sparkles', items: ROWS, buttons: [OPEN_INBOX] }
+}
+
+function statSpec() {
+  return { shape: 'stat', value: String(ROWS.length), label: 'things to do', icon: 'Sparkles', buttons: [OPEN_INBOX] }
+}
+
+async function render() {
+  try {
+    await amc.widget.set(showingList ? listSpec() : statSpec(), TILE)
+    say(showingList ? 'The tile shows a list.' : 'The tile shows a number.')
+  } catch (err) {
+    say('That did not work: ' + (err instanceof Error ? err.message : String(err)))
+  }
+}
+
+if (amc && amc.widget && amc.widget.set) {
+  toggleButton.addEventListener('click', () => {
+    showingList = !showingList
+    render()
+  })
+  render()
 } else {
-  let count = 0
-
-  const push = () =>
-    amc.widget.set({
-      shape: 'stat',
-      value: String(count),
-      label: 'my widget',
-      tone: 'neutral',
-      icon: 'Sparkles',
-      tooltip: 'Updated ' + count + ' time(s)',
-    })
-
-  push()
-  setInterval(() => {
-    count += 1
-    push()
-  }, 5000)
+  say('Omniscio.widget is not available here.')
 }
 `
 
-function buildWidgetPopoverHtml(displayName: string): string {
+export function buildWidgetPageHtml(displayName: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(displayName)} widget</title>
+  <title>${escapeHtml(displayName)}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 16px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
-    h1 { font-size: 1rem; margin-bottom: 6px; }
-    p { font-size: 0.875rem; color: var(--surface-500, #666); }
+    h1 { font-size: 1rem; margin-bottom: 8px; }
+    p { color: var(--surface-500, #666); font-size: 0.875rem; margin-bottom: 12px; }
+    button { padding: 6px 12px; font: inherit; font-size: 0.875rem; margin-bottom: 12px; }
   </style>
 </head>
 <body>
-  <!-- Shown in the 320x256 popover that opens when the user clicks your titlebar widget. -->
   <h1>${escapeHtml(displayName)}</h1>
-  <p>This page opens when the widget is clicked. Replace it with whatever detail sits behind your number.</p>
+  <p>This page is the panel widget. The Status tile in the sidebar shows what plugin.js sends it.</p>
+  <button id="toggle">Switch the tile between a list and a number</button>
+  <p id="status"></p>
+  <script src="plugin.js"></script>
 </body>
 </html>
 `
+}
+
+function widgetTitle(text: string): string {
+  return text.slice(0, SIDEBAR_WIDGET_TITLE_MAX).trim()
+}
+
+export function buildWidgetDeclarations(displayName: string): Record<string, unknown>[] {
+  return [
+    {
+      id: 'status',
+      title: widgetTitle(displayName),
+      kind: 'tile',
+      defaultSize: { w: 4, h: 3 },
+      faces: ['list', 'stat'],
+    },
+    {
+      id: 'panel',
+      title: widgetTitle(`${displayName} panel`),
+      kind: 'panel',
+      defaultSize: { w: 4, h: 6 },
+    },
+  ]
+}
+
+export function buildBasicPageHtml(displayName: string, description: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(displayName)}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p { color: var(--surface-500, #666); }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(displayName)}</h1>
+  <p>${escapeHtml(description)}</p>
+  <script src="plugin.js"></script>
+</body>
+</html>`
 }
 
 const SCAFFOLD_GITIGNORE = [
@@ -282,7 +340,7 @@ export function buildManifest(opts: {
 
   if (template === 'widget') {
     manifest.permissions = ['chrome', 'chrome.widget']
-    manifest.ui = { ...(manifest.ui as Record<string, unknown>), widget: { entryPoint: 'ui/widget.html' } }
+    manifest.ui = { ...(manifest.ui as Record<string, unknown>), widgets: buildWidgetDeclarations(displayName) }
   }
 
   if (hasBackend) {
@@ -439,29 +497,13 @@ export const createCommand = new Command('create')
 
     fs.mkdirSync(uiRoot, { recursive: true })
 
-    fs.writeFileSync(path.join(uiRoot, 'index.html'), `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(displayName)}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; background: var(--surface-50, #fafafa); color: var(--surface-900, #111); }
-    h1 { font-size: 1.5rem; margin-bottom: 8px; }
-    p { color: var(--surface-500, #666); }
-  </style>
-</head>
-<body>
-  <h1>${escapeHtml(displayName)}</h1>
-  <p>${escapeHtml(description)}</p>
-  <script src="plugin.js"></script>
-</body>
-</html>`)
+    fs.writeFileSync(
+      path.join(uiRoot, 'index.html'),
+      template === 'widget' ? buildWidgetPageHtml(displayName) : buildBasicPageHtml(displayName, description),
+    )
 
     if (template === 'widget') {
       fs.writeFileSync(path.join(uiRoot, 'plugin.js'), WIDGET_PLUGIN_JS)
-      fs.writeFileSync(path.join(uiRoot, 'widget.html'), buildWidgetPopoverHtml(displayName))
     } else if (isWebview) {
       fs.writeFileSync(path.join(uiRoot, 'plugin.js'), `// Plain-JS webview plugin — no build step. Edit and reload.
 const amc = window.Omniscio ?? window.AgentMC
@@ -612,6 +654,6 @@ describe('${displayName} backend', () => {
     }
     console.log('  npm run dev')
     if (template === 'widget') {
-      console.log('\nNote: the dev shell has no titlebar, so the widget only appears inside Omniscio.')
+      console.log('\nNote: the dev shell shows your widgets in its left Sidebar preview; the app draws the final look.')
     }
   })

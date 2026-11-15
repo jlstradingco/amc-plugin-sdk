@@ -32,7 +32,7 @@ omniscio-plugin create <name> [options]
 
 | Flag | Description | Default |
 |---|---|---|
-| `-t, --template <template>` | Template variant: `basic`, `with-backend`, `full`, `webview` (flat JS, no build step), `widget` (a `webview` plugin with a titlebar widget and its popover page) | `basic` |
+| `-t, --template <template>` | Template variant: `basic`, `with-backend`, `full`, `webview` (flat JS, no build step), `widget` (a flat-JS sidebar plugin, no build step: a `tile` widget filled from `ui/plugin.js` with a list and an Open inbox button, and a `panel` widget with a page that switches the tile between a list and a number; permissions `chrome` and `chrome.widget`) | `basic` |
 | `--display-name <name>` | Display name (skips interactive prompt) | &mdash; |
 | `--description <desc>` | Plugin description | &mdash; |
 | `--author <author>` | Plugin author | &mdash; |
@@ -505,7 +505,8 @@ omniscio-plugin dev [options]
 
 1. Builds the plugin the same way as `build` (unless `--no-build` is passed or `dist/` already exists).
 2. Opens the dev shell -- an Electron window that loads your plugin UI with a mock `Omniscio` context.
-3. Watches `src/` for changes, rebuilds with the same `omniscio-plugin` that started the shell, and hot-reloads automatically.
+3. Draws a Sidebar preview of your widgets and sidebar rows, fed by your page and your backend.
+4. Watches `src/`, `manifest.json` and a flat plugin's `ui/` folder for changes, rebuilds with the same `omniscio-plugin` that started the shell, and hot-reloads automatically.
 
 **Example:**
 

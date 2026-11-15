@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { validateManifest } from '@omniscio/plugin-sdk'
-import { buildManifest } from '../commands/create.js'
+import {
+  WIDGET_PLUGIN_JS,
+  buildBasicPageHtml,
+  buildManifest,
+  buildWidgetDeclarations,
+  buildWidgetPageHtml,
+} from '../commands/create.js'
 
 // Every template `omniscio-plugin create` scaffolds must produce a manifest the SDK's own
 // validator accepts — otherwise a developer's first `omniscio-plugin validate` fails on a
@@ -35,16 +41,42 @@ describe('buildManifest', () => {
     expect(manifest.ui.entryPoint).toBe('ui/index.html')
   })
 
-  it('widget template is a flat webview that declares the titlebar widget', () => {
+  it('widget template is a flat webview that declares a sidebar tile and a panel', () => {
     const manifest = buildManifest({ ...base, template: 'widget' }) as {
-      ui: { entryPoint: string; widget: { entryPoint: string } }
+      ui: { entryPoint: string; widget?: unknown; widgets: Array<Record<string, unknown>> }
       permissions: string[]
     }
     expect(manifest.ui.entryPoint).toBe('ui/index.html')
-    expect(manifest.ui.widget.entryPoint).toBe('ui/widget.html')
-    // chrome.widget requires an explicit chrome beside it; the validator enforces the pairing.
     expect(manifest.permissions).toEqual(['chrome', 'chrome.widget'])
+    expect('widget' in manifest.ui).toBe(false)
+    expect(manifest.ui.widgets).toEqual([
+      { id: 'status', title: 'My Plugin', kind: 'tile', defaultSize: { w: 4, h: 3 }, faces: ['list', 'stat'] },
+      { id: 'panel', title: 'My Plugin panel', kind: 'panel', defaultSize: { w: 4, h: 6 } },
+    ])
     expect('backend' in manifest).toBe(false)
+  })
+
+  it('widget titles are cut to the 60-character manifest limit', () => {
+    const displayName = 'A'.repeat(80)
+    const widgets = buildWidgetDeclarations(displayName) as Array<{ title: string }>
+    expect(widgets[0].title).toHaveLength(60)
+    expect(widgets[1].title).toHaveLength(60)
+  })
+
+  it('a longest-allowed sidebar name still gives widget titles within the limit and a valid manifest', () => {
+    const displayName = 'B'.repeat(50)
+    const manifest = buildManifest({ ...base, displayName, template: 'widget' }) as {
+      ui: { widgets: Array<{ title: string }> }
+    }
+    expect(manifest.ui.widgets.map((widget) => widget.title.length)).toEqual([50, 56])
+    expect(validateManifest(manifest).errors).toEqual([])
+  })
+
+  it('only the widget template declares widgets', () => {
+    for (const template of ['basic', 'with-backend', 'full', 'webview'] as const) {
+      const manifest = buildManifest({ ...base, template }) as { ui: Record<string, unknown> }
+      expect('widgets' in manifest.ui).toBe(false)
+    }
   })
 
   it('compiled templates point UI at the dist build output', () => {
@@ -88,5 +120,37 @@ describe('buildManifest', () => {
       label: 'Heartbeat Check',
       approvalRequired: true,
     })
+  })
+})
+
+describe('widget template page files', () => {
+  it('plugin.js sets the status tile, guards the call, and has a switch with a status line', () => {
+    expect(WIDGET_PLUGIN_JS).toContain("{ widgetId: 'status' }")
+    expect(WIDGET_PLUGIN_JS).toContain('if (amc && amc.widget && amc.widget.set)')
+    expect(WIDGET_PLUGIN_JS).toContain("shape: 'list'")
+    expect(WIDGET_PLUGIN_JS).toContain("shape: 'stat'")
+    expect(WIDGET_PLUGIN_JS).toContain("action: 'open-place'")
+    expect(WIDGET_PLUGIN_JS).toContain("getElementById('toggle')")
+    expect(WIDGET_PLUGIN_JS).toContain("getElementById('status')")
+  })
+
+  it('plugin.js is a plain script with one header line of comment and nothing else', () => {
+    const commentLines = WIDGET_PLUGIN_JS.split(/\r?\n/).filter((line) => line.trim().startsWith('//'))
+    expect(commentLines).toHaveLength(1)
+  })
+
+  it('the page carries the elements plugin.js looks up, and escapes the display name', () => {
+    const html = buildWidgetPageHtml('Tom & <Jerry>')
+    expect(html).toContain('id="toggle"')
+    expect(html).toContain('id="status"')
+    expect(html).toContain('<script src="plugin.js"></script>')
+    expect(html).toContain('Tom &amp; &lt;Jerry&gt;')
+    expect(html).not.toContain('<Jerry>')
+  })
+
+  it('the basic page still shows the description', () => {
+    expect(buildBasicPageHtml('Name', 'A "quoted" <b>thing</b>')).toContain(
+      'A &quot;quoted&quot; &lt;b&gt;thing&lt;/b&gt;',
+    )
   })
 })

@@ -19,6 +19,7 @@ import {
   estimatePayloadBytes,
   hostQueryPage,
 } from '@omniscio/plugin-sdk/testing'
+import type { PreviewState } from './preview-state.js'
 
 interface MockContextOptions {
   pluginId: string
@@ -31,6 +32,7 @@ interface MockContextOptions {
    * plugin, so a plugin's settings-gated logic can actually be exercised.
    */
   settings?: Record<string, unknown>
+  preview?: PreviewState
 }
 
 /** A copy so callers can't mutate rows/values still held by the in-memory store. */
@@ -604,11 +606,28 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
 
     sidebar: {
       setBadge: (count) => {
+        opts.preview?.setBadge(count)
         if (shouldLog) console.log(`${prefix} [sidebar] setBadge(${count})`)
       },
       setItems: (items) => {
+        opts.preview?.setRows(items)
         if (shouldLog) console.log(`${prefix} [sidebar] setItems(${items.length} items)`)
       },
+    },
+
+    widget: {
+      set: (spec, selector) =>
+        new Promise<void>((resolve) => {
+          opts.preview?.setWidget(spec, selector)
+          if (shouldLog) console.log(`${prefix} [widget] set(${selector?.widgetId ?? 'default'})`)
+          resolve()
+        }),
+      clear: (selector) =>
+        new Promise<void>((resolve) => {
+          opts.preview?.clearWidget(selector)
+          if (shouldLog) console.log(`${prefix} [widget] clear(${selector?.widgetId ?? 'all'})`)
+          resolve()
+        }),
     },
 
     toast: {

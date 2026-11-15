@@ -2,7 +2,7 @@
 
 A live widget drawn by Omniscio: a number, a short label and a status tone in the titlebar, and in the widget sidebar also lists, charts, notes, progress bars and buttons. You can update it at any time.
 
-**Availability:** Webview only (`Omniscio.widget`). There is no `ctx.widget`.
+**Availability:** Both. A webview page has `Omniscio.widget` (`set`, `clear` and `action`). Background code has `ctx.widget` (`set` and `clear` only), and it is optional on `PluginContext`: check `if (ctx.widget)` first. See [From a backend](#from-a-backend-ctx-widget).
 **Required Permissions:** `chrome` **and** `chrome.widget`
 
 ::: tip You send data, Omniscio draws it
@@ -50,6 +50,29 @@ The result's `status` is one of:
 | `needs-confirmation` | Omniscio is asking the user now. Your page is not told their answer |
 | `refused` | It did not run. `reason` and a readable `message` say why (for example `rate-limited` or `bad-target`) |
 | `expired` | The request went stale before the user answered |
+
+## From a backend (`ctx.widget`)
+
+Your plugin's background code can update its widgets itself, with no page open:
+
+```typescript
+import type { PluginContext } from '@omniscio/plugin-sdk'
+
+export default function activate(ctx: PluginContext) {
+  return {
+    onEnable() {
+      if (!ctx.widget) return
+      void ctx.widget.set({ shape: 'stat', value: '3', label: 'open items' })
+    },
+  }
+}
+```
+
+- `ctx.widget.set(spec, selector?)` and `ctx.widget.clear(selector?)` mean the same as the page's. There is **no `action`**: an action needs a person's click, so only a page can ask for one.
+- It needs **both** `chrome` and `chrome.widget`, and a call without either is refused.
+- It runs the same checks as the page: the same spec limits, the same `widgetId` rules and the same **250 ms** coalescing per widget. A spec that breaks a limit is rejected, not trimmed.
+- `ctx.widget` is optional because an Omniscio older than this release has none. Check for it before you call it, as above.
+- Updates from your page and your backend go to the same widget. The last one in a 250 ms window wins.
 
 ## `WidgetSpec`
 
@@ -183,6 +206,7 @@ The widget sidebar is a panel of widgets the user arranges beside their sessions
 | `faces` | For a tile only: the shapes it may send. A panel declares none |
 
 - Declare 1 to 8 widgets. `ui.widgets` replaces the older `ui.widget`, and a manifest cannot set both.
+- The **titlebar** draws one widget per plugin: your **first declared** one (the first entry in `ui.widgets`, or the plugin itself when you declare none). Put the widget you want in the titlebar first. Every widget can go in the sidebar.
 - A **panel** widget runs your panel page with exactly your plugin's permissions, nothing more. It can ask for actions with [`action`](#methods).
 - Omniscio always draws the widget's frame — its name and your plugin's icon — outside your content, so a widget cannot pass for another plugin or for the app.
 - A hidden sidebar pauses its widgets' pages at once and unloads them after a few minutes, so your page may start again when the user reopens it. Send your spec as soon as the page loads, rather than only when your data changes.
@@ -231,9 +255,22 @@ async function publish(failing: number, total: number) {
 
 ## Notes
 
-- Webview only. A backend that needs a widget should send the data to its webview with [`ctx.events`](./events).
+- A backend can update a widget directly with [`ctx.widget`](#from-a-backend-ctx-widget). It does not need to relay through a page. It cannot ask for an action.
 - `@omniscio/plugin-sdk/browser` exports `WidgetSpec`, `CompactWidgetSpec`, `RichWidgetSpec` (and each rich shape's own spec), `WidgetButton`, `WidgetActionId`, `WidgetActionResult`, `WidgetShape`, `RichWidgetShape`, `WidgetTone` and `BridgeWidget`. `PluginManifestWidget` types one `ui.widgets` entry.
 
 ## Testing
 
-The dev shell has no titlebar and the SDK ships no webview mock, so `Omniscio.widget` is not available there. Guard the call (`if (amc.widget?.set)`) so your page still loads, and test the widget inside Omniscio. See the [dev shell guide](../guide/dev-shell).
+The [dev shell](../guide/dev-shell) previews your widgets in a **Sidebar preview**. It draws the latest spec from `widget.set`, shows plain problems for a spec that breaks a limit (naming the field and the limit), and rejects the call as Omniscio would. It does not draw the final look; Omniscio does that. Calls from your page and from your backend (`ctx.widget`) both show there.
+
+To check a spec in your own tests, use `validateWidgetSpec`. It returns a list of problems, and an empty list means Omniscio would accept the spec. The limits are generated from Omniscio's own rules.
+
+```typescript
+import { validateWidgetSpec } from '@omniscio/plugin-sdk'
+
+const problems = validateWidgetSpec({ shape: 'stat', value: 'much too long to fit' })
+// [{ path: 'value', message: '...' }]
+```
+
+`createTestContext` from `@omniscio/plugin-sdk/testing` records what your backend sent: `widgetSpecs` holds the latest spec for each widget (keyed by `widgetId`, `''` for the default widget) and `widgetCleared` lists every cleared widget. Run `validateWidgetSpec` over `widgetSpecs` to check them.
+
+If your page may run outside Omniscio, guard the call (`if (amc.widget?.set)`) so it still loads.

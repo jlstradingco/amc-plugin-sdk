@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { validateSidebarItems, validateWidgetSpec } from '@omniscio/plugin-sdk'
 import {
   BRIDGE_GLOBALS,
   callMockBridge,
@@ -6,6 +7,7 @@ import {
   type MockBridge,
   type MockToastOptions,
 } from '../mock-bridge'
+import { createPreviewState, type PreviewState } from '../preview-state'
 import {
   GUEST_BRIDGE_CONFIG,
   buildPreloadSource,
@@ -139,5 +141,117 @@ describe('guest scripts', () => {
     expect(script).toContain('"durationMs":60000')
     expect(script).toContain(JSON.stringify('"); alert(1); ("'))
     expect(toastBannerScript({ message: 'x' })).toContain('"durationMs":3000')
+  })
+})
+
+describe('createMockBridge with a sidebar preview', () => {
+  let preview: PreviewState
+  let bridge: MockBridge
+
+  beforeEach(() => {
+    preview = createPreviewState({
+      widgets: [
+        { id: 'status', title: 'Status', kind: 'tile' },
+        { id: 'panel', title: 'Panel', kind: 'panel' },
+      ],
+      validateWidgetSpec,
+      validateSidebarItems,
+      notify: () => undefined,
+      throttleMs: 0,
+    })
+    bridge = createMockBridge({ showToast: () => undefined, log: vi.fn(), preview })
+  })
+
+  it('widget.set reaches the preview for the default widget and for a selected one', async () => {
+    await expect(bridge.widget.set({ shape: 'stat', value: '3', label: 'open' })).resolves.toBeUndefined()
+    await bridge.widget.set({ shape: 'note', text: 'hello' }, { widgetId: 'panel' })
+    const [status, panel] = preview.snapshot().widgets
+    expect(status.spec).toEqual({ shape: 'stat', value: '3', label: 'open' })
+    expect(panel.spec).toEqual({ shape: 'note', text: 'hello' })
+  })
+
+  it('widget.set rejects an undeclared widget id like the app', async () => {
+    await expect(bridge.widget.set({ shape: 'stat', value: '1' }, { widgetId: 'nope' })).rejects.toThrow(
+      'this plugin declares no widget called "nope"',
+    )
+  })
+
+  it('widget.set rejects a spec the app would refuse and the preview records why', async () => {
+    await expect(bridge.widget.set({ shape: 'stat', value: '123456789' })).rejects.toThrow()
+    expect(preview.snapshot().widgets[0].problems?.length).toBeGreaterThan(0)
+  })
+
+  it('widget.clear empties one widget, or all of them with no selector', async () => {
+    await bridge.widget.set({ shape: 'stat', value: '1' })
+    await bridge.widget.set({ shape: 'stat', value: '2' }, { widgetId: 'panel' })
+    await bridge.widget.clear({ widgetId: 'status' })
+    expect(preview.snapshot().widgets[0].spec).toBeUndefined()
+    expect(preview.snapshot().widgets[1].spec).toEqual({ shape: 'stat', value: '2' })
+    await bridge.widget.clear()
+    expect(preview.snapshot().widgets[1].spec).toBeUndefined()
+  })
+
+  it('widget.action runs open-place at once', async () => {
+    await expect(bridge.widget.action({ action: 'open-place', target: 'omniscio://inbox' })).resolves.toEqual({
+      status: 'ran',
+      action: 'open-place',
+      summary: 'Opened omniscio://inbox',
+    })
+  })
+
+  it.each(['send-quick-reply', 'run-automation', 'run-recipe', 'start-session'])(
+    'widget.action asks for confirmation for %s',
+    async (action) => {
+      await expect(bridge.widget.action({ action, target: 'something' })).resolves.toEqual({
+        status: 'needs-confirmation',
+        confirmation: { action, target: 'something', canRemember: true },
+      })
+    },
+  )
+
+  it('widget.action rejects an unknown action id and a missing target', async () => {
+    await expect(bridge.widget.action({ action: 'format-disk', target: 'c:' })).rejects.toThrow(
+      'unknown widget action "format-disk"',
+    )
+    await expect(bridge.widget.action({ action: 'open-place' })).rejects.toThrow('needs a target')
+    await expect(bridge.widget.action()).rejects.toThrow('unknown widget action')
+  })
+
+  it('sidebar.setItems drops a row missing status and keeps the good ones', async () => {
+    await bridge.sidebar.setItems([
+      { id: 'good', title: 'Good', status: 'running' },
+      { id: 'bad', title: 'No status' },
+    ])
+    const rows = preview.snapshot().rows
+    expect(rows.kept).toEqual([{ id: 'good', title: 'Good', status: 'running' }])
+    expect(rows.dropped).toHaveLength(1)
+    expect(rows.dropped[0]).toMatchObject({ index: 1, id: 'bad' })
+  })
+
+  it('sidebar.setBadge reaches the preview', async () => {
+    await bridge.sidebar.setBadge(7)
+    expect(preview.snapshot().badge).toBe(7)
+  })
+
+  it('still serves toast, theme, storage and settings', async () => {
+    await bridge.storage.set('k', 1)
+    expect(await bridge.storage.get('k')).toBe(1)
+    expect(((await bridge.theme.get()) as { mode: string }).mode).toBe('dark')
+  })
+
+  it('carries a widget rejection through callMockBridge as a rejected promise', async () => {
+    await expect(
+      Promise.resolve(callMockBridge(bridge, 'widget', 'set', [{ shape: 'stat' }, { widgetId: 'nope' }])),
+    ).rejects.toThrow('declares no widget')
+  })
+})
+
+describe('createMockBridge without a sidebar preview', () => {
+  it('keeps resolving undefined for widget and sidebar calls, rejecting nothing', async () => {
+    const bridge = createMockBridge({ showToast: () => undefined, log: vi.fn() })
+    await expect(bridge.widget.set({ shape: 'stat' }, { widgetId: 'nope' })).resolves.toBeUndefined()
+    await expect(bridge.widget.action({ action: 'format-disk' })).resolves.toBeUndefined()
+    await expect(bridge.sidebar.setItems([{ id: 'x' }])).resolves.toBeUndefined()
+    await expect(bridge.sidebar.setBadge(2)).resolves.toBeUndefined()
   })
 })

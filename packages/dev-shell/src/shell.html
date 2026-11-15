@@ -9,10 +9,38 @@
     .header { padding: 8px 16px; background: #16213e; border-bottom: 1px solid #333; font-size: 13px; display: flex; align-items: center; gap: 8px; }
     .header .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
     .main { flex: 1; display: flex; overflow: hidden; }
-    .sidebar { width: 200px; background: #0f3460; border-right: 1px solid #333; padding: 12px; overflow-y: auto; }
+    .sidebar { width: 300px; flex-shrink: 0; background: #0f3460; border-right: 1px solid #333; padding: 12px; overflow-y: auto; }
     .sidebar h3 { font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 8px; }
-    .sidebar .item { padding: 6px 8px; border-radius: 4px; font-size: 13px; cursor: pointer; }
-    .sidebar .item:hover { background: #1a4a7a; }
+    .banner { font-size: 11px; color: #9fb3d1; margin-bottom: 10px; line-height: 1.4; }
+    .frame { background: #16213e; border: 1px solid #2c3e66; border-radius: 6px; margin-bottom: 10px; }
+    .frame header { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; border-bottom: 1px solid #2c3e66; }
+    .frame .title { font-size: 12px; font-weight: 600; }
+    .frame .kind { font-size: 10px; text-transform: uppercase; color: #888; }
+    .frame .body { padding: 10px; font-size: 13px; }
+    .face-title { font-size: 11px; color: #9fb3d1; margin-bottom: 6px; }
+    .value { font-size: 22px; font-weight: 600; }
+    .label { font-size: 12px; color: #c8d3e6; }
+    .detail { font-size: 11px; color: #888; margin-left: 8px; }
+    .muted { font-size: 12px; color: #888; }
+    .note { font-size: 12px; line-height: 1.4; }
+    .items { list-style: none; }
+    .items li { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 3px 0; }
+    .tone { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; background: #3a4660; }
+    .tone-running { background: #166534; color: #bbf7d0; }
+    .tone-needs-you { background: #92400e; color: #fde68a; }
+    .tone-error { background: #991b1b; color: #fecaca; }
+    .tone-ember { background: #9a3412; color: #fed7aa; }
+    .tone-accent { background: #5b21b6; color: #ddd6fe; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #24365e; border: 1px solid #3b5088; cursor: default; }
+    .chip small { color: #8fa2c6; margin-left: 4px; }
+    .chip.status { background: #2c3e66; }
+    .problems { color: #f87171; font-size: 12px; line-height: 1.4; margin-left: 16px; }
+    div.problems { margin-left: 0; }
+    .bar { height: 6px; background: #2c3e66; border-radius: 3px; margin-top: 6px; overflow: hidden; width: 100%; }
+    .bar .fill { height: 100%; background: #60a5fa; }
+    .spark { width: 100%; height: 36px; color: #60a5fa; margin-top: 6px; }
+    .needs-you-dot { width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; display: inline-block; }
     .content { flex: 1; }
     .content webview { width: 100%; height: 100%; }
     .log-panel { height: 150px; background: #0d1117; border-top: 1px solid #333; padding: 8px 12px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; }
@@ -28,8 +56,8 @@
   </div>
   <div class="main">
     <div class="sidebar">
-      <h3>Sidebar</h3>
-      <div id="sidebar-items"><em style="color:#666;font-size:12px">No items</em></div>
+      <h3>Sidebar preview</h3>
+      <div id="preview"></div>
     </div>
     <div class="content">
       <webview id="plugin-view" style="width:100%;height:100%"></webview>
@@ -45,6 +73,15 @@
     const pluginVersion = params.get('pluginVersion')
     const entryPoint = params.get('entryPoint')
     const preloadUrl = params.get('preloadUrl')
+
+    document.getElementById('preview').addEventListener('click', (event) => {
+      const chip = event.target.closest('.chip[data-asks]')
+      if (!chip) return
+      const line = document.createElement('div')
+      line.className = 'log-line'
+      line.textContent = 'Preview button "' + chip.dataset.button + '" would ask Omniscio to ' + chip.dataset.asks
+      document.getElementById('log-panel').appendChild(line)
+    })
 
     document.getElementById('title').textContent = `Omniscio Plugin Dev Shell - ${pluginName} v${pluginVersion}`
 

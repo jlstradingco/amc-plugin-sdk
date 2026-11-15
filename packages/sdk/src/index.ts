@@ -268,7 +268,15 @@ export { manifestSchema, validateManifest, PLUGIN_PERMISSIONS } from './validato
 export type { ManifestValidationResult } from './validators/manifest.js'
 export { classifyPluginIcon } from './validators/plugin-icon-kind.js'
 export type { PluginIconKind } from './validators/plugin-icon-kind.js'
-export { PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER } from './generated/sdk-facts.js'
+export { validateWidgetSpec } from './validators/widget-spec.js'
+export type { WidgetSpecProblem } from './validators/widget-spec.js'
+export { validateSidebarItems } from './validators/sidebar-items.js'
+export type { DroppedSidebarRow, SidebarItemsCheck } from './validators/sidebar-items.js'
+export {
+  PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER,
+  SIDEBAR_WIDGET_TITLE_MAX,
+  WIDGET_ACTION_IDS,
+} from './generated/sdk-facts.js'
 
 // Tool-activity transcript markers (runtime value exports). Import these rather
 // than hardcoding the glyphs - see the module for provenance and codepoints.

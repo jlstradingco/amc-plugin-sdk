@@ -1,3 +1,5 @@
+import type { WidgetSelector, WidgetSpec } from './bridge.js'
+
 /**
  * Options for `ctx.db.query` (also published as `PluginDbQueryOptions`).
  *
@@ -23,10 +25,10 @@ export interface QueryOptions {
  * One row in your plugin's sidebar list.
  *
  * **`status` is REQUIRED**, and getting that wrong was expensive: the host
- * validates the whole array against its push schema and, on any failure, logs a
- * warning and DROPS THE ENTIRE BATCH — it never throws and never returns an
- * error. So an item missing `status` made `setItems` resolve successfully while
- * nothing reached the sidebar. This type declared it optional.
+ * validates each row against its push schema and, on any failure, logs one
+ * warning and DROPS THAT ROW — it never throws and never returns an error. So
+ * an item missing `status` made `setItems` resolve successfully while that row
+ * never reached the sidebar. This type declared it optional.
  *
  * At most 200 items per call from a webview; over that the call is rejected.
  */
@@ -578,6 +580,20 @@ export interface PluginSidebar {
 }
 
 /**
+ * `ctx.widget` — your plugin's live widgets, from the backend. Requires BOTH the
+ * `chrome` and `chrome.widget` permissions. The same checks and the same 250 ms
+ * per-widget coalescing as `Omniscio.widget` on a page. There is no `action`
+ * here: an action needs a person's click. Absent on an Omniscio older than this SDK:
+ * check `ctx.widget` before calling it.
+ */
+export interface PluginBackendWidget {
+  /** Replace the widget's spec. The last call in a 250 ms window wins. */
+  set(spec: WidgetSpec, selector?: WidgetSelector): Promise<void>
+  /** Remove the widget's data. */
+  clear(selector?: WidgetSelector): Promise<void>
+}
+
+/**
  * Toasts and OS notifications. Requires the `notifications` permission — which
  * this type never mentioned, and which matters more than usual here: the call
  * returns a promise the SDK types as `void`, so a permission denial surfaces as
@@ -634,9 +650,9 @@ export interface PluginAuth {
  * One row your plugin contributes to AMC's unified inbox.
  *
  * **`timestamp` is REQUIRED** — it is what the inbox orders on, and the plugin
- * owns recency. As with {@link SidebarItem}, a shape failure makes the host log
- * a warning and drop the WHOLE batch silently rather than throwing, so an item
- * without a timestamp meant `setItems` resolved and nothing appeared.
+ * owns recency. A shape failure makes the host log a warning and drop the
+ * WHOLE batch silently rather than throwing, so an item without a timestamp
+ * meant `setItems` resolved and nothing appeared.
  *
  * `body`, `icon`, `priority`, `actionLabel` and `actionId` were declared here
  * and have never existed host-side; the real optional fields are `subtitle` and
@@ -2385,6 +2401,11 @@ export interface PluginContext {
   cron: PluginCron
   cli: PluginCli
   sidebar: PluginSidebar
+  /**
+   * Updates this plugin's widgets from the backend — see {@link PluginBackendWidget}. Optional
+   * because an older Omniscio has none: check for it rather than assuming it.
+   */
+  widget?: PluginBackendWidget
   toast: PluginToast
   inbox: PluginInbox
   auth: PluginAuth

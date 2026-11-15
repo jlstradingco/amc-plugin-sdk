@@ -17,11 +17,12 @@ This runs `omniscio-plugin dev`, which:
 3. Opens an Electron dev-shell window for your plugin, with the plugin name and version in its title
 4. Loads your UI entry point (`dist/ui/index.html`) in a webview, with a mock bridge installed as `window.Omniscio` and `window.AgentMC` before your page runs
 5. If your plugin has a backend, activates it with a mock `PluginContext`
-6. Starts watching `src/` and `manifest.json` for changes
+6. Draws a [Sidebar preview](#sidebar-preview) in the left column, fed by your page and your backend
+7. Starts watching `src/`, `manifest.json` and your `ui/` folder for changes
 
 ## Hot-Reload
 
-The dev shell uses [chokidar](https://github.com/paulmillr/chokidar) to watch your `src/` directory and `manifest.json`. When a file changes, it automatically:
+The dev shell uses [chokidar](https://github.com/paulmillr/chokidar) to watch your `src/` directory, `manifest.json`, and the folder holding your manifest's `ui.entryPoint` (and `ui.widget.entryPoint`) when that folder is outside `src/` and `dist/`. That is what makes a flat plugin, whose pages sit in `ui/` rather than `src/ui/`, reload too. When a file changes, it automatically:
 
 1. Debounces rapid changes (300ms delay)
 2. Recompiles TypeScript (`tsc`)
@@ -33,8 +34,9 @@ The dev shell uses [chokidar](https://github.com/paulmillr/chokidar) to watch yo
 | Changed file | Action |
 |---|---|
 | `src/ui/*` | Webview reloads automatically -- you see the change instantly |
+| `ui/*` (a flat plugin's pages) | Webview reloads automatically |
 | `src/backend/*` | Console message: "Backend changed - restart dev shell to apply" |
-| `manifest.json` | Manifest is re-validated |
+| `manifest.json` | The plugin is rebuilt and the Sidebar preview re-reads your declared widgets. The page is not reloaded |
 | Any other `src/*` file | Treated as a UI change -- webview reloads |
 
 ::: warning
@@ -49,7 +51,28 @@ Your panel gets a mock bridge under both names, `window.Omniscio` and `window.Ag
 - **`storage`** (`get`, `set`, `delete`, `list`) keeps values in memory for the session.
 - **`settings`** (`get`, `getAll`) answers from `amc-dev-settings.json` beside your plugin.
 - **`theme.get()`** answers Omniscio's own placeholder, `{ mode: 'dark', accent: '139,92,246', surfaces: {} }`.
+- **`widget.set`, `widget.clear` and `widget.action`** and **`sidebar.setItems` and `sidebar.setBadge`** feed the [Sidebar preview](#sidebar-preview).
 - **Every other call** is logged to the terminal as `[dev-shell] <namespace>.<method>` and resolves `undefined`, so nothing throws. Subscribe methods (`on…`) return an unsubscribe function, and their callbacks never fire.
+
+## Sidebar Preview
+
+The left column of the dev shell is a **Sidebar preview**: it shows what your plugin sends to Omniscio's two sidebar surfaces. The banner above it says the data is checked with Omniscio's own rules, that widget actions answer as if the widget is placed in your sidebar, and that the app draws the final look.
+
+**Widgets.** There is one frame per widget in your manifest's `ui.widgets`, with its title and whether it is a `tile` or a `panel`. If you declare no `ui.widgets` but hold `chrome.widget`, the preview shows one tile named after your plugin, which is what Omniscio offers too. A tile frame draws the latest spec you sent with `widget.set` and says "Waiting for widget.set" until you send one. A panel frame says it shows your plugin's page, which is the page on the right.
+
+**What it checks.**
+
+- A spec that breaks a limit is not drawn. The frame lists plain problems that name the field and the limit, and the `widget.set` call rejects, as it does in Omniscio. The limits are the app's own.
+- A `widgetId` your manifest does not declare rejects the call.
+- A plugin without both `chrome` and `chrome.widget` is refused with Omniscio's wording: "chrome and chrome.widget permissions are required for the widget namespace".
+- `widget.clear` empties the tile you name, or every tile when you name none.
+- `widget.action` answers like the app. `open-place` answers `ran`, the other four actions answer `needs-confirmation`, and an unknown action, or one with no target, rejects. The preview assumes the widget is placed in your sidebar, so it never answers with the refusal Omniscio gives a widget that is not placed. Buttons on a spec show as chips. Clicking one writes "would ask Omniscio to ..." in the log panel; it does not run anything.
+
+**Rows and badge.** A "Sidebar rows" frame shows the rows from `sidebar.setItems` and the badge from `sidebar.setBadge`. Omniscio keeps good rows and drops bad ones, so the preview does too: dropped rows are listed with their index, id and the reason. A batch Omniscio would turn away (more than 200 rows) shows the refusal.
+
+**Page and backend.** Both feed the same preview. `Omniscio.widget` and `Omniscio.sidebar` from your page, and `ctx.widget` and `ctx.sidebar` from your backend, draw into the same frames. The preview redraws at most every 250 ms.
+
+When you edit `manifest.json`, the preview re-reads your declared widgets and keeps what each one last showed.
 
 ## Mock Backend Context
 
@@ -70,7 +93,8 @@ When your plugin has a `backend.entryPoint` in the manifest, the dev shell creat
 | **http** | Passes through to real `globalThis.fetch` -- network requests work normally |
 | **cron** | Logs registration but does not schedule; `isRegistered` returns `false` |
 | **cli** | Logs handler registration but endpoints are not reachable |
-| **sidebar** | Logs `setBadge` and `setItems` calls |
+| **sidebar** | Logs `setBadge` and `setItems` calls and shows them in the [Sidebar preview](#sidebar-preview) |
+| **widget** | `ctx.widget.set` and `clear` draw into the [Sidebar preview](#sidebar-preview), and reject a bad spec like the app. There is no `action`, as in Omniscio |
 | **toast** | Logs toast messages and notifications to the console |
 | **core** | Read-only sample data: three sessions, two projects and a few messages. An unknown id answers `null` / `[]`, and `messages.list` honours the 200-message cap and `window` |
 
@@ -153,18 +177,20 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | Cron scheduling | Logs only, no execution | Real cron scheduler |
 | CLI endpoints | Logs only, not reachable | Reachable via control server |
 | Toasts and notifications | `toast.show` draws a banner; other calls log | In-app toasts and real OS notifications |
-| Plugin permissions | Not enforced | Enforced at runtime |
-| Sidebar badge/items | Logs to console | Updates Omniscio sidebar |
-| Titlebar widget (`Omniscio.widget`) | Calls are logged; nothing is drawn | Drawn by Omniscio in the titlebar |
+| Plugin permissions | Not enforced, except that `widget` calls need `chrome` and `chrome.widget` | Enforced at runtime |
+| Sidebar badge/items | Shown in the Sidebar preview, with dropped rows and their reasons | Updates Omniscio sidebar |
+| Widgets (`Omniscio.widget`, `ctx.widget`) | Shown in the Sidebar preview, checked with the app's rules; the look is a stand-in | Drawn by Omniscio in the widget sidebar, and the first declared widget in the titlebar |
 | `ctx.core` data | Fixed sample data | The user's real sessions, projects and messages |
 
 ::: tip
 For integration testing with real Omniscio APIs, install your built plugin into Omniscio directly. Use `npm run package` to create the `.amcplugin` file, then install it through Settings > Plugins > Install from file.
 :::
 
-### Titlebar widgets are tested inside Omniscio
+### What the preview does not show
 
-The dev shell has no titlebar, so `Omniscio.widget.set(...)` there is only logged and draws nothing. The SDK deliberately draws no fake widget, since a fake would only tell you your call type-checks, not that the host accepts and draws it. Guard the call so the rest of your page still runs in the shell:
+The preview is a stand-in, not Omniscio's drawing. It does not show the titlebar, the real fonts, colours or icons, the Add picker, or the dialog Omniscio opens before it runs an action. To see the real look, run `npm run package` and install the `.amcplugin` through Settings > Plugins > Install from file.
+
+If your page may also run outside the dev shell, guard the call so the rest of it still works:
 
 ```typescript
 const amc = (window as unknown as { Omniscio?: Omniscio }).Omniscio
@@ -173,7 +199,7 @@ if (amc?.widget?.set) {
 }
 ```
 
-To see a widget, run `npm run package` and install the `.amcplugin` through Settings > Plugins > Install from file. The `widget` template (`omniscio-plugin create my-widget --template widget`) already contains this guard.
+The `widget` template (`omniscio-plugin create my-widget --template widget`) already contains this guard, and its two widgets show in the preview the moment you run `npm run dev`.
 
 ## Window Configuration
 

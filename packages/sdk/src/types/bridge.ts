@@ -931,8 +931,8 @@ export type WidgetActionResult =
 
 /**
  * `Omniscio.widget` — your plugin's live widgets, drawn by Omniscio in the
- * titlebar and in the widget sidebar. Webview only: the host builds no
- * `ctx.widget` for backends. Requires BOTH the `chrome` and `chrome.widget`
+ * titlebar and in the widget sidebar. Backends get `set` and `clear` as
+ * `ctx.widget`, never `action`. Requires BOTH the `chrome` and `chrome.widget`
  * permissions.
  *
  * Each `set` REPLACES that widget's previous spec. Calls coalesce to at most one
@@ -1409,7 +1409,7 @@ export interface Omniscio {
   backend?: BridgeBackend
   /** Optional: absent before Omniscio v0.1.89. See {@link BridgeHost}. */
   host?: BridgeHost
-  /** Webview-only. See {@link BridgeWidget}. */
+  /** A backend has `ctx.widget` too, without `action`. See {@link BridgeWidget}. */
   widget: BridgeWidget
   /** See {@link BridgeHttp}. */
   http: BridgeHttp

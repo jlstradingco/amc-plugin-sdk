@@ -15,7 +15,7 @@ export type {
   PluginStorage, PluginSecrets, PluginDb, PluginDbRow, PluginDbQueryOptions,
   PluginStorageStats, PluginSettings, PluginLogger, PluginEvents,
   PluginSessions, PluginSessionImage, PluginSessionCreateOptions, PluginSessionCreateResult, PluginSessionFanoutOptions, PluginSessionFanoutResult, SessionStatus, SessionStatusInfo, SessionStatusDetail, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginEngineCatalog, PluginFs, PluginFileEncoding, PluginHttp, PluginHttpInit, PluginHttpResponse, PluginCron, PluginCli,
-  PluginSidebar, PluginToast, PluginContext, PluginRpc, PluginHost, PluginUsage,
+  PluginSidebar, PluginBackendWidget, PluginToast, PluginContext, PluginRpc, PluginHost, PluginUsage,
   PluginMemberRole, PluginLaunchKind,
   PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, InboxDismissal, PluginMyInboxItem, PluginMyInboxQuery, PluginMyInboxPage, PluginInbox,
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
@@ -66,7 +66,7 @@ export type {
   PluginRssParsedEntry, PluginRssFeedResult, PluginRssFeed, PluginRssEntry, PluginRssRecentOptions, PluginRss,
 } from './context.js'
 
-// Titlebar and sidebar widgets (`chrome.widget`) — webview-only, declared with the bridge types
+// Titlebar and sidebar widgets (`chrome.widget`) — declared with the bridge types
 export type {
   WidgetShape, WidgetTone, WidgetIconName, RichWidgetShape, WidgetActionId,
   WidgetButton, WidgetChrome, RichWidgetChrome, CompactWidgetSpec, RichWidgetSpec, ListWidgetSpec, ChartWidgetSpec,

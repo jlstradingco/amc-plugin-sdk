@@ -1,3 +1,6 @@
+import { WIDGET_ACTION_IDS } from '@omniscio/plugin-sdk'
+import type { PreviewState } from './preview-state.js'
+
 export const BRIDGE_GLOBALS = ['Omniscio', 'AgentMC'] as const
 
 /** Method names that subscribe (`on`, `onChange`, `onMessage`...) and so return an unsubscribe function. */
@@ -22,6 +25,8 @@ export interface MockBridgeOptions {
   settings?: Record<string, unknown>
   /** Defaults to `console.log`. */
   log?(line: string, args: unknown[]): void
+  /** When set, `widget.*` and `sidebar.*` calls feed the shell's sidebar preview. */
+  preview?: PreviewState
 }
 
 export type MockBridgeMethod = (...args: unknown[]) => unknown
@@ -29,10 +34,39 @@ export type MockBridge = Record<string, Record<string, MockBridgeMethod>>
 
 type Handler = (args: unknown[]) => unknown
 
+const OPEN_PLACE_ACTION = 'open-place'
+
+function answerWidgetAction(request: unknown): unknown {
+  const { action, target } = (request ?? {}) as { action?: unknown; target?: unknown }
+  if (typeof action !== 'string' || !(WIDGET_ACTION_IDS as readonly string[]).includes(action)) {
+    throw new Error(`unknown widget action "${String(action)}"`)
+  }
+  if (typeof target !== 'string' || target.length === 0) {
+    throw new Error(`widget action "${action}" needs a target`)
+  }
+  if (action === OPEN_PLACE_ACTION) return { status: 'ran', action, summary: `Opened ${target}` }
+  return { status: 'needs-confirmation', confirmation: { action, target, canRemember: true } }
+}
+
+function previewHandlers(preview: PreviewState): Record<string, Record<string, Handler>> {
+  return {
+    widget: {
+      set: ([spec, selector]) => preview.setWidget(spec, selector as { widgetId?: unknown } | undefined),
+      clear: ([selector]) => preview.clearWidget(selector as { widgetId?: unknown } | undefined),
+      action: ([request]) => answerWidgetAction(request),
+    },
+    sidebar: {
+      setItems: ([items]) => preview.setRows(items),
+      setBadge: ([count]) => preview.setBadge(count),
+    },
+  }
+}
+
 function createHandlers(options: MockBridgeOptions): Record<string, Record<string, Handler>> {
   const storage = new Map<string, unknown>()
   const settings = new Map<string, unknown>(Object.entries(options.settings ?? {}))
   return {
+    ...(options.preview ? previewHandlers(options.preview) : {}),
     toast: {
       show: ([opts]) => options.showToast(opts as MockToastOptions),
     },
@@ -63,7 +97,9 @@ function createNamespace(
   const call = (method: string, args: unknown[]): unknown => {
     log(`[dev-shell] ${name}.${method}`, args)
     if (SUBSCRIBE_METHOD_PATTERN.test(method)) return () => undefined
-    return Promise.resolve(Object.hasOwn(handlers, method) ? handlers[method](args) : undefined)
+    return new Promise((resolve) =>
+      resolve(Object.hasOwn(handlers, method) ? handlers[method](args) : undefined),
+    )
   }
   return new Proxy({} as Record<string, MockBridgeMethod>, {
     get: (_target, method) =>
@@ -76,7 +112,8 @@ function createNamespace(
 /**
  * Builds the object the dev shell installs as `window.Omniscio` (and `window.AgentMC`).
  * Any `bridge.<namespace>.<method>(...)` logs and resolves `undefined`, so no call throws;
- * `toast`, `theme`, `storage` and `settings` behave like the real thing for a dev session.
+ * `toast`, `theme`, `storage` and `settings` behave like the real thing for a dev session. With a
+ * `preview`, `widget` and `sidebar` calls answer like the app, rejecting what the app would reject.
  */
 export function createMockBridge(options: MockBridgeOptions): MockBridge {
   const log = options.log ?? ((line, args) => console.log(line, ...args))

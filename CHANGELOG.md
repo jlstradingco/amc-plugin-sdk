@@ -9,6 +9,65 @@ Versions listed here cover the published packages `@omniscio/plugin-sdk`,
 `@omniscio/plugin-cli`, and `@omniscio/plugin-dev-shell` (named `@agent-mc/*` before 3.4.0),
 which are released together.
 
+## [Unreleased]
+
+### Added — check a widget spec or a batch of sidebar rows before you send it
+
+- `validateWidgetSpec(spec)` returns the reasons Omniscio would refuse a widget spec, each with the
+  field (`path`) and a plain `message`. An empty list means it would accept it.
+- `validateSidebarItems(items)` returns `{ kept, dropped, refused? }`: the rows Omniscio keeps, the
+  rows it drops with their `index`, `id` and `reason`, and a refusal when the whole batch is turned
+  away (more than 200 rows, or not a list).
+- Both use limits generated from the app, and a test compares them with the app's own schemas, so they
+  cannot drift. `WIDGET_ACTION_IDS` and `SIDEBAR_WIDGET_TITLE_MAX` are exported too.
+- `createTestContext` records `ctx.widget` calls: `widgetSpecs` holds the latest spec per widget and
+  `widgetCleared` lists every clear.
+
+### Added — update widgets from your backend
+
+`ctx.widget.set(spec, selector?)` and `ctx.widget.clear(selector?)` work from background code. They
+need both `chrome` and `chrome.widget`, run the same checks as the page and coalesce to one update
+per widget every 250 ms. There is no `ctx.widget.action`, because an action needs a person's click.
+`ctx.widget` is optional on `PluginContext`: an Omniscio older than this release does not have it, so
+check `if (ctx.widget)` before you call it.
+
+### Added — the dev shell previews your sidebar
+
+`omniscio-plugin dev` now shows a **Sidebar preview** in its left column: one frame per widget in
+`ui.widgets` (one tile named after the plugin when you declare none but hold `chrome.widget`), drawing
+the latest `widget.set` spec. A spec that breaks a limit shows plain problems naming the field and the
+limit, and the call rejects as it does in Omniscio. `widget.clear` empties a tile, `widget.action`
+answers like the app (`open-place` runs, the other actions ask first, an unknown action rejects), and
+a plugin without `chrome` and `chrome.widget` is refused with the app's wording. `sidebar.setItems` rows
+and `sidebar.setBadge` show too, with dropped rows listed and the reason for each. Your page
+(`Omniscio.widget`, `Omniscio.sidebar`) and your backend (`ctx.widget`, `ctx.sidebar`) feed the same
+preview. Editing `manifest.json` re-reads your declared widgets.
+
+### Changed — `omniscio-plugin create --template widget` scaffolds a sidebar plugin
+
+The `widget` template now declares two sidebar widgets in `ui.widgets`, a `tile` and a `panel`, with
+the `chrome` and `chrome.widget` permissions, and no longer declares a `ui.widget` popover. `ui/plugin.js`
+fills the tile with a list and an Open inbox button, and the panel page switches the tile between a
+list and a number. It is plain JavaScript with no build step.
+
+### Changed — a bad sidebar row no longer drops the whole batch
+
+`sidebar.setItems`, from your page and from your backend, now goes through one check that keeps every
+valid row and drops each bad one, with one warning in the host log per call. Before, a single bad row
+(a missing `status`, say) dropped the whole batch and nothing appeared. A batch where every row is bad
+now empties your list. At most 200 rows per call, as before.
+
+### Fixed — dev shell hot reload
+
+Hot reload rebuilt your plugin and printed "reloading webview", but the page never reloaded: the
+message it sent had nothing listening. It now reloads the page. It also watches a flat plugin's `ui/`
+folder (and the folder of your widget page), which it did not watch before.
+
+**Migration:** nothing to do for an existing plugin. The `create` template and the dev shell's
+Sidebar preview use the validators and facts that ship in `@omniscio/plugin-sdk`, so
+`@omniscio/plugin-cli` and `@omniscio/plugin-dev-shell` need the matching SDK version. The three
+packages are released together; update all three to the same version.
+
 ## [3.6.0] - 2026-11-14
 
 ### Added — fifteen permissions the published kit lacked now ship

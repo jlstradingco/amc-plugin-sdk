@@ -3,10 +3,13 @@ import * as path from 'node:path'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { validateSidebarItems, validateWidgetSpec } from '@omniscio/plugin-sdk'
 import { createMockContext } from './mock-context.js'
 import { callMockBridge, createMockBridge } from './mock-bridge.js'
 import { BRIDGE_CHANNEL, buildPreloadSource, toastBannerScript } from './webview-guest.js'
 import { startHotReload } from './hot-reload.js'
+import { createPreviewState, widgetAccessProblem, widgetsFromManifest, type ManifestWidgetSource, type PreviewSnapshot, type PreviewState } from './preview-state.js'
+import { renderPreviewScript, reloadPluginViewScript } from './shell-ui.js'
 
 // This package is ESM ("type": "module"), where Node does not define __dirname.
 // Derive it from import.meta.url so path.join(__dirname, 'shell.html') resolves
@@ -22,11 +25,46 @@ if (!fs.existsSync(manifestPath)) {
   process.exit(1)
 }
 
-const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+interface ShellManifest extends ManifestWidgetSource {
+  plugin: { id: string; name?: string; version?: string }
+  ui?: { entryPoint?: string; widgets?: unknown }
+  backend?: { entryPoint?: string }
+}
+
+function readManifest(): ShellManifest {
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
+}
+
+const manifest = readManifest()
+let currentManifest = manifest
 const pluginName = manifest.plugin?.name ?? manifest.plugin?.id ?? 'Unknown Plugin'
 const pluginVersion = manifest.plugin?.version ?? '0.0.0'
 
+const PREVIEW_THROTTLE_MS = 250
+
 let mainWindow: BrowserWindow | null = null
+
+const preview: PreviewState = createPreviewState({
+  widgets: widgetsFromManifest(manifest),
+  validateWidgetSpec,
+  validateSidebarItems,
+  notify: drawPreview,
+  throttleMs: PREVIEW_THROTTLE_MS,
+  accessProblem: () => widgetAccessProblem(currentManifest),
+})
+
+function drawPreview(snapshot: PreviewSnapshot): void {
+  mainWindow?.webContents.executeJavaScript(renderPreviewScript(snapshot)).catch(() => undefined)
+}
+
+function reloadDeclaredWidgets(): void {
+  try {
+    currentManifest = readManifest()
+    preview.setDeclared(widgetsFromManifest(currentManifest))
+  } catch (err) {
+    console.error('[dev-shell] Manifest could not be read:', err)
+  }
+}
 
 function loadDevSettings(): Record<string, unknown> {
   const settingsFile = path.join(pluginDir, 'amc-dev-settings.json')
@@ -55,6 +93,7 @@ function serveMockBridge(devSettings: Record<string, unknown>): void {
   let guest: WebContents | null = null
   const bridge = createMockBridge({
     settings: devSettings,
+    preview,
     showToast: (opts) => {
       guest?.executeJavaScript(toastBannerScript(opts)).catch(() => undefined)
     },
@@ -79,6 +118,8 @@ app.whenReady().then(() => {
     },
   })
 
+  mainWindow.webContents.on('did-finish-load', () => drawPreview(preview.snapshot()))
+
   const shellHtmlPath = path.join(__dirname, 'shell.html')
   mainWindow.loadFile(shellHtmlPath, {
     query: {
@@ -99,6 +140,7 @@ app.whenReady().then(() => {
         logToConsole: true,
         dataDir: path.join(pluginDir, '.amc-dev'),
         settings: devSettings,
+        preview,
       })
 
       try {
@@ -117,13 +159,14 @@ app.whenReady().then(() => {
   startHotReload(pluginDir, {
     onUiChange() {
       console.log('[dev-shell] UI changed - reloading webview')
-      mainWindow?.webContents.send('reload-webview')
+      mainWindow?.webContents.executeJavaScript(reloadPluginViewScript()).catch(() => undefined)
     },
     onBackendChange() {
       console.log('[dev-shell] Backend changed - restart dev shell to apply')
     },
     onManifestChange() {
-      console.log('[dev-shell] Manifest changed - re-validating')
+      console.log('[dev-shell] Manifest changed - refreshing the sidebar preview')
+      reloadDeclaredWidgets()
     },
   })
 })
