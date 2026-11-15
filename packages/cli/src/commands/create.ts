@@ -1,5 +1,5 @@
 import { Command } from 'commander'
-import prompts from 'prompts'
+import prompts, { type PromptObject } from 'prompts'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { createRequire } from 'node:module'
@@ -354,44 +354,55 @@ export const createCommand = new Command('create')
     let tags: string[]
     let icon: string
 
-    const hasAllOptions = opts.displayName && opts.description && opts.author
-    if (hasAllOptions) {
-      if (!CATEGORIES.includes(opts.category as typeof CATEGORIES[number])) {
-        actionableError(`Invalid category: ${opts.category}`, `Choose from: ${CATEGORIES.join(', ')}`)
-        process.exit(1)
-      }
+    if (!CATEGORIES.includes((opts.category ?? 'other') as typeof CATEGORIES[number])) {
+      actionableError(`Invalid category: ${opts.category}`, `Choose from: ${CATEGORIES.join(', ')}`)
+      process.exit(1)
+    }
+    category = opts.category ?? 'other'
+    const needsPrompt = !opts.displayName || !opts.description || !opts.author
+    if (!needsPrompt) {
       displayName = opts.displayName!
       description = opts.description!
       author = opts.author!
-      category = opts.category ?? 'other'
       tags = parseTagsInput(opts.tags, category)
       icon = opts.icon ?? 'assets/icon.svg'
     } else {
-      const response = await prompts([
-        { type: 'text', name: 'displayName', message: 'Display name', initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ') },
-        { type: 'text', name: 'description', message: 'Description', initial: 'An Omniscio plugin' },
-        { type: 'text', name: 'author', message: 'Author' },
-        { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })) },
-        { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: '' },
+      const asked: PromptObject[] = []
+      if (!opts.displayName) {
+        asked.push({
+          type: 'text',
+          name: 'displayName',
+          message: 'Display name',
+          initial: name.split('-').map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
+        })
+      }
+      if (!opts.description) {
+        asked.push({ type: 'text', name: 'description', message: 'Description', initial: 'An Omniscio plugin' })
+      }
+      if (!opts.author) asked.push({ type: 'text', name: 'author', message: 'Author' })
+      asked.push(
+        { type: 'select', name: 'category', message: 'Category', choices: CATEGORIES.map(c => ({ title: c, value: c })), initial: Math.max(0, CATEGORIES.indexOf(category)) },
+        { type: 'text', name: 'tags', message: 'Tags (comma-separated, blank = category)', initial: opts.tags ?? '' },
         {
           type: 'text',
           name: 'icon',
           message: 'Icon — a path to your logo in the package (assets/icon.svg), or a Lucide name for a generic glyph',
-          initial: 'assets/icon.svg'
-        },
-      ])
+          initial: opts.icon ?? 'assets/icon.svg'
+        }
+      )
+      const response = await prompts(asked)
+      displayName = opts.displayName ?? response.displayName
+      description = opts.description ?? response.description
+      author = opts.author ?? response.author
 
-      if (!response.author) {
+      if (!displayName || !description || !author) {
         fail('Cancelled')
         process.exit(1)
       }
 
-      displayName = response.displayName
-      description = response.description
-      author = response.author
-      category = response.category
-      tags = parseTagsInput(response.tags, category)
-      icon = response.icon
+      category = response.category ?? category
+      tags = parseTagsInput(opts.tags ?? response.tags, category)
+      icon = response.icon ?? opts.icon ?? 'assets/icon.svg'
     }
 
     const iconKind = classifyPluginIcon(icon)
