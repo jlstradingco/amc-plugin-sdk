@@ -68,6 +68,11 @@ Omniscio sends each of these only when it can resolve it, and drops one that is 
 | `--on-accent-text-shadow` | shadow | Text shadow for text on the accent colour |
 | `--on-accent-icon-shadow` | shadow | Shadow for icons on the accent colour |
 | `--btn-accent-fill` | `R G B` | Fill of a primary button |
+| `--panel-bg` | colour | The theme's panel fill — a translucent white in Glassmorphism, solid in flat themes. Paint it *over* your own surface colour so a panel reads as glass: `background-image: linear-gradient(var(--panel-bg), var(--panel-bg))` |
+| `--panel-bg-hover` | colour | The panel fill on hover |
+| `--panel-border-color` | colour | The panel hairline. Carries the `-color` suffix because several plugins already define a panel-border property of their own |
+| `--app-glow-1` | colour | First background-wash colour. `transparent` in every theme that paints no wash, so painting it is always safe |
+| `--app-glow-2` | colour | Second background-wash colour |
 
 A name that is not on this page is never set, so `var()` on it silently falls back (or resolves to nothing). Don't invent token names.
 
