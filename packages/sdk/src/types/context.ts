@@ -187,6 +187,14 @@ export interface PluginHost {
    * result, so do not treat this call as having won.
    */
   setSurfaceTab(input: { tab: 'items' | 'sessions' }): Promise<void>
+  /**
+   * Whether this Omniscio permits a pull request in `repoFullName` to be merged ON GitHub. It
+   * answers false only for the repository this build was made from — local master is the master
+   * there, and a publisher fast-forwards GitHub from it — and true for every other repository.
+   * Optional: a host older than this method cannot answer, so read it as
+   * `ctx.host?.canMergeOnGitHub?.(repo)` rather than assuming it.
+   */
+  canMergeOnGitHub?(repoFullName: string): Promise<boolean>
 }
 
 export interface PluginUsage {

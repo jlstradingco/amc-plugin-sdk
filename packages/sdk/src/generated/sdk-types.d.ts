@@ -887,6 +887,7 @@ export interface PluginContext {
     "writeFile": (...args: unknown[]) => Promise<unknown>
   }
   "host": {
+    "canMergeOnGitHub": (...args: unknown[]) => Promise<unknown>
     "getCapabilities": (...args: unknown[]) => Promise<unknown>
     "setSurfaceTab": (...args: unknown[]) => Promise<unknown>
   }
