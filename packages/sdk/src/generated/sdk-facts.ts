@@ -71,7 +71,8 @@ export const PLUGIN_PERMISSIONS = [
   "teamChat.emoji",
   "email.send",
   "webassembly",
-  "email.fromName"
+  "email.fromName",
+  "live"
 ] as const
 
 export const PROCESS_INTERPRETER_DENYLIST = [

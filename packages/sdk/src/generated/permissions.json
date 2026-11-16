@@ -527,5 +527,14 @@
     "description": "Show a name of its choosing next to your Omniscio agent address on the email it sends, like \"Weekly Digest\". The address itself never changes, and the name can never be Omniscio.",
     "tier": "elevated",
     "namespaces": []
+  },
+  {
+    "name": "live",
+    "label": "Take part in live boards",
+    "description": "Join the boards you have chosen to share live, so it can show what the other people are doing and add your edits. It cannot share a board or stop sharing one.",
+    "tier": "standard",
+    "namespaces": [
+      "live"
+    ]
   }
 ]

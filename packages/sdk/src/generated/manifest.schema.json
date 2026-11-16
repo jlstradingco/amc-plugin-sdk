@@ -848,10 +848,11 @@
           "teamChat.emoji",
           "email.send",
           "webassembly",
-          "email.fromName"
+          "email.fromName",
+          "live"
         ]
       },
-      "maxItems": 59
+      "maxItems": 60
     },
     "mobile": {
       "type": "boolean"
