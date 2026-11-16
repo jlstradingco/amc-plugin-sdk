@@ -908,6 +908,7 @@ export interface PluginContext {
     "listMine": (...args: unknown[]) => Promise<unknown>
     "onDismiss": (...args: unknown[]) => unknown
     "postAlert": (...args: unknown[]) => Promise<unknown>
+    "resolveAlert": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>
   }
   "launch": {

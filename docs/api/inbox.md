@@ -23,9 +23,13 @@ Replace the plugin's inbox items with the given list. Pass an empty array to cle
 
 **Returns:** `Promise<void>`
 
-### `postAlert(opts: { title: string; body: string; dedupKey?: string }): Promise<void>`
+### `postAlert(opts: { title: string; body: string; dedupKey?: string; openPlugin?: boolean }): Promise<void>`
 
 Raise a one-off alert, independent of the `setItems` list.
+
+Pass `openPlugin: true` to give the card an "Open the plugin" button that opens YOUR panel.
+
+**`openPlugin` keys are host-built.** The key becomes `plugin-open:<yourPluginId>:<dedupKey>`; you cannot point the button at another plugin.
 
 | Name | Type | Description |
 |---|---|---|
@@ -39,6 +43,16 @@ await ctx.inbox.postAlert({
   body: 'The nightly scan could not reach the registry.',
   dedupKey: 'scan-failure',
 })
+```
+
+### `resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<void>`
+
+**Availability:** backend only (`ctx.inbox`); a panel call is refused.
+
+Withdraw the card you posted. Pass the same `dedupKey` and `openPlugin` you posted with; it withdraws only your own card, and nothing to withdraw is not an error.
+
+```typescript
+await ctx.inbox.resolveAlert({ dedupKey: 'queue', openPlugin: true })
 ```
 
 ### `onDismiss(handler: (dismissal: InboxDismissal) => void): () => void`

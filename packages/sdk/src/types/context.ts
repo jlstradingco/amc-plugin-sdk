@@ -722,7 +722,9 @@ export interface PluginInbox {
     chatRouteTag?: string
     /** `false` with a kept `chatRouteTag`: post to Team Chat only, not the person's inbox. */
     inboxVisible?: boolean
+    openPlugin?: boolean
   }): Promise<void>
+  resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<void>
   onDismiss(handler: (dismissal: InboxDismissal) => void): () => void
   listMine(query?: PluginMyInboxQuery): Promise<PluginMyInboxPage>
 }
