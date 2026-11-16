@@ -169,7 +169,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(59)
+    expect(HOST_PERMISSIONS.length).toBe(60)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

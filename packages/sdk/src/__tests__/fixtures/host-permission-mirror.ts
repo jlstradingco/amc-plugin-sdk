@@ -65,11 +65,12 @@ export const HOST_PERMISSIONS = [
   'auth.actAsUser',
   'ai.images',
   'coaching-profile',
+  'live',
 ] as const
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 
-export const HOST_AHEAD_PERMISSIONS = [] as const
+export const HOST_AHEAD_PERMISSIONS = ['live'] as const
 
 export const BRIDGE_PENDING_PERMISSIONS = [] as const
 
