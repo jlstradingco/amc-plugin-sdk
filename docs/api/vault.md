@@ -89,7 +89,7 @@ Pass the previous page's `nextCursor` as `cursor` to get the next page. `nextCur
 
 Open one note with its text. A note that does not exist, is hidden, or is outside your grants rejects with "Note not found".
 
-A note larger than 5 MB comes back with `body: null` and `bodyTooLarge: true`. Keep `updatedAt` from this call: you need it to edit the note.
+A note larger than 5 MB comes back with `body: null` and `bodyTooLarge: true`. Such a note cannot be edited through `notes.update` (see below). Keep `updatedAt` from this call: you need it to edit the note.
 
 **Returns:** `Promise<PluginVaultNote>`.
 
@@ -110,6 +110,8 @@ A note already at that path (even a hidden one) resolves `CONFLICT`. A bad `fold
 Replace a note's whole text. `expectedUpdatedAt` is **required**: pass the `updatedAt` you got from `notes.get`. Without it the change resolves `INVALID`.
 
 If the note changed after that time, the change resolves `CONFLICT` and nothing is written. Read the note again, merge, and retry with the new `updatedAt`. Keep the `updatedAt` from this call's result for your next edit.
+
+A note larger than 5 MB resolves `INVALID` and nothing is written: Omniscio never read that note's full text, so replacing it would cut off the part it never saw. That note has to be edited in the Vault itself.
 
 **Never asks.** The note's earlier text stays in its version history.
 
