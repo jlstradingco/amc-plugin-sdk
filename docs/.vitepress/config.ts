@@ -8,6 +8,17 @@ export default defineConfig({
   outDir: '../../docs/help-site/public/sdk',
   appearance: false,
   metaChunk: true,
+  /**
+   * VitePress writes its OWN `<meta name="description">` from `pageData.description`, and a tag it
+   * writes wins over the same tag from `transformHead` — measured 2026-11-18: every /sdk/ page kept
+   * the site description however transformHead was told otherwise. So the page's own description is
+   * set HERE, before the head is built, and the shared block below carries the same value for
+   * `og:description` and the Twitter card.
+   */
+  transformPageData(pageData) {
+    const derived = pageData.frontmatter?.description || sdkPageDescription(pageData.relativePath)
+    if (derived) pageData.description = derived
+  },
   transformHead({ pageData, title, description }) {
     return sdkHeadTags({
       relativePath: pageData.relativePath,
