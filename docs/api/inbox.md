@@ -194,3 +194,9 @@ await Omniscio.inbox.setItems([
 - Use stable `id` values so an item that stays relevant across updates keeps its place instead of flickering.
 - Use `dotColor` sparingly to flag genuine urgency -- colouring everything dulls the signal.
 - At most **500 items** per call; a longer array is rejected.
+
+## Alert item destinations
+
+For `postAlert({ openPlugin: true, dedupKey })`, the host opens your panel and passes the entire raw `dedupKey` through the existing `navigate` command as `{ itemId: dedupKey }`. Colons are preserved. Your plugin remains responsible for decoding the key and selecting its own item; a missing or unknown item should open your home view. This uses the existing command surface and adds no schema field or permission.
+
+Delivery waits for your panel to be ready and is restricted to your own plugin. Popped-out cards use the main-window alert handoff. An empty key produces no item navigation; when no key was supplied, the host-generated automatic deduplication suffix is the item id, so handle unknown keys safely. Navigation itself performs no send, retry or other issue action. Existing historical cards are not migrated or removed.
