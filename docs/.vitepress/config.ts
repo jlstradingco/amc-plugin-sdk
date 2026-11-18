@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitepress'
-import { SDK_SITE_DESCRIPTION, SDK_SITE_TITLE, sdkHeadTags } from './site-head.mjs'
+import { SDK_SITE_DESCRIPTION, SDK_SITE_TITLE, sdkHeadTags, sdkPageDescription } from './site-head.mjs'
 
 export default defineConfig({
   title: SDK_SITE_TITLE,
@@ -12,7 +12,11 @@ export default defineConfig({
     return sdkHeadTags({
       relativePath: pageData.relativePath,
       title: title || pageData.title,
-      description: description || pageData.description
+      description:
+        pageData.frontmatter?.description ||
+        sdkPageDescription(pageData.relativePath) ||
+        description ||
+        pageData.description
     })
   },
   themeConfig: {

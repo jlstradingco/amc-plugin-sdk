@@ -1,12 +1,18 @@
 // @script what="Gives every VitePress SDK page the shared help-site <head> block — canonical, Open Graph, Twitter card and the site icon set — from the same module the rest of docs.omniscio.com uses."
 
-import { helpSiteHead } from '../../../scripts/lib/help-site-head.mjs'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { clampDescription, helpSiteHead } from '../../../scripts/lib/help-site-head.mjs'
 
 export const SDK_SITE_TITLE = 'Omniscio Plugin SDK'
 export const SDK_SITE_DESCRIPTION = 'Build plugins for Omniscio'
 
 const BASE_PATH = '/sdk/'
 const NOT_FOUND_SOURCE = '404.md'
+const DOCS_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n/
+const NOT_LEAD_RE = /^(?:#|:::|<|\||[-*+]\s|\d+\.\s|\*\*Availability|\*\*Required Permission)/
 
 /**
  * The URL this page is served at, which its canonical must name.
@@ -55,6 +61,48 @@ export function headTagsFromHtml(html) {
     tags.push([name, attrs])
   }
   return tags
+}
+
+const INLINE_MARKUP = [
+  [/```[\s\S]*?```/g, ' '],
+  [/`([^`]*)`/g, '$1'],
+  [/!\[[^\]]*\]\([^)]*\)/g, ' '],
+  [/\[([^\]]*)\]\([^)]*\)/g, '$1'],
+  [/<[^>]+>/g, ' '],
+  [/\*\*([^*]+)\*\*/g, '$1'],
+  [/__([^_]+)__/g, '$1'],
+  [/(^|\s)[*_]([^*_\s][^*_]*)[*_]/g, '$1$2']
+]
+
+function plainTextOf(markdown) {
+  return INLINE_MARKUP.reduce((text, [pattern, replacement]) => text.replace(pattern, replacement), markdown)
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * The description an SDK page carries when nothing names one itself: the first real sentence of
+ * the page's own copy, so no two /sdk/ pages share a meta description.
+ * @param {string} relativePath VitePress's page source path, e.g. `api/ai.md`.
+ * @returns {string} The description, or an empty string when the page has no usable lead.
+ */
+export function sdkPageDescription(relativePath) {
+  const rel = String(relativePath ?? '').replace(/\\/g, '/')
+  if (!rel || rel.startsWith('..') || rel === NOT_FOUND_SOURCE) return ''
+  let source
+  try {
+    source = readFileSync(join(DOCS_ROOT, rel), 'utf8')
+  } catch {
+    return ''
+  }
+  for (const block of source.replace(FRONTMATTER_RE, '').split(/\r?\n[ \t]*\r?\n/)) {
+    const lead = block.trim()
+    if (!lead || NOT_LEAD_RE.test(lead)) continue
+    const text = plainTextOf(lead)
+    if (text.length < 40) continue
+    return clampDescription(text)
+  }
+  return ''
 }
 
 /**

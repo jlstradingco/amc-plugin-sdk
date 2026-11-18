@@ -56,10 +56,10 @@ Write text on the person's own Claude plan instead of a stored API key. Use it f
 **What it can and cannot do:**
 
 - Text only. The AI behind it has no tools and no tool servers, so it cannot run a command, read a file, browse or act on anything in your prompt.
-- Only while the person has your plugin turned on, and only with the `ai` permission.
+- Only while the person has your plugin turned on, and only with both the `ai` and `ai.subscription` permissions in your manifest.
 - It counts against your plugin's daily AI limit (the one the person sets in Settings), with at most 3 AI calls running at once. A limit of $0 stops it.
 - It never falls back to an API key by itself. When the plan cannot answer, it refuses with the code `plugin-ai-plan-unavailable` and the fixed message "Your Claude plan could not write this right now. Try again later, or use your API key instead." The refusal never says why, by design: a plugin cannot learn which sign-in the person uses.
-- Check `host.getCapabilities()` for the `ai-plan-text` token before calling; an older Omniscio does not have this method.
+- Check `host.getCapabilities()` for the `ai-plan-text` token before calling. Omniscio lists it only for a plugin whose manifest declares `ai.subscription`, and an older Omniscio does not have this method. A call from a plugin without the permission is refused with the same `plugin-ai-plan-unavailable` code, so falling back to your API key on that code still works.
 
 **Example:**
 
