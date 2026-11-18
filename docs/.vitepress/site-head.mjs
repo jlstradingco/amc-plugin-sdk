@@ -10,7 +10,11 @@ export const SDK_SITE_DESCRIPTION = 'Build plugins for Omniscio'
 
 const BASE_PATH = '/sdk/'
 const NOT_FOUND_SOURCE = '404.md'
-const DOCS_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const DOCS_ROOTS = [
+  join(dirname(fileURLToPath(import.meta.url)), '..'),
+  process.cwd(),
+  join(process.cwd(), 'plugin-sdk/docs')
+]
 const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n/
 const NOT_LEAD_RE = /^(?:#|:::|<|\||[-*+]\s|\d+\.\s|\*\*Availability|\*\*Required Permission)/
 
@@ -89,12 +93,16 @@ function plainTextOf(markdown) {
 export function sdkPageDescription(relativePath) {
   const rel = String(relativePath ?? '').replace(/\\/g, '/')
   if (!rel || rel.startsWith('..') || rel === NOT_FOUND_SOURCE) return ''
-  let source
-  try {
-    source = readFileSync(join(DOCS_ROOT, rel), 'utf8')
-  } catch {
-    return ''
+  let source = ''
+  for (const root of DOCS_ROOTS) {
+    try {
+      source = readFileSync(join(root, rel), 'utf8')
+      break
+    } catch {
+      continue
+    }
   }
+  if (!source) return ''
   for (const block of source.replace(FRONTMATTER_RE, '').split(/\r?\n[ \t]*\r?\n/)) {
     const lead = block.trim()
     if (!lead || NOT_LEAD_RE.test(lead)) continue
