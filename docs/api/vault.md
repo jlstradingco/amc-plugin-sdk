@@ -99,7 +99,7 @@ A note larger than 5 MB comes back with `body: null` and `bodyTooLarge: true`. S
 
 Add a note. `folder` must be inside a grant (the empty string only with the "all" grant) and may name a subfolder that does not exist yet. `name` is trimmed, cannot contain `/` or `\`, is at most 200 characters, and gets `.md` added when it is missing. `body` is at most 5 MB.
 
-A note already at that path (even a hidden one) resolves `CONFLICT`. A bad `folder` or `name` resolves `INVALID`. A folder outside your grants resolves `NOT_FOUND`.
+A note already at that path (even a hidden one) resolves `CONFLICT`. A `name` that is only spaces, contains `/` or `\`, or is a reserved name resolves `INVALID`, as does a `folder` containing `..` or naming a reserved folder — but a `name` that is empty, or longer than 200 characters, is rejected before the change is considered. A folder outside your grants resolves `NOT_FOUND`.
 
 **Never asks.**
 
@@ -147,7 +147,7 @@ Adding, editing, renaming and moving never ask.
 
 ## Results and refusals
 
-A change never throws because it was refused. It resolves `{ ok: false, code }`, so check `ok` before you use `value`. A read that is refused rejects with a plain message instead: "This feature is not available.", "Note not found", "Folder not found" or "Too many requests. Try again in a minute."
+A change the host refuses does not throw: it resolves `{ ok: false, code }`, so check `ok` before you use `value`. Arguments that break the limits stated on each call are the exception — an empty `name` or one over 200 characters, a `body` over 5 MB, a `folder` over 500 characters, an empty-string `expectedUpdatedAt`, a search `limit` past its maximum, or a field the call does not take. Those are rejected before the change is considered, so the call rejects with an argument error instead of resolving a code. A read that is refused rejects with a plain message instead: "This feature is not available.", "Note not found", "Folder not found" or "Too many requests. Try again in a minute."
 
 | `code` | What it means |
 |---|---|

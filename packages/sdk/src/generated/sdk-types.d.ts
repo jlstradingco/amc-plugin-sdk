@@ -610,6 +610,7 @@ export interface AgentMC {
     "launchFixes": (...args: unknown[]) => Promise<unknown>
     "listAudits": (...args: unknown[]) => Promise<unknown>
     "listCustomAudits": (...args: unknown[]) => Promise<unknown>
+    "listInFlightRuns": (...args: unknown[]) => Promise<unknown>
     "listProjects": (...args: unknown[]) => Promise<unknown>
     "listRecentReportsByRepo": (...args: unknown[]) => Promise<unknown>
     "listRunsForAudit": (...args: unknown[]) => Promise<unknown>
@@ -622,6 +623,7 @@ export interface AgentMC {
     "runAuditNow": (...args: unknown[]) => Promise<unknown>
     "setNightyTidyLimits": (...args: unknown[]) => Promise<unknown>
     "startFixing": (...args: unknown[]) => Promise<unknown>
+    "stopRuns": (...args: unknown[]) => Promise<unknown>
     "updateCustomAudit": (...args: unknown[]) => Promise<unknown>
     "upsertSubscription": (...args: unknown[]) => Promise<unknown>
   }
