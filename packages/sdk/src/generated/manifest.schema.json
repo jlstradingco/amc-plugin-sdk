@@ -259,6 +259,14 @@
                   "minItems": 1
                 }
               },
+              "cliAccess": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "read",
+                  "read-write"
+                ]
+              },
               "cliReadOnlyColumns": {
                 "type": "array",
                 "items": {
@@ -477,6 +485,13 @@
         },
         "hideSessionsPane": {
           "type": "boolean"
+        },
+        "presentation": {
+          "type": "string",
+          "enum": [
+            "popup",
+            "full"
+          ]
         },
         "sessions": {
           "type": "object",
@@ -794,6 +809,7 @@
           "secrets",
           "sessions",
           "ai",
+          "ai.subscription",
           "ai.images",
           "tts",
           "stt",
@@ -852,7 +868,7 @@
           "live"
         ]
       },
-      "maxItems": 60
+      "maxItems": 61
     },
     "mobile": {
       "type": "boolean"
@@ -927,6 +943,29 @@
   ],
   "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.label, uiAnchors.description, uiAnchors.when",
   "allOf": [
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "ai.subscription"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "ai"
+            }
+          }
+        }
+      }
+    },
     {
       "if": {
         "required": [

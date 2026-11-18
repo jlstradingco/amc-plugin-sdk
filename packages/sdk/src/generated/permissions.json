@@ -40,6 +40,13 @@
     ]
   },
   {
+    "name": "ai.subscription",
+    "label": "AI on your Claude plan",
+    "description": "Send text to Claude using your Claude subscription when no API key is set, which counts toward your plan usage",
+    "tier": "standard",
+    "namespaces": []
+  },
+  {
     "name": "ai.images",
     "label": "Make Pictures",
     "description": "Ask to make pictures with Image Studio, paid from your Omniscio credit. You confirm the price of every picture, and it has its own daily spending limit.",

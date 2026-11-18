@@ -17,6 +17,7 @@ export const PLUGIN_PERMISSIONS = [
   "secrets",
   "sessions",
   "ai",
+  "ai.subscription",
   "ai.images",
   "tts",
   "stt",

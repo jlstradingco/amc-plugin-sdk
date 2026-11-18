@@ -9,6 +9,7 @@ export type PluginPermission =
   | "secrets"
   | "sessions"
   | "ai"
+  | "ai.subscription"
   | "ai.images"
   | "tts"
   | "stt"
@@ -111,6 +112,7 @@ export interface PluginManifest {
       "columns": Record<string, "text" | "integer" | "real" | "json">
       "indexes"?: Array<string>
       "uniqueIndexes"?: Array<Array<string>>
+      "cliAccess"?: "none" | "read" | "read-write"
       "cliReadOnlyColumns"?: Array<string>
       "agentWritable"?: boolean
       "agentReadable"?: boolean
@@ -154,6 +156,7 @@ export interface PluginManifest {
     }>
     "hideProjectPanel"?: boolean
     "hideSessionsPane"?: boolean
+    "presentation"?: "popup" | "full"
     "sessions"?: {
       "contextTemplate"?: string
       "label"?: string
@@ -219,7 +222,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "webassembly" | "email.fromName" | "live">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "webassembly" | "email.fromName" | "live">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -233,6 +236,8 @@ export interface PluginManifest {
 
 export interface AgentMC {
   "ai": {
+    "availability": (...args: unknown[]) => Promise<unknown>
+    "completeText": (...args: unknown[]) => Promise<unknown>
     "estimateImage": (...args: unknown[]) => Promise<unknown>
     "estimateImageSet": (...args: unknown[]) => Promise<unknown>
     "generateImage": (...args: unknown[]) => Promise<unknown>
@@ -243,6 +248,7 @@ export interface AgentMC {
     "generateTitle": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
+    "openSetup": (...args: unknown[]) => Promise<unknown>
   }
   "assets": {
     "listFiles": (...args: unknown[]) => Promise<unknown>
@@ -421,6 +427,7 @@ export interface AgentMC {
   }
   "host": {
     "getCapabilities": (...args: unknown[]) => Promise<unknown>
+    "openSettings": (...args: unknown[]) => Promise<unknown>
     "setSurfaceTab": (...args: unknown[]) => Promise<unknown>
   }
   "http": {
@@ -923,6 +930,10 @@ export interface PluginContext {
   "members": {
     "list": (...args: unknown[]) => Promise<unknown>
   }
+  "notifications": {
+    "clear": (...args: unknown[]) => Promise<unknown>
+    "fire": (...args: unknown[]) => Promise<unknown>
+  }
   "oauth": {
     "authorize": (...args: unknown[]) => Promise<unknown>
   }
@@ -981,6 +992,7 @@ export interface PluginContext {
     "fanout": (...args: unknown[]) => Promise<unknown>
     "getMessages": (...args: unknown[]) => Promise<unknown>
     "getStatus": (...args: unknown[]) => Promise<unknown>
+    "linkPullRequest": (...args: unknown[]) => Promise<unknown>
     "onStatusChange": (...args: unknown[]) => unknown
     "reveal": (...args: unknown[]) => Promise<unknown>
     "sendMessage": (...args: unknown[]) => Promise<unknown>

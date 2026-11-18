@@ -465,6 +465,10 @@ own Delete chat. It refuses a session a person can see, one launched into a real
 plugin's session, and a paired phone cannot call it. See
 [the sessions reference](docs/api/sessions.md). An app that predates it answers `Unknown method`.
 
+### Added — `ui.presentation`
+
+The manifest `ui` block gains an optional `presentation` field, `"popup"` or `"full"`. `popup` opens the plugin from its top-bar button in a floating, draggable card on desktop; `full` (the default when the field is absent) takes over the main view as before, so existing plugins are unchanged. Only popup apps can be newly pinned to the top bar. See the manifest guide, "Popup or full".
+
 ### Added — `uiAnchors` on the manifest
 
 A plugin can list the controls in its page that the in-app assistant may point at. Each entry has an

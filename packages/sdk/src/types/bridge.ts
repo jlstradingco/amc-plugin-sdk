@@ -983,6 +983,7 @@ export interface BridgeHost {
    * the `surfaceTab` command, so render the host's answer rather than assuming this call won.
    */
   setSurfaceTab(input: { tab: 'items' | 'sessions' }): Promise<void>
+  openSettings?(): Promise<void>
 }
 
 /** A site's answer to {@link BridgeHttp.uploadFile}, as plain data. */

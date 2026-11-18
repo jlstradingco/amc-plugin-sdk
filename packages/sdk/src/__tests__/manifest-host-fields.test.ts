@@ -107,6 +107,26 @@ describe('ui.sessions.realProjectContext (host: boolean)', () => {
   })
 })
 
+describe('ui.presentation (host: z.enum popup | full, optional)', () => {
+  const uiWith = (presentation: unknown) => ({ ...baseManifest, ui: { presentation } })
+
+  it.each(['popup', 'full'])('accepts and keeps %s', (presentation) => {
+    const result = validateManifest(uiWith(presentation))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.presentation).toBe(presentation)
+  })
+
+  it('leaves presentation undefined when it is not declared', () => {
+    const result = validateManifest({ ...baseManifest, ui: { hideProjectPanel: true } })
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.presentation).toBeUndefined()
+  })
+
+  it.each(['floating', 'Popup', true, null])('refuses %j', (presentation) => {
+    expect(errorsOf(uiWith(presentation))).toMatch(/^ui\.presentation: /m)
+  })
+})
+
 describe('ui.sessions per-context chat fields (host: perContext, lockDown, chatPlacement, noContextText)', () => {
   const sessionsWith = (sessions: Record<string, unknown>) => ({ ...baseManifest, ui: { sessions } })
 

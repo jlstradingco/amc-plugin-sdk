@@ -330,6 +330,7 @@ const uiSchema = z.object({
   // and SILENTLY LOST this one, un-full-widthing the plugin at package time
   // while a dev-loaded build looked right.
   hideSessionsPane: z.boolean().optional(),
+  presentation: z.enum(['popup', 'full']).optional(),
   sessions: z
     .object({
       // max(5000) but deliberately NO min(1): the host accepts an empty

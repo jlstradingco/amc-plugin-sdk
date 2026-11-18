@@ -238,3 +238,9 @@ ctx.events.on('sync:request', () => {
 - If a handler throws, the other handlers on that channel still run and the error is logged.
 - Always unsubscribe when you no longer need to listen, to avoid memory leaks -- subject to the host gap noted above for the backend half.
 - No permission is required. Every plugin can use the Events API.
+
+## Session turn completion
+
+The webview event `host.sessionTurnFinished` carries `{ sessionId: string, turnId: string }` for a session owned by your plugin. Subscribe with `Omniscio.events.on`. Treat `turnId` as opaque. It identifies the finalized reply, including all phase rows, rather than each assistant message. Pending `host.sessionOutput` text is flushed before completion. Streamed text is incremental; `streaming: false` carries a replacement body for its `messageId`, not another delta. The host does not announce empty recovery frames, errored results or replayed replies as successful turns. Subscribe before starting a session; these events are live notifications with no replay. The event uses the same ownership and workspace-grant checks as output and is scoped to the owning webview. Older hosts emit no completion event.
+
+The finish event is a generation-completion marker emitted after the finalization attempt. It makes no promise that the transcript was saved. Use it to close streamed output, never as a persistence receipt.

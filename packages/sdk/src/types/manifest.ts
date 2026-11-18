@@ -455,6 +455,12 @@ export interface PluginManifest {
      * "full width" is these two booleans together, not one flag.
      */
     hideSessionsPane?: boolean
+    /**
+     * How the plugin opens. `'popup'` floats it over the current screen in a small
+     * surface and lets users pin it to the top bar; `'full'` takes over the main
+     * view. Leave it out for `'full'`, which is how plugins have always opened.
+     */
+    presentation?: 'popup' | 'full'
     /** Customises the session list AMC renders for this plugin's own virtual project. */
     sessions?: {
       /**

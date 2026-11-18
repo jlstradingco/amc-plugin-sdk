@@ -538,6 +538,7 @@ Declares the frontend entry point, sidebar appearance, and how Omniscio frames y
 | `settingsPanel.entryPoint` | string | No | 500 | Your own settings screen, opened from a "Settings" button on your plugin's card. The `settings` fields still render |
 | `widget.entryPoint` | string | No | 500 | The 320 x 256 popover Omniscio opens when your titlebar widget is clicked. Needs `chrome` and `chrome.widget`. **Plugin-relative only**, see below |
 | `windows.<key>.entryPoint` | string | No | 500 | A pop-out surface you open with `window.open(key)`. Up to 4; keys are lowercase letters, digits and hyphens (≤ 40); optional `title` (≤ 120), `width` and `height` (200–10000 px) |
+| `presentation` | `"popup"` \| `"full"` | No | — | How your plugin opens from the top bar. Defaults to `full`. **See "Popup or full" below** |
 | `hideProjectPanel` | boolean | No | — | Suppress Omniscio's project panel while your view is open. **Half of "full width" — see below** |
 | `hideSessionsPane` | boolean | No | — | Suppress the plugin sessions pane. **The other half — set it alongside `hideProjectPanel`** |
 | `sessions.label` | string | No | 100 | Heading above your plugin's session list. Defaults to the plugin name |
@@ -584,6 +585,21 @@ sibling** on the way through `omniscio-plugin validate` and `package` — so the
 correct dev-loaded and un-full-widthed itself once packaged. If you worked around that by
 giving up on full width, you can stop.
 :::
+
+### Popup or full (`ui.presentation`)
+
+`ui.presentation` says how your plugin opens when a user clicks its top-bar button:
+
+- `"full"` (the default) takes over the main view, as plugins always have.
+- `"popup"` opens a floating, draggable card over whatever the user is doing. The card has an "Open full view" button and closes with Esc.
+
+Leave it out and nothing changes: every existing plugin keeps opening full. A popup is a desktop feature. On a phone the user gets the full page, and a plugin the user has popped out into its own window keeps that window.
+
+Only popup apps can be newly pinned to the top bar. A `full` plugin stays reachable from the "⋯" menu and its search, and a user who pinned it earlier keeps it pinned until they remove it. Pick `popup` for quick tools the user glances at, and `full` for anything that needs the whole screen.
+
+```json
+{ "ui": { "entryPoint": "index.html", "presentation": "popup" } }
+```
 
 ### The Sessions pane and the `[list | Sessions]` toggle
 
