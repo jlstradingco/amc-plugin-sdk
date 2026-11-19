@@ -232,6 +232,13 @@ export interface PluginManifest {
     "kind": "button" | "link" | "input" | "toggle" | "tab" | "menuitem" | "row" | "region" | "composite" | "dialog" | "panel" | "display" | "select" | "form"
     "when"?: string
   }>
+  "uiAnchorsExtra"?: Array<{
+    "id": string
+    "label": string
+    "description": string
+    "kind": "button" | "link" | "input" | "toggle" | "tab" | "menuitem" | "row" | "region" | "composite" | "dialog" | "panel" | "display" | "select" | "form"
+    "when"?: string
+  }>
 }
 
 export interface AgentMC {
