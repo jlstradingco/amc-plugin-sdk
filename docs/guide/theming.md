@@ -137,6 +137,10 @@ code {
 }
 ```
 
+## Buttons and form fields
+
+Browsers draw `button`, `input`, `select` and `textarea` in their own system font unless a page says otherwise. Omniscio adds one rule to every panel so these controls use your page's font instead: `font-family: inherit`, at the lowest priority your page can have. You do not need a reset of your own. Any font you set on a control, in any stylesheet, cascade layer or inline style, still wins. Only the typeface changes, never the size.
+
 ## Animations
 
 Two plugin panels can each define an animation with the same name, and the browser keeps only one. Prefix your `@keyframes` names with your plugin id (`@keyframes my-plugin-pulse`) so yours is never replaced.

@@ -482,6 +482,7 @@ export interface AgentMC {
     "createGlossaryTerm": (...args: unknown[]) => Promise<unknown>
     "createLesson": (...args: unknown[]) => Promise<unknown>
     "createModule": (...args: unknown[]) => Promise<unknown>
+    "createMyDeckCard": (...args: unknown[]) => Promise<unknown>
     "createResource": (...args: unknown[]) => Promise<unknown>
     "deleteAssignment": (...args: unknown[]) => Promise<unknown>
     "deleteConcept": (...args: unknown[]) => Promise<unknown>
@@ -491,6 +492,7 @@ export interface AgentMC {
     "deleteGlossaryTerm": (...args: unknown[]) => Promise<unknown>
     "deleteLesson": (...args: unknown[]) => Promise<unknown>
     "deleteModule": (...args: unknown[]) => Promise<unknown>
+    "deleteMyDeckCard": (...args: unknown[]) => Promise<unknown>
     "deleteResource": (...args: unknown[]) => Promise<unknown>
     "doceboAiReview": (...args: unknown[]) => Promise<unknown>
     "doceboAuthComplete": (...args: unknown[]) => Promise<unknown>
@@ -539,6 +541,7 @@ export interface AgentMC {
     "listLmsMembers": (...args: unknown[]) => Promise<unknown>
     "listModulesByCourse": (...args: unknown[]) => Promise<unknown>
     "listMyAssignments": (...args: unknown[]) => Promise<unknown>
+    "listMyDeckCards": (...args: unknown[]) => Promise<unknown>
     "listMyEnrollments": (...args: unknown[]) => Promise<unknown>
     "listMyLibraryListings": (...args: unknown[]) => Promise<unknown>
     "listQuizAttempts": (...args: unknown[]) => Promise<unknown>
@@ -581,6 +584,7 @@ export interface AgentMC {
     "updateLesson": (...args: unknown[]) => Promise<unknown>
     "updateLmsSettings": (...args: unknown[]) => Promise<unknown>
     "updateModule": (...args: unknown[]) => Promise<unknown>
+    "updateMyDeckCard": (...args: unknown[]) => Promise<unknown>
     "updateResource": (...args: unknown[]) => Promise<unknown>
     "whoAmI": (...args: unknown[]) => Promise<unknown>
   }

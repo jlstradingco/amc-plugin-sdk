@@ -232,47 +232,75 @@ export interface PluginEvents {
 }
 
 /**
- * Every status AMC can report for a session.
+ * Every status AMC can report for a session, in the host's own order.
  *
- * Deliberately an OPEN union: the `(string & {})` arm keeps editor
+ * ONE list, because this vocabulary is the host's: `ALL_SESSION_STATUSES` in the
+ * app's `src/shared/types/session-status.ts` owns it, and the app's own test
+ * (`tests/unit/author-sdk-session-vocabulary-drift.test.ts`) fails the build if
+ * this tuple and the host's ever disagree, in either direction.
+ *
+ * The TYPE is deliberately an OPEN union: the `(string & {})` arm keeps editor
  * autocomplete for the known values while still accepting a status the host
  * adds later. A closed union would turn an exhaustive `switch` into a silent
  * misroute the day that happens.
  */
-export type SessionStatus =
-  | 'running'
-  | 'needs_you'
-  | 'error'
-  | 'stalled'
-  | 'starting'
-  | 'ready'
-  | 'terminating'
-  | 'ended'
-  | 'archived'
-  | 'paused'
-  | 'waiting'
-  | (string & {})
+export const SESSION_STATUSES = [
+  'running',
+  'needs_you',
+  'error',
+  'stalled',
+  'starting',
+  'ready',
+  'terminating',
+  'ended',
+  'archived',
+  'paused',
+  'waiting'
+] as const
+
+export type SessionStatus = (typeof SESSION_STATUSES)[number] | (string & {})
 
 /**
  * What a session is waiting for when it reports `needs_you`, `error` or
- * `waiting`. `null` when it is not waiting on anything. Open, for the same
- * reason as {@link SessionStatus}.
+ * `waiting`, in the host's own order. `null` when it is not waiting on anything.
+ *
+ * The host owns this vocabulary too: `ALL_PENDING_ACTIONS` in the app's
+ * `src/shared/types/session-status.ts`, pinned to this tuple by the same test as
+ * {@link SESSION_STATUSES}. It is here in full rather than in part, because a
+ * plugin author's exhaustive `switch` over a shortened list silently misroutes
+ * every state the list does not name.
+ *
+ * Open, for the same reason as {@link SessionStatus}.
  */
-export type SessionPendingAction =
-  | 'question'
-  | 'plan_approval'
-  | 'permission_request'
-  | 'rate_limited'
-  | 'api_error'
-  | 'auth_error'
-  | 'user_stopped'
-  | 'subagent_timeout'
-  | 'wait_timeout'
-  | 'response_aborted'
-  | 'recovery_failed'
-  | 'mission'
-  | 'suspended'
-  | (string & {})
+export const SESSION_PENDING_ACTIONS = [
+  'question',
+  'plan_approval',
+  'permission_request',
+  'rate_limited',
+  'api_error',
+  'auth_error',
+  'user_stopped',
+  'subagent_timeout',
+  'wait_timeout',
+  'response_aborted',
+  'recovery_failed',
+  'machine_gone',
+  'machine_unreachable',
+  'mission',
+  'suspended',
+  'merge_conflict',
+  'balance_parked',
+  'disk_space_blocked',
+  'folder_wait',
+  'pipeline_complete',
+  'attention_other',
+  'overseer_handoff',
+  'overseer_status_update',
+  'spawner_skipped',
+  'review_loop_cap'
+] as const
+
+export type SessionPendingAction = (typeof SESSION_PENDING_ACTIONS)[number] | (string & {})
 
 /**
  * One message from `ctx.sessions.getMessages()` — the BACKEND shape.

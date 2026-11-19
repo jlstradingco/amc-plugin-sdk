@@ -25,8 +25,7 @@
     "description": "Create and manage Claude Code sessions. It can also run them in the background, where they do not show in your session list, up to 20 a day.",
     "tier": "standard",
     "namespaces": [
-      "session",
-      "sessions"
+      "session"
     ]
   },
   {
@@ -250,8 +249,7 @@
     "description": "Start sessions in any of your projects, with any model or engine. Granted only to built-in plugins and to first-party plugins the Marketplace has classified.",
     "tier": "standard",
     "namespaces": [
-      "session",
-      "sessions"
+      "session"
     ]
   },
   {

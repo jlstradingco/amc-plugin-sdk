@@ -279,6 +279,10 @@ export {
   WIDGET_ACTION_IDS,
 } from './generated/sdk-facts.js'
 
+// The session vocabularies (runtime value exports), so a plugin can enumerate the
+// statuses and pending actions the host can report instead of retyping them.
+export { SESSION_STATUSES, SESSION_PENDING_ACTIONS } from './types/context.js'
+
 // Tool-activity transcript markers (runtime value exports). Import these rather
 // than hardcoding the glyphs - see the module for provenance and codepoints.
 export {
