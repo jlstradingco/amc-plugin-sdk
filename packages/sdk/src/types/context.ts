@@ -19,6 +19,7 @@ export interface QueryOptions {
   orderBy?: Record<string, 'asc' | 'desc'>
   limit?: number
   offset?: number
+  fields?: string[]
 }
 
 /**

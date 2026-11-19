@@ -11,6 +11,15 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — read part of a row instead of all of it
+
+`QueryOptions.fields` asks `db.query` for named columns only, so a summary that needs a few small
+columns from a large collection never receives the documents those rows also hold. Every returned row
+still carries `id`, `created_at` and `updated_at`. `where` and `orderBy` may name a column outside
+`fields`; an unknown column is refused rather than ignored, and an empty list means no projection. An
+Omniscio older than this release ignores the option and returns every column, so code that sends it is
+correct everywhere and only faster on a newer host.
+
 ### Added — check a widget spec or a batch of sidebar rows before you send it
 
 - `validateWidgetSpec(spec)` returns the reasons Omniscio would refuse a widget spec, each with the

@@ -306,6 +306,23 @@ const uiSchema = z.object({
   // their entry paths were never checked: `amc-plugin validate` approved a
   // `ui.widget.entryPoint` of `../other-plugin/x.html` that the host refuses.
   settingsPanel: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
+  settingsSearch: z
+    .array(
+      z.object({
+        label: z.string().min(1).max(200),
+        description: z.string().max(500).optional(),
+        keywords: z.array(z.string().min(1).max(40)).max(10).optional(),
+        route: z
+          .string()
+          .min(1)
+          .max(200)
+          .refine((value) => !/\p{Cc}/u.test(value), {
+            message: 'route must not contain control characters',
+          })
+      })
+    )
+    .max(20)
+    .optional(),
   widget: z.object({ entryPoint: pluginRelativeEntryPath }).optional(),
   widgets: sidebarWidgetsSchema.optional(),
   windows: z

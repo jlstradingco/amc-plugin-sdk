@@ -135,6 +135,12 @@ export interface PluginManifest {
     "settingsPanel"?: {
       "entryPoint": string
     }
+    "settingsSearch"?: Array<{
+      "label": string
+      "description"?: string
+      "keywords"?: Array<string>
+      "route": string
+    }>
     "widget"?: {
       "entryPoint": string
     }

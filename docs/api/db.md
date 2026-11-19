@@ -15,6 +15,7 @@ interface QueryOptions {
   orderBy?: Record<string, 'asc' | 'desc'>  // Column -> sort direction
   limit?: number                            // Maximum rows to return
   offset?: number                           // Number of rows to skip
+  fields?: string[]                         // Columns to return; id/created_at/updated_at always come back
 }
 ```
 
@@ -24,6 +25,13 @@ page with `offset` until a page comes back short. If your code changes rows so t
 `where` (marking them done, say), re-read from the start instead: an offset would skip rows.
 `createTestContext()` and the dev shell page the same way, so a test that reads only one page fails
 there, not in front of a person.
+
+**`fields` returns part of a row instead of the whole of it.** Every returned row still carries `id`,
+`created_at` and `updated_at`; your list adds the rest. Use it for a summary that needs a few small
+columns from a collection whose rows also hold large documents — those never leave the store. `where`
+and `orderBy` may name a column that is not in `fields`, and an unknown column is refused rather than
+ignored. An **older host ignores `fields` entirely** and returns every column, so code that sends it
+works everywhere and is only slower there.
 
 ## Methods
 
@@ -70,7 +78,7 @@ Query rows from a collection with optional filters, ordering, and pagination.
 | Name | Type | Description |
 |---|---|---|
 | `collection` | `string` | The collection name |
-| `options` | `QueryOptions` (optional) | Filter, sort, and pagination options |
+| `options` | `QueryOptions` (optional) | Filter, sort, pagination and column options |
 
 **Returns:** `Promise<Record<string, unknown>[]>` -- an array of matching rows.
 

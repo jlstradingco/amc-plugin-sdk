@@ -425,6 +425,12 @@ export interface PluginManifest {
      * card in Settings -> Plugins. Additive: the `settings` array still renders.
      */
     settingsPanel?: { entryPoint: string }
+    settingsSearch?: Array<{
+      label: string
+      description?: string
+      keywords?: string[]
+      route: string
+    }>
     /**
      * The page shown in the popover that opens when the user clicks the plugin's
      * titlebar widget (a 320x256 frame). Requires the `chrome.widget` permission
