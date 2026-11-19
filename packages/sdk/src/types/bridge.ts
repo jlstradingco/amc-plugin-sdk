@@ -1038,7 +1038,18 @@ export interface ModelPickOption {
   disabled?: boolean
   reason?: string
   description?: string
+  icon?: ModelPickIcon
 }
+
+/**
+ * A row's leading picture, drawn by the host. Four shapes, all bounded — a plugin can pick a
+ * shape and a colour, never markup, markup-bearing SVG or a remote URL.
+ */
+export type ModelPickIcon =
+  | { kind: 'emoji'; char: string }
+  | { kind: 'badge'; label: string; bg: string; fg: string }
+  | { kind: 'image'; dataUri: string }
+  | { kind: 'tile'; label: string; bg: string }
 
 /** What a plugin asks the host model menu to show. The default row is drawn by the host. */
 export interface ModelPickRequest {
