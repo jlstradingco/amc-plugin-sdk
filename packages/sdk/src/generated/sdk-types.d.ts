@@ -171,6 +171,7 @@ export interface PluginManifest {
       "perContext"?: boolean
       "lockDown"?: boolean
       "chatPlacement"?: "replace" | "beside"
+      "sidePanel"?: boolean
       "noContextText"?: string
       "suggestedPrompts"?: Array<{
         "label": string
