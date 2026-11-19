@@ -555,6 +555,9 @@ const usageActionsSchema = z
   })
 
 const UI_ANCHORS_MAX = 64
+const UI_ANCHORS_EXTRA_MAX = 128
+const UI_ANCHORS_TOTAL_MAX = UI_ANCHORS_MAX + UI_ANCHORS_EXTRA_MAX
+const UI_ANCHORS_BYTES_MAX = 128 * 1024
 const UI_ANCHOR_NAME_MAX = 120
 const UI_ANCHOR_KINDS = [
   'button',
@@ -608,6 +611,24 @@ const uiAnchorsSchema = z
   .refine((entries) => new Set(entries.map((entry) => entry.id)).size === entries.length, {
     message: 'uiAnchors may not list the same id twice',
   })
+
+const uiAnchorsExtraSchema = z
+  .array(uiAnchorSchema)
+  .max(UI_ANCHORS_EXTRA_MAX)
+  .refine((entries) => new Set(entries.map((entry) => entry.id)).size === entries.length, {
+    message: 'uiAnchorsExtra may not list the same id twice',
+  })
+
+const ANCHOR_BYTES_ENCODER = new TextEncoder()
+
+function anchorDeclarationsBytes(
+  primary: readonly unknown[],
+  extra: readonly unknown[],
+): number {
+  return ANCHOR_BYTES_ENCODER.encode(
+    JSON.stringify({ uiAnchors: primary, uiAnchorsExtra: extra }),
+  ).length
+}
 
 const LINK_CLAIMS_MAX = 20
 const LINK_CLAIM_HOST_MAX = 253
@@ -699,17 +720,51 @@ export const manifestSchema = z.object({
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
   usageActions: usageActionsSchema.optional(),
   uiAnchors: uiAnchorsSchema.optional(),
+  uiAnchorsExtra: uiAnchorsExtraSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
-    ;(manifest.uiAnchors ?? []).forEach((anchor, index) => {
-      if (`plugin:${manifest.plugin.id}:${anchor.id}`.length > UI_ANCHOR_NAME_MAX) {
+    const primaryAnchors = manifest.uiAnchors ?? []
+    const extraAnchors = manifest.uiAnchorsExtra ?? []
+    for (const [field, list] of [
+      ['uiAnchors', primaryAnchors],
+      ['uiAnchorsExtra', extraAnchors],
+    ] as const) {
+      list.forEach((anchor, index) => {
+        if (`plugin:${manifest.plugin.id}:${anchor.id}`.length > UI_ANCHOR_NAME_MAX) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [field, index, 'id'],
+            message: 'the full anchor name (plugin id plus this id) is too long: shorten this id',
+          })
+        }
+      })
+    }
+    const extraIds = new Set(extraAnchors.map((anchor) => anchor.id))
+    primaryAnchors.forEach((anchor, index) => {
+      if (extraIds.has(anchor.id)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['uiAnchors', index, 'id'],
-          message: 'the full anchor name (plugin id plus this id) is too long: shorten this id',
+          message: `"${anchor.id}" is declared in both uiAnchors and uiAnchorsExtra: list an anchor id once`,
         })
       }
     })
+    const anchorCount = primaryAnchors.length + extraAnchors.length
+    if (anchorCount > UI_ANCHORS_TOTAL_MAX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['uiAnchorsExtra'],
+        message: `uiAnchors and uiAnchorsExtra together declare ${anchorCount} anchors; the limit is ${UI_ANCHORS_TOTAL_MAX}`,
+      })
+    }
+    const anchorBytes = anchorDeclarationsBytes(primaryAnchors, extraAnchors)
+    if (anchorBytes > UI_ANCHORS_BYTES_MAX) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['uiAnchorsExtra'],
+        message: `uiAnchors and uiAnchorsExtra use ${anchorBytes} bytes of UTF-8; the limit is ${UI_ANCHORS_BYTES_MAX}`,
+      })
+    }
     if ((manifest.permissions ?? []).includes('network.upload') !== (manifest.uploadHosts?.length ?? 0) > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

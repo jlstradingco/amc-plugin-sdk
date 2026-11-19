@@ -38,6 +38,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
 | `mobile` | boolean | No | Let your plugin open on the owner's phone. Off unless `true` — see [`mobile`](#mobile) |
 | `uiAnchors` | array | No | Controls in your page the in-app assistant may point at — see [`uiAnchors`](#uianchors) |
+| `uiAnchorsExtra` | array | No | Anchors beyond the first 64, so up to 192 in total — see [`uiAnchors`](#uianchors) |
 | `linkClaims` | array | No | Web URLs your plugin wants to handle, 1–20 entries of `{ "host", "path" }` — see [`linkClaims`](#linkclaims) |
 | `uploadHosts` | array | No | The exact websites `http.uploadFile` may send files to, up to 10 — **required together with `network.upload`** — see [`uploadHosts`](#uploadhosts) |
 | `usageActions` | array | No | The feature actions your plugin counts with `usage.record(action)`, up to 20 — see [`usageActions`](#usageactions) |
@@ -948,7 +949,8 @@ assistant sees your plugin as one blank area.
 - **Fields.** `id` is lowercase letters, digits and single hyphens, up to 48 characters, and unique.
   `label` (80), `description` (300) and the optional `when` (120) are one line of plain text each, with no
   line breaks. `kind` is one of `button`, `link`, `input`, `toggle`, `tab`, `menuitem`, `row`, `region`,
-  `composite`, `dialog`, `panel`, `display`, `select`, `form`. At most 64 entries.
+  `composite`, `dialog`, `panel`, `display`, `select`, `form`. At most 64 entries in `uiAnchors`,
+  and at most 192 across `uiAnchors` and `uiAnchorsExtra` together.
 - **The assistant reads these words, not your page.** It sees your `label`, `description` and `when`, marked
   as written by your plugin. Write them as plain descriptions of the control, never as instructions.
 - **Names.** Omniscio names each control `plugin:<your plugin id>:<id>`, so your ids can never collide with
@@ -958,6 +960,10 @@ assistant sees your plugin as one blank area.
   frame is not covered.
 - **Older apps.** An app that predates this key ignores it and loads your plugin as before; the
   assistant just cannot point inside it.
+- **More than 64 controls.** List the rest in `uiAnchorsExtra`: the same entries, at most 128, and an
+  id may appear in only one of the two lists. Together they must stay under 128 KiB of UTF-8. The
+  second list exists only so an older app can drop it and keep working with your first 64, instead of
+  refusing to load your plugin.
 - It must be an array of valid entries; anything else fails `omniscio-plugin validate`.
 
 ## `linkClaims`

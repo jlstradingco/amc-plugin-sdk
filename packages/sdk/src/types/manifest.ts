@@ -572,6 +572,14 @@ export interface PluginManifest {
    * collide with the app's. An app older than this key ignores it.
    */
   uiAnchors?: PluginUiAnchor[]
+  /**
+   * Anchors beyond the first 64, so a plugin can declare up to 192 in total. Same entry
+   * shape as `uiAnchors`, at most 128 entries, and no id may appear in both lists. It
+   * lives apart from `uiAnchors` only because an app that predates this key drops it and
+   * keeps working with the first 64. Together the two lists must stay under 128 KiB of
+   * UTF-8.
+   */
+  uiAnchorsExtra?: PluginUiAnchor[]
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]

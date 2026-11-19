@@ -75,3 +75,42 @@ describe('uiAnchors (host: up to 64 plugin-listed controls, named plugin:<id>:<a
     expect(errorsOf(withAnchors([longEntry], 'p'.repeat(90)))).toContain('full anchor name')
   })
 })
+
+describe('uiAnchorsExtra (the overflow list an older app drops and ignores)', () => {
+  const anchorsNamed = (prefix: string, count: number, entry: Record<string, unknown> = {}) =>
+    Array.from({ length: count }, (_unused, index) => ({ ...openFile, id: `${prefix}-${index}`, ...entry }))
+
+  const withLists = (uiAnchors: unknown[], uiAnchorsExtra: unknown[]) => ({
+    ...baseManifest,
+    uiAnchors,
+    uiAnchorsExtra,
+  })
+
+  it('accepts 64 plus 128 and keeps both lists', () => {
+    const result = validateManifest(withLists(anchorsNamed('primary', 64), anchorsNamed('extra', 128)))
+
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.uiAnchorsExtra).toHaveLength(128)
+  })
+
+  it('refuses a 129th extra anchor', () => {
+    expect(errorsOf(withLists([], anchorsNamed('extra', 129)))).toMatch(/^uiAnchorsExtra/m)
+  })
+
+  it('refuses one id declared in both lists', () => {
+    expect(errorsOf(withLists([openFile], [openFile]))).toContain('both uiAnchors')
+  })
+
+  it('refuses an anchor set over the combined UTF-8 budget', () => {
+    const wide = { label: '漢'.repeat(80), description: '漢'.repeat(300), when: '漢'.repeat(120) }
+    const errors = errorsOf(withLists(anchorsNamed('primary', 64, wide), anchorsNamed('extra', 128, wide)))
+
+    expect(errors).toContain('131072')
+  })
+
+  it('is a published type field', () => {
+    const manifest = { ...baseManifest, uiAnchorsExtra: [openFile] } satisfies PluginManifest
+
+    expect(manifest.uiAnchorsExtra).toHaveLength(1)
+  })
+})
