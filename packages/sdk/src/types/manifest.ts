@@ -492,6 +492,8 @@ export interface PluginManifest {
       perContext?: boolean
       lockDown?: boolean
       chatPlacement?: 'replace' | 'beside'
+      /** Show this plugin's chats in a right-hand Sessions panel it opens with `host.setSurfaceTab`. */
+      sidePanel?: boolean
       noContextText?: string
       suggestedPrompts?: PluginSuggestedPrompt[]
     }

@@ -360,6 +360,7 @@ const uiSchema = z.object({
       perContext: z.boolean().optional(),
       lockDown: z.boolean().optional(),
       chatPlacement: z.enum(['replace', 'beside']).optional(),
+      sidePanel: z.boolean().optional(),
       noContextText: z.string().min(1).max(NO_CONTEXT_TEXT_MAX).optional(),
       suggestedPrompts: z
         .array(

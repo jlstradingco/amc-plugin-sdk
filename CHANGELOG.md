@@ -20,6 +20,13 @@ still carries `id`, `created_at` and `updated_at`. `where` and `orderBy` may nam
 Omniscio older than this release ignores the option and returns every column, so code that sends it is
 correct everywhere and only faster on a newer host.
 
+### Added — a Sessions side panel for plugins with their own tabs
+
+- `ui.sessions.sidePanel` — a boolean. Omniscio shows your chats in a 320 px panel on the right, with
+  an "Ask about your <plugin name>..." box at the top. Open and close it with the existing
+  `host.setSurfaceTab({ tab: 'sessions' | 'items' })`; the `surfaceTab` command now carries
+  `sidePanel: true` when this Omniscio shows the panel for you. Older Omniscio versions ignore the key.
+
 ### Added — check a widget spec or a batch of sidebar rows before you send it
 
 - `validateWidgetSpec(spec)` returns the reasons Omniscio would refuse a widget spec, each with the

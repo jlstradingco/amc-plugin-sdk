@@ -464,6 +464,40 @@ file) opts in with two manifest keys and one webview call.
 page keeps the left of the panel and the chat takes a strip on the right (360-560 px). The default,
 `"replace"`, shows the chat over your page as before. Desktop only.
 
+### A Sessions side panel (`ui.sessions.sidePanel`)
+
+A plugin that already draws its own top tabs can show its chats in a panel on the right instead of the
+column tabs. Set `"sidePanel": true` under `ui.sessions`. Your page keeps the left of the panel and
+stays usable; the panel is 320 px wide and holds an "Ask about your <your plugin name>..." box (Enter
+starts a chat with the typed text, Shift+Enter adds a line) above every chat of your plugin, newest
+first. Omniscio draws the panel and the box; you draw only the button that opens it.
+
+Open and close it with the call you already use for tabs:
+
+```ts
+await Omniscio.host.setSurfaceTab({ tab: 'sessions' }) // open
+await Omniscio.host.setSurfaceTab({ tab: 'items' }) // close
+```
+
+Omniscio owns the state and pushes it back on the `surfaceTab` command as
+`{ tab, sessionsCount, sidePanel? }`. `sidePanel: true` means this Omniscio shows the panel for your
+plugin right now, so read `tab: 'sessions'` as "panel open". When `sidePanel` is missing (an older
+Omniscio, a phone, or the AI-native feature off) the key is ignored: hide your button or keep your own
+sessions screen. Opening a chat from the panel replaces the list in the same strip, which widens to
+the chat width, with a "Back to sessions" bar above it. Closing the panel closes that chat. Omniscio
+remembers whether the panel was open, per plugin, across restarts; a plugin that was never opened
+starts closed. The width is fixed at 320 px, with no drag edge. Desktop only. It replaces the column
+tabs and the left rail for your plugin, so `ui.hideSessionsPane` is not needed alongside it.
+
+What Omniscio does for you: the panel slides in over 180 ms (no motion when the person asked for
+reduced motion), the Ask box takes the cursor when it opens, and Esc closes it. Below about 1100 px of
+window width the panel floats over your page with a soft shadow instead of squeezing it.
+
+What your plugin does, because the button lives inside your page: draw your Sessions button with
+`aria-pressed` set while the echo says `tab: 'sessions'` and `sidePanel: true`, and call `focus()` on
+that button when the echo flips from `'sessions'` to `'items'` (Omniscio hands the keyboard focus back
+to your page first). No new call and no new field are involved.
+
 ### Locking down pane chats (`ui.sessions.lockDown`)
 
 Set `"lockDown": true` under `ui.sessions` to give every chat the person starts from your pane the

@@ -156,6 +156,26 @@ describe('ui.sessions per-context chat fields (host: perContext, lockDown, chatP
   })
 })
 
+describe('ui.sessions.sidePanel (host: a right-hand Sessions panel the plugin opens)', () => {
+  const sessionsWith = (sessions: Record<string, unknown>) => ({ ...baseManifest, ui: { sessions } })
+
+  it.each([true, false])('accepts and keeps %s', (sidePanel) => {
+    const result = validateManifest(sessionsWith({ sidePanel }))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.sessions?.sidePanel).toBe(sidePanel)
+  })
+
+  it('leaves it unset when the plugin does not declare it', () => {
+    const result = validateManifest(sessionsWith({ perContext: true }))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.sessions?.sidePanel).toBeUndefined()
+  })
+
+  it.each(['yes', 1, null])('refuses %j', (value) => {
+    expect(errorsOf(sessionsWith({ sidePanel: value }))).toMatch(/^ui\.sessions\.sidePanel: /m)
+  })
+})
+
 describe('linkClaims (host: 1-20 claims of an exact host and a templated path)', () => {
   const claimsWith = (linkClaims: unknown) => ({ ...baseManifest, linkClaims })
 
