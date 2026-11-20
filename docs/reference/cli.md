@@ -2,11 +2,13 @@
 
 The `omniscio-plugin` CLI is a Commander.js-based tool for building, validating, packaging, and publishing Omniscio plugins.
 
-## Install
+## Install the CLI
 
 ```bash
 npm install -g @omniscio/plugin-cli
 ```
+
+To install a plugin into your local Omniscio, see [`install`](#install).
 
 ---
 
@@ -218,6 +220,49 @@ omniscio-plugin package
 ```
 
 **Exit codes:** `0` success, `1` manifest invalid, build failed, or a page script would not load.
+
+---
+
+### `install`
+
+Build and install this plugin into your local Omniscio, then hot-reload it.
+
+**Usage:**
+
+```bash
+omniscio-plugin install [options]
+```
+
+Run it from the plugin project root -- the folder holding `manifest.json`.
+
+**Options:**
+
+| Flag | Description | Default |
+|---|---|---|
+| `--no-build` | Skip the build; install the files as authored | builds first |
+| `--no-reload` | Copy the files only; do not hot-reload the running Omniscio | reloads |
+| `-w, --watch` | Re-install and hot-reload on every source change | `false` |
+
+**What it does:**
+
+1. Validates `manifest.json`.
+2. Builds the plugin (unless `--no-build` is passed, or the project has no TypeScript source).
+3. Copies `manifest.json` and the package entries into Omniscio's own `plugins` folder (`<user-data>/plugins/<plugin-id>`), clearing a previous copy of each entry folder so a file you deleted from source does not linger. The plugin's `data/` folder is left untouched.
+4. Hot-reloads the running Omniscio through its control server, so the new code is live without a restart. If Omniscio is not running, or its control token cannot be found (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`), the files are installed and the command tells you to restart Omniscio to pick them up.
+
+**Example:**
+
+```bash
+omniscio-plugin install
+# ℹ Building plugin...
+# ✓ Installed my-plugin → C:\Users\you\AppData\Roaming\agent-mission-control\plugins\my-plugin
+# ✓ Hot-reloaded in Omniscio
+
+omniscio-plugin install --watch
+# ℹ Watching for changes — press Ctrl+C to stop
+```
+
+**Exit codes:** `0` installed, with or without the hot-reload; `1` no `manifest.json` in the current folder, `manifest.json` invalid, or the build failed.
 
 ---
 

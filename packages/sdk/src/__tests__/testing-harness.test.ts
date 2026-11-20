@@ -242,6 +242,33 @@ describe('capture surfaces', () => {
   })
 })
 
+describe('inbox.resolveAlert', () => {
+  it('withdraws the card the plugin posted and records the call', async () => {
+    const h = createTestContext()
+    await h.ctx.inbox.postAlert({ title: 'Scan failed', body: 'b', dedupKey: 'scan' })
+    await h.ctx.inbox.resolveAlert({ dedupKey: 'scan' })
+
+    expect(h.inboxAlerts).toEqual([])
+    expect(h.inboxResolved).toEqual([{ dedupKey: 'scan' }])
+  })
+
+  it('resolves nothing without error when no card carries that key', async () => {
+    const h = createTestContext()
+    await h.ctx.inbox.resolveAlert({ dedupKey: 'never-posted' })
+
+    expect(h.inboxAlerts).toEqual([])
+    expect(h.inboxResolved).toEqual([{ dedupKey: 'never-posted' }])
+  })
+
+  it('leaves a card posted for a different destination alone', async () => {
+    const h = createTestContext()
+    await h.ctx.inbox.postAlert({ title: 'T', body: 'b', dedupKey: 'queue', openPlugin: true })
+    await h.ctx.inbox.resolveAlert({ dedupKey: 'queue' })
+
+    expect(h.inboxAlerts).toHaveLength(1)
+  })
+})
+
 describe('inbox.onDismiss', () => {
   it('hands a subscribed plugin the dismissal of its own row', () => {
     const h = createTestContext()

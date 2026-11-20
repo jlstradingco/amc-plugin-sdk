@@ -32,6 +32,22 @@ The mirror is this folder and nothing else, so nothing in it may reach outside i
   [docs.omniscio.com/sdk](https://docs.omniscio.com/sdk/). The folder's `build` script builds only
   `packages/*`, and the mirror has no docs workflow.
 
+## `packages/sdk/src/generated/` is not in git, and a build needs it
+
+The SDK's generated reference (the permission list, the manifest schema, the icon names, the host's
+context types) is produced, never hand-written:
+
+```sh
+npm run scripts:run -- plugin-kit:generate   # from the Omniscio repository root
+```
+
+In the Omniscio repository every file it writes is listed in the root `.gitignore`, so a fresh
+clone carries none of them — and `packages/sdk/src` imports from that folder, so `pnpm build` there
+fails until the generator has run. Run it once after cloning, and again whenever a host surface
+changes. In the mirror there is nothing to do: the mirror sync runs the generator itself and commits
+its output with the folder (`scripts/ops/plugin-sdk-mirror.mjs`), so a clone of `amc-plugin-sdk`
+builds as-is.
+
 ## What the mirror's workflows run
 
 GitHub reads workflows only at a repository's root, so the two files in `.github/workflows/` run
@@ -75,8 +91,10 @@ being read as "already published". **Never `npm publish` a package folder by han
 1. **Bump all three `package.json` versions** to the new number in one commit. Never stagger
    them — a partial bump is how `dev-shell` drifted to `1.0.0` while the others were at `1.0.7`.
 2. **Regenerate the SDK's facts** from the Omniscio repository root:
-   `npm run scripts:run -- plugin-kit:generate`, and commit what it changes. The host's plugin-SDK
-   contract version is generated from `packages/sdk/package.json`; never hand-edit it.
+   `npm run scripts:run -- plugin-kit:generate`. It writes only into
+   `packages/sdk/src/generated/`, which the Omniscio repository keeps untracked, so there is
+   nothing to commit — the mirror sync commits that output alongside the folder. The host's
+   plugin-SDK contract version is generated from `packages/sdk/package.json`; never hand-edit it.
 3. **Turn `## [Unreleased]` in `CHANGELOG.md` into the new version's section.** If a previous
    version was stamped but never published, say so and tell upgraders to read the skipped section
    too — the registry's `latest` is the only version anyone actually has. (`1.1.0` was stamped,

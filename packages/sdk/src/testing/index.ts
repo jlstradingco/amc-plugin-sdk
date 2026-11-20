@@ -153,7 +153,9 @@ export interface TestHarness {
   /** Captured ctx.toast.notify calls. */
   notifications: Array<{ title: string; body?: string }>
   /** Captured ctx.inbox.postAlert calls. */
-  inboxAlerts: Array<{ title: string; body: string; dedupKey?: string }>
+  inboxAlerts: Array<{ title: string; body: string; dedupKey?: string; openPlugin?: boolean }>
+  /** Captured ctx.inbox.resolveAlert calls, in the order the plugin made them. */
+  inboxResolved: Array<{ dedupKey: string; openPlugin?: boolean }>
   /** Captured ctx.log.* calls. */
   logs: CapturedLog[]
   /** Captured ctx.events.emit calls. */
@@ -417,6 +419,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     widgetCleared: [],
     inboxItems: [],
     inboxAlerts: [],
+    inboxResolved: [],
     sentEmails: [],
     scheduledEmails: [],
     launches: [],
@@ -820,6 +823,13 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     inbox: {
       setItems: (items) => { harness.inboxItems = items; return Promise.resolve() },
       postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve() },
+      resolveAlert: ({ dedupKey, openPlugin }) => {
+        harness.inboxAlerts = harness.inboxAlerts.filter(
+          (alert) => alert.dedupKey !== dedupKey || Boolean(alert.openPlugin) !== Boolean(openPlugin)
+        )
+        harness.inboxResolved.push({ dedupKey, openPlugin })
+        return Promise.resolve()
+      },
       onDismiss: (handler) => {
         inboxDismissHandlers.add(handler)
         return () => { inboxDismissHandlers.delete(handler) }

@@ -648,6 +648,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [inbox] setItems(${items.length} items)`)
         return Promise.resolve()
       },
+      resolveAlert: (alertOpts) => {
+        if (shouldLog) console.log(`${prefix} [inbox] resolveAlert: ${alertOpts.dedupKey}`)
+        return Promise.resolve()
+      },
       onDismiss: () => () => {},
       listMine: () => {
         if (shouldLog) console.log(`${prefix} [inbox] listMine`)

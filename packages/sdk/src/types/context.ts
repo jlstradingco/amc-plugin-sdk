@@ -436,7 +436,72 @@ export interface PluginSessions {
    * must be built-in or classified first-party by the Marketplace.
    */
   fanout(opts: PluginSessionFanoutOptions): Promise<PluginSessionFanoutResult>
+  /**
+   * Attach a pull request to one of this plugin's sessions, so the person sees
+   * it on the session row and in the PR list.
+   *
+   * `snapshot` is what you already know about the PR (title, state, branches);
+   * anything you leave out keeps whatever the host has stored. `refresh: true`
+   * re-links a PR the person DISMISSED; without it a dismissed PR stays
+   * dismissed and the answer is `{ linked: false, reason: 'dismissed' }`.
+   */
+  linkPullRequest(
+    sessionId: string,
+    input: PluginSessionLinkPullRequestInput
+  ): Promise<PluginSessionLinkPullRequestResult>
 }
+
+export type PluginPullRequestState = 'open' | 'closed' | 'merged'
+
+export interface PluginPullRequestSnapshot {
+  title: string | null
+  state: PluginPullRequestState | null
+  headBranch: string | null
+  baseBranch: string | null
+  isDraft: boolean | null
+  syncedAt: string | null
+}
+
+export interface PluginPullRequestWatch {
+  active: boolean
+  startedAt: string | null
+  startedBy: 'person' | 'agent' | null
+  wakes: number
+  lastWakeAt: string | null
+  endedAt: string | null
+  endedReason: string | null
+}
+
+export interface PluginPullRequestLink {
+  host: string
+  repository: string
+  number: number
+  url: string
+  sessionId: string
+  source: 'created' | 'manual' | 'detected' | 'agent'
+  linkedAt: string
+  snapshot: PluginPullRequestSnapshot
+  watch?: PluginPullRequestWatch
+}
+
+export interface PluginSessionLinkPullRequestInput {
+  /** The pull request's web URL. */
+  url: string
+  /** What you already know about it; omitted fields keep the host's stored value. */
+  snapshot?: {
+    title?: string | null
+    state?: string | null
+    headBranch?: string | null
+    baseBranch?: string | null
+    isDraft?: boolean | null
+  }
+  /** Re-link a PR the person dismissed. */
+  refresh?: boolean
+}
+
+export type PluginSessionLinkPullRequestResult =
+  | { linked: true; link: PluginPullRequestLink }
+  | { linked: false; reason: 'bad-url' | 'no-session' | 'dismissed' }
 
 export interface PluginSessionFanoutOptions {
   prompt: string
@@ -2405,6 +2470,63 @@ export interface PluginRss {
   getRecentEntries(options?: PluginRssRecentOptions): Promise<PluginRssEntry[]>
 }
 
+/** The options for {@link PluginNotifications.fire}. */
+export interface PluginNotificationOptions {
+  /** 1 to 120 characters. */
+  title: string
+  /** Up to 500 characters. */
+  body: string
+  /** 1 to 120 characters. Names the notification so `clear` can close it; scoped to your plugin. */
+  tag: string
+  /** Defaults to `'info'`. */
+  category?: 'email' | 'task' | 'alert' | 'info'
+  /** Where clicking the notification should lead inside a plugin. */
+  deepLink?: { pluginId: string; path: string }
+  sound?: string
+  /** Show the notification even while Focus Mode is on. */
+  bypassFocusMode?: boolean
+  /** Show it without a sound. */
+  silent?: boolean
+}
+
+/**
+ * OS notifications from your backend. Requires the `notifications` permission.
+ *
+ * They route through the host, so Focus Mode, silence and mute gating all apply
+ * — a `fire` that resolves means the host accepted it, not that the person saw
+ * a banner.
+ */
+export interface PluginNotifications {
+  /** Show a notification. Resolves with no value. */
+  fire(opts: PluginNotificationOptions): Promise<void>
+  /** Close the open notification with this tag, if any. Resolves with no value. */
+  clear(opts: { tag: string }): Promise<void>
+}
+
+/** One section of the person's coaching profile. */
+export interface CoachingProfileSection {
+  /** The stable topic key. */
+  topic: string
+  /** The section's heading as written. */
+  title: string
+  /** The section's text. */
+  text: string
+}
+
+export type CoachingProfileRead =
+  | { ok: true; sections: CoachingProfileSection[] }
+  | { ok: false; reason: string }
+
+/**
+ * The person's own coaching profile, read on the backend. Requires the
+ * `coaching-profile` permission, which the person grants at install.
+ *
+ * A refusal is `{ ok: false, reason }` rather than a throw.
+ */
+export interface PluginCoachingProfile {
+  read(): Promise<CoachingProfileRead>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -2453,6 +2575,8 @@ export interface PluginContext {
   widget?: PluginBackendWidget
   toast: PluginToast
   inbox: PluginInbox
+  /** Requires `notifications`. See {@link PluginNotifications}. */
+  notifications?: PluginNotifications
   auth: PluginAuth
   recording: PluginRecording
   spend: PluginSpend
@@ -2522,4 +2646,9 @@ export interface PluginContext {
   people?: PluginPeople
   calendar?: PluginCalendar
   teamChat?: PluginTeamChat
+  /**
+   * Requires `coaching-profile`. See {@link PluginCoachingProfile}. Optional so
+   * a `PluginContext` double written before the SDK typed it still compiles.
+   */
+  coachingProfile?: PluginCoachingProfile
 }

@@ -105,7 +105,86 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
   generateImage(request: BridgeImageRequest): Promise<BridgeImageResult | BridgeImageRefusal>
   estimateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetEstimate | BridgeImageRefusal>
   generateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetResult | BridgeImageRefusal>
+  /**
+   * Which route a {@link completeText} would take RIGHT NOW: the person's API
+   * key, their Claude subscription, or none — with the host-chosen model, its
+   * list price and the route's limits.
+   *
+   * Never throws for "not configured": that is `route: 'none'`. Call it before
+   * offering a completion, so the person is never shown an action that cannot
+   * run.
+   */
+  availability(): Promise<BridgeAiAvailability>
+  /**
+   * One text completion, on the person's API key when there is one, else their
+   * Claude subscription (only if the manifest declares `ai.subscription`).
+   *
+   * The HOST chooses the model — never pass one; an unknown field is refused.
+   * `expectRoute` is the route you showed the person and budgeted for: if the
+   * host would now answer on a different route the call is refused
+   * `route-changed` instead of running.
+   *
+   * A model-side failure is RETURNED as `{ ok: false, kind }`, not thrown.
+   */
+  completeText(request: BridgeTextCompletionRequest): Promise<BridgeTextCompletionResult>
+  /**
+   * Open Settings → Accounts at the AI provider setup, so the person can add a
+   * credential. Resolves with no value; rate-limited, so a burst is harmless.
+   */
+  openSetup(): Promise<void>
 }
+
+/** Where a completion's spend lands: real money on an API key, covered by the plan on a subscription. */
+export type BridgeAiRoute = 'api-key' | 'subscription'
+
+/** What {@link BridgeAi.availability} answers. */
+export interface BridgeAiAvailability {
+  route: BridgeAiRoute | 'none'
+  /** The host-chosen model id, or `null` when no route answers. */
+  model: string | null
+  /** List price per million tokens; `null` exactly when `route` is `'none'`. */
+  pricing: { inUsdPerMTok: number; outUsdPerMTok: number } | null
+  /** `true` on the API-key route (real money), `false` on the subscription route. */
+  billed: boolean
+  limits: { maxConcurrent: number; maxRowsPerRun: number | null }
+}
+
+/** The one argument {@link BridgeAi.completeText} takes. Extra fields are refused. */
+export interface BridgeTextCompletionRequest {
+  /** The system prompt, up to 32 KB. */
+  system?: string
+  /** The user prompt, 1 to 32 KB. */
+  prompt: string
+  /** 1 to 8192. */
+  maxOutputTokens?: number
+  /** The route you showed the person; a different resolved route is refused `route-changed`. */
+  expectRoute?: BridgeAiRoute
+}
+
+export type BridgeTextCompletionFailureKind =
+  | 'no-credential'
+  | 'cap'
+  | 'usage-limit'
+  | 'too-long'
+  | 'timed-out'
+  | 'unavailable'
+  | 'route-changed'
+  | 'other'
+
+export type BridgeTextCompletionResult =
+  | {
+      ok: true
+      text: string
+      route: BridgeAiRoute
+      model: string
+      inTokens: number
+      outTokens: number
+      /** `true` when the token counts were estimated rather than reported by the provider. */
+      tokensEstimated: boolean
+      /** `true` when the answer hit `maxOutputTokens`. */
+      truncated: boolean
+    }
+  | { ok: false; kind: BridgeTextCompletionFailureKind; message: string }
 
 /** What `AgentMC.ai.estimateImage` / `generateImage` take. Extra fields are refused. */
 export interface BridgeImageRequest {
@@ -604,6 +683,24 @@ export interface DocumentHandle {
 }
 
 /**
+ * A file the person chose to have RECALLED, returned by
+ * {@link BridgeDocuments.grants} and accepted by {@link BridgeDocuments.reopen}.
+ *
+ * A grant survives a restart, unlike a {@link DocumentHandle}. It carries the
+ * file's base name and never its path.
+ */
+export interface DocumentGrant {
+  /** The opaque id {@link BridgeDocuments.reopen} takes. */
+  grantId: string
+  /** The file's base name, for display. Not a path. */
+  name: string
+  /** The mode fixed when the person first picked the file. */
+  mode: 'read' | 'readwrite'
+  /** When the grant was last used to open the file, ISO-8601. */
+  lastOpenedAt: string
+}
+
+/**
  * Read and append to files the user explicitly picked, on `Omniscio.documents`.
  *
  * ::: OFF BY DEFAULT — check before you build on this :::
@@ -652,6 +749,16 @@ export interface BridgeDocuments {
     title?: string
     filters?: { name: string; extensions: string[] }[]
     multiple?: boolean
+    /**
+     * Ask the host to REMEMBER the picked files so {@link reopen} can mint a
+     * Handle for them in a later run without a dialog.
+     *
+     * The ask never holds up this call: the pick resolves whether or not the
+     * person answers, and their answer arrives later as a grant that shows up
+     * in {@link grants}. A grant is capped (64 per plugin) and expires after 90
+     * unused days.
+     */
+    remember?: boolean
   }): Promise<DocumentHandle[]>
   /**
    * The Handles this plugin still holds, with freshly re-stat'd sizes.
@@ -711,6 +818,34 @@ export interface BridgeDocuments {
   ): Promise<{ length: number }>
   /** Drop the Handle and its capability. The file itself is untouched. */
   close(handleId: string): Promise<void>
+  /**
+   * The files this plugin may reopen without a dialog, most recently opened
+   * first.
+   *
+   * This is your discovery mechanism, so never persist grant ids of your own: a
+   * private copy can go stale against a revoke you cannot see, and you would
+   * then offer the person a row guaranteed to fail. Ask the host instead.
+   *
+   * A grant carries the file's NAME and never its path, exactly like
+   * {@link list}. Expired, revoked and never-existing grants are simply absent.
+   */
+  grants(): Promise<DocumentGrant[]>
+  /**
+   * Mint a fresh Handle over a remembered file, with no picker.
+   *
+   * `grantId` is the only argument, and it is the ONLY thing standing where a
+   * path is not allowed to be. Rejects for an unknown, revoked or expired
+   * grant — the recovery is the same in every case: show the picker
+   * ({@link open} with `remember: true`).
+   */
+  reopen(grantId: string): Promise<DocumentHandle>
+  /**
+   * Drop one grant, the persisted twin of {@link close}. The file is untouched
+   * and the person's Settings list stops offering it.
+   *
+   * Succeeds whether or not the grant existed.
+   */
+  forget(grantId: string): Promise<void>
   /**
    * Save ONE new file wherever the person chooses in a native Save window.
    *
@@ -1389,17 +1524,316 @@ export interface BridgeShell {
   showMessageBox(opts: BridgeMessageBoxOptions): Promise<{ buttonIndex: number }>
 }
 
+/** One row of a live board: an id and its property map. */
+export interface BridgeLiveItem {
+  readonly id: string
+  readonly props: Record<string, unknown>
+}
+
+/** One property change for {@link BridgeLive.set}. */
+export interface BridgeLivePropertyEdit {
+  /** The row's id. */
+  item: string
+  /** The property name. */
+  prop: string
+  value: unknown
+}
+
+/** Somebody else on the same live board. */
+export interface BridgeLiveParticipant {
+  participantId: string
+  uid: string
+  name: string
+  colour: string
+  isGuest: boolean
+  /** `null` until they move. */
+  cursor: { x: number; y: number } | null
+}
+
+export type BridgeLiveStatus = 'live' | 'reconnecting' | 'offline' | 'removed'
+
+export type BridgeLiveOpenResult =
+  | { live: false }
+  | {
+      live: true
+      liveId: string
+      items: BridgeLiveItem[]
+      status: BridgeLiveStatus
+      participants: BridgeLiveParticipant[]
+    }
+
+export type BridgeLiveEditResult =
+  | { ok: true }
+  | { ok: false; reason: 'unknown-board' | 'no-base' | 'removed' | 'bad-edit' }
+
+/**
+ * `Omniscio.live` — join a board your screen draws and edit it together with
+ * whoever else is on it. Requires the `live` permission.
+ *
+ * A refusal is an `{ ok: false, reason }` result, never a throw: someone else
+ * closing the board is an ordinary state, not an error.
+ */
+export interface BridgeLive {
+  /** Join a board. `{ live: false }` means it could not be opened. */
+  open(board: { boardId: string; title: string }): Promise<BridgeLiveOpenResult>
+  /** Apply property edits. */
+  set(liveId: string, edits: BridgeLivePropertyEdit[]): Promise<BridgeLiveEditResult>
+  /** Replace the board's rows wholesale. */
+  write(liveId: string, next: BridgeLiveItem[]): Promise<BridgeLiveEditResult>
+  undo(liveId: string): Promise<BridgeLiveEditResult>
+  redo(liveId: string): Promise<BridgeLiveEditResult>
+  /** Show your cursor to everyone else; `null` hides it. */
+  cursor(liveId: string, point: { x: number; y: number } | null): Promise<BridgeLiveEditResult>
+  /** Leave the board. Resolves how many of your changes could not be sent. */
+  close(liveId: string): Promise<{ unsent: number }>
+}
+
+/** How a file's bytes are spelled: `'utf8'` text (the default) or `'base64'` raw bytes. */
+export type BridgeFileEncoding = 'utf8' | 'base64'
+
+/**
+ * `Omniscio.fs` — read and write files from your screen.
+ *
+ * The webview reaches its own data directory (`<userData>/plugins/<pluginId>/data`)
+ * plus any folder the person picked with `Omniscio.shell.showOpenDialog({
+ * directory: true })`. With the `system` permission, reads are broad (minus the
+ * person's protected locations); writes and deletes stay inside those two. The
+ * worker's `ctx.fs` is narrower — its data directory only.
+ */
+export interface BridgeFs {
+  /** Text by default; `{ encoding: 'base64' }` returns the raw bytes. */
+  readFile(path: string, opts?: { encoding?: BridgeFileEncoding }): Promise<string>
+  writeFile(
+    path: string,
+    content: string,
+    opts?: { encoding?: BridgeFileEncoding }
+  ): Promise<void>
+  exists(path: string): Promise<boolean>
+  /** Entry NAMES, not paths. Capped — very large folders are truncated. */
+  listDir(path: string): Promise<string[]>
+  mkdir(path: string): Promise<void>
+  /** Removes one file. Directories are refused. */
+  deleteFile(path: string): Promise<void>
+  /**
+   * Start watching a path. Resolves the id {@link unwatch} takes.
+   *
+   * The watcher is registered and counted against a per-plugin cap of 20, but
+   * NO change events reach a plugin yet — the host's delivery is a placeholder,
+   * so do not build a feature that waits on one.
+   */
+  watch(path: string): Promise<{ watchId: string }>
+  /** Stop a watcher. Succeeds whether or not it existed. */
+  unwatch(watchId: string): Promise<void>
+}
+
+/**
+ * `Omniscio.secrets` — this plugin's own encrypted credential store. Requires
+ * the `secrets` permission.
+ *
+ * Values are encrypted per plugin: a `set` that resolves was written, and there
+ * is no layer that reads another plugin's keys. `get` returns `null` for BOTH
+ * "never set" and "stored but no longer decryptable" — never read that as
+ * permission to overwrite.
+ */
+export interface BridgeSecrets {
+  /** The stored secret, or `null` when missing or undecryptable. */
+  get(key: string): Promise<string | null>
+  set(key: string, value: string): Promise<void>
+  /** Succeeds whether or not the key existed. */
+  delete(key: string): Promise<void>
+  /** The KEYS only, sorted. Never the values. */
+  list(): Promise<string[]>
+}
+
+/** One schedule a plugin declared, as {@link BridgeCron.list} reports it. */
+export interface BridgeCronJob {
+  /** The `id` you scheduled it under. */
+  id: string
+  /** The cron expression. */
+  cron: string
+  /** The command string you gave. */
+  command: string
+  active: boolean
+}
+
+/**
+ * `Omniscio.cron` — schedule recurring work from your screen. Requires the
+ * `cron` permission.
+ *
+ * A scheduled job shows in the person's Cron dashboard and fires `onTrigger`
+ * in every open copy of your screen. Jobs are capped at 20 per plugin, and an
+ * invalid expression is refused by `schedule`.
+ */
+export interface BridgeCron {
+  /** Create or replace the job with this `id`. Resolves it. */
+  schedule(opts: { id: string; cron: string; command: string }): Promise<{ jobId: string; name: string }>
+  /** Remove a job by its `id`. Succeeds whether or not it existed. */
+  unschedule(jobId: string): Promise<void>
+  list(): Promise<BridgeCronJob[]>
+  /** Subscribe to this plugin's own fired jobs. Returns the unsubscribe function. */
+  onTrigger(callback: (jobId: string) => void): () => void
+}
+
+/**
+ * `Omniscio.commands` — receive the manifest commands the person invokes
+ * (keyboard shortcut, command palette or a menu row).
+ */
+export interface BridgeCommands {
+  /** Returns the unsubscribe function. */
+  onCommand(
+    callback: (command: string, payload: Record<string, unknown>) => void
+  ): () => void
+}
+
+/**
+ * `Omniscio.keybindings` — bind a shortcut to one of your manifest commands.
+ *
+ * A shortcut another plugin already holds is refused rather than stolen, which
+ * is what the `registered` flag in the result reports.
+ */
+export interface BridgeKeybindings {
+  register(
+    shortcut: string,
+    commandId: string
+  ): Promise<{ registered: boolean }>
+  /** Succeeds whether or not the shortcut was yours. */
+  unregister(shortcut: string): Promise<void>
+  /** Fires when a registered shortcut is pressed. Returns the unsubscribe function. */
+  onCommand(callback: (commandId: string) => void): () => void
+}
+
+/** Options for {@link BridgeTray.addMenuItem}. */
+export interface BridgeTrayMenuItem {
+  id: string
+  label: string
+  /** An icon name from the SDK's drawable set. */
+  icon?: string
+  position?: 'top' | 'bottom'
+}
+
+/**
+ * `Omniscio.tray` — add rows to the person's tray menu, shown under this
+ * plugin's name. Items belong to the plugin and disappear when it is disabled.
+ */
+export interface BridgeTray {
+  addMenuItem(item: BridgeTrayMenuItem): Promise<void>
+  removeMenuItem(itemId: string): Promise<void>
+  updateMenuItem(
+    itemId: string,
+    fields: { label?: string; enabled?: boolean; checked?: boolean }
+  ): Promise<void>
+  /** Fires when the person clicks one of your rows. Returns the unsubscribe function. */
+  onMenuItemClick(callback: (itemId: string) => void): () => void
+}
+
+export type BridgeRunStartResult =
+  | { ok: true; heartbeatEveryMs: number; staleAfterMs: number; maxRunMs: number }
+  | { ok: false; reason: 'too-many-runs' | 'no-screen' }
+  | { ok: false; reason: 'cooling-down'; retryAfterMs: number }
+
+/**
+ * `Omniscio.runs` — tell the host a long piece of work is IN PROGRESS on your
+ * screen, so the person sees your rows as busy and the row is not reaped as a
+ * stuck run.
+ *
+ * Ungated, because it only keeps the calling plugin's own screen alive and
+ * names its own rows. Heartbeat at the interval `start` resolves, and always
+ * `finish` when the work ends.
+ */
+export interface BridgeRuns {
+  start(run: {
+    /** Your own identifier for the work, stable across heartbeats. */
+    runId: string
+    /** What the person sees. */
+    label: string
+    /** Inbox rows this run owns, so they can be cleared when it stops. */
+    inboxItemIds?: string[]
+    /** Sidebar rows this run owns. */
+    sidebarItemIds?: string[]
+  }): Promise<BridgeRunStartResult>
+  heartbeat(runId: string, opts?: { label?: string }): Promise<{ ok: true } | { ok: false; reason: 'unknown-run' | 'no-screen' }>
+  finish(runId: string): Promise<{ ok: true }>
+}
+
+/**
+ * `Omniscio.runtime` — which Omniscio instance this is. Ungated and read-only.
+ */
+export interface BridgeRuntime {
+  /** `''` for the default install, or the `AMC_INSTANCE_ID` of a named one. */
+  getInstanceId(): Promise<{ instanceId: string }>
+}
+
+/**
+ * `Omniscio.ocr` — read the words out of a picture on this computer. The
+ * picture is never uploaded and nothing is spent.
+ */
+export interface BridgeOcr {
+  /**
+   * Recognise the text in a base64 picture. A picture with no words is a
+   * SUCCESS with `text: null` and a `reason`; a malformed argument is the only
+   * refusal that throws.
+   */
+  recognize(opts: { base64: string; mediaType: string }): Promise<{
+    text: string | null
+    reason: string | null
+  }>
+}
+
+/**
+ * `Omniscio.overlay` — drive the floating overlay window a plugin's panel can
+ * be popped out into. Ungated: it only affects this plugin's own surface.
+ */
+export interface BridgeOverlay {
+  /** Whether the person can click THROUGH the overlay to the app below it. */
+  setClickable(clickable: boolean): void
+  onBoundsChange(callback: (bounds: { width: number; height: number }) => void): () => void
+  onInsetChange(
+    callback: (insets: { top: number; bottom: number; left: number; right: number }) => void
+  ): () => void
+  onVisibilityChange(callback: (visible: boolean) => void): () => void
+}
+
+/**
+ * `Omniscio.rpc` — your panel's request channel to your OWN background worker.
+ * The worker registers handlers with `ctx.rpc.handle`, and nothing outside your
+ * plugin can reach them.
+ *
+ * Optional: absent before Omniscio v0.1.92 — check for it rather than assuming.
+ */
+export interface BridgeRpc {
+  call(method: string, ...args: unknown[]): Promise<unknown>
+}
+
+/** The host's UI language and formatting locale, as {@link BridgeLocale.onChange} reports it. */
+export interface BridgeLocaleValue {
+  /** The UI language tag, such as `en` or `pt-BR`. */
+  uiLanguage: string
+  /** The locale dates and numbers are formatted in. */
+  formattingLocale: string
+  dir: 'ltr' | 'rtl'
+  /** The host's IANA time zone, when it knows one. */
+  timeZone?: string
+}
+
+/**
+ * `Omniscio.locale` — the person's UI language and formatting locale. Read-only
+ * and ungated; a change fires the subscriber.
+ */
+export interface BridgeLocale {
+  /** Fires when the person changes either setting. Returns the unsubscribe function. */
+  onChange(callback: (locale: BridgeLocaleValue) => void): () => void
+}
+
 /**
  * `window.Omniscio` — the surface a plugin WEBVIEW gets. The same object is
  * also installed as `window.AgentMC`, its name before 3.4.0, so existing
  * plugins keep working. An Omniscio released before the rename only installs
  * `window.AgentMC`; read `window.Omniscio ?? window.AgentMC` to run on both.
  *
- * This is a subset of what the host exposes, not the whole of it. The host's
- * preload carries roughly forty namespaces; the ones typed below are those with
- * a stable, documented contract. Notable untyped ones you can still reach at
- * runtime include `secrets`, `fs`, `runtime`, `keybindings`, `tray`, `cron`
- * and `overlay`.
+ * Every general namespace the host exposes is typed here. The only namespaces
+ * still untyped belong to one plugin each (`autohotkey`, `books`, `decks`,
+ * `flashcards`, `lms`, `nightytidy2`, `scan`, `shotflow`), and only that plugin
+ * may call them.
  *
  * `recording` is deliberately ABSENT: it exists on the backend (`ctx.recording`)
  * and has no webview counterpart at all, so the `Omniscio.recording` this
@@ -1466,6 +1900,32 @@ export interface Omniscio {
   usage?: PluginUsage
   /** Optional: absent on hosts without the 'model-picker' token. See {@link BridgeModelPicker}. */
   modelPicker?: BridgeModelPicker
+  /** Requires `live`. See {@link BridgeLive}. */
+  live: BridgeLive
+  /** See {@link BridgeFs}. */
+  fs: BridgeFs
+  /** Requires `secrets`. See {@link BridgeSecrets}. */
+  secrets: BridgeSecrets
+  /** Requires `cron`. See {@link BridgeCron}. */
+  cron: BridgeCron
+  /** See {@link BridgeCommands}. */
+  commands: BridgeCommands
+  /** See {@link BridgeKeybindings}. */
+  keybindings: BridgeKeybindings
+  /** See {@link BridgeTray}. */
+  tray: BridgeTray
+  /** See {@link BridgeRuns}. */
+  runs: BridgeRuns
+  /** See {@link BridgeRuntime}. */
+  runtime: BridgeRuntime
+  /** See {@link BridgeOcr}. */
+  ocr: BridgeOcr
+  /** See {@link BridgeOverlay}. */
+  overlay: BridgeOverlay
+  /** Optional: absent before Omniscio v0.1.92. See {@link BridgeRpc}. */
+  rpc?: BridgeRpc
+  /** See {@link BridgeLocale}. */
+  locale: BridgeLocale
 }
 
 /** @deprecated Renamed to {@link Omniscio} in 3.4.0. The same type; kept so existing plugins compile. */

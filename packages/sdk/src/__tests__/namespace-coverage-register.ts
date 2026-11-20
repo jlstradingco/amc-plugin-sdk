@@ -6,30 +6,7 @@ export interface PublishedMethodGap {
   reason: string
 }
 
-export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = [
-  {
-    surface: 'backend',
-    namespace: 'email',
-    generatedOnly: [],
-    publishedOnly: ['sender'],
-    reason: "The backend context builds email.sender, but the worker proxy forwards only the five send-schedule actions, so the generated sheet omits it"
-  },
-  {
-    surface: 'webview',
-    namespace: 'documents',
-    generatedOnly: ['forget', 'grants', 'reopen'],
-    publishedOnly: [],
-    reason: 'The published BridgeDocuments declares only the picker half of the documents namespace'
-  },
-  {
-    surface: 'backend',
-    namespace: 'coachingProfile',
-    generatedOnly: ['read'],
-    publishedOnly: [],
-    reason:
-      'The generated backend surface carries coachingProfile.read (permission `coaching-profile`), but the published PluginContext does not declare the namespace yet'
-  }
-]
+export const PUBLISHED_METHOD_GAPS: readonly PublishedMethodGap[] = []
 
 export interface UntypedBridgeNamespace {
   namespace: string
@@ -37,24 +14,36 @@ export interface UntypedBridgeNamespace {
 }
 
 export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
-  { namespace: 'autohotkey', reason: 'AutoHotkey script control — no AgentMC type yet' },
-  { namespace: 'books', reason: 'Book and chapter content — no AgentMC type yet' },
-  { namespace: 'commands', reason: 'Command palette contributions — no AgentMC type yet' },
-  { namespace: 'cron', reason: 'Scheduled job control from the webview — no AgentMC type yet' },
-  { namespace: 'decks', reason: 'Deck and slide assembly — no AgentMC type yet' },
-  { namespace: 'flashcards', reason: 'Card packs and review sessions — no AgentMC type yet' },
-  { namespace: 'fs', reason: 'File reads and writes from the webview — no AgentMC type yet' },
-  { namespace: 'keybindings', reason: 'Shortcut registration — no AgentMC type yet' },
-  { namespace: 'lms', reason: 'Course and lesson administration — no AgentMC type yet' },
-  { namespace: 'locale', reason: 'UI language and formatting locale, read-only — no AgentMC type yet' },
-  { namespace: 'nightytidy2', reason: 'Nightly tidy controls — no AgentMC type yet' },
-  { namespace: 'ocr', reason: 'Reads the words out of a picture on this computer — no AgentMC type yet' },
-  { namespace: 'overlay', reason: 'Overlay panel surface — no AgentMC type yet' },
-  { namespace: 'rpc', reason: 'Panel-to-backend request channel — no AgentMC type yet' },
-  { namespace: 'runs', reason: 'Run inspection and cancellation — no AgentMC type yet' },
-  { namespace: 'runtime', reason: 'Runtime version and introspection — no AgentMC type yet' },
-  { namespace: 'scan', reason: 'Security scanning — no AgentMC type yet' },
-  { namespace: 'secrets', reason: 'Encrypted credential storage — no AgentMC type yet' },
-  { namespace: 'shotflow', reason: 'Owned by the ShotFlow plugin alone — no AgentMC type yet' },
-  { namespace: 'tray', reason: 'Tray menu contributions — no AgentMC type yet' }
+  {
+    namespace: 'autohotkey',
+    reason: 'Reserved to the AutoHotkey plugin (ownerPlugin: autohotkey) — no general AgentMC type, and none may be added for anyone else'
+  },
+  {
+    namespace: 'books',
+    reason: 'Reserved to the Books plugin (ownerPlugin: books) — only that plugin may reach its own library'
+  },
+  {
+    namespace: 'decks',
+    reason: 'Reserved to the Decks plugin (ownerPlugin: decks) — only that plugin may measure and render its own decks'
+  },
+  {
+    namespace: 'flashcards',
+    reason: 'Reserved to the Flashcards plugin (ownerPlugin: flashcards) — only that plugin may reach its own study data'
+  },
+  {
+    namespace: 'lms',
+    reason: 'Reserved to the LMS plugin (ownerPlugin: lms) — only that plugin may reach its own course data'
+  },
+  {
+    namespace: 'nightytidy2',
+    reason: 'Reserved to the NightyTidy plugin (ownerPlugin: nightytidy2) — only that plugin may reach its own audits and runs'
+  },
+  {
+    namespace: 'scan',
+    reason: 'Reserved to the RepoGuard plugin (ownerPlugin: repoguard) — only that plugin may reach its own scans'
+  },
+  {
+    namespace: 'shotflow',
+    reason: 'Reserved to the ShotFlow plugin (ownerPlugin: shotflow) — only that plugin may reach its own shot lists and images'
+  }
 ]

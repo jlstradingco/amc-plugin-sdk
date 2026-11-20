@@ -104,20 +104,22 @@ Click **Say hello** — a success toast appears. Edit the greeting text, save, a
 
 ## 5. Install it in Omniscio for real (optional, 1 min)
 
-When you're happy, bundle and install it:
+From the plugin folder:
 
 ```bash
-npm run package        # → hello-world-1.0.0.amcplugin
+omniscio-plugin install
 ```
 
-Then in **Omniscio**: **Settings → Plugins → Install from file**, pick the `.amcplugin`, and your panel shows up in the sidebar.
+It builds, copies the plugin into Omniscio's own `plugins` folder, and hot-reloads the running app — your panel shows up in the sidebar, no restart. Re-run it with `--watch` to re-install on every save, so the real app becomes your dev loop.
+
+Omniscio has no "Install from file" control. To put a plugin in other people's hands, publish it to the Marketplace instead — see [Publishing](./publishing).
 
 ## What just happened
 
 - **`manifest.json`** declared your plugin to Omniscio (id, name, permissions, UI entry).
 - **`src/ui/`** is your panel — plain HTML + TypeScript, no framework required.
 - **`window.Omniscio`** is the bridge: the typed gateway to every Omniscio API. `toast` is free; other APIs are unlocked by [permissions](./permissions).
-- **`omniscio-plugin dev`** gave you a mock-backed, hot-reloading loop; **`package`** produced the installable artifact.
+- **`omniscio-plugin dev`** gave you a mock-backed, hot-reloading loop; **`install`** put the same plugin inside your real Omniscio.
 
 ## Next steps
 

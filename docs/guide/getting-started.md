@@ -20,7 +20,7 @@ Verify the installation:
 
 ```bash
 omniscio-plugin --version
-# 1.0.0
+# 3.6.0
 ```
 
 ## Scaffold a New Plugin
@@ -189,13 +189,45 @@ The marketplace enforces a **50 MB** package size limit. The CLI warns you if yo
 
 ## Install in Omniscio
 
-1. Open **Omniscio**
-2. Go to **Settings > Plugins**
-3. Click **Install from file**
-4. Select your `.amcplugin` file
-5. The plugin appears in the sidebar
+Omniscio has no "Install from file" control. A `.amcplugin` file is the upload format for the Marketplace -- it is not something the app opens locally. There are two real roads in:
+
+### Road 1: local development
+
+From your plugin directory:
+
+```bash
+omniscio-plugin install
+```
+
+Expected output:
+
+```
+ℹ Building plugin...
+✓ Installed my-plugin → C:\Users\you\AppData\Roaming\agent-mission-control\plugins\my-plugin
+✓ Hot-reloaded in Omniscio
+```
+
+`install` validates your manifest, builds the plugin, copies it into Omniscio's own `plugins` folder, and hot-reloads the running app -- no restart. Options:
+
+| Flag | What it does |
+|---|---|
+| `-w, --watch` | Re-install and hot-reload on every source change |
+| `--no-build` | Install the files as they are, without building first |
+| `--no-reload` | Copy the files only; leave the running Omniscio alone |
+
+If Omniscio is not running (or the CLI cannot find its control token), the files are still installed and the command tells you to restart Omniscio to pick them up.
 
 Your plugin is now running inside Omniscio. Open it from the sidebar to see your UI.
+
+::: tip Loading a built folder by hand
+Turn on **Settings > Plugins > Advanced plugin settings > Developer Mode**, then use **Load unpacked plugin** to point Omniscio at your built plugin folder. That is the same local load path, done through the app instead of the CLI.
+:::
+
+### Road 2: the Marketplace
+
+The Marketplace is the road for everyone who is not developing the plugin. Publish it (see [Publishing](./publishing)), and once the submission is approved anyone can install it from **Settings > Plugins > Browse Marketplace** with one click on **Install** -- no files to pick.
+
+The Marketplace also uninstalls plugins and checks for new versions.
 
 ## Next Steps
 

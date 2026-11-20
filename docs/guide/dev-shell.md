@@ -183,12 +183,12 @@ The dev shell is designed for rapid UI development and basic backend testing. It
 | `ctx.core` data | Fixed sample data | The user's real sessions, projects and messages |
 
 ::: tip
-For integration testing with real Omniscio APIs, install your built plugin into Omniscio directly. Use `npm run package` to create the `.amcplugin` file, then install it through Settings > Plugins > Install from file.
+For integration testing with real Omniscio APIs, install the plugin into Omniscio directly with `omniscio-plugin install` (add `--watch` to re-install and hot-reload on every save). It builds the plugin, copies it into Omniscio's own `plugins` folder, and hot-reloads the running app.
 :::
 
 ### What the preview does not show
 
-The preview is a stand-in, not Omniscio's drawing. It does not show the titlebar, the real fonts, colours or icons, the Add picker, or the dialog Omniscio opens before it runs an action. To see the real look, run `npm run package` and install the `.amcplugin` through Settings > Plugins > Install from file.
+The preview is a stand-in, not Omniscio's drawing. It does not show the titlebar, the real fonts, colours or icons, the Add picker, or the dialog Omniscio opens before it runs an action. To see the real look, run `omniscio-plugin install` and open the plugin in Omniscio.
 
 If your page may also run outside the dev shell, guard the call so the rest of it still works:
 
