@@ -25,6 +25,7 @@ export const REQUIRED_PERMISSION_PARTNERS = [
   ['chrome.widget', 'chrome'],
   ['sessions.images', 'sessions'],
   ['email.fromName', 'email.send'],
+  ['ai.subscription', 'ai'],
   ['boards.link', 'boards.read'],
   ['boards.write', 'boards.read'],
   ['tasks.write', 'tasks.read'],
