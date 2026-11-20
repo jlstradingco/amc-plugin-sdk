@@ -60,6 +60,11 @@ interface BridgeSharePublishRequest {
   fullBleed?: boolean
   /** Who may read and post comments: anyone with the link (the default), or workspace members only. */
   commentAudience?: 'link' | 'workspace'
+  /**
+   * A SHORTER life than the 30-day default, in whole days from 1 to 30. Omit it for 30 days.
+   * A value outside that range is refused rather than clamped.
+   */
+  expiresInDays?: number
 }
 
 interface BridgeSharePublishResult {
@@ -67,6 +72,8 @@ interface BridgeSharePublishResult {
   token: string
   /** The public link. */
   url: string
+  /** When the link stops working, as an ISO timestamp. `null` for a link that never expires. */
+  expiresAt: string | null
 }
 
 interface BridgeShareRevokeResult {
@@ -86,7 +93,11 @@ let lastToken: string | null = null
 
 async function shareReport(html: string): Promise<string | null> {
   try {
-    const { token, url } = await omniscio.share.publishArtifact({ html, title: 'Weekly report' })
+    const { token, url } = await omniscio.share.publishArtifact({
+      html,
+      title: 'Weekly report',
+      expiresInDays: 14
+    })
     lastToken = token
     return url
   } catch (err) {
@@ -114,6 +125,7 @@ async function unshare() {
 ## Notes
 
 - Webview only.
-- A link published without an expiry set lasts 30 days. The bridge does not let you choose the expiry.
+- A link published without an expiry set lasts 30 days. Ask for a shorter one with `expiresInDays`, from 1 to 30 whole days; a value outside that range is refused. A link is never given a longer life than 30 days.
+- The result reports `expiresAt`, the moment the link stops working. Read it rather than assuming it matches what you asked for: publishing a page that already has a live link can shorten that link, and the date you get back is always the real one.
 - A page must be one self-contained HTML document of at most 20 MB.
 - `@omniscio/plugin-sdk/browser` exports `BridgeShare`, `BridgeSharePublishRequest`, `BridgeSharePublishResult`, `BridgeShareRevokeResult` and `BridgeHostFailureCode`.

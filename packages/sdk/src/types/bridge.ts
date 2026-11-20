@@ -1279,6 +1279,11 @@ export interface BridgeSharePublishRequest {
   fullBleed?: boolean
   /** Who may read and post comments: anyone with the link (the default), or workspace members only. */
   commentAudience?: 'link' | 'workspace'
+  /**
+   * A SHORTER life than the 30-day default, in whole days from 1 to 30. Omit it for 30 days.
+   * A value outside that range is refused rather than clamped.
+   */
+  expiresInDays?: number
 }
 
 /** What `Omniscio.share.publishArtifact()` resolves to. */
@@ -1287,6 +1292,8 @@ export interface BridgeSharePublishResult {
   token: string
   /** The public link. */
   url: string
+  /** When the link stops working, as an ISO timestamp. `null` for a link that never expires. */
+  expiresAt: string | null
 }
 
 /** What `Omniscio.share.revokeArtifact()` resolves to. */

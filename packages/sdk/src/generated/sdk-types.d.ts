@@ -329,6 +329,7 @@ export interface AgentMC {
     "assembleFile": (...args: unknown[]) => Promise<unknown>
     "cancelVideoExport": (...args: unknown[]) => Promise<unknown>
     "claimHostCopy": (...args: unknown[]) => Promise<unknown>
+    "claimUnownedDecks": (...args: unknown[]) => Promise<unknown>
     "deleteHostCopy": (...args: unknown[]) => Promise<unknown>
     "discardDesignerFiles": (...args: unknown[]) => Promise<unknown>
     "exportPptx": (...args: unknown[]) => Promise<unknown>
