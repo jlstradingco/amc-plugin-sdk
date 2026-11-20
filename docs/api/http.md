@@ -57,6 +57,7 @@ await ctx.fs.writeFile('imports/data.csv', csv)
 - Responses follow the standard [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) interface with `.json()`, `.text()`, `.blob()`, `.ok`, `.status`, and other standard properties.
 - API keys and secrets should be stored in plugin settings (configured by the user in Omniscio's Settings > Plugins panel) and read via the [Settings](./settings) API. Never hardcode credentials.
 - There are no restrictions on which URLs you can fetch, but users see that your plugin has the `network` permission during installation.
+- Redirects are followed for you, up to 8. A redirect to a different website (another scheme, host or port) carries only `Accept`, `Accept-Language`, `User-Agent` and `Range`; every other header is dropped, including `Authorization`, `Cookie` and your own secret headers, so never put a secret in `User-Agent`. A `303` on any method except `GET` and `HEAD`, and a `301` or `302` on a `POST`, is followed as a `GET` with no body, whether or not you sent one. Any other redirect that would resend a body there (a `307` or `308`, or a `301` or `302` on a `PUT`, `PATCH` or `DELETE`) fails with an error naming that website; without a body it is followed with the same method. A URL that carries a username or password, as the first URL or as a redirect target, is refused. A redirect within the same website keeps everything.
 
 ## Uploading a file the person shared — `Omniscio.http.uploadFile`
 
