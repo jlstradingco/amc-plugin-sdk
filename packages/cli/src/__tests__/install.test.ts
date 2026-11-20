@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { copyPluginToDir } from '../lib/install.js'
+import { copyPluginToDir, installPluginToApp } from '../lib/install.js'
 
 let srcDir: string
 let destParent: string
@@ -73,5 +73,74 @@ describe('copyPluginToDir', () => {
 
     const entries = copyPluginToDir(srcDir, manifest, dest)
     expect(entries).toContain('ui')
+  })
+})
+
+describe('installPluginToApp', () => {
+  const appData = () => path.join(destParent, 'app-profile')
+
+  function writeManifest(): Record<string, unknown> {
+    writeFlatPlugin()
+    return JSON.parse(fs.readFileSync(path.join(srcDir, 'manifest.json'), 'utf-8'))
+  }
+
+  it('copies the plugin into the folder the running app reports', async () => {
+    const manifest = writeManifest()
+    const profile = appData()
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ ok: true, data: { path: profile } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch
+
+    const target = await installPluginToApp(srcDir, manifest, 'my-plugin', {
+      token: 'cli-token',
+      port: 19531,
+      fetchImpl,
+    })
+
+    expect(target.source).toBe('app')
+    expect(target.destDir).toBe(path.join(profile, 'plugins', 'my-plugin'))
+    expect(fs.existsSync(path.join(profile, 'plugins', 'my-plugin', 'manifest.json'))).toBe(true)
+    expect(fs.readFileSync(path.join(profile, 'plugins', 'my-plugin', 'ui', 'index.html'), 'utf-8')).toBe('<html>v1</html>')
+  })
+
+  it('copies into the fallback folder and keeps the reason when the app cannot be asked', async () => {
+    const manifest = writeManifest()
+    const fallbackDir = path.join(destParent, 'fallback-plugins')
+    const fetchImpl = (async () => {
+      throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } })
+    }) as typeof fetch
+
+    const target = await installPluginToApp(srcDir, manifest, 'my-plugin', {
+      token: 'cli-token',
+      port: 19531,
+      fetchImpl,
+      fallbackDir,
+    })
+
+    expect(target.source).toBe('fallback')
+    expect(target.reason).toBe('Omniscio is not running')
+    expect(target.destDir).toBe(path.join(fallbackDir, 'my-plugin'))
+    expect(fs.existsSync(path.join(target.destDir, 'manifest.json'))).toBe(true)
+  })
+
+  it('falls back when the app stops answering mid-lookup', async () => {
+    const manifest = writeManifest()
+    const fallbackDir = path.join(destParent, 'fallback-plugins')
+    const fetchImpl = (async () => {
+      throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' })
+    }) as typeof fetch
+
+    const target = await installPluginToApp(srcDir, manifest, 'my-plugin', {
+      token: 'cli-token',
+      port: 19531,
+      fetchImpl,
+      fallbackDir,
+    })
+
+    expect(target.source).toBe('fallback')
+    expect(target.reason).toBe('Omniscio did not answer in time')
+    expect(target.destDir).toBe(path.join(fallbackDir, 'my-plugin'))
   })
 })

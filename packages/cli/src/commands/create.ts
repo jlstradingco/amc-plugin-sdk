@@ -638,7 +638,15 @@ describe('${displayName} backend', () => {
 
     if (!opts.skipInstall) {
       info('Installing dependencies...')
-      execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
+      try {
+        execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
+      } catch {
+        actionableError(
+          `Could not install dependencies in ./${name}/`,
+          `The plugin files are scaffolded, but its dependencies are not installed. Finish the install with: cd ${name} && npm install. (Pass --skip-install to scaffold without installing next time.)`
+        )
+        process.exit(1)
+      }
     }
 
     if (!opts.skipGit) {

@@ -51,8 +51,26 @@ export interface TokenSource {
 }
 
 /**
- * Read the CLI control-server bearer token — `$AMC_CLI_TOKEN` wins, else the
- * `~/.amc/cli-token` file Omniscio writes. Returns null (never throws) when absent.
+ * The token file name THIS instance owns: the bare `cli-token` for the primary
+ * install, `cli-token-<id>` for a deliberately isolated instance (AMC_INSTANCE_ID).
+ * Mirrors `instanceTokenFileName` in the app's own token ladder.
+ */
+export function cliTokenFileName(env: NodeJS.ProcessEnv = process.env): string {
+  const id = typeof env.AMC_INSTANCE_ID === 'string' ? env.AMC_INSTANCE_ID.trim() : ''
+  const isRealId = !!id && id !== '.' && id !== '..' && /^[A-Za-z0-9._-]+$/.test(id)
+  return isRealId ? `cli-token-${id}` : 'cli-token'
+}
+
+function absoluteEnvPath(value: string | undefined): string | null {
+  const trimmed = value?.trim()
+  return trimmed && path.isAbsolute(trimmed) ? trimmed : null
+}
+
+/**
+ * Read the CLI control-server bearer token, through the same ladder the app
+ * writes it: `$AMC_CLI_TOKEN`, then `$AMC_CLI_TOKEN_FILE_OVERRIDE` /
+ * `$AMC_CLI_TOKEN_FILE` (absolute paths only), then this instance's own file
+ * under `~/.amc`. Returns null (never throws) when none is present.
  */
 export function readCliToken(opts: TokenSource = {}): string | null {
   const env = opts.env ?? process.env
@@ -61,11 +79,21 @@ export function readCliToken(opts: TokenSource = {}): string | null {
 
   const home = opts.homedir ?? os.homedir()
   const readFile = opts.readFile ?? ((p: string) => fs.readFileSync(p, 'utf-8'))
-  try {
-    return readFile(path.join(home, '.amc', 'cli-token')).trim() || null
-  } catch {
-    return null
+  const candidates = [
+    absoluteEnvPath(env.AMC_CLI_TOKEN_FILE_OVERRIDE),
+    absoluteEnvPath(env.AMC_CLI_TOKEN_FILE),
+    path.join(home, '.amc', cliTokenFileName(env)),
+  ].filter((candidate): candidate is string => candidate !== null)
+
+  for (const candidate of candidates) {
+    try {
+      const token = readFile(candidate).trim()
+      if (token) return token
+    } catch {
+      continue
+    }
   }
+  return null
 }
 
 /** The control-server port, honoring an integer AMC_CLI_PORT override. */
@@ -73,6 +101,67 @@ export function amcControlPort(env: NodeJS.ProcessEnv = process.env): number {
   const raw = env.AMC_CLI_PORT
   const n = raw ? Number(raw) : NaN
   return Number.isInteger(n) && n > 0 ? n : DEFAULT_CONTROL_PORT
+}
+
+export interface PluginsDirLookup {
+  dir: string
+  source: 'app' | 'fallback'
+  reason?: string
+}
+
+export interface PluginsDirLookupOptions {
+  token?: string | null
+  port?: number
+  fetchImpl?: typeof fetch
+  fallbackDir?: string
+}
+
+const APP_DATA_LOOKUP_TIMEOUT_MS = 2000
+
+function lookupFailureReason(err: unknown): string {
+  if (err instanceof Error && err.name === 'TimeoutError') return 'Omniscio did not answer in time'
+  const code = (err as { cause?: { code?: string } } | null)?.cause?.code
+  if (code === 'ECONNREFUSED') return 'Omniscio is not running'
+  return err instanceof Error ? err.message : String(err)
+}
+
+/**
+ * Where to copy a plugin, asked of the RUNNING Omniscio over the CLI control
+ * server's `/app/user-data-path` route — the same `getUserDataDir()` its loader
+ * reads, so per-account profiles resolve to the bound profile folder. Falls back
+ * to `resolveAmcPluginsDir()` (or `fallbackDir`, for tests) with a reason when no
+ * app answers.
+ */
+export async function resolvePluginsDirForInstall(
+  opts: PluginsDirLookupOptions = {},
+): Promise<PluginsDirLookup> {
+  const fallback = (reason: string): PluginsDirLookup => ({
+    dir: opts.fallbackDir ?? resolveAmcPluginsDir(),
+    source: 'fallback',
+    reason,
+  })
+
+  const token = opts.token !== undefined ? opts.token : readCliToken()
+  if (!token) return fallback('no control token (~/.amc/cli-token or $AMC_CLI_TOKEN)')
+
+  const port = opts.port ?? amcControlPort()
+  const doFetch = opts.fetchImpl ?? fetch
+
+  try {
+    const res = await doFetch(`http://127.0.0.1:${port}/app/user-data-path`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(APP_DATA_LOOKUP_TIMEOUT_MS),
+    })
+    if (!res.ok) return fallback(`Omniscio answered HTTP ${res.status}`)
+    const body = (await res.json().catch(() => null)) as { data?: { path?: unknown } } | null
+    const userDataDir = body?.data?.path
+    if (typeof userDataDir !== 'string' || userDataDir.trim() === '' || !path.isAbsolute(userDataDir)) {
+      return fallback('Omniscio did not return a usable data folder')
+    }
+    return { dir: path.join(userDataDir, 'plugins'), source: 'app' }
+  } catch (err) {
+    return fallback(lookupFailureReason(err))
+  }
 }
 
 export interface ReloadResult {

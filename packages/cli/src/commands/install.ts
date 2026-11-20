@@ -5,8 +5,8 @@ import { validateManifest } from '@omniscio/plugin-sdk'
 import { ok, fail, info, warn, filePath, manifestNotFound, actionableError } from '../lib/output.js'
 import { isTypeScriptProject } from '../lib/project.js'
 import { compilePlugin } from '../lib/compile.js'
-import { copyPluginToDir } from '../lib/install.js'
-import { resolveAmcPluginsDir, readCliToken, reloadPluginInAmc } from '../lib/amc-host.js'
+import { installPluginToApp } from '../lib/install.js'
+import { readCliToken, reloadPluginInAmc } from '../lib/amc-host.js'
 
 interface InstallOptions {
   build: boolean
@@ -46,16 +46,23 @@ export const installCommand = new Command('install')
         }
       }
 
-      const destDir = path.join(resolveAmcPluginsDir(), pluginId)
-      copyPluginToDir(cwd, manifest, destDir)
-      ok(`Installed ${filePath(pluginId)} → ${filePath(destDir)}`)
+      const token = readCliToken()
+      const target = await installPluginToApp(cwd, manifest, pluginId, { token })
+      ok(`Installed ${filePath(pluginId)} → ${filePath(target.destDir)}`)
+      if (target.source === 'fallback') {
+        warn(`Could not ask a running Omniscio for its plugins folder (${target.reason}).`)
+        warn(`Copied into ${filePath(path.dirname(target.destDir))} — start Omniscio and re-run install so the plugin lands in the folder it reads.`)
+      }
 
       if (!opts.reload) return true
 
-      const token = readCliToken()
       if (!token) {
         warn('Omniscio control token not found (~/.amc/cli-token or $AMC_CLI_TOKEN).')
-        warn('Skipping hot-reload — restart Omniscio to pick up the changes.')
+        warn(
+          target.source === 'app'
+            ? 'Skipping hot-reload — restart Omniscio to pick up the changes.'
+            : 'Skipping hot-reload — start Omniscio and re-run install.',
+        )
         return true
       }
       const reload = await reloadPluginInAmc(pluginId, {
@@ -63,9 +70,15 @@ export const installCommand = new Command('install')
         sourceSessionId: process.env.AMC_SESSION_ID,
       })
       if (reload.ok) {
-        ok('Hot-reloaded in Omniscio')
+        if (target.source === 'app') {
+          ok('Hot-reloaded in Omniscio')
+        } else {
+          warn('Reloaded the running Omniscio, but the files went to the fallback folder — re-run install once Omniscio answers so the plugin lands in the folder it reads.')
+        }
       } else {
-        warn(`Could not hot-reload (${reload.error}). Files are installed — restart Omniscio to pick them up.`)
+        warn(
+          `Could not hot-reload (${reload.error}). ${target.source === 'app' ? 'Files are installed — restart Omniscio to pick them up.' : 'Start Omniscio and re-run install.'}`,
+        )
       }
       return true
     }

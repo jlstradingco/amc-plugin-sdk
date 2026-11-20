@@ -3,6 +3,9 @@
 A live widget drawn by Omniscio: a number, a short label and a status tone in the titlebar, and in the widget sidebar also lists, charts, notes, progress bars and buttons. You can update it at any time.
 
 **Availability:** Both. A webview page has `Omniscio.widget` (`set`, `clear` and `action`). Background code has `ctx.widget` (`set` and `clear` only), and it is optional on `PluginContext`: check `if (ctx.widget)` first. See [From a backend](#from-a-backend-ctx-widget).
+
+**New to widgets?** [Build a Widget](../guide/widgets) walks a bare plugin to a widget that appears on load, the sidebar, the dev loop and shipping it. This page is the reference it links.
+
 **Required Permissions:** `chrome` **and** `chrome.widget`
 
 ::: tip You send data, Omniscio draws it

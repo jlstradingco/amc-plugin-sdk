@@ -55,6 +55,7 @@ export default defineConfig({
           items: [
             { text: 'Quickstart', link: '/guide/quickstart' },
             { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Widgets', link: '/guide/widgets' },
             { text: 'Project Structure', link: '/guide/project-structure' },
             { text: 'Manifest', link: '/guide/manifest' },
             { text: 'Permissions', link: '/guide/permissions' },

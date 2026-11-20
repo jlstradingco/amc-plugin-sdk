@@ -972,7 +972,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `tts` | `PluginTts` (**webview**, `Omniscio.tts`) | Read text aloud with the user's configured voice (metered) |
 | `stt` | `Omniscio.stt` (**webview**) | Turn a recording into text with the configured speech service (metered) |
 | `microphone` | *(media-permission guard; no namespace)* | Record from the microphone while your panel is open — elevated |
-| `network` | `PluginHttp` | Outbound HTTP requests |
+| `network` | `PluginHttp` | Outbound HTTP requests — elevated |
 | `network.upload` | `Omniscio.http.uploadFile` (**webview**) | Upload a picked-folder file to the sites listed in `uploadHosts` (**requires `uploadHosts`**) |
 | `cron` | `PluginCron` | Scheduled background tasks |
 | `cli` | `PluginCli` | HTTP endpoints on Omniscio's control server |

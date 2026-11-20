@@ -468,7 +468,7 @@ page keeps the left of the panel and the chat takes a strip on the right (360-56
 
 A plugin that already draws its own top tabs can show its chats in a panel on the right instead of the
 column tabs. Set `"sidePanel": true` under `ui.sessions`. Your page keeps the left of the panel and
-stays usable; the panel is 320 px wide and holds an "Ask about your <your plugin name>..." box (Enter
+stays usable; the panel is 320 px wide and holds an "Ask about your &lt;your plugin name&gt;..." box (Enter
 starts a chat with the typed text, Shift+Enter adds a line) above every chat of your plugin, newest
 first. Omniscio draws the panel and the box; you draw only the button that opens it.
 

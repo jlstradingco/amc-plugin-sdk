@@ -633,6 +633,7 @@ export interface AgentMC {
     "listInFlightRuns": (...args: unknown[]) => Promise<unknown>
     "listProjects": (...args: unknown[]) => Promise<unknown>
     "listRecentReportsByRepo": (...args: unknown[]) => Promise<unknown>
+    "listRunComputers": (...args: unknown[]) => Promise<unknown>
     "listRunsForAudit": (...args: unknown[]) => Promise<unknown>
     "listRunsForProject": (...args: unknown[]) => Promise<unknown>
     "listSubscriptions": (...args: unknown[]) => Promise<unknown>
@@ -831,6 +832,8 @@ export interface AgentMC {
 
 export interface PluginContext {
   "ai": {
+    "availability": (...args: unknown[]) => Promise<unknown>
+    "completeText": (...args: unknown[]) => Promise<unknown>
     "generateMessage": (...args: unknown[]) => Promise<unknown>
     "generateStructured": (...args: unknown[]) => Promise<unknown>
     "generateTextViaSubscription": (...args: unknown[]) => Promise<unknown>
@@ -912,6 +915,7 @@ export interface PluginContext {
     "list": (...args: unknown[]) => Promise<unknown>
     "schedule": (...args: unknown[]) => Promise<unknown>
     "send": (...args: unknown[]) => Promise<unknown>
+    "sender": (...args: unknown[]) => Promise<unknown>
     "status": (...args: unknown[]) => Promise<unknown>
   }
   "events": {
@@ -942,6 +946,15 @@ export interface PluginContext {
   }
   "launch": {
     "open": (...args: unknown[]) => Promise<unknown>
+  }
+  "live": {
+    "close": (...args: unknown[]) => Promise<unknown>
+    "cursor": (...args: unknown[]) => Promise<unknown>
+    "open": (...args: unknown[]) => Promise<unknown>
+    "redo": (...args: unknown[]) => Promise<unknown>
+    "set": (...args: unknown[]) => Promise<unknown>
+    "undo": (...args: unknown[]) => Promise<unknown>
+    "write": (...args: unknown[]) => Promise<unknown>
   }
   "log": {
     "debug": (...args: unknown[]) => unknown

@@ -98,6 +98,7 @@ describe('SDK <-> host permission parity', () => {
     'teamChat.read': null,
     'teamChat.write': null,
     webassembly: null,
+    itemFolders: null,
   }
 
   const sdk = new Set<string>(PLUGIN_PERMISSIONS)
@@ -169,7 +170,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(60)
+    expect(HOST_PERMISSIONS.length).toBe(61)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

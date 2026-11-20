@@ -203,11 +203,11 @@ Expected output:
 
 ```
 ℹ Building plugin...
-✓ Installed my-plugin → C:\Users\you\AppData\Roaming\agent-mission-control\plugins\my-plugin
+✓ Installed my-plugin → <Omniscio data folder>/profiles/<your-account>/plugins/my-plugin
 ✓ Hot-reloaded in Omniscio
 ```
 
-`install` validates your manifest, builds the plugin, copies it into Omniscio's own `plugins` folder, and hot-reloads the running app -- no restart. Options:
+`install` validates your manifest, builds the plugin, copies it into the `plugins` folder of the running Omniscio, and hot-reloads the app -- no restart. It asks Omniscio where that folder is, so it follows per-account profiles and any custom data folder.
 
 | Flag | What it does |
 |---|---|
@@ -215,9 +215,9 @@ Expected output:
 | `--no-build` | Install the files as they are, without building first |
 | `--no-reload` | Copy the files only; leave the running Omniscio alone |
 
-If Omniscio is not running (or the CLI cannot find its control token), the files are still installed and the command tells you to restart Omniscio to pick them up.
+When Omniscio cannot be asked (it is not running, or the CLI cannot find its control token), the files still go somewhere and the command tells you where -- start Omniscio and run `omniscio-plugin install` again so they land in the folder it loads from. A restart alone will not move them.
 
-Your plugin is now running inside Omniscio. Open it from the sidebar to see your UI.
+Your plugin is then running inside Omniscio. Open it from the sidebar to see your UI.
 
 ::: tip Loading a built folder by hand
 Turn on **Settings > Plugins > Advanced plugin settings > Developer Mode**, then use **Load unpacked plugin** to point Omniscio at your built plugin folder. That is the same local load path, done through the app instead of the CLI.

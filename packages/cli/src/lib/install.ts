@@ -1,10 +1,35 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { collectPackageEntries } from './project.js'
+import { resolvePluginsDirForInstall, type PluginsDirLookupOptions } from './amc-host.js'
 
 interface ManifestLike {
   ui?: { entryPoint?: string }
   backend?: { entryPoint?: string }
+}
+
+export interface InstallTarget {
+  destDir: string
+  source: 'app' | 'fallback'
+  reason?: string
+}
+
+/**
+ * Copy a built plugin into the folder the RUNNING Omniscio says it loads plugins
+ * from — the whole call site of `install`, so a test can prove the plugin lands
+ * in the app's own profile folder rather than only proving the resolver in
+ * isolation.
+ */
+export async function installPluginToApp(
+  cwd: string,
+  manifest: ManifestLike,
+  pluginId: string,
+  opts: PluginsDirLookupOptions = {},
+): Promise<InstallTarget> {
+  const target = await resolvePluginsDirForInstall(opts)
+  const destDir = path.join(target.dir, pluginId)
+  copyPluginToDir(cwd, manifest, destDir)
+  return { destDir, source: target.source, reason: target.reason }
 }
 
 /**

@@ -247,15 +247,15 @@ Run it from the plugin project root -- the folder holding `manifest.json`.
 
 1. Validates `manifest.json`.
 2. Builds the plugin (unless `--no-build` is passed, or the project has no TypeScript source).
-3. Copies `manifest.json` and the package entries into Omniscio's own `plugins` folder (`<user-data>/plugins/<plugin-id>`), clearing a previous copy of each entry folder so a file you deleted from source does not linger. The plugin's `data/` folder is left untouched.
-4. Hot-reloads the running Omniscio through its control server, so the new code is live without a restart. If Omniscio is not running, or its control token cannot be found (`~/.amc/cli-token` or `$AMC_CLI_TOKEN`), the files are installed and the command tells you to restart Omniscio to pick them up.
+3. Copies `manifest.json` and the package entries into Omniscio's own `plugins` folder, clearing a previous copy of each entry folder so a file you deleted from source does not linger. The plugin's `data/` folder is left untouched. The folder is **asked of the running Omniscio** (its `GET /app/user-data-path` control route, plus `plugins/`), so it follows per-account profiles and any custom data folder. When Omniscio is not running, or its control token cannot be found (`~/.amc/cli-token`, an absolute `$AMC_CLI_TOKEN_FILE`, or `$AMC_CLI_TOKEN`), the copy goes to the default `plugins` folder under the platform's app-data directory instead, and the command says so — start Omniscio and re-run `install` if it uses per-account profiles.
+4. Hot-reloads the running Omniscio through its control server, so the new code is live without a restart. If Omniscio could not be asked where its plugins folder is, the files went to the fallback folder instead — start Omniscio and re-run `install` so the plugin lands where the app reads it. If the folder was correct but the reload failed, restart Omniscio to pick the changes up.
 
 **Example:**
 
 ```bash
 omniscio-plugin install
 # ℹ Building plugin...
-# ✓ Installed my-plugin → C:\Users\you\AppData\Roaming\agent-mission-control\plugins\my-plugin
+# ✓ Installed my-plugin → <Omniscio data folder>/profiles/<your-account>/plugins/my-plugin
 # ✓ Hot-reloaded in Omniscio
 
 omniscio-plugin install --watch

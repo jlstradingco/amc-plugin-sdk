@@ -66,11 +66,12 @@ export const HOST_PERMISSIONS = [
   'ai.images',
   'coaching-profile',
   'live',
+  'itemFolders',
 ] as const
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 
-export const HOST_AHEAD_PERMISSIONS = ['live'] as const
+export const HOST_AHEAD_PERMISSIONS = ['live', 'itemFolders'] as const
 
 export const BRIDGE_PENDING_PERMISSIONS = [] as const
 

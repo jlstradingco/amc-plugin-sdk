@@ -2,6 +2,8 @@
 
 Minimal Omniscio plugin demonstrating the **titlebar widget** (`chrome.widget`).
 
+New to widgets? [Build a Widget](https://docs.omniscio.com/sdk/guide/widgets.html) is the walkthrough this example follows.
+
 ## What It Shows
 
 - `Omniscio.widget.set(spec)` — draw or update a widget in the Omniscio titlebar

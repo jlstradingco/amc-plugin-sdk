@@ -2,6 +2,8 @@
 
 Minimal Omniscio plugin that offers **two widgets for the widget sidebar** (`chrome.widget`).
 
+New to widgets? [Build a Widget](https://docs.omniscio.com/sdk/guide/widgets.html) is the walkthrough this example follows.
+
 ## What It Shows
 
 - `ui.widgets` — a plugin offering more than one widget, each with its own id, title, kind and starting size
