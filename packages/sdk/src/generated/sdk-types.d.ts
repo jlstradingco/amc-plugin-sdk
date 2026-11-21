@@ -642,6 +642,7 @@ export interface AgentMC {
     "onCustomAuditsUpdated": (handler: (...args: unknown[]) => void) => () => void
     "onRunUpdated": (handler: (...args: unknown[]) => void) => () => void
     "onSubscriptionsUpdated": (handler: (...args: unknown[]) => void) => () => void
+    "previewRunTitle": (...args: unknown[]) => Promise<unknown>
     "reviewFinding": (...args: unknown[]) => Promise<unknown>
     "runAuditNow": (...args: unknown[]) => Promise<unknown>
     "setNightyTidyLimits": (...args: unknown[]) => Promise<unknown>
