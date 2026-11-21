@@ -62,6 +62,8 @@ Choose a template with the `-t` flag:
 | `basic` (default) | UI only (`src/ui/`) |
 | `with-backend` | UI + backend (`src/backend/`) with `storage` permission |
 | `full` | UI + backend + cron job + CLI endpoint with `storage`, `cron`, and `cli` permissions |
+| `webview` | A flat plain-JavaScript page (`ui/index.html` + `ui/plugin.js`) — no TypeScript and no build step; edit and reload |
+| `widget` | A sidebar plugin in plain JavaScript, no build step: a `tile` widget filled from `ui/plugin.js`, plus a panel page that switches the tile between a list and a number (`chrome` and `chrome.widget` permissions) |
 
 ```bash
 # Scaffold with a backend
@@ -70,6 +72,8 @@ omniscio-plugin create my-tool -t with-backend
 # Scaffold with everything
 omniscio-plugin create my-suite -t full
 ```
+
+The `webview` and `widget` templates are plain JavaScript with no build step. For widget shapes, tones, icons and permissions, see [Build a Widget](./widgets).
 
 You can also skip the interactive prompts entirely:
 

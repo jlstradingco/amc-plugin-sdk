@@ -896,6 +896,7 @@
           "workspace.write",
           "workspace.exec",
           "documents.read",
+          "itemFolders",
           "documents.write",
           "members.read",
           "people.read",
@@ -907,7 +908,7 @@
           "live"
         ]
       },
-      "maxItems": 61
+      "maxItems": 62
     },
     "mobile": {
       "type": "boolean"

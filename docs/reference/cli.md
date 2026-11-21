@@ -16,7 +16,7 @@ To install a plugin into your local Omniscio, see [`install`](#install).
 
 ### `create`
 
-Scaffold a new plugin project with starter files, manifest, and optional git init.
+Scaffold a new plugin project with starter files, manifest, and optional git init. A failed dependency install or git step stops with an actionable message and keeps the scaffolded files.
 
 **Usage:**
 
@@ -60,7 +60,7 @@ omniscio-plugin create my-plugin \
   --skip-git
 ```
 
-**Exit codes:** `0` success, `1` error (invalid name, template, or cancelled prompt).
+**Exit codes:** `0` success, `1` error (invalid name, template, cancelled prompt, or a failed dependency install or git step — the scaffolded files are kept).
 
 ---
 

@@ -548,6 +548,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           ...(fanoutOpts.swarm === true ? { swarmBoard: `mock-swarm-${sessionCounter}` } : {})
         })
       },
+      linkPullRequest: (_sid, _input) => {
+        if (shouldLog) console.log(`${prefix} [sessions] linkPullRequest -> refused (the dev shell has no pull-request store)`)
+        return Promise.resolve({ linked: false as const, reason: 'no-session' as const })
+      },
     },
 
     ai: {

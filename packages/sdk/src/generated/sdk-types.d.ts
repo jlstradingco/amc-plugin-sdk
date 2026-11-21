@@ -57,6 +57,7 @@ export type PluginPermission =
   | "workspace.write"
   | "workspace.exec"
   | "documents.read"
+  | "itemFolders"
   | "documents.write"
   | "members.read"
   | "people.read"
@@ -229,7 +230,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "webassembly" | "email.fromName" | "live">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "webassembly" | "email.fromName" | "live">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -620,6 +621,7 @@ export interface AgentMC {
     "getDeck": (...args: unknown[]) => Promise<unknown>
     "getEngineCatalog": (...args: unknown[]) => Promise<unknown>
     "getLaunchRisk": (...args: unknown[]) => Promise<unknown>
+    "getLinkedRunFindings": (...args: unknown[]) => Promise<unknown>
     "getNextRun": (...args: unknown[]) => Promise<unknown>
     "getNightyTidyLimits": (...args: unknown[]) => Promise<unknown>
     "getReport": (...args: unknown[]) => Promise<unknown>

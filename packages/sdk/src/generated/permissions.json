@@ -83,7 +83,7 @@
     "name": "network",
     "label": "Network",
     "description": "Make HTTP requests to external services",
-    "tier": "standard",
+    "tier": "elevated",
     "namespaces": [
       "http"
     ]
@@ -129,7 +129,7 @@
   {
     "name": "system",
     "label": "System",
-    "description": "Run approved programs through this app's own launcher, read the clipboard, and open files",
+    "description": "Run approved programs through this app's own launcher, read and replace the clipboard, and open files",
     "tier": "elevated",
     "namespaces": [
       "clipboard",
@@ -464,6 +464,13 @@
     "name": "documents.read",
     "label": "Read your documents",
     "description": "Open and search everything you have written in the app, and publish a document to a Google account you have connected",
+    "tier": "standard",
+    "namespaces": []
+  },
+  {
+    "name": "itemFolders",
+    "label": "Item folders",
+    "description": "Keep one folder per item in a folder named Omniscio (or Omniscio and a short code) in your home folder, holding a read-only copy of that item's files. The app writes that copy from its own record, so editing a file in the folder never changes the item.",
     "tier": "standard",
     "namespaces": []
   },

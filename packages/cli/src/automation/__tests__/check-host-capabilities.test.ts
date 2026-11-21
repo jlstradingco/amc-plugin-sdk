@@ -73,6 +73,55 @@ describe('surfacesReferencedBy', () => {
   })
 })
 
+// The shipped matrix shares 23 prefixes between apps (/agent, /sessions, /kms, /google,
+// /project …). Reporting only the first of them made the other apps unreachable and blocked
+// a correctly declared listing, so a tie is reported as a tie.
+const SHARED = [
+  { surface: 'agent-email', pathPrefixes: ['/agent'], status: null, identity: null },
+  { surface: 'agent-sessions', pathPrefixes: ['/agent'], status: null, identity: null },
+  { surface: 'jira', pathPrefixes: ['/jira'], status: 'GET /jira/status', identity: null }
+]
+
+describe('surfacesReferencedBy — shared route prefixes', () => {
+  it('reports EVERY app that ties at the longest matching prefix', () => {
+    expect(surfacesReferencedBy('GET /agent/status', SHARED)).toEqual([
+      'agent-email',
+      'agent-sessions'
+    ])
+  })
+
+  it('still lets the longer prefix beat both halves of a shorter tie', () => {
+    const matrix = [...SHARED, { surface: 'agent-inbox', pathPrefixes: ['/agent/inbox'], status: null, identity: null }]
+    expect(surfacesReferencedBy('GET /agent/inbox/threads', matrix)).toEqual(['agent-inbox'])
+  })
+})
+
+describe('checkHostCapabilities — shared route prefixes', () => {
+  it('passes when the listing declares ONE of the apps sharing the prefix', () => {
+    const findings = checkHostCapabilities(
+      recipe({
+        requiresApps: ['agent-sessions'],
+        steps: [{ name: 'S', prompt: 'GET /agent/status and summarise.' }]
+      }),
+      SHARED
+    )
+    expect(codes(findings)).not.toContain('undeclared-required-app')
+    expect(codes(findings)).not.toContain('unused-required-app')
+  })
+
+  it('names every candidate when the listing declares none of them', () => {
+    const findings = checkHostCapabilities(
+      recipe({ steps: [{ name: 'S', prompt: 'GET /agent/status.' }] }),
+      SHARED
+    )
+    const undeclared = findings.filter((f) => f.code === 'undeclared-required-app')
+    expect(undeclared).toHaveLength(1)
+    expect(undeclared[0].message).toContain('agent-email')
+    expect(undeclared[0].message).toContain('agent-sessions')
+    expect(undeclared[0].fix).toContain('agent-sessions')
+  })
+})
+
 describe('checkHostCapabilities', () => {
   it('passes a listing that declares exactly what it uses', () => {
     const findings = checkHostCapabilities(

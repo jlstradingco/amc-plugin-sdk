@@ -710,7 +710,9 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
             ? { swarmBoard: `test-swarm-${crypto.randomUUID().slice(0, 8)}` }
             : {})
         })
-      }
+      },
+      linkPullRequest: (_sessionId, _input) =>
+        Promise.resolve({ linked: false as const, reason: 'no-session' as const })
     },
 
     ai: {

@@ -650,9 +650,25 @@ describe('${displayName} backend', () => {
     }
 
     if (!opts.skipGit) {
-      execSync('git init', { cwd: targetDir, stdio: 'pipe' })
-      execSync('git add -A', { cwd: targetDir, stdio: 'pipe' })
-      execSync('git commit -m "Initial plugin scaffold"', { cwd: targetDir, stdio: 'pipe' })
+      try {
+        execSync('git init', { cwd: targetDir, stdio: 'pipe' })
+      } catch {
+        actionableError(
+          `Could not initialize a git repository in ./${name}/`,
+          `Git is not installed or refused to start. The plugin files are scaffolded — install git, then run: cd ${name} && git init && git add -A && git commit -m "Initial plugin scaffold". (Pass --skip-git to scaffold without git next time.)`
+        )
+        process.exit(1)
+      }
+      try {
+        execSync('git add -A', { cwd: targetDir, stdio: 'pipe' })
+        execSync('git commit -m "Initial plugin scaffold"', { cwd: targetDir, stdio: 'pipe' })
+      } catch {
+        actionableError(
+          `Could not make the first commit in ./${name}/`,
+          `The plugin files are scaffolded and the repository is initialized, but the commit failed — usually a missing git identity. Set it with: git config --global user.name "Your Name" && git config --global user.email "you@example.com", then run: cd ${name} && git add -A && git commit -m "Initial plugin scaffold". (Pass --skip-git to scaffold without git next time.)`
+        )
+        process.exit(1)
+      }
     }
 
     ok(`Plugin scaffolded at ./${name}/`)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { AgentMC, BridgeDocuments, DocumentHandle } from '../types/bridge.js'
+import type { AgentMC, BridgeDocuments, DocumentGrant, DocumentHandle } from '../types/bridge.js'
 import { createTestContext } from '../testing/index.js'
 
 // ─── Compile-time canary for the documents namespace ─────────────────────────
@@ -8,7 +8,7 @@ import { createTestContext } from '../testing/index.js'
 // the shape the AMC host actually exposes on `window.AgentMC.documents`, so a
 // drift fails `pnpm run typecheck` rather than a plugin at runtime.
 //
-// Transcribed from the host at `origin/master` **e08e3f46d7**, from the three
+// Transcribed from the host at `origin/master` **e975f0cb28**, from the three
 // files that together are the real contract:
 //   - args:    src/shared/plugin-capabilities/args.ts (`DOCUMENTS_SCHEMAS`)
 //   - returns: src/main/ipc/plugin-bridge/document-handles.ts (`DocumentHandle`)
@@ -40,12 +40,20 @@ type HostDocumentHandle = {
   url: string
 }
 
+type HostDocumentGrant = {
+  grantId: string
+  name: string
+  mode: 'read' | 'readwrite'
+  lastOpenedAt: string
+}
+
 type HostDocuments = {
   open(options: {
     mode: 'read' | 'readwrite'
     title?: string
     filters?: { name: string; extensions: string[] }[]
     multiple?: boolean
+    remember?: boolean
   }): Promise<HostDocumentHandle[]>
   list(): Promise<HostDocumentHandle[]>
   stat(handleId: string): Promise<{ length: number }>
@@ -55,6 +63,8 @@ type HostDocuments = {
     options: { expectedLength: number }
   ): Promise<{ length: number }>
   close(handleId: string): Promise<void>
+  grants(): Promise<HostDocumentGrant[]>
+  reopen(grantId: string): Promise<HostDocumentHandle>
   saveCopy(options: {
     name: string
     base64: string
@@ -64,6 +74,7 @@ type HostDocuments = {
     files: { name: string; base64: string }[]
     title?: string
   }): Promise<{ saved: false } | { saved: true; names: string[] }>
+  forget(grantId: string): Promise<void>
 }
 
 // INVARIANCE, not `extends` — a bidirectional `extends` pair looks strict but
@@ -80,6 +91,13 @@ void _documentsMatchesHost
 type _AssertHandleMatchesHost = Eq<DocumentHandle, HostDocumentHandle>
 const _handleMatchesHost: _AssertHandleMatchesHost = true
 void _handleMatchesHost
+
+// Grants are their own shape, transcribed from the host's `grants` case return —
+// a drift there is invisible to the documents assertion only if it happens to
+// break the namespace's invariance too, so it gets its own line.
+type _AssertGrantMatchesHost = Eq<DocumentGrant, HostDocumentGrant>
+const _grantMatchesHost: _AssertGrantMatchesHost = true
+void _grantMatchesHost
 
 // The namespace must be REACHABLE on the bridge surface, not merely exported
 // beside it — an interface nothing hangs off is a type a plugin cannot call.

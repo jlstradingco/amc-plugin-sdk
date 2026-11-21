@@ -62,6 +62,12 @@ function isInfrastructureRoute(path: string): boolean {
  * Which apps does this text DEPEND ON? Longest-prefix wins, so
  * `/supermail/threads/:id/archive` resolves to `supermail` and not to a surface that
  * merely shares a shorter root. Infrastructure routes are excluded.
+ *
+ * A TIE AT THE LONGEST PREFIX IS REPORTED AS A TIE, never collapsed to whichever surface
+ * the matrix happens to list first. Twenty-three prefixes in the shipped matrix are shared
+ * (`/agent`, `/sessions`, `/kms`, `/google`, `/project` …), so first-wins made every surface
+ * but the first unreachable and turned a correctly declared listing into a publish-blocking
+ * "undeclared app" error for the twin it never named.
  */
 export function surfacesReferencedBy(
   text: string,
@@ -69,18 +75,47 @@ export function surfacesReferencedBy(
 ): string[] {
   const hits = new Set<string>()
   for (const path of extractRoutePaths(text).filter((p) => !isInfrastructureRoute(p))) {
-    let best: { surface: string; length: number } | null = null
-    for (const surface of matrix) {
-      for (const prefix of surface.pathPrefixes) {
-        const isMatch = path === prefix || path.startsWith(`${prefix}/`)
-        if (isMatch && (!best || prefix.length > best.length)) {
-          best = { surface: surface.surface, length: prefix.length }
-        }
-      }
-    }
-    if (best) hits.add(best.surface)
+    for (const surface of surfacesMatching(path, matrix)) hits.add(surface)
   }
   return [...hits].sort()
+}
+
+/** Every surface whose longest matching prefix for `path` ties at the same length. */
+function surfacesMatching(path: string, matrix: SdkCrossAppSurface[]): string[] {
+  let bestLength = -1
+  const winners = new Set<string>()
+  for (const surface of matrix) {
+    for (const prefix of surface.pathPrefixes) {
+      const isMatch = path === prefix || path.startsWith(`${prefix}/`)
+      if (!isMatch) continue
+      if (prefix.length < bestLength) continue
+      if (prefix.length > bestLength) {
+        bestLength = prefix.length
+        winners.clear()
+      }
+      winners.add(surface.surface)
+    }
+  }
+  return [...winners]
+}
+
+/**
+ * The candidate surfaces behind every route the automation names, one entry per distinct
+ * candidate set (several steps calling `/sessions/x` and `/sessions/y` are one problem).
+ */
+function referencedRouteCandidates(
+  recipe: Record<string, unknown>,
+  matrix: SdkCrossAppSurface[]
+): { candidates: string[] }[] {
+  const byCandidates = new Map<string, { candidates: string[] }>()
+  for (const path of extractRoutePaths(automationText(recipe))) {
+    if (isInfrastructureRoute(path)) continue
+    const candidates = surfacesMatching(path, matrix)
+    if (candidates.length === 0) continue
+    const key = [...candidates].sort().join(',')
+    if (!byCandidates.has(key)) byCandidates.set(key, { candidates })
+  }
+  return [...byCandidates.values()]
 }
 
 /** Everything the automation's agent will read — description plus every step prompt. */
@@ -120,18 +155,37 @@ export function checkHostCapabilities(
     }
   }
 
-  const used = surfacesReferencedBy(automationText(recipe), matrix)
+  const routes = referencedRouteCandidates(recipe, matrix)
+  const used = [...new Set(routes.flatMap((r) => r.candidates))].sort()
 
-  for (const app of used) {
-    if (declaredSet.has(app)) continue
+  for (const { candidates } of routes) {
+    // A declared app among the candidates settles the route: when two apps share a prefix we
+    // cannot tell which one the step meant, so naming EITHER of them is an honest declaration.
+    if (candidates.some((app) => declaredSet.has(app))) continue
+    if (candidates.length === 1) {
+      const app = candidates[0]
+      findings.push({
+        severity: 'error',
+        code: 'undeclared-required-app',
+        message: `A step calls ${app}, but "requiresApps" does not list it.`,
+        fix:
+          `Add "${app}" to "requiresApps". Without it, the marketplace cannot warn people ` +
+          `before they install, and anyone whose ${app} is not connected will hit a failure ` +
+          'partway through the run instead of a clean message.'
+      })
+      continue
+    }
     findings.push({
       severity: 'error',
       code: 'undeclared-required-app',
-      message: `A step calls ${app}, but "requiresApps" does not list it.`,
+      message:
+        `A step calls a route that belongs to one of ${candidates.join(', ')} ` +
+        `(they share a path prefix), but "requiresApps" lists none of them.`,
       fix:
-        `Add "${app}" to "requiresApps". Without it, the marketplace cannot warn people ` +
-        `before they install, and anyone whose ${app} is not connected will hit a failure ` +
-        'partway through the run instead of a clean message.'
+        `Add the app the step actually calls — one of ${candidates.join(', ')} — to ` +
+        '"requiresApps". Without it, the marketplace cannot warn people before they install, ' +
+        'and anyone whose app is not connected will hit a failure partway through the run ' +
+        'instead of a clean message.'
     })
   }
 
