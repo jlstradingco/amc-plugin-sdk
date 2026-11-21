@@ -100,6 +100,10 @@ omniscio-plugin package
 # -> my-plugin-1.0.0.amcplugin
 ```
 
+`package` refuses rather than shipping a build it cannot trust: if `dist/` is older than
+anything in `src/`, or `package.json` and `manifest.json` disagree on the version, it stops
+with the reason and asks you to run `omniscio-plugin build` (or match the two versions) first.
+
 ## PluginContext API
 
 Every plugin receives a `PluginContext` object with these sandboxed capabilities:
@@ -190,7 +194,7 @@ key by key, is [the manifest reference](docs/guide/manifest.md).
 | `omniscio-plugin create <name>` | Scaffold a new plugin (templates: `basic`, `with-backend`, `full`, `webview`, `widget`) |
 | `omniscio-plugin build` | Compile TypeScript, copy UI assets, bundle each panel script, validate manifest, scan for banned imports |
 | `omniscio-plugin validate` | Run all validation checks without emitting output (CI-friendly) |
-| `omniscio-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback) |
+| `omniscio-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback); refuses a `dist/` older than `src/`, or a `package.json`/`manifest.json` version mismatch |
 
 ## Automations
 

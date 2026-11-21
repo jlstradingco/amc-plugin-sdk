@@ -195,6 +195,38 @@ describe('Plugin lifecycle E2E', () => {
     expect(files[0]).toBe('e2e-test-plugin-1.0.0.amcplugin')
   }, SHELL_OUT_TIMEOUT_MS)
 
+  it('refuses to package build output older than the sources', () => {
+    const source = path.join(pluginDir, 'src', 'backend', 'index.ts')
+    const editedLater = new Date(Date.now() + 60_000)
+    fs.utimesSync(source, editedLater, editedLater)
+    try {
+      const run = spawnSync(process.execPath, [cliDist, 'package'], { cwd: pluginDir, encoding: 'utf-8' })
+      expect(run.status).toBe(1)
+      expect(run.stderr).toContain('dist/ is older than src/backend/index.ts')
+      expect(run.stderr).toContain('omniscio-plugin build')
+      expect(run.stdout).not.toContain('Packaged:')
+    } finally {
+      const built = new Date(Date.now() - 120_000)
+      fs.utimesSync(source, built, built)
+    }
+  }, SHELL_OUT_TIMEOUT_MS)
+
+  it('refuses to package when package.json and manifest.json disagree on the version', () => {
+    const manifestPath = path.join(pluginDir, 'manifest.json')
+    const original = fs.readFileSync(manifestPath, 'utf-8')
+    const manifest = JSON.parse(original)
+    manifest.plugin.version = '1.0.1'
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
+    try {
+      const run = spawnSync(process.execPath, [cliDist, 'package'], { cwd: pluginDir, encoding: 'utf-8' })
+      expect(run.status).toBe(1)
+      expect(run.stderr).toContain('package.json is version 1.0.0 but manifest.json declares 1.0.1')
+      expect(run.stdout).not.toContain('Packaged:')
+    } finally {
+      fs.writeFileSync(manifestPath, original)
+    }
+  }, SHELL_OUT_TIMEOUT_MS)
+
   it('packages a panel script that loads, and rebuilds it the same way when dist/ is missing', () => {
     fs.rmSync(path.join(pluginDir, 'dist'), { recursive: true, force: true })
     execSync(`node "${cliDist}" package`, { cwd: pluginDir, stdio: 'pipe' })

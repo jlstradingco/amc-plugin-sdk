@@ -7,6 +7,7 @@ import { ok, fail, info, warn, actionableError, manifestNotFound } from '../lib/
 import { isTypeScriptProject, collectPackageEntries } from '../lib/project.js'
 import { compilePluginOrExit } from '../lib/compile.js'
 import { pageScriptsResult } from '../lib/page-scripts.js'
+import { packagingProblems } from '../lib/build-freshness.js'
 
 export const packageCommand = new Command('package')
   .description('Bundle plugin into a .amcplugin archive')
@@ -23,6 +24,12 @@ export const packageCommand = new Command('package')
     if (!result.valid) {
       fail('Manifest validation failed:')
       result.errors.forEach(e => console.error(`  - ${e}`))
+      process.exit(1)
+    }
+
+    const problems = packagingProblems(cwd, manifest.plugin.version)
+    if (problems.length) {
+      problems.forEach(problem => actionableError(problem.message, problem.suggestion))
       process.exit(1)
     }
 
