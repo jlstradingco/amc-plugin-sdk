@@ -807,6 +807,12 @@ export interface PluginInbox {
    *
    * `body` is markdown. `dedupKey` suppresses repeats and is namespaced to your
    * plugin host-side, so it cannot collide with another plugin's.
+   *
+   * `ownerNeedsToSee: true` declares THIS card one the person should see now, so the
+   * host also sends it to their phone (the same page an owner-critical alert gets).
+   * Reserve it for the few cards that are worth an interruption — the host's push
+   * ceilings, a re-page cooldown and notification silence all still apply — and cap
+   * your own use, because every use spends the person's attention.
    */
   postAlert(opts: {
     title: string
@@ -817,6 +823,8 @@ export interface PluginInbox {
     /** `false` with a kept `chatRouteTag`: post to Team Chat only, not the person's inbox. */
     inboxVisible?: boolean
     openPlugin?: boolean
+    /** Page the person's phone about this one card. See the method docs above. */
+    ownerNeedsToSee?: boolean
   }): Promise<void>
   resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<void>
   onDismiss(handler: (dismissal: InboxDismissal) => void): () => void

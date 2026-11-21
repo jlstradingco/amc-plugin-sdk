@@ -23,7 +23,7 @@ Replace the plugin's inbox items with the given list. Pass an empty array to cle
 
 **Returns:** `Promise<void>`
 
-### `postAlert(opts: { title: string; body: string; dedupKey?: string; openPlugin?: boolean }): Promise<void>`
+### `postAlert(opts: { title: string; body: string; dedupKey?: string; openPlugin?: boolean; ownerNeedsToSee?: boolean }): Promise<void>`
 
 Raise a one-off alert, independent of the `setItems` list.
 
@@ -31,11 +31,14 @@ Pass `openPlugin: true` to give the card an "Open the plugin" button that opens 
 
 **`openPlugin` keys are host-built.** The key becomes `plugin-open:<yourPluginId>:<dedupKey>`; you cannot point the button at another plugin.
 
+Pass `ownerNeedsToSee: true` to declare THIS card one the person should see now: the host also sends it to their phone, the same page an owner-critical alert gets. Everything else stays a quiet inbox card. Use it sparingly and cap your own use — it spends the person's attention. The host still applies its own push ceilings (a routine push ceiling per hour and a per-card re-page window) and the person's notification silence.
+
 | Name | Type | Description |
 |---|---|---|
 | `title` | `string` | Required, 1-300 chars |
 | `body` | `string` | Required markdown, 1-50,000 chars |
 | `dedupKey` | `string` | Optional. Suppresses repeats; namespaced to your plugin host-side, so it cannot collide with another plugin's |
+| `ownerNeedsToSee` | `boolean` | Optional. Also page the person's phone about this one card |
 
 ```typescript
 await ctx.inbox.postAlert({
