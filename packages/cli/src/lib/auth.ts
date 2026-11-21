@@ -93,6 +93,73 @@ export function getStoredToken(): StoredToken | null {
   return isTokenFresh(raw) ? raw : null
 }
 
+const GITHUB_API = 'https://api.github.com'
+
+const GITHUB_LOOKUP_TIMEOUT_MS = 5_000
+
+const GITHUB_LOGIN_RE = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$/
+
+const GITHUB_ID_RE = /^[0-9]{1,20}$/
+
+export function isGithubHandle(value: string | null | undefined): value is string {
+  return (
+    typeof value === 'string' &&
+    GITHUB_LOGIN_RE.test(value) &&
+    !GITHUB_ID_RE.test(value) &&
+    value !== 'unknown'
+  )
+}
+
+export function githubIdFromIdToken(idToken: string): string | null {
+  const payload = idToken.split('.')[1]
+  if (!payload) return null
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf-8')) as {
+      firebase?: { identities?: Record<string, unknown> }
+    }
+    const ids = claims.firebase?.identities?.['github.com']
+    const id = Array.isArray(ids) && typeof ids[0] === 'string' ? ids[0] : ''
+    return GITHUB_ID_RE.test(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
+async function fetchGithubLogin(githubId: string): Promise<string | null> {
+  try {
+    const res = await globalThis.fetch(`${GITHUB_API}/user/${githubId}`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'omniscio-plugin-cli'
+      },
+      signal: AbortSignal.timeout(GITHUB_LOOKUP_TIMEOUT_MS)
+    })
+    if (!res.ok) return null
+    const body = (await res.json()) as { id?: unknown; login?: unknown }
+    if (String(body.id) !== githubId) return null
+    const login = typeof body.login === 'string' ? body.login : null
+    return isGithubHandle(login) ? login : null
+  } catch {
+    return null
+  }
+}
+
+export async function resolveGithubLogin(token: StoredToken): Promise<string | null> {
+  if (isGithubHandle(token.github)) return token.github
+  const githubId = GITHUB_ID_RE.test(token.github) ? token.github : githubIdFromIdToken(token.token)
+  if (!githubId) return null
+  const login = await fetchGithubLogin(githubId)
+  if (!login) return null
+  if (login !== token.github) {
+    try {
+      saveToken({ ...token, github: login })
+    } catch {
+    }
+  }
+  return login
+}
+
 export async function tryRefreshStoredToken(): Promise<StoredToken | null> {
   const stored = readStoredTokenRaw()
   if (!stored?.refreshToken) return null

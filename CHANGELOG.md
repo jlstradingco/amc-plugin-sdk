@@ -11,6 +11,16 @@ which are released together.
 
 ## [Unreleased]
 
+### Fixed — `whoami` and `publish` name your GitHub login, not a number
+
+A credential written by an older CLI stores the numeric GitHub account id instead of the login, so
+`omniscio-plugin whoami` printed `Signed in as: 62183258` and `publish --as <login>` aborted against
+it. Both commands — and `login`, `omniscio-automation publish` — now resolve that id to the account's
+login (GitHub's own id-to-login lookup, matched back against the same id so a wrong answer is never
+shown), write the login into `~/.amc/marketplace-token`, and print it from then on. A credential that
+already holds a login costs no network call, and a lookup that cannot be made leaves the file alone
+rather than reporting a guess.
+
 ### Added — read part of a row instead of all of it
 
 `QueryOptions.fields` asks `db.query` for named columns only, so a summary that needs a few small

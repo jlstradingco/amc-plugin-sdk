@@ -25,7 +25,13 @@ import {
   latestSubmittedVersion,
   bumpPatch
 } from '../lib/version-planning.js'
-import { authenticate, getStoredToken, clearToken, type StoredToken } from '../../lib/auth.js'
+import {
+  authenticate,
+  getStoredToken,
+  clearToken,
+  resolveGithubLogin,
+  type StoredToken
+} from '../../lib/auth.js'
 import { MarketplaceApiError } from '../../lib/marketplace-api.js'
 import { evaluatePublishAccount, SWITCH_ACCOUNT_GUIDANCE } from '../../lib/publish-account.js'
 import { ok, fail, info, label, heading, actionableError } from '../../lib/output.js'
@@ -165,14 +171,9 @@ export async function runPublish(
   }
 
   const token = opts.token ?? (await authenticate())
+  const github = (await resolveGithubLogin(token)) ?? token.github
 
-  // The silent-account trap: GitHub OAuth reuses whatever account the default browser
-  // is already signed into, so a publish can go out under an identity the author never
-  // chose — and a published automation carries that name permanently. The plugin
-  // surface has confirmed this since it shipped; the automation surface declared a
-  // --yes flag to SKIP the confirmation without ever having one, so every publish went
-  // out unconfirmed. Same shared gate, so the two binaries cannot drift apart again.
-  const gate = evaluatePublishAccount(token.github, {
+  const gate = evaluatePublishAccount(github, {
     as: opts.as,
     yes: opts.yes,
     commandName: 'omniscio-automation publish'
@@ -242,11 +243,11 @@ export async function runPublish(
   })
 
   if (opts.dryRun) {
-    ok(`Dry run — would publish "${envelope.automationId}" v${envelope.version} as ${token.github}`)
+    ok(`Dry run — would publish "${envelope.automationId}" v${envelope.version} as ${github}`)
     return { exitCode: 0 }
   }
 
-  info(`Publishing ${envelope.automationId} v${envelope.version} as ${token.github}...`)
+  info(`Publishing ${envelope.automationId} v${envelope.version} as ${github}...`)
 
   try {
     const res = await uploadAutomation(token, envelope)

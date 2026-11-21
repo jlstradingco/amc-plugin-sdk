@@ -3,7 +3,7 @@ import prompts from 'prompts'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
 import chalk from 'chalk'
-import { authenticate, getStoredToken, clearToken } from '../lib/auth.js'
+import { authenticate, getStoredToken, clearToken, resolveGithubLogin } from '../lib/auth.js'
 import { uploadPackage, getMyPlugins, MarketplaceApiError } from '../lib/marketplace-api.js'
 import type { SecurityFinding, UploadResult } from '../lib/marketplace-api.js'
 import { ok, fail, info, warn, heading, label, actionableError } from '../lib/output.js'
@@ -30,10 +30,8 @@ export const publishCommand = new Command('publish')
   }) => {
     const cwd = process.cwd()
 
-    // 1. Choose the one package this release uploads, before anything is signed in or sent.
     const packagePath = locatePackage(cwd, opts.package)
 
-    // 2. Check auth. --switch-account forces a fresh sign-in.
     if (opts.switchAccount) {
       const prev = getStoredToken()
       clearToken()
@@ -46,7 +44,6 @@ export const publishCommand = new Command('publish')
     let token = getStoredToken()
     if (!token) {
       if (!opts.switchAccount) {
-        // First-time sign-in: warn about the silent-account trap up front.
         info('You are about to sign in with GitHub to publish.')
         console.log(SWITCH_ACCOUNT_GUIDANCE)
         console.log('')
@@ -54,8 +51,8 @@ export const publishCommand = new Command('publish')
       token = await authenticate()
     }
 
-    // 3. Confirm the uploading identity (the silent-account trap guard).
-    const gate = evaluatePublishAccount(token.github, { as: opts.as, yes: opts.yes })
+    const github = (await resolveGithubLogin(token)) ?? token.github
+    const gate = evaluatePublishAccount(github, { as: opts.as, yes: opts.yes })
     if (gate.action === 'abort') {
       actionableError(gate.message, gate.suggestion)
       process.exit(1)
@@ -75,7 +72,6 @@ export const publishCommand = new Command('publish')
       }
     }
 
-    // 4. Preflight readiness checks (skippable)
     if (!opts.skipPreflight) {
       const { results, hasFailure } = await runPreflight(cwd, {
         changelog: opts.changelog,
@@ -89,14 +85,12 @@ export const publishCommand = new Command('publish')
     }
 
     const sizeMB = (fs.statSync(packagePath).size / 1024 / 1024).toFixed(2)
-    info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB) as ${token.github}...`)
+    info(`Uploading ${path.basename(packagePath)} (${sizeMB} MB) as ${github}...`)
 
-    // 5. Upload
     try {
       const result = await uploadPackage(token, packagePath, opts.changelog ?? '')
       ok(`Submitted for review (submission ID: ${result.submissionId})`)
 
-      // Display security findings if present
       displaySecurityFindings(result)
 
       info('View your submission in Omniscio → Marketplace → My Plugins tab.')
@@ -105,10 +99,9 @@ export const publishCommand = new Command('publish')
         return
       }
 
-      // 6. Poll for status
       info('Watching for review decision...')
-      for (let i = 0; i < 360; i++) { // 3 hours max
-        await sleep(30_000) // 30 seconds
+      for (let i = 0; i < 360; i++) {
+        await sleep(30_000)
 
         try {
           const myPlugins = await getMyPlugins(token)
@@ -124,7 +117,6 @@ export const publishCommand = new Command('publish')
             process.exit(1)
           }
         } catch {
-          // Network error — keep polling
         }
 
         if (i % 2 === 0) process.stdout.write('.')
@@ -176,7 +168,6 @@ function displaySecurityFindings(result: UploadResult): void {
   console.log(`  Found ${parts.join(', ')} ${report.findings.length === 1 ? 'issue' : 'issues'}`)
   console.log()
 
-  // Group by severity, show critical first
   const bySeverity: Record<string, SecurityFinding[]> = { critical: [], warning: [], info: [] }
   for (const f of report.findings) {
     ;(bySeverity[f.severity] ??= []).push(f)

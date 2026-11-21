@@ -398,7 +398,7 @@ omniscio-plugin publish [options]
 
 1. Chooses the package to upload ([how](#choosing-the-package)); refuses before anything is sent if it cannot pick exactly one right one.
 2. Checks for a stored auth token; prompts GitHub OAuth if missing. The browser sign-in waits **15 minutes** for you, so a headless machine is no obstacle: copy the printed link to any device with a browser and finish GitHub sign-in there, two-factor step included.
-3. **Confirms the uploading identity** before upload (see the account trap below).
+3. **Confirms the uploading identity** before upload (see the account trap below). A credential holding the numeric GitHub id an older CLI stored is resolved to the account's login first (see [`whoami`](#whoami)), so `--as <github-user>` compares against the login.
 4. Runs [`preflight`](#preflight) readiness checks (unless `--skip-preflight`); aborts on any failure.
 5. Uploads the archive to the marketplace.
 6. With `--watch`, polls every 30 seconds for the review decision.
@@ -484,6 +484,8 @@ omniscio-plugin status
 ### `whoami`
 
 Show the authenticated GitHub username.
+
+A credential written by an older CLI stores the numeric GitHub account id instead of the login, because the marketplace had no login to record at that sign-in. `whoami` resolves that id to the account's login the first time it sees one, writes the login back to `~/.amc/marketplace-token`, and prints it from then on. If GitHub cannot be reached, it prints what the file holds rather than guessing.
 
 **Usage:**
 

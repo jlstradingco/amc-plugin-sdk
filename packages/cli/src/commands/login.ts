@@ -1,23 +1,13 @@
 import { Command } from 'commander'
-import { authenticate, getStoredToken, getTokenPath } from '../lib/auth.js'
+import { authenticate, getStoredToken, getTokenPath, resolveGithubLogin } from '../lib/auth.js'
 import { SWITCH_ACCOUNT_GUIDANCE } from '../lib/publish-account.js'
 import { actionableError, info, ok } from '../lib/output.js'
 
-/**
- * Sign in to the marketplace without publishing.
- *
- * The credential and the sign-in flow are the ones `publish` already uses — this
- * command only makes that step reachable on its own, because a packaged build's
- * **My Plugins** tab has no sign-in of its own and borrows the CLI's credential.
- *
- * An existing FRESH credential is reported and left alone (no browser, no write).
- * An expired one falls through to `authenticate()`, which renews it silently from
- * the stored refresh token before it ever opens a browser.
- */
 export async function runLogin(): Promise<void> {
   const stored = getStoredToken()
   if (stored) {
-    ok(`Signed in as ${stored.github} (uid: ${stored.uid})`)
+    const github = (await resolveGithubLogin(stored)) ?? stored.github
+    ok(`Signed in as ${github} (uid: ${stored.uid})`)
     info(`Credential: ${getTokenPath()}`)
     info("To switch accounts, run 'omniscio-plugin logout' and then 'omniscio-plugin login'.")
     console.log(SWITCH_ACCOUNT_GUIDANCE)
