@@ -308,6 +308,89 @@ describe('inbox.onDismiss', () => {
   })
 })
 
+describe('sessions.linkPullRequest', () => {
+  it('answers with the link the host would store and records the call', async () => {
+    const h = createTestContext()
+    const { sessionId } = await h.ctx.sessions.create({ prompt: 'open a PR' })
+
+    const result = await h.ctx.sessions.linkPullRequest(sessionId, {
+      url: 'https://github.com/acme/widget/pull/42',
+      snapshot: { title: 'Add the widget', state: 'open', headBranch: 'feat/widget' }
+    })
+
+    expect(result).toMatchObject({
+      linked: true,
+      link: {
+        host: 'github.com',
+        repository: 'acme/widget',
+        number: 42,
+        url: 'https://github.com/acme/widget/pull/42',
+        sessionId,
+        source: 'created',
+        snapshot: {
+          title: 'Add the widget',
+          state: 'open',
+          headBranch: 'feat/widget',
+          baseBranch: null,
+          isDraft: null
+        }
+      }
+    })
+    expect(h.pullRequestLinks).toEqual([
+      { sessionId, url: 'https://github.com/acme/widget/pull/42' }
+    ])
+  })
+
+  it('refuses a session it never created, before it looks at the URL', async () => {
+    // The host resolves the session first, so a garbage URL against an unknown
+    // session answers 'no-session' — not 'bad-url'. The order is the contract.
+    const h = createTestContext()
+
+    const result = await h.ctx.sessions.linkPullRequest('never-created', { url: 'not a url' })
+
+    expect(result).toEqual({ linked: false, reason: 'no-session' })
+  })
+
+  it('refuses a URL that is not a pull request', async () => {
+    const h = createTestContext()
+    const { sessionId } = await h.ctx.sessions.create({ prompt: 'x' })
+
+    const result = await h.ctx.sessions.linkPullRequest(sessionId, {
+      url: 'https://github.com/acme/widget/issues/42'
+    })
+
+    expect(result).toEqual({ linked: false, reason: 'bad-url' })
+  })
+
+  it('treats two forms of the same pull request as one link', async () => {
+    const h = createTestContext()
+    const { sessionId } = await h.ctx.sessions.create({ prompt: 'x' })
+
+    const first = await h.ctx.sessions.linkPullRequest(sessionId, {
+      url: 'https://github.com/Acme/Widget/pull/42',
+      snapshot: { title: 'Add the widget', state: 'open' }
+    })
+    const second = await h.ctx.sessions.linkPullRequest(sessionId, {
+      url: 'http://github.com/acme/widget/pull/42/files',
+      snapshot: { state: 'merged' }
+    })
+
+    expect(first).toMatchObject({
+      linked: true,
+      link: { url: 'https://github.com/acme/widget/pull/42' }
+    })
+    expect(second).toMatchObject({
+      linked: true,
+      link: {
+        url: 'https://github.com/acme/widget/pull/42',
+        snapshot: { title: 'Add the widget', state: 'merged' }
+      }
+    })
+    // A re-link keeps the field the caller omitted and never moves linkedAt.
+    if (first.linked && second.linked) expect(second.link.linkedAt).toBe(first.link.linkedAt)
+  })
+})
+
 describe('cron + cli triggers', () => {
   it('runCron invokes the registered handler', async () => {
     const h = createTestContext()

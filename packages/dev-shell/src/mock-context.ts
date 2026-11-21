@@ -15,6 +15,7 @@ import type {
 // than a second copy that can drift from the host.
 import {
   coreMessagesPage,
+  createMockPullRequestLink,
   createMockSessionMessage,
   estimatePayloadBytes,
   hostQueryPage,
@@ -527,6 +528,19 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [sessions] reveal(${sid})`)
         return Promise.resolve()
       },
+      linkPullRequest: (sid, input) => {
+        if (shouldLog) console.log(`${prefix} [sessions] linkPullRequest(${sid}): ${input.url}`)
+        // The host refuses an unknown session before it ever looks at the URL.
+        if (!sessionStatus.has(sid)) {
+          return Promise.resolve({ linked: false as const, reason: 'no-session' as const })
+        }
+        const built = createMockPullRequestLink(sid, input)
+        if (!built) return Promise.resolve({ linked: false as const, reason: 'bad-url' as const })
+        // Log-and-answer only: the dev shell holds no pull-request store, so a
+        // re-link answers the fields this call sent rather than merging with an
+        // earlier one. The testing harness keeps the store and merges.
+        return Promise.resolve({ linked: true as const, link: built.link })
+      },
       onStatusChange: () => () => {},
       fanout: (fanoutOpts) => {
         const launched = fanoutOpts.targets.map((target) => {
@@ -547,10 +561,6 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           skipped: [],
           ...(fanoutOpts.swarm === true ? { swarmBoard: `mock-swarm-${sessionCounter}` } : {})
         })
-      },
-      linkPullRequest: (_sid, _input) => {
-        if (shouldLog) console.log(`${prefix} [sessions] linkPullRequest -> refused (the dev shell has no pull-request store)`)
-        return Promise.resolve({ linked: false as const, reason: 'no-session' as const })
       },
     },
 

@@ -49,6 +49,12 @@ import type {
   PluginChannelConnectOptions,
   PluginChannelEvent
 } from '../types/index.js'
+import type {
+  PluginPullRequestLink,
+  PluginPullRequestState,
+  PluginSessionLinkPullRequestInput,
+  PluginSessionLinkPullRequestResult
+} from '../types/context.js'
 
 export { createRpcDouble } from './rpc-double.js'
 export type { RpcDouble } from './rpc-double.js'
@@ -156,6 +162,13 @@ export interface TestHarness {
   inboxAlerts: Array<{ title: string; body: string; dedupKey?: string; openPlugin?: boolean }>
   /** Captured ctx.inbox.resolveAlert calls, in the order the plugin made them. */
   inboxResolved: Array<{ dedupKey: string; openPlugin?: boolean }>
+  /**
+   * Captured ctx.sessions.linkPullRequest calls, in the order the plugin made
+   * them. The link each call produced is the harness's stored state, so a test
+   * can also assert on the ANSWER; this is here for the call itself (what URL,
+   * which session, whether it asked to re-link a dismissed pull request).
+   */
+  pullRequestLinks: Array<{ sessionId: string; url: string; refresh?: boolean }>
   /** Captured ctx.log.* calls. */
   logs: CapturedLog[]
   /** Captured ctx.events.emit calls. */
@@ -388,6 +401,87 @@ export function createMockSessionMessage(
   }
 }
 
+const MOCK_PULL_REQUEST_URL =
+  /^https?:\/\/([A-Za-z0-9.-]+(?::\d+)?)\/([A-Za-z0-9._-]+)\/([A-Za-z0-9._-]+)\/pull\/(\d+)(?:[/?#].*)?$/
+
+function mockPullRequestState(raw: string | null | undefined): PluginPullRequestState | null {
+  const value = (raw ?? '').trim().toLowerCase()
+  return value === 'open' || value === 'closed' || value === 'merged' ? value : null
+}
+
+function parseMockPullRequestUrl(
+  raw: string
+): { key: string; host: string; repository: string; number: number; url: string } | null {
+  const match = MOCK_PULL_REQUEST_URL.exec(raw.trim())
+  if (!match) return null
+  const [, rawHost, owner, name, digits] = match
+  const number = Number(digits)
+  if (!Number.isInteger(number) || number <= 0) return null
+  const host = rawHost!.toLowerCase()
+  const repository = `${owner}/${name!.replace(/\.git$/i, '')}`.toLowerCase()
+  return {
+    key: `${host}/${repository}#${number}`,
+    host,
+    repository,
+    number,
+    url: `https://${host}/${repository}/pull/${number}`
+  }
+}
+
+/**
+ * The identity the host gives a pull request — `host/repo#number`, lower-cased —
+ * or `null` when the URL is not one. Two URLs that differ only in case, a
+ * trailing `/files`, or a `http://` scheme are the same pull request.
+ */
+export function mockPullRequestLinkKey(url: string): string | null {
+  return parseMockPullRequestUrl(url)?.key ?? null
+}
+
+/**
+ * Build the answer `ctx.sessions.linkPullRequest()` really gives, or `null` when
+ * the URL is not a pull-request URL (the host answers `{ linked: false,
+ * reason: 'bad-url' }`).
+ *
+ * Shared by this harness and the dev shell's mock for the same reason
+ * `createMockSessionMessage` is: one definition of the host's answer, so an
+ * author learning the contract from a mock learns the real one. `existing` is
+ * the link this session already holds for that pull request — the host keeps
+ * every snapshot field the caller omits and never moves `linkedAt` on a
+ * re-link, so linking the same pull request twice updates one link in place.
+ */
+export function createMockPullRequestLink(
+  sessionId: string,
+  input: PluginSessionLinkPullRequestInput,
+  existing?: PluginPullRequestLink,
+  now: Date = new Date()
+): { key: string; link: PluginPullRequestLink } | null {
+  const parsed = parseMockPullRequestUrl(input.url)
+  if (!parsed) return null
+  const sent = input.snapshot
+  const kept = existing?.snapshot
+  const syncedAt = now.toISOString()
+  return {
+    key: parsed.key,
+    link: {
+      host: parsed.host,
+      repository: parsed.repository,
+      number: parsed.number,
+      url: parsed.url,
+      sessionId,
+      source: 'created',
+      linkedAt: existing?.linkedAt ?? syncedAt,
+      snapshot: {
+        title: sent?.title === undefined ? (kept?.title ?? null) : sent.title,
+        state: mockPullRequestState(sent?.state === undefined ? kept?.state : sent.state),
+        headBranch: sent?.headBranch === undefined ? (kept?.headBranch ?? null) : sent.headBranch,
+        baseBranch: sent?.baseBranch === undefined ? (kept?.baseBranch ?? null) : sent.baseBranch,
+        isDraft: sent?.isDraft === undefined ? (kept?.isDraft ?? null) : sent.isDraft,
+        syncedAt
+      }
+    }
+  }
+}
+
 export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const pluginId = opts.pluginId ?? 'test-plugin'
   const pluginVersion = opts.pluginVersion ?? '1.0.0'
@@ -403,6 +497,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   const inboxDismissHandlers = new Set<(dismissal: InboxDismissal) => void>()
   const sessionStatus = new Map<string, string>()
   const sessionMessages = new Map<string, SessionMessage[]>()
+  const sessionPullRequestLinks = new Map<string, PluginPullRequestLink>()
   const recordings: Recording[] = []
   const settings = { ...(opts.settings ?? {}) }
 
@@ -420,6 +515,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     inboxItems: [],
     inboxAlerts: [],
     inboxResolved: [],
+    pullRequestLinks: [],
     sentEmails: [],
     scheduledEmails: [],
     launches: [],
@@ -690,6 +786,25 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       delete: (sessionId) => { sessionStatus.delete(sessionId); sessionMessages.delete(sessionId); return Promise.resolve() },
       reveal: () => Promise.resolve(),
       onStatusChange: () => () => {},
+      linkPullRequest: (sessionId, input) => {
+        harness.pullRequestLinks.push({
+          sessionId,
+          url: input.url,
+          ...(input.refresh === undefined ? {} : { refresh: input.refresh })
+        })
+        // The host refuses an unknown session before it ever looks at the URL,
+        // so this does too — the order is part of the answer a plugin sees.
+        if (!sessionStatus.has(sessionId)) {
+          return Promise.resolve<PluginSessionLinkPullRequestResult>({ linked: false, reason: 'no-session' })
+        }
+        const existing = sessionPullRequestLinks.get(`${sessionId}|${mockPullRequestLinkKey(input.url)}`)
+        const built = createMockPullRequestLink(sessionId, input, existing)
+        if (!built) {
+          return Promise.resolve<PluginSessionLinkPullRequestResult>({ linked: false, reason: 'bad-url' })
+        }
+        sessionPullRequestLinks.set(`${sessionId}|${built.key}`, built.link)
+        return Promise.resolve<PluginSessionLinkPullRequestResult>({ linked: true, link: built.link })
+      },
       fanout: (fanoutOpts) => {
         const launched = fanoutOpts.targets.map((target) => {
           const sessionId = `test-session-${crypto.randomUUID().slice(0, 8)}`
@@ -710,9 +825,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
             ? { swarmBoard: `test-swarm-${crypto.randomUUID().slice(0, 8)}` }
             : {})
         })
-      },
-      linkPullRequest: (_sessionId, _input) =>
-        Promise.resolve({ linked: false as const, reason: 'no-session' as const })
+      }
     },
 
     ai: {

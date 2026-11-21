@@ -130,6 +130,15 @@ omniscio-plugin package
 
 Then in Omniscio: **Settings → Plugins → Install from file**, pick the `.amcplugin`, and press Load. A plugin widget appears in the titlebar by its first declared entry, and in the widget sidebar from its **Add** picker.
 
+## Power widgets
+
+A widget built for one person from their own `Omniscio Widgets` folder may also ask to run code and programs. It may declare a `backend` entry point, `process.allowedCommands` or `process.pinnedPrograms`, `cli.endpoints`, `sessionTools`, and any permission it genuinely needs.
+
+- **Nothing runs until the person trusts that one widget.** Loading shows them every power in plain words — programs by name, endpoints by method and path, each extra permission with its own description — and the widget stays off until they press its trust button. There is no way to ask for a power and skip that step.
+- **The trust is bound to your files.** Change any file in the widget's folder and it switches off until the person reviews it again. Keep runtime data — logs, caches, settings — out of your plugin folder and in plugin storage; writing into the folder revokes your own trust.
+- **A widget-only widget still loads in one click.** If you are not using a power, declare none: that path is unchanged and costs the person no extra step.
+- **Publishing to the Marketplace is a different road.** A Marketplace install is approved through the app's own consent flow; a power widget's trust is granted on the computer that runs it and never travels in a shared sidebar setup.
+
 ## When nothing shows
 
 - **Both permissions are missing one half.** `chrome.widget` must be declared together with `chrome`, and the validate command refuses it alone.
