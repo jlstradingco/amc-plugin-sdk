@@ -163,6 +163,7 @@ export interface PluginManifest {
     }>
     "hideProjectPanel"?: boolean
     "hideSessionsPane"?: boolean
+    "nativePanel"?: "workspace-hub"
     "presentation"?: "popup" | "full"
     "sessions"?: {
       "contextTemplate"?: string

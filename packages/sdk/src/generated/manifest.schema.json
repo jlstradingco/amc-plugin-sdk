@@ -522,6 +522,12 @@
         "hideSessionsPane": {
           "type": "boolean"
         },
+        "nativePanel": {
+          "type": "string",
+          "enum": [
+            "workspace-hub"
+          ]
+        },
         "presentation": {
           "type": "string",
           "enum": [
