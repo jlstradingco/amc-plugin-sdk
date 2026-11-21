@@ -37,7 +37,7 @@ function escapeHtml(str: string): string {
 
 const MAX_TAGS = 10
 const MAX_TAG_LEN = 30
-const SCAFFOLD_SDK_RANGE = '^3.4.0'
+const SCAFFOLD_SDK_RANGE = `^${CLI_VERSION}`
 
 export function parseTagsInput(raw: string | undefined, fallbackCategory: string): string[] {
   const seen = new Set<string>()

@@ -31,7 +31,7 @@ describe('buildPackageJson', () => {
     expect(pkg.scripts.dev).toBe('omniscio-plugin dev')
     expect(pkg.scripts.package).toBe('omniscio-plugin package')
     expect(pkg.scripts.validate).toBe('omniscio-plugin validate')
-    expect(pkg.devDependencies['@omniscio/plugin-sdk']).toBe('^3.4.0')
+    expect(pkg.devDependencies['@omniscio/plugin-sdk']).toBe(`^${cliVersion}`)
     expect(pkg.devDependencies.typescript).toBe('^5.5.0')
   })
 

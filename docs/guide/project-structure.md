@@ -77,8 +77,8 @@ Standard npm project file. The scaffolder generates it with the build, dev, pack
     "validate": "omniscio-plugin validate"
   },
   "devDependencies": {
-    "@omniscio/plugin-cli": "^3.5.0",
-    "@omniscio/plugin-sdk": "^3.4.0",
+    "@omniscio/plugin-cli": "^3.6.0",
+    "@omniscio/plugin-sdk": "^3.6.0",
     "typescript": "^5.5.0"
   }
 }
