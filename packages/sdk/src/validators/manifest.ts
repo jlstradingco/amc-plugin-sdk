@@ -492,6 +492,28 @@ const allowedCommandSchema = z
     })
   })
 
+const PROGRAM_FORBIDDEN_CHARS = [String.fromCharCode(92), "/", ":", "*", "?", String.fromCharCode(34), "<", ">", "|"]
+const PROGRAM_NAME_MAX = 120
+const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i
+
+const marketplaceProgramPath = z
+  .string()
+  .min(1)
+  .max(PROGRAM_NAME_MAX)
+  .refine((value) => ![...value].some((ch) => ch.charCodeAt(0) < 0x20), {
+    message: 'a marketplace program path may not contain control characters',
+  })
+  .refine(
+    (value) => ![...value].some((ch) => PROGRAM_FORBIDDEN_CHARS.includes(ch)),
+    { message: 'a marketplace program path is a bare file name: no folders or reserved characters' },
+  )
+  .refine((value) => !WINDOWS_RESERVED_NAME.test(value), {
+    message: 'a marketplace program path may not be a reserved Windows device name',
+  })
+  .refine((value) => value === value.trim() && !/[. ]$/.test(value), {
+    message: 'a marketplace program path may not end with a dot or a space',
+  })
+
 const pinnedProgramSchema = z
   .object({
     name: allowedCommandSchema,
@@ -501,8 +523,27 @@ const pinnedProgramSchema = z
       .regex(/^[a-f0-9]{64}$/, "sha256 must be the file's SHA-256 written as 64 lowercase hex characters"),
     folder: z.enum(['data', 'install']).optional(),
     platform: z.enum(['win32', 'darwin', 'linux']).optional(),
+    source: z.enum(['marketplace']).optional(),
   })
   .strict()
+  .superRefine((program, ctx) => {
+    if (program.source !== 'marketplace') return
+    if (program.folder !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['folder'],
+        message: 'a marketplace program is not in a plugin folder, so remove its folder field',
+      })
+    }
+    const bare = marketplaceProgramPath.safeParse(program.path)
+    if (!bare.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['path'],
+        message: bare.error.issues[0]?.message ?? 'a marketplace program path must be a bare file name',
+      })
+    }
+  })
 
 const processSchema = z
   .object({
