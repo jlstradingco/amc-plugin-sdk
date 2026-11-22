@@ -106,6 +106,12 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
   estimateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetEstimate | BridgeImageRefusal>
   generateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetResult | BridgeImageRefusal>
   /**
+   * Open Settings → Plan & Usage at Buy credit, for a button beside an
+   * `insufficient-credit` refusal. Needs the `ai.images` permission; panel
+   * only. Resolves with no value; at most once a second, so a burst is harmless.
+   */
+  openAddCredit(): Promise<void>
+  /**
    * Which route a {@link completeText} would take RIGHT NOW: the person's API
    * key, their Claude subscription, or none — with the host-chosen model, its
    * list price and the route's limits.

@@ -264,6 +264,7 @@ export interface AgentMC {
     "generateTitle": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
+    "openAddCredit": (...args: unknown[]) => Promise<unknown>
     "openSetup": (...args: unknown[]) => Promise<unknown>
   }
   "assets": {
