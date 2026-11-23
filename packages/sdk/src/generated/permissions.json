@@ -35,6 +35,7 @@
     "tier": "standard",
     "namespaces": [
       "ai",
+      "decks",
       "lms"
     ]
   },
@@ -524,6 +525,15 @@
     "tier": "elevated",
     "namespaces": [
       "email"
+    ]
+  },
+  {
+    "name": "limits",
+    "label": "Check its limits",
+    "description": "Ask how much of its own daily allowance this plugin has left, so it can slow down before it is refused. It never sees your plan's limits or another plugin's usage, and the app's servers still count and enforce anything that costs money.",
+    "tier": "standard",
+    "namespaces": [
+      "limits"
     ]
   },
   {

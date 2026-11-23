@@ -915,12 +915,13 @@
           "coaching-profile",
           "teamChat.emoji",
           "email.send",
+          "limits",
           "webassembly",
           "email.fromName",
           "live"
         ]
       },
-      "maxItems": 62
+      "maxItems": 63
     },
     "mobile": {
       "type": "boolean"

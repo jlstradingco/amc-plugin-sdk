@@ -64,6 +64,7 @@ export type PluginPermission =
   | "coaching-profile"
   | "teamChat.emoji"
   | "email.send"
+  | "limits"
   | "webassembly"
   | "email.fromName"
   | "live"
@@ -232,7 +233,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "webassembly" | "email.fromName" | "live">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -461,6 +462,10 @@ export interface AgentMC {
     "onCommand": (handler: (...args: unknown[]) => void) => () => void
     "register": (...args: unknown[]) => Promise<unknown>
     "unregister": (...args: unknown[]) => Promise<unknown>
+  }
+  "limits": {
+    "count": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
   }
   "live": {
     "close": (...args: unknown[]) => Promise<unknown>
@@ -952,6 +957,10 @@ export interface PluginContext {
   }
   "launch": {
     "open": (...args: unknown[]) => Promise<unknown>
+  }
+  "limits": {
+    "count": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
   }
   "live": {
     "close": (...args: unknown[]) => Promise<unknown>
