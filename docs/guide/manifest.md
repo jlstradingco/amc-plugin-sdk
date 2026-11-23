@@ -401,8 +401,9 @@ session ids, private notes, unpublished drafts:
 ```
 
 - **What it refuses.** `GET /plugins/:id/db/:table` and the single-row read answer `403`
-  (`PLUGIN_COLLECTION_NOT_AGENT_READABLE`) to every caller but the person's own install-wide key.
-  It refuses outside writes too: a caller that may not read the rows may not change them.
+  (`PLUGIN_COLLECTION_NOT_AGENT_READABLE`) to every caller, the install-wide key included, with or
+  without a session header (an Omniscio build from 19 November 2026 or later; an older build still
+  lets the install-wide key through). It refuses outside writes too: a caller that may not read the rows may not change them.
 - **Your panel and backend read normally** — they use the in-process bridge, never those routes.
 - **This key is the one that fails OPEN on an older host.** A build that predates it drops the key
   and serves the rows to agents anyway; `agentWritable` fails the other way (closed). So never rely
@@ -457,7 +458,7 @@ computer can reach the read routes. Two keys keep that data to the person:
 
 | Key | What it does |
 |---|---|
-| `agentReadable` | `false` refuses BOTH read routes for the whole store to every caller but the person's own install-wide key. Absent or `true` leaves the store readable. |
+| `agentReadable` | `false` refuses BOTH read routes for the whole store to every caller, the install-wide key included (a build from 19 November 2026 or later; older builds admit that key). Absent or `true` leaves the store readable. |
 | `agentHidden` | Up to 64 keys, each 1 to 256 characters, hidden while the rest of the store stays readable. A trailing `*` matches a key PREFIX (`draft:*` hides every `draft:` key). |
 
 - **The single-key read is refused** (`403`, `PLUGIN_KV_NOT_AGENT_READABLE`). The key is not
@@ -808,7 +809,7 @@ Declare CLI endpoints that external tools can call through Omniscio's control se
 | `safe` | boolean | A write that may run without asking; cannot be combined with `requiresConfirmation` |
 | `preview` | `"two-step"` or `"card"` | Lets the approval card show what the action will do; only with `requiresConfirmation`, and only together with `previewPath` |
 | `previewPath` | string | The read-only endpoint Omniscio asks for the preview: another endpoint of this plugin with the same method, marked `safe`, not `requiresConfirmation` |
-| `agentReadable` | boolean | Keep this action's answers away from AI agents. `false` refuses every call that carries an agent credential (HTTP 403, `PLUGIN_CLI_NOT_AGENT_READABLE`); the person's own install-wide key still runs it. See [Actions an agent may not call](#actions-an-agent-may-not-call-agentreadable) |
+| `agentReadable` | boolean | Keep this action's answers away from AI agents. `false` refuses every call that carries an agent credential (HTTP 403, `PLUGIN_CLI_NOT_AGENT_READABLE`); a build from 19 November 2026 or later refuses the install-wide key too. See [Actions an agent may not call](#actions-an-agent-may-not-call-agentreadable) |
 
 Requires the `cli` permission.
 
@@ -827,10 +828,11 @@ hand to every agent — can be kept away from agent credentials:
 }
 ```
 
-- **What it refuses.** A call carrying any credential except the person's own install-wide key is
-  answered `403` with the machine-readable code `PLUGIN_CLI_NOT_AGENT_READABLE`, before Omniscio
-  replays a queued request or reaches your handler. A call the person approves is unaffected: their
-  approval runs on their own key.
+- **What it refuses.** A call carrying any credential, the install-wide key included and with or
+  without a session header, is answered `403` with the machine-readable code
+  `PLUGIN_CLI_NOT_AGENT_READABLE`, before Omniscio replays a queued request or reaches your handler.
+  That is a build from 19 November 2026 or later; an older build still lets the install-wide key
+  through.
 - **It covers the whole PATH, whatever the verb.** Your backend's handler is reached by path, so a
   fenced path called with another method is refused too rather than running the same handler. Use it
   for an action whose answer is private, not only for `GET`s.
