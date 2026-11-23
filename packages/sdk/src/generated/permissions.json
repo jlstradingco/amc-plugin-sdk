@@ -41,7 +41,7 @@
   {
     "name": "ai.subscription",
     "label": "AI on your Claude plan",
-    "description": "Send text to Claude using your Claude subscription when no API key is set, which counts toward your plan usage",
+    "description": "Lets this plugin use your Claude plan for text generation, even when you have a saved API key. When this plugin uses your Claude plan, requests count toward that plan's usage limits.",
     "tier": "standard",
     "namespaces": []
   },
