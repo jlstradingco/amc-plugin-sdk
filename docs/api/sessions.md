@@ -451,7 +451,6 @@ file) opts in with two manifest keys and one webview call.
   "ui": {
     "sessions": {
       "perContext": true,
-      "noContextText": "Open a document to start a Chat.",
       "contextTemplate": "Work only on document {{contextKey}} ({{contextLabel}})."
     }
   }
@@ -523,13 +522,17 @@ item changes, and with `null` when nothing is open.
 
 - `key` is your stable id for the item: 1-128 characters from `A-Z a-z 0-9 . _ -`. Use an id that
   survives a restart, so the item's chats come back when it is reopened.
-- `label` is what the person sees above the list ("Chats for report.pdf"): 1-200 characters, no
+- `label` is what the person sees above the list ("Sessions for report.pdf"): 1-200 characters, no
   line breaks or other control characters.
 
-With `perContext` on, the pane lists only the chats started for the active key, and its suggested
-prompts, "New session" button and header "+" start chats for that key. With no active key the pane
-shows `noContextText` (or a short host sentence) and offers no way to start a chat. A launch for a
-key your plugin has not declared since the app started is refused.
+With `perContext` on, the pane lists only the sessions started for the active key, and its suggested
+prompts, "New session" button and header "+" start sessions for that key. With no active key the pane
+lists only the sessions that belong to no item, and the Ask box, "New session" button, header "+" and
+suggested prompts start sessions that belong to no item. A session filed under an item stays out of
+that list until the item is opened. Newer Omniscio versions ignore `noContextText`, which stays
+accepted so older plugins keep loading; older versions still show it and offer no way to start a
+session while nothing is open. A launch for a key your plugin has not declared since the app started
+is refused.
 
 `{{contextKey}}` and `{{contextLabel}}` in `contextTemplate` are filled from the chat's own item;
 both are empty for a chat that belongs to no item. Without `perContext` nothing changes.
