@@ -194,6 +194,7 @@ export interface PluginManifest {
       "sha256": string
       "folder"?: "data" | "install"
       "platform"?: "win32" | "darwin" | "linux"
+      "source"?: "marketplace"
     }>
   }
   "sdkVersion"?: string
