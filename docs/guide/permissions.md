@@ -937,6 +937,26 @@ why the host will not infer one from another.
 
 ---
 
+### `limits`
+
+**Grants access to:** `ctx.limits.status(name)` and `ctx.limits.count(name)` (**backend**) and
+`Omniscio.limits.*` (**webview**) — ask about *your own* limit, by a name the host registers for the
+permission you hold
+
+A limitation is a row in Omniscio's pricing registry, and this is the only way a plugin may read one:
+`ctx.limits.status('plugin_emails_sent')` answers the figure in force right now, its unit and period,
+and whether you are allowed another use. A plugin holding `email.send` may ask about
+`plugin_emails_sent`; asking about another plugin's limit or about an Omniscio plan limit is refused.
+A name the host has never heard of is answered as allowed and unmetered, so a plugin newer than the
+host keeps working — the host reports it so the gap can be closed.
+
+The answer is **advisory for anything that costs Omniscio money**. `ctx.limits.count(name)` moves no
+counter for such a limit: it answers `counted: false` beside the deploy that does count it, and the
+server that spends enforces the real cap. Treat the door as a way to slow down before a refusal, never
+as permission to spend.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -997,6 +1017,7 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `recording` | `PluginRecording` | Screen recording, host-mediated with a per-start confirm (backend only) |
 | `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated; `ctx.email.sender()` reads which address that is, and sends nothing (backend only) |
 | `email.fromName` | `PluginEmail` (`fromName` on `send`) | Put a display name beside the agent address; cleaned, capped at 64 characters, never the app's own name; needs `email.send` (backend only) |
+| `limits` | `ctx.limits.status` / `ctx.limits.count` (**backend**); `Omniscio.limits` (**webview**) | Ask how much of your own registered daily allowance is left, by name; advisory only for anything that costs Omniscio money, which its servers count and cap |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `inbox.read` | `ctx.inbox.listMine()` (**backend**) | See the titles of the person's open inbox items and waiting sessions, never their contents — elevated |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |
