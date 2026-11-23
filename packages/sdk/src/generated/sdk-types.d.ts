@@ -325,6 +325,7 @@ export interface AgentMC {
     "query": (...args: unknown[]) => Promise<unknown>
     "stats": (...args: unknown[]) => Promise<unknown>
     "update": (...args: unknown[]) => Promise<unknown>
+    "updateIf": (...args: unknown[]) => Promise<unknown>
     "upsert": (...args: unknown[]) => Promise<unknown>
   }
   "decks": {
@@ -919,6 +920,7 @@ export interface PluginContext {
     "query": (...args: unknown[]) => Promise<unknown>
     "stats": (...args: unknown[]) => Promise<unknown>
     "update": (...args: unknown[]) => Promise<unknown>
+    "updateIf": (...args: unknown[]) => Promise<unknown>
     "upsert": (...args: unknown[]) => Promise<unknown>
   }
   "email": {

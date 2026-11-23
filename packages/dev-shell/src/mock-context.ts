@@ -363,6 +363,26 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [db] update(${col}, ${id})`, fields)
         return Promise.resolve(clone(updated))
       },
+      updateIf: (col, id, expect, fields) => {
+        if (Object.keys(expect).length === 0) {
+          return Promise.reject(new Error('db.updateIf: expect needs at least one column'))
+        }
+        const existing = collectionOf(col).get(id)
+        if (!existing) return Promise.resolve({ updated: false, row: null })
+        const holds = Object.entries(expect).every(
+          ([column, value]) => (existing[column] ?? null) === value
+        )
+        if (!holds) return Promise.resolve({ updated: false, row: clone(existing) })
+        const updated: PluginDbRow = {
+          ...existing,
+          ...clone(fields),
+          id,
+          updated_at: new Date().toISOString()
+        }
+        collectionOf(col).set(id, updated)
+        if (shouldLog) console.log(`${prefix} [db] updateIf(${col}, ${id})`, fields)
+        return Promise.resolve({ updated: true, row: clone(updated) })
+      },
       delete: (col, id) => {
         collectionOf(col).delete(id)
         if (shouldLog) console.log(`${prefix} [db] delete(${col}, ${id})`)

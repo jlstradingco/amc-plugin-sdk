@@ -165,6 +165,58 @@ describe('db.upsert — atomic insert-or-update on a key tuple', () => {
   })
 })
 
+describe('db.updateIf — conditional update with the host’s win and loss answers', () => {
+  it('writes and reports updated:true when every expectation holds', async () => {
+    const { ctx } = createTestContext()
+    const row = await ctx.db.insert('runs', { status: 'running' })
+
+    const result = await ctx.db.updateIf('runs', row.id, { status: 'running' }, { status: 'stopped' })
+
+    expect(result.updated).toBe(true)
+    expect(result.row?.status).toBe('stopped')
+    expect((await ctx.db.getById('runs', row.id))?.status).toBe('stopped')
+  })
+
+  it('reports updated:false with the current row and writes nothing when one no longer holds', async () => {
+    const { ctx } = createTestContext()
+    const row = await ctx.db.insert('runs', { status: 'running' })
+    await ctx.db.update('runs', row.id, { status: 'done' })
+
+    const result = await ctx.db.updateIf('runs', row.id, { status: 'running' }, { status: 'stopped' })
+
+    expect(result.updated).toBe(false)
+    expect(result.row?.status).toBe('done')
+    expect((await ctx.db.getById('runs', row.id))?.status).toBe('done')
+  })
+
+  it('treats an absent column as null, like the host’s empty column', async () => {
+    const { ctx } = createTestContext()
+    const row = await ctx.db.insert('runs', { status: 'running' })
+
+    const wins = await ctx.db.updateIf('runs', row.id, { ended_at: null }, { ended_at: 'now' })
+    const loses = await ctx.db.updateIf('runs', row.id, { ended_at: null }, { ended_at: 'later' })
+
+    expect(wins.updated).toBe(true)
+    expect(loses.updated).toBe(false)
+    expect(loses.row?.ended_at).toBe('now')
+  })
+
+  it('reports a missing row as updated:false with a null row, not as an error', async () => {
+    const { ctx } = createTestContext()
+    expect(await ctx.db.updateIf('runs', 'nope', { status: 'running' }, { status: 'x' })).toEqual({
+      updated: false,
+      row: null
+    })
+  })
+
+  it('rejects an empty expect, as the host does', async () => {
+    const { ctx } = createTestContext()
+    const row = await ctx.db.insert('runs', { status: 'running' })
+    await expect(ctx.db.updateIf('runs', row.id, {}, { status: 'x' })).rejects.toThrow()
+    expect((await ctx.db.getById('runs', row.id))?.status).toBe('running')
+  })
+})
+
 describe('db.count + db.stats', () => {
   it('count returns the row total for one collection only', async () => {
     const { ctx } = createTestContext()

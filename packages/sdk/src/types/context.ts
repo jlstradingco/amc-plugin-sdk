@@ -133,6 +133,12 @@ export interface PluginDb {
   query(collection: string, options?: QueryOptions): Promise<PluginDbRow[]>
   getById(collection: string, id: string): Promise<PluginDbRow | null>
   update(collection: string, id: string, fields: Record<string, unknown>): Promise<PluginDbRow>
+  updateIf(
+    collection: string,
+    id: string,
+    expect: Record<string, string | number | null>,
+    fields: Record<string, unknown>
+  ): Promise<{ updated: boolean; row: PluginDbRow | null }>
   delete(collection: string, id: string): Promise<void>
   deleteWhere(collection: string, where: Record<string, unknown>): Promise<void>
   /** Atomic insert-or-update on a declared UNIQUE column tuple; returns the persisted row. */

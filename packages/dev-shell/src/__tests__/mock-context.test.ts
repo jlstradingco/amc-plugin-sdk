@@ -184,6 +184,27 @@ describe('createMockContext — faithful db', () => {
     expect(reread?.title).toBe('a')
   })
 
+  it('updateIf writes when the expectation holds and reports the loss when it does not', async () => {
+    const row = await ctx.db.insert('runs', { status: 'running' })
+
+    const lost = await ctx.db.updateIf('runs', row.id, { status: 'done' }, { status: 'stopped' })
+    const won = await ctx.db.updateIf('runs', row.id, { status: 'running' }, { status: 'stopped' })
+
+    expect(lost.updated).toBe(false)
+    expect(lost.row?.status).toBe('running')
+    expect(won.updated).toBe(true)
+    expect(won.row?.status).toBe('stopped')
+  })
+
+  it('updateIf reports a missing row as not updated and rejects an empty expect', async () => {
+    expect(await ctx.db.updateIf('runs', 'nope', { status: 'running' }, {})).toEqual({
+      updated: false,
+      row: null
+    })
+    const row = await ctx.db.insert('runs', { status: 'running' })
+    await expect(ctx.db.updateIf('runs', row.id, {}, { status: 'x' })).rejects.toThrow()
+  })
+
   it('upsert inserts when the key tuple is absent', async () => {
     const row = await ctx.db.upsert('results', ['worktree', 'file'], {
       worktree: 'w1',

@@ -594,6 +594,17 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         Object.assign(row, fields, { updated_at: nowIso() })
         return Promise.resolve({ ...row })
       },
+      updateIf: (collection, id, expect, fields) => {
+        if (Object.keys(expect).length === 0) {
+          return Promise.reject(new Error('updateIf requires at least one expected column'))
+        }
+        const row = (collections.get(collection) ?? []).find((r) => r.id === id)
+        if (!row) return Promise.resolve({ updated: false, row: null })
+        const holds = Object.entries(expect).every(([column, value]) => (row[column] ?? null) === value)
+        if (!holds) return Promise.resolve({ updated: false, row: { ...row } })
+        Object.assign(row, fields, { updated_at: nowIso() })
+        return Promise.resolve({ updated: true, row: { ...row } })
+      },
       delete: (collection, id) => {
         const rows = collections.get(collection) ?? []
         collections.set(collection, rows.filter((r) => r.id !== id))

@@ -165,6 +165,48 @@ await ctx.db.update('tasks', 'a1b2c3', {
 
 ---
 
+### `updateIf(collection: string, id: string, expect: Record<string, string | number | null>, fields: Record<string, unknown>): Promise<{ updated: boolean; row: PluginDbRow | null }>`
+
+Update one row only if it still holds the values you expect. The check and the write are one atomic step, so nothing can change the row between them. Use it when you read a row, decide, and then write: a plain `update()` in between would overwrite whatever another screen or worker wrote in the meantime.
+
+**Parameters:**
+
+| Name | Type | Description |
+|---|---|---|
+| `collection` | `string` | The collection name |
+| `id` | `string` | The row ID to update |
+| `expect` | `Record<string, string \| number \| null>` | 1 to 16 columns and the value each must still hold. `null` matches an empty column. Text up to 4096 characters. Booleans are not accepted: store and compare `0` / `1`. |
+| `fields` | `Record<string, unknown>` | The fields to write, as in `update()` |
+
+**Returns:** `Promise<{ updated: boolean; row: PluginDbRow | null }>`
+
+- `updated: true` -- the write landed. `row` is the row after the write.
+- `updated: false` -- nothing was written because the row no longer matches `expect`. `row` is the row as it is now, or `null` if it was deleted. This is a normal answer, not an error: re-read and decide what to do. Never retry the same call blindly.
+- A call with an empty `expect`, an unknown column or a value of another type throws, and nothing is written.
+
+**Timestamps:** `updated_at` has millisecond resolution, so two writes in the same millisecond can leave the same value. When that matters, keep a counter column that every writer increments and put it in `expect`.
+
+**Older Omniscio versions:** a host without this method answers `Unknown method: db.updateIf`. Treat that as "cannot do this safely" and skip the work. Do not fall back to `update()`, which has no check.
+
+**Example:**
+
+```typescript
+// Backend: stop a run only if it is still running and nobody touched it since we looked
+const run = await ctx.db.getById('runs', runId)
+if (run && run.status === 'running') {
+  const result = await ctx.db.updateIf(
+    'runs',
+    runId,
+    { status: 'running', updated_at: run.updated_at },
+    { status: 'stopped' }
+  )
+  if (!result.updated) return
+  await cleanUpAfterStop(runId)
+}
+```
+
+---
+
 ### `delete(collection: string, id: string): Promise<void>`
 
 Delete a single row by its ID.
