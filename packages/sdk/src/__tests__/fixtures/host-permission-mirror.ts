@@ -10,6 +10,7 @@ export const HOST_PERMISSIONS = [
   'secrets',
   'sessions',
   'ai',
+  'ai.subscription',
   'tts',
   'stt',
   'microphone',
