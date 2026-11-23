@@ -365,8 +365,10 @@ export interface AgentMC {
   }
   "export": {
     "getDefaultFolder": (...args: unknown[]) => Promise<unknown>
+    "openDataFile": (...args: unknown[]) => Promise<unknown>
     "openFolder": (...args: unknown[]) => Promise<unknown>
     "pickFolder": (...args: unknown[]) => Promise<unknown>
+    "saveDataFile": (...args: unknown[]) => Promise<unknown>
     "saveFile": (...args: unknown[]) => Promise<unknown>
     "savePdf": (...args: unknown[]) => Promise<unknown>
     "verifyFiles": (...args: unknown[]) => Promise<unknown>
