@@ -349,6 +349,16 @@ export interface PluginManifest {
     description: string
     icon: string
     category: PluginCategory
+    sidebarGroup?:
+      | 'creative'
+      | 'developer-tools-group'
+      | 'ai-tools'
+      | 'automation-group'
+      | 'agent-tools'
+      | 'productivity'
+      | 'communication'
+      | 'prompt-tools'
+      | 'insights-group'
     license: { type: PluginLicenseType }
     minAppVersion?: string
     // Free-form discoverability keywords. Folded into the marketplace's text

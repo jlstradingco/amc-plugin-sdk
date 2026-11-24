@@ -124,6 +124,7 @@ keep them stable once shipped.
 | `description` | string | Yes | Short description shown in the marketplace |
 | `icon` | string | Yes | **Path to an image in your package** (e.g. `"assets/icon.svg"`) — your real logo — **or** a [Lucide](https://lucide.dev/icons) icon name for a generic stock glyph. See [Plugin Icon](#plugin-icon). |
 | `category` | string | Yes | One of: `planning`, `development`, `testing`, `devops`, `productivity`, `other` |
+| `sidebarGroup` | string | No | Which sidebar group's color family your plugin's icon uses: `creative`, `developer-tools-group`, `ai-tools`, `automation-group`, `agent-tools`, `productivity`, `communication`, `prompt-tools` or `insights-group`. Leave it out and the `category` decides; a plugin with neither gets the neutral gray icon |
 | `license` | object | Yes | `{ "type": "free" }`, `{ "type": "paid" }`, or `{ "type": "trial" }` |
 | `minAppVersion` | string | No | Minimum Omniscio version required to run this plugin |
 | `tags` | string[] | No | Discoverability keywords surfaced in marketplace search and shown as chips on the plugin card (up to 10 tags, 30 characters each) |

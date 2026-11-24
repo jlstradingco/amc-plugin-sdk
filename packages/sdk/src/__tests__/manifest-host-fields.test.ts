@@ -42,6 +42,41 @@ describe('plugin.requiresOrganization (host: min 1, max 128, /^[A-Za-z0-9_-]+$/)
   })
 })
 
+describe('plugin.sidebarGroup (host: one of the nine sidebar group ids, optional)', () => {
+  const GROUP_IDS = [
+    'creative',
+    'developer-tools-group',
+    'ai-tools',
+    'automation-group',
+    'agent-tools',
+    'productivity',
+    'communication',
+    'prompt-tools',
+    'insights-group',
+  ] as const
+
+  it.each(GROUP_IDS)('accepts and keeps %s', (group) => {
+    const result = validateManifest(withPlugin({ sidebarGroup: group }))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.plugin.sidebarGroup).toBe(group)
+  })
+
+  it('still validates when the key is absent', () => {
+    const result = validateManifest(baseManifest)
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.plugin.sidebarGroup).toBeUndefined()
+  })
+
+  it.each(['', 'Creative', 'games', 'channels', 42])('refuses %j', (group) => {
+    expect(errorsOf(withPlugin({ sidebarGroup: group }))).toMatch(/^plugin\.sidebarGroup: /m)
+  })
+
+  it('is a published type field', () => {
+    const plugin = { ...baseManifest.plugin, sidebarGroup: 'creative' } satisfies PluginManifest['plugin']
+    expect(plugin.sidebarGroup).toBe('creative')
+  })
+})
+
 describe('storage.collections.*.cliReadOnlyColumns (host: SQL identifiers, max 64, declared columns only)', () => {
   const columns = Object.fromEntries(Array.from({ length: 65 }, (_, index) => [`c${index}`, 'text']))
   const collectionWith = (cliReadOnlyColumns: unknown) => ({

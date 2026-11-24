@@ -38,6 +38,18 @@ export const REQUIRED_PERMISSION_PARTNERS = [
 const pluginIdRegex = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/
 const PLUGIN_ID_MAX = 100
 
+const SIDEBAR_GROUP_IDS = [
+  'creative',
+  'developer-tools-group',
+  'ai-tools',
+  'automation-group',
+  'agent-tools',
+  'productivity',
+  'communication',
+  'prompt-tools',
+  'insights-group',
+] as const
+
 const pluginIcon = z
   .string()
   .min(1)
@@ -121,6 +133,7 @@ const pluginInfoSchema = z.object({
   description: z.string().min(1).max(500),
   icon: pluginIcon,
   category: z.enum(['planning', 'development', 'testing', 'devops', 'productivity', 'other']),
+  sidebarGroup: z.enum(SIDEBAR_GROUP_IDS).optional(),
   license: z.object({ type: z.enum(['free', 'paid', 'trial']) }),
   minAppVersion: z.string().max(50).optional(),
   // Discoverability keywords surfaced in marketplace search + card chips.
