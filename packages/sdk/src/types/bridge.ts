@@ -323,6 +323,22 @@ export interface BridgeAuth {
     customToken: string
     organizationId: string | null
   }>
+
+  /**
+   * A credential scoped to ONE shared service, minted for the person signed in to Omniscio.
+   *
+   * This is never the person's own Omniscio sign-in: the token is accepted by the one backend that
+   * declared that audience and refused by every other. `serviceUrl` is where it is meant to go —
+   * check it before you connect, because an address you were not given is an address the token was
+   * never minted for.
+   *
+   * Requires `auth.actAsUser`, and only a first-party plugin may ask.
+   */
+  getServiceToken(audience: 'tables'): Promise<{
+    customToken: string
+    config: { apiKey: string; authDomain: string; projectId: string }
+    serviceUrl: string
+  }>
 }
 
 /**
