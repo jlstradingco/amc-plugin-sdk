@@ -49,6 +49,20 @@
             "other"
           ]
         },
+        "sidebarGroup": {
+          "type": "string",
+          "enum": [
+            "creative",
+            "developer-tools-group",
+            "ai-tools",
+            "automation-group",
+            "agent-tools",
+            "productivity",
+            "communication",
+            "prompt-tools",
+            "insights-group"
+          ]
+        },
         "license": {
           "type": "object",
           "properties": {

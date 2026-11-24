@@ -364,7 +364,7 @@
   {
     "name": "chrome.widget",
     "label": "Header Widget",
-    "description": "Show a live status widget in the Omniscio header: a number, a short label, and a status colour, which it can update at any time",
+    "description": "Show a live status widget in the Omniscio header: a number, a short label, and a status color, which it can update at any time",
     "tier": "standard",
     "namespaces": [
       "widget"

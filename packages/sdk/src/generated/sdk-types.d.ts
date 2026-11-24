@@ -78,6 +78,7 @@ export interface PluginManifest {
     "description": string
     "icon": string
     "category": "planning" | "development" | "testing" | "devops" | "productivity" | "other"
+    "sidebarGroup"?: "creative" | "developer-tools-group" | "ai-tools" | "automation-group" | "agent-tools" | "productivity" | "communication" | "prompt-tools" | "insights-group"
     "license": {
       "type": "free" | "paid" | "trial"
     }
@@ -448,6 +449,7 @@ export interface AgentMC {
     "writeFile": (...args: unknown[]) => Promise<unknown>
   }
   "host": {
+    "accountNamespace": (...args: unknown[]) => Promise<unknown>
     "getCapabilities": (...args: unknown[]) => Promise<unknown>
     "openSettings": (...args: unknown[]) => Promise<unknown>
     "setSurfaceTab": (...args: unknown[]) => Promise<unknown>
@@ -945,6 +947,7 @@ export interface PluginContext {
     "writeFile": (...args: unknown[]) => Promise<unknown>
   }
   "host": {
+    "accountNamespace": (...args: unknown[]) => Promise<unknown>
     "canMergeOnGitHub": (...args: unknown[]) => Promise<unknown>
     "getCapabilities": (...args: unknown[]) => Promise<unknown>
     "setSurfaceTab": (...args: unknown[]) => Promise<unknown>
