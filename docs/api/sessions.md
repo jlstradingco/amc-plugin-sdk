@@ -425,6 +425,62 @@ paired phone cannot call it.
 await Omniscio.session.delete(sessionId)
 ```
 
+### `deleteVisible(sessionIds: string[]): Promise<void>`
+
+Permanently erase chats your plugin created in its own sandbox, **after the person confirms**. Use it
+when your user deletes the thing those chats belong to and the chats are ones they can see and open
+(started with `userInitiated`, or revealed). Omniscio shows its own dialog, naming how many chats are
+about to go and listing their titles (the first twelve, then "...and N more"); your plugin cannot supply
+the answer or word the dialog. On the person's OK, each chat is erased the same way `delete` erases
+one: stopped first, then the session and every message, search entry and attachment it stored are
+removed. It resolves when every chat is gone.
+
+It rejects, and removes nothing, when:
+
+- the person chooses Cancel, or no Omniscio window is open to show the dialog;
+- any id is unknown, belongs to another plugin, or is a session launched into a real project. The
+  whole call is refused before any dialog appears, and the error names the refused ids;
+- the list is empty or longer than 100 ids.
+
+Repeated ids count once. This is a desktop call for a panel, on the screen the person is looking at:
+there is no `ctx.sessions` version, and a panel on a paired phone cannot call it.
+
+**Read the ids from the error, not from its text.** The rejected `Error` carries up to three
+string-array fields next to its `message`:
+
+| When | Fields on the error | Cancel? |
+| --- | --- | --- |
+| Any id refused (no dialog, nothing deleted) | `refusedIds`: the refused ids, in the order you sent them | |
+| An erase failed part-way | `erasedIds`: the ids already erased (an empty array when the first erase failed), and `notErasedIds`: the ids not erased | |
+| The person did not confirm | none of the three is present | yes |
+
+A field that does not apply to the failure is absent, not empty, except `erasedIds`, which is `[]`
+when nothing was erased yet. The `message` is also fixed wording you may match on: Omniscio adds
+` (Reference: <id>)` to its end, so test the start. The ids in it are separated by `, `.
+
+| When | Message starts |
+| --- | --- |
+| Any id refused | `Nothing was deleted. These chats are unknown or not this plugin's own: <refused ids>` |
+| The person did not confirm | `Nothing was deleted: the person did not confirm.` |
+| An erase failed part-way | `Some chats were deleted and some were not, and a delete cannot be undone. Deleted: <erased ids, or none>. Not deleted: <ids not erased>. Reason: <why the erase failed>` |
+
+An empty or oversized list is refused by argument validation with Omniscio's own wording, which is not
+fixed and carries none of the fields. An Omniscio older than this release has no `deleteVisible` at all.
+
+> [!WARNING]
+> **All-or-nothing holds up to the confirm, not through the erase.** An erase cannot be undone. If
+> one chat cannot be erased part-way through (for example it cannot be stopped), the call rejects
+> with a message naming the ids already erased and the ids not erased. Read it, and treat the erased
+> ones as gone.
+
+```typescript
+try {
+  await Omniscio.session.deleteVisible(chatIds)
+} catch (err) {
+  showNotice(err instanceof Error ? err.message : String(err))
+}
+```
+
 ### `launchWithDraft(opts: { projectId: string; draftText: string; autoSend?: boolean }): Promise<void>`
 
 Open a new session in Omniscio's main UI with pre-filled draft text. Frontend only.

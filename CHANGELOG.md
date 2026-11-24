@@ -11,6 +11,19 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — delete your visible chats after the person confirms
+
+`Omniscio.session.deleteVisible(sessionIds)` erases chats your plugin created in its own sandbox,
+visible ones included, for the case `session.delete` refuses: a chat the person can open. Omniscio
+shows its own confirmation dialog for the whole list (how many chats, and their titles), and the
+plugin cannot answer it. On OK every chat is erased with its messages, search entries and
+attachments; on Cancel, or when any id is unknown, another plugin's or in a real project, nothing is
+deleted and the dialog is not shown. A list takes up to 100 ids. The rejected error carries
+`refusedIds` (an id was refused), or `erasedIds` and `notErasedIds` (an erase failed part-way, which
+cannot be undone), and none of them when the person cancels. Panels only: there is
+no `ctx.sessions` version and a paired phone cannot call it. An Omniscio older than this release has
+no such method, so check that `Omniscio.session.deleteVisible` is a function before calling it.
+
 ### Added — `needsYouCount` on the `surfaceTab` push
 
 The `surfaceTab` command now carries `needsYouCount`, the number of your plugin's chats that are waiting

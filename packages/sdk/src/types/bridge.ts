@@ -434,6 +434,19 @@ export interface BridgeSession {
    */
   delete(sessionId: string): Promise<void>
   /**
+   * Permanently erase chats your plugin created in its own sandbox, hidden or visible,
+   * after the person confirms. Omniscio shows its own dialog naming how many chats and
+   * listing their titles; a plugin cannot supply the answer. Resolves once every chat is
+   * gone (messages, search entries and attachments included) and rejects if the person
+   * cancels, with nothing deleted. Up to 100 ids per call. Refuses the whole call, shows
+   * no dialog and deletes nothing when any id is unknown, another plugin's, or a session
+   * launched into a real project. All-or-nothing holds up to the confirm, not through the
+   * erase: if one erase fails part-way the rejection carries `erasedIds` and `notErasedIds`
+   * (string arrays), because an erase cannot be undone; a refusal carries `refusedIds`; a
+   * cancel carries none of them. Desktop panels only: no phone, and no `ctx.sessions` version.
+   */
+  deleteVisible(sessionIds: string[]): Promise<void>
+  /**
    * `autoSend` submits the draft immediately instead of leaving it in the
    * composer — `plugin-bridge/session-handler.ts`'s `launchWithDraft` case reads all three keys.
    */
