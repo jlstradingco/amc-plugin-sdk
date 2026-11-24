@@ -616,6 +616,8 @@ export interface AgentMC {
     "openTeamChat": (...args: unknown[]) => Promise<unknown>
   }
   "nightytidy2": {
+    "archiveOldRuns": (...args: unknown[]) => Promise<unknown>
+    "archiveRun": (...args: unknown[]) => Promise<unknown>
     "askAi": (...args: unknown[]) => Promise<unknown>
     "cancelManualRuns": (...args: unknown[]) => Promise<unknown>
     "clearHistory": (...args: unknown[]) => Promise<unknown>
@@ -660,6 +662,7 @@ export interface AgentMC {
     "setNightyTidyLimits": (...args: unknown[]) => Promise<unknown>
     "startFixing": (...args: unknown[]) => Promise<unknown>
     "stopRuns": (...args: unknown[]) => Promise<unknown>
+    "unarchiveRun": (...args: unknown[]) => Promise<unknown>
     "updateCustomAudit": (...args: unknown[]) => Promise<unknown>
     "upsertSubscription": (...args: unknown[]) => Promise<unknown>
   }
