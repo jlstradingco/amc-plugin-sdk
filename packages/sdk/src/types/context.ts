@@ -2494,7 +2494,7 @@ export interface PluginNotificationOptions {
   tag: string
   /** Defaults to `'info'`. */
   category?: 'email' | 'task' | 'alert' | 'info'
-  /** Where clicking the notification should lead inside a plugin. */
+  /** Where a click opens your own plugin's panel. `pluginId` must be your own plugin's id; a link that names any other plugin is dropped and the notification shows with no click action. */
   deepLink?: { pluginId: string; path: string }
   sound?: string
   /** Show the notification even while Focus Mode is on. */

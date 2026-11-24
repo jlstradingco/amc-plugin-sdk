@@ -1370,7 +1370,7 @@ export interface BridgeNotification {
   tag: string
   /** Defaults to `'info'`. */
   category?: 'email' | 'task' | 'alert' | 'info'
-  /** Where clicking the notification should lead inside a plugin. */
+  /** Where a click opens your own plugin's panel. `pluginId` must be your own plugin's id; a link that names any other plugin is dropped and the notification shows with no click action. */
   deepLink?: { pluginId: string; path: string }
   sound?: string
   /** Show the notification even while Focus Mode is on. */
@@ -1381,7 +1381,7 @@ export interface BridgeNotification {
 /**
  * `Omniscio.notifications` - system notifications that respect Focus Mode and can be closed again.
  * Needs no permission: a panel fires and clears only its own plugin's notifications. Typed for
- * the webview only; a backend uses `ctx.toast.notify`, which needs the `notifications` permission.
+ * the webview; a backend uses `ctx.notifications`, which needs the `notifications` permission.
  */
 export interface BridgeNotifications {
   /** Show a notification. Resolves with no value. */

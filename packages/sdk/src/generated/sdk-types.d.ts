@@ -274,6 +274,7 @@ export interface AgentMC {
     "readFile": (...args: unknown[]) => Promise<unknown>
   }
   "auth": {
+    "getServiceToken": (...args: unknown[]) => Promise<unknown>
     "getWebAuth": (...args: unknown[]) => Promise<unknown>
   }
   "autohotkey": {
