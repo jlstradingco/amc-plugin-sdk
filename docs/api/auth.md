@@ -12,6 +12,8 @@ bridge -- calling `Omniscio.auth.getUser()` is a `TypeError`, not a permission e
 plus a custom token so your webview can sign into the same identity via the Firebase Web
 SDK. It requires the elevated `auth.actAsUser` permission, which is NOT implied by `auth`:
 the token carries the person's own identity and can read and write anything their account can.
+Each token also names your plugin in its `amcPluginId` claim, so a cloud service built for your
+plugin can refuse tokens minted for any other plugin.
 Everything on this page is the **backend** surface. If your UI needs any of it, call it
 from your backend and forward the result over `ctx.events` -> `Omniscio.events`.
 :::
@@ -21,7 +23,7 @@ There are two levels here:
 
 - **Identity** (`auth` permission) -- see who is signed in and react to sign-in state.
 - **Account access** (`auth.session` permission) -- obtain a scoped OAuth access token to call Google or GitHub APIs as the user.
-- **Act as the user** (`auth.actAsUser` permission, elevated, webview only) -- sign in to the shared account with `getWebAuth()`; the token carries the user's identity and is not scoped to anything.
+- **Act as the user** (`auth.actAsUser` permission, elevated, webview only) -- sign in to the shared account with `getWebAuth()`; the token carries the user's identity and names your plugin (`amcPluginId`).
 
 ## Identity methods
 
