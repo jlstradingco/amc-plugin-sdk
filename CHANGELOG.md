@@ -11,6 +11,15 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — a stable account string for browser storage keys
+
+`host.accountNamespace()` returns an opaque string for the signed-in account: the same every time
+that account is active, different for every other account and for every other plugin, and never the
+account's id or email. A plugin that keeps data in browser storage can prefix its keys with it, so
+the data of one account is never read under another. A panel opened under another account is refused,
+so read it again after reloading on an account change. An Omniscio older than this release has no
+such method, so call it as `host.accountNamespace?.()`.
+
 ### Added — delete your visible chats after the person confirms
 
 `Omniscio.session.deleteVisible(sessionIds)` erases chats your plugin created in its own sandbox,

@@ -1154,6 +1154,13 @@ export interface BridgeHost {
    */
   setSurfaceTab(input: { tab: 'items' | 'sessions' }): Promise<void>
   openSettings?(): Promise<void>
+  /**
+   * A stable, opaque string for the signed-in Omniscio account, the same every time that account is
+   * active and different for every other account and every other plugin. It carries nothing about
+   * the account itself, so use it only as a prefix for browser storage keys. A panel opened under
+   * another account is refused, so reload the panel after an account change and read it again.
+   */
+  accountNamespace?(): Promise<string>
 }
 
 /** A site's answer to {@link BridgeHttp.uploadFile}, as plain data. */

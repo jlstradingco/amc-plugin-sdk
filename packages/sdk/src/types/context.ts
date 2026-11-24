@@ -202,6 +202,12 @@ export interface PluginHost {
    * `ctx.host?.canMergeOnGitHub?.(repo)` rather than assuming it.
    */
   canMergeOnGitHub?(repoFullName: string): Promise<boolean>
+  /**
+   * A stable, opaque string for the account this backend was started under: the same for that
+   * account every time, different for every other account and every other plugin. A backend of a
+   * previous account is refused once another account signs in.
+   */
+  accountNamespace?(): Promise<string>
 }
 
 export interface PluginUsage {
