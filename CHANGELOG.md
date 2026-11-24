@@ -11,6 +11,14 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — `needsYouCount` on the `surfaceTab` push
+
+The `surfaceTab` command now carries `needsYouCount`, the number of your plugin's chats that are waiting
+on the person: a whole number, 0 or more. It counts only chats that need the person, not running chats,
+errors, chats waiting for capacity or interrupted ones, and it is 0 while Focus Mode hides session
+badges. `sessionsCount` is unchanged. An Omniscio older than this release leaves the key out, so read a
+missing `needsYouCount` as 0.
+
 ### Fixed — `whoami` and `publish` name your GitHub login, not a number
 
 A credential written by an older CLI stores the numeric GitHub account id instead of the login, so

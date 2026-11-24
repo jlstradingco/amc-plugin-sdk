@@ -479,7 +479,11 @@ await Omniscio.host.setSurfaceTab({ tab: 'items' }) // close
 ```
 
 Omniscio owns the state and pushes it back on the `surfaceTab` command as
-`{ tab, sessionsCount, sidePanel? }`. `sidePanel: true` means this Omniscio shows the panel for your
+`{ tab, sessionsCount, needsYouCount?, sidePanel? }`. `needsYouCount` is how many of your plugin's chats are
+waiting on the person (a whole number, 0 or more; read a missing key as 0). It counts only chats that need
+the person: not running chats, not errors, not ones waiting for capacity, and not interrupted ones, so
+`sessionsCount` stays the larger total for your tab badge. It is 0 while Focus Mode hides session badges,
+exactly like `sessionsCount`. Use it for a "needs you" dot or number. `sidePanel: true` means this Omniscio shows the panel for your
 plugin right now, so read `tab: 'sessions'` as "panel open". When `sidePanel` is missing (an older
 Omniscio, a phone, or the AI-native feature off) the key is ignored: hide your button or keep your own
 sessions screen. Opening a chat from the panel replaces the list in the same strip, which widens to

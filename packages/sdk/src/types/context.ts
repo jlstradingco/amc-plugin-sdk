@@ -831,6 +831,10 @@ export interface PluginInbox {
     openPlugin?: boolean
     /** Page the person's phone about this one card. See the method docs above. */
     ownerNeedsToSee?: boolean
+    /** File this card in the person's Omniscio hub instead of the routine alerts pile.
+     *  `'omniscio'` is the only value: the host owns which project that is. Filing only — it
+     *  does not page the phone, so use it for the card that belongs where the person lives. */
+    hub?: 'omniscio'
   }): Promise<void>
   resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<void>
   onDismiss(handler: (dismissal: InboxDismissal) => void): () => void
