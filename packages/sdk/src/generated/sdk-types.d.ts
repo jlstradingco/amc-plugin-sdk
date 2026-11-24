@@ -733,6 +733,7 @@ export interface AgentMC {
   "session": {
     "create": (...args: unknown[]) => Promise<unknown>
     "delete": (...args: unknown[]) => Promise<unknown>
+    "deleteVisible": (...args: unknown[]) => Promise<unknown>
     "getCost": (...args: unknown[]) => Promise<unknown>
     "getMessages": (...args: unknown[]) => Promise<unknown>
     "getStatus": (...args: unknown[]) => Promise<unknown>
