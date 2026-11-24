@@ -836,7 +836,7 @@ export interface PluginInbox {
      *  does not page the phone, so use it for the card that belongs where the person lives. */
     hub?: 'omniscio'
   }): Promise<void>
-  resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<void>
+  resolveAlert(opts: { dedupKey: string; openPlugin?: boolean; hub?: 'omniscio' }): Promise<void>
   onDismiss(handler: (dismissal: InboxDismissal) => void): () => void
   listMine(query?: PluginMyInboxQuery): Promise<PluginMyInboxPage>
 }
