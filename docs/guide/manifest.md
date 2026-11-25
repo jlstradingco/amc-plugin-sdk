@@ -537,6 +537,7 @@ Declares the frontend entry point, sidebar appearance, and how Omniscio frames y
 | `entryPoint` | string | No | 500 | Path to the HTML file (relative to plugin root) |
 | `sidebar.title` | string | No | 50 | Label shown in Omniscio's sidebar |
 | `sidebar.icon` | string | No | 50 | [Lucide](https://lucide.dev/icons) icon name |
+| `sidebar.newItem` | boolean | No | — | `true` shows a **+** at the top of your sidebar list. Clicking it sends your panel the `createNew` command (`AgentMC.commands.onCommand`), so set it only when you handle that command. Left out, there is no **+** |
 | `overlay.entryPoint` | string | No | 500 | A separate always-on-top window Omniscio opens on enable |
 | `settingsPanel.entryPoint` | string | No | 500 | Your own settings screen, opened from a "Settings" button on your plugin's card. The `settings` fields still render |
 | `widget.entryPoint` | string | No | 500 | The 320 x 256 popover Omniscio opens when your titlebar widget is clicked. Needs `chrome` and `chrome.widget`. **Plugin-relative only**, see below |
@@ -623,6 +624,10 @@ two columns. Omniscio puts both in **one** column with the standard tab switch a
   `Show <plugin>` way back stays in view. Picking the list tab then brings your plugin back.
 
 A plugin with only a sidebar list, or only sessions, keeps a single column exactly as before.
+
+The sidebar list shows a **+** only when `ui.sidebar.newItem` is `true`. Omniscio cannot tell
+whether a panel listens for `createNew`, so the plugin has to say so: a **+** that does nothing looks
+broken. Handle it with `AgentMC.commands.onCommand((command) => { if (command === 'createNew') … })`.
 
 `contextTemplate` supports single-pass `{{placeholder}}` substitution. Available variables are
 `date`, `projectName`, `sessionName`, `workDir` and `pluginName`. A whitespace-only template is

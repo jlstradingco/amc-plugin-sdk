@@ -427,7 +427,7 @@ export interface PluginManifest {
   ui?: {
     /** Optional, matching the host — a `ui` block is useful for its side effects alone. */
     entryPoint?: string
-    sidebar?: { title: string; icon: string }
+    sidebar?: { title: string; icon: string; newItem?: boolean }
     /** A separate always-on-top window. The host opens it on enable. */
     overlay?: { entryPoint: string }
     /**

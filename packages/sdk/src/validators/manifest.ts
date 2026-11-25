@@ -309,6 +309,7 @@ const uiSchema = z.object({
     .object({
       title: z.string().min(1).max(50),
       icon: pluginIcon,
+      newItem: z.boolean().optional(),
     })
     .optional(),
   overlay: z
