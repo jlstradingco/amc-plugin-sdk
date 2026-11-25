@@ -1918,6 +1918,82 @@ export interface PluginTaskView {
   updatedAt: string
 }
 
+export interface PluginTimeTrackerClient {
+  id: string
+  name: string
+  email: string | null
+  address: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PluginTimeTrackerProject {
+  id: string
+  name: string
+  clientId: string | null
+  billable: boolean
+  hourlyRateMicroUsd: number
+  archived: boolean
+}
+
+export interface PluginTimeTrackerRate {
+  projectId: string
+  taskId?: string
+  hourlyRateMicroUsd: number
+  currency: 'USD'
+}
+
+export interface PluginTimeTrackerInvoiceLineInput {
+  description: string
+  quantity: number
+  unitPriceMinor: number
+  discountMinor?: number
+  amountMinor: number
+  taxLabel?: string | null
+  taxRateBps?: number
+  taxInclusive?: boolean
+}
+
+export interface PluginTimeTrackerInvoiceInput {
+  sourceEnvelopeId: string
+  sourceVersion: number
+  clientId: string
+  currency: string
+  taxMinor?: number
+  lines: PluginTimeTrackerInvoiceLineInput[]
+  notes?: string | null
+}
+
+export interface PluginTimeTrackerInvoiceResult {
+  invoiceId: string
+  invoiceNumber: string
+  status: 'draft' | 'sent' | 'paid'
+  currency: string | null
+  subtotalMinor: number | null
+  taxMinor: number | null
+  totalMinor: number | null
+  created: boolean
+}
+
+export interface PluginTimeTrackerFindClientInput {
+  id?: string
+  name?: string
+  email?: string
+  address?: string | null
+}
+
+export interface PluginTimeTracker {
+  listClients(): Promise<{ clients: PluginTimeTrackerClient[] }>
+  listProjects(clientId: string): Promise<{ projects: PluginTimeTrackerProject[] }>
+  listRates(clientId: string): Promise<{ rates: PluginTimeTrackerRate[] }>
+  findOrCreateClient(
+    input: PluginTimeTrackerFindClientInput
+  ): Promise<{ client: PluginTimeTrackerClient; created: boolean }>
+  createInvoiceFromLines(
+    input: PluginTimeTrackerInvoiceInput
+  ): Promise<PluginTimeTrackerInvoiceResult>
+}
+
 export interface PluginTasksQuery {
   listId?: string
   done?: boolean
@@ -2676,6 +2752,8 @@ export interface PluginContext {
   rss?: PluginRss
   boards?: PluginBoards
   tasks?: PluginTasks
+  /** Backend only. Requires `timeTracker.read`, and `timeTracker.write` for the two writes. */
+  timeTracker?: PluginTimeTracker
   sessionControl?: PluginSessionControl
   vault?: PluginVault
   people?: PluginPeople

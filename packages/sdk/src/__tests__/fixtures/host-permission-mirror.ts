@@ -1,6 +1,6 @@
 export const HOST_MIRROR_PROVENANCE = {
-  reconciledAt: '2026-11-13',
-  sourceCommit: '4325148db05c08e259151c69c97859505fa32aa8',
+  reconciledAt: '2026-11-24',
+  sourceCommit: '51f528a6eb8d3005910d254e7a2a8b71894b3669',
   sourceBranch: 'master',
   onOriginMaster: true,
 } as const
@@ -39,6 +39,8 @@ export const HOST_PERMISSIONS = [
   'inbox.read',
   'calendar.read',
   'calendar.write',
+  'timeTracker.read',
+  'timeTracker.write',
   'teamChat.read',
   'teamChat.write',
   'inbox',

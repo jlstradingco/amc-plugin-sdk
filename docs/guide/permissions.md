@@ -792,6 +792,29 @@ person turns on "Let plugins change Outlook calendars". 10 changes a minute per 
 **Elevated**: it changes the person's calendars. It **requires** [`calendar.read`](#calendarread) in
 the same manifest. See [Calendar](../api/calendar).
 
+### `timeTracker.read`
+
+**Grants access to:** `ctx.timeTracker` reads (**backend** — `listClients`, `listProjects`, `listRates`)
+
+Read the people and companies you invoice, their projects, and the hourly rates recorded against
+those projects and tasks. A rate is a suggestion for quoting work: nothing here can set a price, and
+no time entry or invoice is returned. A client record carries the person's name, email and billing
+address, so treat it as personal data.
+
+### `timeTracker.write`
+
+**Grants access to:** `ctx.timeTracker` writes (**backend** — `findOrCreateClient`, `createInvoiceFromLines`)
+
+Find an existing client or add one, and create a fixed-price invoice from the figures your plugin
+sends. The invoice is quote-sourced: it carries your plugin's own source reference, so a retry with
+the same reference returns the invoice that already exists, while a repeat with different lines or
+figures is refused. The invoice view shows which plugin created it. Amounts arrive as whole minor
+units in a real currency; the invoice number and issue date are set by the host, never by your
+plugin.
+
+**Elevated**: it creates financial records and reads a client record through a repeat. It
+**requires** [`timeTracker.read`](#timetrackerread) in the same manifest.
+
 ---
 
 ### `teamChat.read`
@@ -969,6 +992,39 @@ Add permissions to the `permissions` array in `manifest.json`:
 
 Only request the permissions your plugin actually needs. Users see the permission list during installation, and requesting unnecessary permissions may discourage adoption.
 
+### `ai.subscription`
+
+**Grants access to:** `ctx.ai` text generation billed to your own Claude plan (**backend** — `generateTextViaSubscription`)
+
+Use the person's Claude plan for text generation instead of a saved API key. Requests made this way
+count toward that plan's usage limits, exactly as if the person had made them. Nothing else on
+`ctx.ai` changes: the plugin still needs its own `ai` permission for the other calls, and the plan
+is only used when the person has one connected.
+
+### `coaching-profile`
+
+**Grants access to:** `ctx.coachingProfile.read` (**backend**)
+
+Read the parts of the person's Coaching Profile they chose to share with this plugin. It is read
+only: the profile is the person's own record and no plugin call can change it.
+
+### `live`
+
+**Grants access to:** `ctx.live` (**backend** — `open`, `set`, `write`, `undo`, `redo`, `cursor`, `close`)
+
+Join the boards the person has chosen to share live, so your plugin can see what the other people
+are doing and add its own edits to those boards. It cannot share a board or stop sharing one; the
+person decides which boards are live.
+
+### `itemFolders`
+
+**Grants access to:** the per-item folder copies the app keeps in a folder named Omniscio (or
+Omniscio and a short code) in the person's home folder
+
+Keep one folder per item holding a read-only copy of that item's files. The app writes the copy from
+its own record, so editing a file in the folder never changes the item, and the plugin never gets a
+second way to change the item's data through the folder.
+
 ## Summary Table
 
 | Permission | APIs Granted | Use Case |
@@ -986,6 +1042,12 @@ Only request the permissions your plugin actually needs. Users see the permissio
 | `vault.write` | `ctx.vault.notes` changes (**backend**) | Add, edit, rename and move notes in the Vault folders the person picked; deleting asks first (**requires `vault.read`**) — elevated |
 | `calendar.read` | `Omniscio.calendar` (**webview**); `ctx.calendar` reads (**backend**) | Read events, guests, meeting links and free or busy time on the calendars the person picked — elevated |
 | `calendar.write` | `ctx.calendar.events` changes (**backend**) | Add, edit and delete events on the picked calendars the person can change; guests and deletes ask first (**requires `calendar.read`**) — elevated |
+| `timeTracker.read` | `ctx.timeTracker` reads (**backend**) | Read the clients, projects and recorded hourly rates you invoice — elevated |
+| `timeTracker.write` | `ctx.timeTracker` writes (**backend**) | Find or add a client and create a fixed-price invoice from your figures (**requires `timeTracker.read`**) — elevated |
+| `ai.subscription` | `ctx.ai` generation on the person's Claude plan (**backend**) | Use the person's Claude plan for text generation, counting toward its usage limits |
+| `coaching-profile` | `ctx.coachingProfile.read` (**backend**) | Read the parts of the Coaching Profile the person shared — read only, elevated |
+| `live` | `ctx.live` (**backend**) | Join boards shared live and add edits to them; cannot share or stop sharing a board |
+| `itemFolders` | item-folder copies in the person's home folder | Read-only per-item copies the app writes; editing them never changes the item |
 | `teamChat.read` | `Omniscio.teamChat` (**webview**); `ctx.teamChat` reads (**backend**) | Read and search the Team Chat channels and direct messages the person picked, as the person — elevated |
 | `teamChat.write` | `ctx.teamChat` posting (**backend**) | Post in the picked conversations after the person approves each one (**requires `teamChat.read`**) — elevated |
 | `ai` | `PluginAi` | Direct AI text generation |
