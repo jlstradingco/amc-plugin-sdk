@@ -753,9 +753,22 @@ export interface PluginAuthSession {
   account: { uid: string; email: string }
 }
 
+export type WorkerTokenResult =
+  | { ok: true; token: string; expiresAt: number; uid: string }
+  | {
+      ok: false
+      reason: 'signed-out' | 'not-allowed' | 'refused' | 'unavailable'
+      retryAfterMs?: number
+    }
+
+export interface WorkerTokenOptions {
+  refresh?: boolean
+}
+
 export interface PluginAuth {
   getUser(): Promise<PluginAuthUser | null>
   getGoogleIdToken(): Promise<string | null>
+  getWorkerToken(options?: WorkerTokenOptions): Promise<WorkerTokenResult>
   isAuthenticated(): Promise<boolean>
   onAuthStateChange(handler: (user: PluginAuthUser | null) => void): () => void
   requestSignIn(): Promise<{ success: boolean }>

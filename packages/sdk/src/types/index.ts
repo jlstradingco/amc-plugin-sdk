@@ -19,7 +19,7 @@ export type {
   SessionStatus, SessionStatusInfo, SessionStatusDetail, SessionPendingAction, SessionMessage, PluginAi, PluginAiStructuredRequest, PluginEngineCatalog, PluginFs, PluginFileEncoding, PluginHttp, PluginHttpInit, PluginHttpResponse, PluginCron, PluginCli,
   PluginSidebar, PluginBackendWidget, PluginToast, PluginContext, PluginRpc, PluginHost, PluginUsage,
   PluginMemberRole, PluginLaunchKind,
-  PluginAuthUser, PluginAuthSession, PluginAuth, InboxItem, InboxDismissal, PluginMyInboxItem, PluginMyInboxQuery, PluginMyInboxPage, PluginInbox, PluginAlertAck, PluginAlertResolveAck,
+  PluginAuthUser, PluginAuthSession, PluginAuth, WorkerTokenResult, WorkerTokenOptions, InboxItem, InboxDismissal, PluginMyInboxItem, PluginMyInboxQuery, PluginMyInboxPage, PluginInbox, PluginAlertAck, PluginAlertResolveAck,
   RecordingStartResult, RecordingStopResult, Recording, PluginRecording,
   PluginEmailMessage, PluginEmailFailureReason, PluginEmailSendResult, PluginEmail,
   PluginEmailIssue, PluginEmailScheduleReason, PluginEmailSchedule, PluginEmailScheduleRefusal,

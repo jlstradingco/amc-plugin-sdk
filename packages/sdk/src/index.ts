@@ -74,6 +74,8 @@ export type {
   PluginAuthUser,
   PluginAuthSession,
   PluginAuth,
+  WorkerTokenResult,
+  WorkerTokenOptions,
   InboxItem,
   InboxDismissal,
   PluginMyInboxItem,

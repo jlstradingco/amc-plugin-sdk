@@ -25,6 +25,7 @@ import type {
   InboxDismissal,
   PluginAuthUser,
   PluginAuthSession,
+  WorkerTokenResult,
   PluginAiStructuredRequest,
   PluginDbRow,
   PluginEngineCatalog,
@@ -109,6 +110,7 @@ export interface TestContextOptions {
     user?: PluginAuthUser | null
     googleIdToken?: string | null
     session?: PluginAuthSession | null
+    workerToken?: WorkerTokenResult
   }
   // NOTE: no tts / sessionHistory / firebase seeding options. Those namespaces
   // are webview-only and are no longer on PluginContext, so an option to seed
@@ -966,6 +968,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     auth: {
       getUser: () => Promise.resolve(opts.auth?.user ?? null),
       getGoogleIdToken: () => Promise.resolve(opts.auth?.googleIdToken ?? null),
+      getWorkerToken: () => Promise.resolve(opts.auth?.workerToken ?? { ok: false, reason: 'signed-out' }),
       isAuthenticated: () => Promise.resolve(Boolean(opts.auth?.user)),
       onAuthStateChange: () => () => {},
       requestSignIn: () => Promise.resolve({ success: Boolean(opts.auth?.user) }),

@@ -696,6 +696,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     auth: {
       getUser: () => Promise.resolve(null),
       getGoogleIdToken: () => Promise.resolve(null),
+      getWorkerToken: () => Promise.resolve({ ok: false, reason: 'signed-out' }),
       isAuthenticated: () => Promise.resolve(false),
       onAuthStateChange: () => () => {},
       requestSignIn: () => Promise.resolve({ success: false }),
