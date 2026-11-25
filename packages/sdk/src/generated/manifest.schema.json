@@ -466,7 +466,8 @@
                 "required": [
                   "w",
                   "h"
-                ]
+                ],
+                "additionalProperties": false
               },
               "faces": {
                 "type": "array",
@@ -493,7 +494,8 @@
               "title",
               "kind",
               "defaultSize"
-            ]
+            ],
+            "additionalProperties": false
           },
           "minItems": 1,
           "maxItems": 8
@@ -706,7 +708,8 @@
               "name",
               "path",
               "sha256"
-            ]
+            ],
+            "additionalProperties": false
           },
           "minItems": 1,
           "maxItems": 10
@@ -789,7 +792,8 @@
         "required": [
           "host",
           "path"
-        ]
+        ],
+        "additionalProperties": false
       },
       "minItems": 1,
       "maxItems": 20
@@ -1001,7 +1005,8 @@
           "label",
           "description",
           "kind"
-        ]
+        ],
+        "additionalProperties": false
       },
       "maxItems": 64
     },
@@ -1055,7 +1060,8 @@
           "label",
           "description",
           "kind"
-        ]
+        ],
+        "additionalProperties": false
       },
       "maxItems": 128
     }
