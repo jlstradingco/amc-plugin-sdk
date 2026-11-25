@@ -339,6 +339,9 @@ export interface AgentMC {
   "commands": {
     "onCommand": (handler: (...args: unknown[]) => void) => () => void
   }
+  "confirm": {
+    "presence": (...args: unknown[]) => Promise<unknown>
+  }
   "cron": {
     "list": (...args: unknown[]) => Promise<unknown>
     "onTrigger": (handler: (...args: unknown[]) => void) => () => void
