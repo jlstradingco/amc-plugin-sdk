@@ -1333,6 +1333,29 @@ export interface BridgeBoardLinks {
   remove(opts: { linkId: string }): Promise<boolean>
 }
 
+/** What {@link BridgeConfirm.presence} asks the person to confirm. */
+export interface BridgePresenceRequest {
+  /** One line of plain text, shown verbatim in the host dialog and signed verbatim. Up to 500 characters. */
+  action: string
+  /** The thing being confirmed, such as `version:<id>`. Letters, digits and `:._-` only. */
+  subject: string
+  /** The single-use challenge the plugin's cloud issued for this decision, base64url, 16 to 128 characters. */
+  nonce: string
+}
+
+export type BridgePresenceResult =
+  | { ok: true; assertion: string; kid: string; expiresAt: number }
+  | { ok: false; reason: 'declined' | 'signed-out' | 'not-allowed' | 'no-window' | 'busy' | 'unavailable' }
+
+/**
+ * `Omniscio.confirm` - the host asks the person, in its own dialog outside the panel, to confirm an action.
+ * Webview only, first-party only, requires `auth`. On Confirm it returns a host-signed assertion (EdDSA JWS)
+ * naming the plugin, the person, the action, the subject and the nonce, valid for two minutes.
+ */
+export interface BridgeConfirm {
+  presence(request: BridgePresenceRequest): Promise<BridgePresenceResult>
+}
+
 /** A kind of clipboard content, for {@link BridgeClipboard.has}. */
 export type BridgeClipboardFormat = 'text' | 'image' | 'html' | 'rtf'
 
@@ -1926,6 +1949,8 @@ export interface Omniscio {
   teamChat: BridgeTeamChat
   /** See {@link BridgeClipboard}. */
   clipboard: BridgeClipboard
+  /** See {@link BridgeConfirm}. */
+  confirm: BridgeConfirm
   /** Requires `members.read`. See {@link BridgeMembers}. */
   members: BridgeMembers
   /** Requires `navigation`. See {@link BridgeNavigation}. */
