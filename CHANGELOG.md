@@ -11,6 +11,14 @@ which are released together.
 
 ## [Unreleased]
 
+### Changed - `ctx.inbox.postAlert` and `resolveAlert` tell you whether it worked
+
+`postAlert` now resolves `{ stored: true, created }` or `{ stored: false, reason }` instead of
+`undefined`, and `resolveAlert` resolves `{ resolved: true }` or `{ resolved: false, reason }`. Neither
+rejects for a storage failure, so code that ignored the result is unchanged. A host older than this
+change still resolves `undefined`; treat that as "cannot say". The test harness and dev shell resolve
+the stored form.
+
 ### Added — a stable account string for browser storage keys
 
 `host.accountNamespace()` returns an opaque string for the signed-in account: the same every time

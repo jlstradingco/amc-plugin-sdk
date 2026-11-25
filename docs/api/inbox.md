@@ -23,7 +23,7 @@ Replace the plugin's inbox items with the given list. Pass an empty array to cle
 
 **Returns:** `Promise<void>`
 
-### `postAlert(opts: { title: string; body: string; dedupKey?: string; openPlugin?: boolean; ownerNeedsToSee?: boolean }): Promise<void>`
+### `postAlert(opts: { title: string; body: string; dedupKey?: string; openPlugin?: boolean; ownerNeedsToSee?: boolean }): Promise<PluginAlertAck>`
 
 Raise a one-off alert, independent of the `setItems` list.
 
@@ -40,6 +40,19 @@ Pass `ownerNeedsToSee: true` to declare THIS card one the person should see now:
 | `dedupKey` | `string` | Optional. Suppresses repeats; namespaced to your plugin host-side, so it cannot collide with another plugin's |
 | `ownerNeedsToSee` | `boolean` | Optional. Also page the person's phone about this one card |
 
+**Returns:** `Promise<PluginAlertAck>`, which tells you whether the card was stored. It never rejects because storage failed.
+
+| Result | Meaning |
+|---|---|
+| `{ stored: true, created: true }` | The card is stored. |
+| `{ stored: true, created: false }` | It coalesced onto your earlier card with the same `dedupKey`. |
+| `{ stored: false, reason: 'agent-alerts-off' }` | The person has turned off agent alerts. Nothing was stored. |
+| `{ stored: false, reason: 'not-stored' }` | The host chose not to store it. |
+| `{ stored: false, reason: 'failed' }` | The host could not confirm it stored the card. Re-posting the same `dedupKey` is safe. |
+| `{ stored: false, reason: 'queued' }` | The host will retry it shortly. Re-posting the same `dedupKey` is safe. |
+
+An older host resolves `undefined`. Read that as "the host cannot say", not as a failure.
+
 ```typescript
 await ctx.inbox.postAlert({
   title: 'Scan failed',
@@ -48,11 +61,11 @@ await ctx.inbox.postAlert({
 })
 ```
 
-### `resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<void>`
+### `resolveAlert(opts: { dedupKey: string; openPlugin?: boolean }): Promise<PluginAlertResolveAck>`
 
 **Availability:** backend only (`ctx.inbox`); a panel call is refused.
 
-Withdraw the card you posted. Pass the same `dedupKey` and `openPlugin` you posted with; it withdraws only your own card, and nothing to withdraw is not an error.
+Withdraw the card you posted. Pass the same `dedupKey` and `openPlugin` you posted with; it withdraws only your own card, and nothing to withdraw is not an error. It resolves `{ resolved: true }`, or `{ resolved: false, reason: 'failed' }` when the host could not withdraw it; it never rejects for that.
 
 ```typescript
 await ctx.inbox.resolveAlert({ dedupKey: 'queue', openPlugin: true })

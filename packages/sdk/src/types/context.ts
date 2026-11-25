@@ -811,6 +811,12 @@ export interface PluginMyInboxPage {
   truncated: boolean
 }
 
+export type PluginAlertAck =
+  | { stored: true; created: boolean }
+  | { stored: false; reason: 'agent-alerts-off' | 'not-stored' | 'failed' | 'queued' }
+
+export type PluginAlertResolveAck = { resolved: true } | { resolved: false; reason: 'failed' }
+
 export interface PluginInbox {
   /** At most 500 items. Replaces this plugin's whole set. */
   setItems(items: InboxItem[]): Promise<void>
@@ -825,6 +831,11 @@ export interface PluginInbox {
    * Reserve it for the few cards that are worth an interruption — the host's push
    * ceilings, a re-page cooldown and notification silence all still apply — and cap
    * your own use, because every use spends the person's attention.
+   *
+   * Resolves `{ stored: true, created }` once the card is stored (`created: false` means it
+   * coalesced onto your earlier card with the same `dedupKey`), or `{ stored: false, reason }`
+   * when it is not. It never rejects for a storage failure. Re-posting the same `dedupKey` is
+   * always safe. An older host resolves `undefined`: that means the host cannot say, not that it failed.
    */
   postAlert(opts: {
     title: string
@@ -841,8 +852,8 @@ export interface PluginInbox {
      *  `'omniscio'` is the only value: the host owns which project that is. Filing only — it
      *  does not page the phone, so use it for the card that belongs where the person lives. */
     hub?: 'omniscio'
-  }): Promise<void>
-  resolveAlert(opts: { dedupKey: string; openPlugin?: boolean; hub?: 'omniscio' }): Promise<void>
+  }): Promise<PluginAlertAck>
+  resolveAlert(opts: { dedupKey: string; openPlugin?: boolean; hub?: 'omniscio' }): Promise<PluginAlertResolveAck>
   onDismiss(handler: (dismissal: InboxDismissal) => void): () => void
   listMine(query?: PluginMyInboxQuery): Promise<PluginMyInboxPage>
 }

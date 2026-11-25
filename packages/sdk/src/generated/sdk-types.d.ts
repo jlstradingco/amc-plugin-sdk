@@ -131,6 +131,7 @@ export interface PluginManifest {
     "sidebar"?: {
       "title": string
       "icon": string
+      "newItem"?: boolean
     }
     "overlay"?: {
       "entryPoint": string

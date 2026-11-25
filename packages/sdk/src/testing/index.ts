@@ -948,13 +948,13 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
 
     inbox: {
       setItems: (items) => { harness.inboxItems = items; return Promise.resolve() },
-      postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve() },
+      postAlert: (alertOpts) => { harness.inboxAlerts.push(alertOpts); return Promise.resolve({ stored: true, created: true }) },
       resolveAlert: ({ dedupKey, openPlugin }) => {
         harness.inboxAlerts = harness.inboxAlerts.filter(
           (alert) => alert.dedupKey !== dedupKey || Boolean(alert.openPlugin) !== Boolean(openPlugin)
         )
         harness.inboxResolved.push({ dedupKey, openPlugin })
-        return Promise.resolve()
+        return Promise.resolve({ resolved: true })
       },
       onDismiss: (handler) => {
         inboxDismissHandlers.add(handler)

@@ -80,6 +80,8 @@ export type {
   PluginMyInboxQuery,
   PluginMyInboxPage,
   PluginInbox,
+  PluginAlertAck,
+  PluginAlertResolveAck,
   RecordingStartResult,
   RecordingStopResult,
   Recording,

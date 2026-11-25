@@ -676,7 +676,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
     inbox: {
       postAlert: (alertOpts) => {
         if (shouldLog) console.log(`${prefix} [inbox] postAlert: ${alertOpts.title}`)
-        return Promise.resolve()
+        return Promise.resolve({ stored: true, created: true })
       },
       setItems: (items) => {
         if (shouldLog) console.log(`${prefix} [inbox] setItems(${items.length} items)`)
@@ -684,7 +684,7 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       },
       resolveAlert: (alertOpts) => {
         if (shouldLog) console.log(`${prefix} [inbox] resolveAlert: ${alertOpts.dedupKey}`)
-        return Promise.resolve()
+        return Promise.resolve({ resolved: true })
       },
       onDismiss: () => () => {},
       listMine: () => {
