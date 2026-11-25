@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 
 const TOKEN_PATH = path.join(os.homedir(), '.amc', 'marketplace-token')
@@ -230,6 +230,8 @@ export const SIGN_IN_TIMEOUT_MS = 15 * 60 * 1000
 
 export const SIGN_IN_POLL_INTERVAL_MS = 2 * 1000
 
+export const SIGN_IN_CONSUME_TIMEOUT_MS = 2 * 1000
+
 const SIGN_IN_DOT_INTERVAL_MS = 10 * 1000
 const SIGN_IN_REMINDER_INTERVAL_MS = 2 * 60 * 1000
 
@@ -245,14 +247,44 @@ export interface SignInOptions {
   onWait?: (tick: SignInTick) => void
 }
 
+export interface SignInHandoff {
+  verifier: string
+  sessionId: string
+}
+
+export function mintSignInHandoff(): SignInHandoff {
+  const verifier = randomBytes(32).toString('hex')
+  return { verifier, sessionId: createHash('sha256').update(verifier, 'utf8').digest('hex') }
+}
+
+function signInHeaders(handoff: SignInHandoff): Record<string, string> {
+  return {
+    'x-auth-verifier': handoff.verifier,
+    'x-auth-session': handoff.sessionId,
+    accept: 'application/json'
+  }
+}
+
+const AUTH_SESSION_URL = `${BASE_URL}/getAuthSession`
+
+async function consumeSignInSession(handoff: SignInHandoff): Promise<void> {
+  try {
+    await globalThis.fetch(AUTH_SESSION_URL, {
+      method: 'POST',
+      headers: signInHeaders(handoff),
+      signal: AbortSignal.timeout(SIGN_IN_CONSUME_TIMEOUT_MS)
+    })
+  } catch {
+  }
+}
+
 export async function waitForSignIn(
-  sessionId: string,
+  handoff: SignInHandoff,
   options: SignInOptions = {}
 ): Promise<StoredToken> {
   const timeoutMs = options.timeoutMs ?? SIGN_IN_TIMEOUT_MS
   const intervalMs = options.intervalMs ?? SIGN_IN_POLL_INTERVAL_MS
   const onWait = options.onWait ?? signInProgress()
-  const pollUrl = `${BASE_URL}/getAuthSession?session=${sessionId}`
   const startedAt = Date.now()
   const deadline = startedAt + timeoutMs
   let saveError: Error | null = null
@@ -261,7 +293,7 @@ export async function waitForSignIn(
     await sleep(Math.max(0, Math.min(intervalMs, deadline - Date.now())))
 
     try {
-      const res = await globalThis.fetch(pollUrl)
+      const res = await globalThis.fetch(AUTH_SESSION_URL, { headers: signInHeaders(handoff) })
       if (res.ok) {
         const data = await res.json() as { token?: string; refreshToken?: string; uid?: string; github?: string; expiresAt?: string }
         if (data.token) {
@@ -274,9 +306,12 @@ export async function waitForSignIn(
           }
           try {
             saveToken(storedToken)
-            return storedToken
           } catch (err) {
             saveError = err instanceof Error ? err : new Error(String(err))
+          }
+          if (saveError === null) {
+            await consumeSignInSession(handoff)
+            return storedToken
           }
         }
       }
@@ -303,8 +338,8 @@ export async function authenticate(options: SignInOptions = {}): Promise<StoredT
   const refreshed = await tryRefreshStoredToken()
   if (refreshed) return refreshed
 
-  const sessionId = randomBytes(12).toString('hex')
-  const authUrl = buildAuthUrl(sessionId)
+  const handoff = mintSignInHandoff()
+  const authUrl = buildAuthUrl(handoff.sessionId)
   const timeoutMs = options.timeoutMs ?? SIGN_IN_TIMEOUT_MS
 
   console.log('\nOpening browser for GitHub sign-in...')
@@ -317,7 +352,7 @@ export async function authenticate(options: SignInOptions = {}): Promise<StoredT
   openBrowser(authUrl)
 
   console.log('Waiting for sign-in... (press Ctrl+C to cancel)')
-  const storedToken = await waitForSignIn(sessionId, options)
+  const storedToken = await waitForSignIn(handoff, options)
   console.log(`\nSigned in as ${storedToken.github}`)
   return storedToken
 }

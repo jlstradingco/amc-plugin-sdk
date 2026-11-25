@@ -1,10 +1,10 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { execSync } from 'node:child_process'
 import { buildSync } from 'esbuild'
 import { actionableError } from './output.js'
 import { copyNonTsFiles } from './project.js'
 import { classicParseError, listHtmlFiles, resolvePageScripts } from './page-scripts.js'
+import { runTypeScript, TypeScriptNotInstalledError } from './tsc.js'
 
 const UI_SOURCE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs']
 const UI_BUNDLE_TARGET = 'es2022'
@@ -17,7 +17,7 @@ export interface UiBundle {
 export type CompileRunner = (cwd: string) => void
 
 const runTsc: CompileRunner = (cwd) => {
-  execSync('npx tsc', { cwd, stdio: 'inherit' })
+  runTypeScript(cwd, [], 'inherit')
 }
 
 function uiSourceFor(srcUi: string, distUi: string, script: string): string | null {
@@ -68,8 +68,12 @@ export function compilePlugin(cwd: string, run: CompileRunner = runTsc): UiBundl
 export function compilePluginOrExit(cwd: string): UiBundle[] {
   try {
     return compilePlugin(cwd)
-  } catch {
-    actionableError('Build failed', 'Check the errors above and fix your source files.')
+  } catch (err) {
+    if (err instanceof TypeScriptNotInstalledError) {
+      actionableError('TypeScript is not installed', err.message)
+    } else {
+      actionableError('Build failed', 'Check the errors above and fix your source files.')
+    }
     process.exit(1)
   }
 }

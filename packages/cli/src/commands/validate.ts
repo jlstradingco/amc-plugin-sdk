@@ -1,7 +1,6 @@
 import { Command } from 'commander'
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { execSync } from 'node:child_process'
 import { validateManifest, classifyPluginIcon } from '@omniscio/plugin-sdk'
 import { ok, fail, warn, manifestNotFound } from '../lib/output.js'
 import {
@@ -13,6 +12,7 @@ import {
 } from '../lib/project.js'
 import { scanBannedImports } from '../lib/banned-imports.js'
 import { reportCommandTables } from '../lib/command-tables.js'
+import { runTypeScript, TypeScriptNotInstalledError } from '../lib/tsc.js'
 
 function reportEntryPoint(
   cwd: string,
@@ -136,10 +136,10 @@ export const validateCommand = new Command('validate')
 
     if (!flat) {
       try {
-        execSync('npx tsc --noEmit', { cwd, stdio: 'pipe' })
+        runTypeScript(cwd, ['--noEmit'], 'pipe')
         ok('TypeScript compilation')
-      } catch {
-        fail('TypeScript compilation errors')
+      } catch (err) {
+        fail(err instanceof TypeScriptNotInstalledError ? `TypeScript is not installed — ${err.message}` : 'TypeScript compilation errors')
         hasErrors = true
       }
     }

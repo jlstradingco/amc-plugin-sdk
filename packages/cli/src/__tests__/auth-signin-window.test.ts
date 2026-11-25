@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { createHash } from 'node:crypto'
 
 const TMP_ROOT = os.tmpdir()
 
@@ -25,11 +26,21 @@ function freshToken(overrides: Record<string, unknown> = {}): Record<string, unk
   }
 }
 
+interface FetchCall {
+  url: string
+  init: RequestInit | undefined
+}
+
+function handoff(seed: string): { verifier: string; sessionId: string } {
+  const verifier = seed.repeat(64).slice(0, 64)
+  return { verifier, sessionId: createHash('sha256').update(verifier, 'utf8').digest('hex') }
+}
+
 function respondWith(...replies: Array<() => unknown>) {
-  const calls: string[] = []
+  const calls: FetchCall[] = []
   let index = 0
-  const fetchMock = vi.fn(async (url: string) => {
-    calls.push(String(url))
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    calls.push({ url: String(url), init })
     const reply = replies[Math.min(index, replies.length - 1)]
     index += 1
     return reply()
@@ -80,29 +91,44 @@ describe('the sign-in window', () => {
 })
 
 describe('waitForSignIn', () => {
-  it('returns the credential as soon as the browser sign-in lands', async () => {
+  it('returns the credential as soon as the browser sign-in lands, then consumes the session', async () => {
     const { calls } = respondWith(notFound, notFound, signedIn)
     const { waitForSignIn } = await import('../lib/auth.js')
+    const minted = handoff('a')
 
-    const token = await waitForSignIn('a'.repeat(24), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
+    const token = await waitForSignIn(minted, { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
 
     expect(token.token).toBe('browser-id-token')
     expect(token.github).toBe('octocat')
-    expect(calls.length).toBe(3)
-    expect(calls[0]).toContain(`session=${'a'.repeat(24)}`)
+    expect(calls.length).toBe(4)
+    expect(calls[0].url).not.toContain('session=')
+    expect((calls[0].init?.headers as Record<string, string>)['x-auth-verifier']).toBe(minted.verifier)
+    expect(calls[3].init?.method).toBe('POST')
   })
 
   it('saves the credential before returning it, so a run that dies is still signed in', async () => {
     respondWith(signedIn)
     const { waitForSignIn } = await import('../lib/auth.js')
 
-    await waitForSignIn('b'.repeat(24), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
+    await waitForSignIn(handoff('b'), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
 
     const persisted = JSON.parse(fs.readFileSync(TOKEN_PATH, 'utf-8'))
     expect(persisted.token).toBe('browser-id-token')
     if (os.platform() !== 'win32') {
       expect(fs.statSync(TOKEN_PATH).mode & 0o777).toBe(0o600)
     }
+  })
+
+  it('consumes nothing when the credential could not be saved', async () => {
+    fs.writeFileSync(TOKEN_DIR, 'not a directory', 'utf-8')
+    const { calls } = respondWith(signedIn)
+    const { waitForSignIn } = await import('../lib/auth.js')
+
+    await expect(
+      waitForSignIn(handoff('i'), { timeoutMs: 150, intervalMs: 20, onWait: () => {} })
+    ).rejects.toThrow(/could not be saved to .*marketplace-token/)
+
+    expect(calls.some((call) => call.init?.method === 'POST')).toBe(false)
   })
 
   it('keeps polling through a network error rather than ending the wait', async () => {
@@ -113,7 +139,7 @@ describe('waitForSignIn', () => {
     )
     const { waitForSignIn } = await import('../lib/auth.js')
 
-    const token = await waitForSignIn('c'.repeat(24), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
+    const token = await waitForSignIn(handoff('c'), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
     expect(token.token).toBe('browser-id-token')
   })
 
@@ -121,8 +147,8 @@ describe('waitForSignIn', () => {
     const { calls } = respondWith(notFound, notFound, notFound, signedIn)
     const { waitForSignIn } = await import('../lib/auth.js')
 
-    await waitForSignIn('d'.repeat(24), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
-    expect(calls.length).toBe(4)
+    await waitForSignIn(handoff('d'), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
+    expect(calls.filter((call) => call.url.includes('getAuthSession'))).toHaveLength(5)
   })
 
   it('fails with the window it waited, naming the way forward, when no sign-in arrives', async () => {
@@ -131,7 +157,7 @@ describe('waitForSignIn', () => {
 
     const startedAt = Date.now()
     await expect(
-      waitForSignIn('e'.repeat(24), { timeoutMs: 200, intervalMs: 20, onWait: () => {} })
+      waitForSignIn(handoff('e'), { timeoutMs: 200, intervalMs: 20, onWait: () => {} })
     ).rejects.toThrow(/not completed within .*Run the command again/)
 
     const waited = Date.now() - startedAt
@@ -145,7 +171,7 @@ describe('waitForSignIn', () => {
     const { waitForSignIn } = await import('../lib/auth.js')
 
     await expect(
-      waitForSignIn('f'.repeat(24), { timeoutMs: 120, intervalMs: 20, onWait: () => {} })
+      waitForSignIn(handoff('f'), { timeoutMs: 120, intervalMs: 20, onWait: () => {} })
     ).rejects.toThrow()
     expect(fs.existsSync(TOKEN_PATH)).toBe(false)
   })
@@ -155,7 +181,7 @@ describe('waitForSignIn', () => {
     const { waitForSignIn } = await import('../lib/auth.js')
     const ticks: Array<{ elapsedMs: number; remainingMs: number }> = []
 
-    await waitForSignIn('g'.repeat(24), {
+    await waitForSignIn(handoff('g'), {
       timeoutMs: 5_000,
       intervalMs: 10,
       onWait: (tick) => ticks.push(tick)
@@ -172,8 +198,22 @@ describe('waitForSignIn', () => {
     const { waitForSignIn } = await import('../lib/auth.js')
 
     await expect(
-      waitForSignIn('h'.repeat(24), { timeoutMs: 150, intervalMs: 20, onWait: () => {} })
+      waitForSignIn(handoff('h'), { timeoutMs: 150, intervalMs: 20, onWait: () => {} })
     ).rejects.toThrow(/could not be saved to .*marketplace-token/)
+  })
+
+  it('still signs in when the marketplace does not answer the consume', async () => {
+    const calls: FetchCall[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url: String(url), init })
+      if (init?.method === 'POST') throw new Error('ECONNRESET')
+      return signedIn()
+    }))
+    const { waitForSignIn } = await import('../lib/auth.js')
+
+    const token = await waitForSignIn(handoff('j'), { timeoutMs: 5_000, intervalMs: 10, onWait: () => {} })
+    expect(token.token).toBe('browser-id-token')
+    expect(calls.some((call) => call.init?.method === 'POST')).toBe(true)
   })
 })
 
@@ -190,7 +230,7 @@ describe('authenticate', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('opens the sign-in page for the session it then polls, without touching a real browser', async () => {
+  it('opens the sign-in page for the handoff it then polls, without touching a real browser', async () => {
     const { calls } = respondWith(signedIn)
     const openBrowser = vi.fn()
     const { authenticate } = await import('../lib/auth.js')
@@ -202,7 +242,10 @@ describe('authenticate', () => {
     const opened = new URL(openBrowser.mock.calls[0][0])
     const session = opened.searchParams.get('session')
     expect(session).toMatch(/^[A-Za-z0-9_-]{20,200}$/)
-    expect(calls[0]).toContain(`session=${session}`)
+
+    const polled = calls.find((call) => call.url.includes('getAuthSession'))
+    const verifier = (polled?.init?.headers as Record<string, string>)['x-auth-verifier']
+    expect(createHash('sha256').update(verifier, 'utf8').digest('hex')).toBe(session)
   })
 
   it('prints the link and the wait up front, which is all a headless author has', async () => {

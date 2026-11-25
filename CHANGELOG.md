@@ -19,6 +19,24 @@ rejects for a storage failure, so code that ignored the result is unchanged. A h
 change still resolves `undefined`; treat that as "cannot say". The test harness and dev shell resolve
 the stored form.
 
+### Fixed — `omniscio-plugin login` spends the marketplace sign-in code instead of leaving it live
+
+The CLI now asks for the finished sign-in with a one-time code instead of a reusable link. It mints a
+verifier and prints a link carrying only that verifier's SHA-256, so the link on its own can no longer
+collect the credential it started. It also tells the marketplace the hand-off is over the moment the
+credential is saved to `~/.amc/marketplace-token`, so the stored copy is destroyed rather than left
+collectable for the hour the server keeps it. A failed clean-up never fails a sign-in, and a failed
+save never burns the code. Signing in against a marketplace older than this release keeps working
+unchanged.
+
+### Fixed — `build`, `dev`, `package`, `install` and `validate` run your own TypeScript
+
+Those commands used to shell out to `npx tsc`, so on a checkout with no `typescript` installed `npx`
+resolved the bin name `tsc` to the unrelated public npm package of that name and ran it, with no
+prompt in CI. The compiler is now the `typescript` installed in your plugin folder, run directly by
+Node, so nothing is fetched. When it is missing the command says so and tells you to run `npm install`
+instead of printing a compile error.
+
 ### Added — a stable account string for browser storage keys
 
 `host.accountNamespace()` returns an opaque string for the signed-in account: the same every time
