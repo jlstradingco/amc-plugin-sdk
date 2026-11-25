@@ -2651,6 +2651,56 @@ export interface PluginCoachingProfile {
   read(): Promise<CoachingProfileRead>
 }
 
+/** One brand the person accepted, as a studio sees it. */
+export interface PluginBrandRef {
+  kitId: string
+  name: string
+}
+
+/** A fact the checker found in a draft, with the words that raised it. */
+export interface PluginBrandFlag {
+  id: string
+  kind: string
+  quote: string
+  start: number
+  end: number
+  title: string
+  message: string
+  fieldId?: string
+}
+
+/**
+ * The brands the person accepted, read through Omniscio's own Brand Service. A bundled studio
+ * calls this instead of keeping its own copy of the brand. Nothing here accepts a fact: `suggest`
+ * only queues a proposal for the person, and there is no accept call.
+ *
+ * Requires the `brands` permission, which only a bundled studio can hold: a marketplace plugin
+ * is answered `not granted` by the service itself.
+ */
+export interface PluginBrands {
+  list(): Promise<{ kits: PluginBrandRef[] }>
+  get(input: { kitId: string }): Promise<{ kitId: string; kit: unknown; ready: boolean }>
+  brief(input: { kitId: string; full?: boolean }): Promise<{
+    kitId: string
+    brandName: string
+    ready: boolean
+    brief: { text: string; fieldIds: string[]; capped: boolean }
+  }>
+  check(input: { kitId: string; text: string }): Promise<{
+    kitId: string
+    brandName: string
+    flags: PluginBrandFlag[]
+  }>
+  fine(input: { kitId: string; kind: string; quote: string }): Promise<{ kitId: string; remembered: boolean }>
+  link(input: { name: string }): Promise<{ kitId: string | null; name: string | null }>
+  suggest(input: {
+    kitId: string
+    fieldId: string
+    value: unknown
+    source?: string
+  }): Promise<{ kitId: string; accepted: false }>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -2777,4 +2827,9 @@ export interface PluginContext {
    * a `PluginContext` double written before the SDK typed it still compiles.
    */
   coachingProfile?: PluginCoachingProfile
+  /**
+   * Requires `brands`, and only a bundled studio is granted it. See {@link PluginBrands}.
+   * Optional so a `PluginContext` double written before the SDK typed it still compiles.
+   */
+  brands?: PluginBrands
 }

@@ -69,6 +69,7 @@ export const HOST_PERMISSIONS = [
   'auth.actAsUser',
   'ai.images',
   'coaching-profile',
+  'brands',
   'live',
   'itemFolders',
 ] as const

@@ -910,6 +910,8 @@
           "vault.read",
           "vault.write",
           "calendar.read",
+          "timeTracker.read",
+          "timeTracker.write",
           "calendar.write",
           "teamChat.read",
           "teamChat.write",
@@ -934,6 +936,7 @@
           "members.read",
           "people.read",
           "coaching-profile",
+          "brands",
           "teamChat.emoji",
           "email.send",
           "limits",
@@ -942,7 +945,7 @@
           "live"
         ]
       },
-      "maxItems": 63
+      "maxItems": 66
     },
     "mobile": {
       "type": "boolean"
@@ -1399,6 +1402,29 @@
           "permissions": {
             "contains": {
               "const": "vault.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "timeTracker.write"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "timeTracker.read"
             }
           }
         }

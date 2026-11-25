@@ -1025,6 +1025,20 @@ Keep one folder per item holding a read-only copy of that item's files. The app 
 its own record, so editing a file in the folder never changes the item, and the plugin never gets a
 second way to change the item's data through the folder.
 
+### `brands`
+
+**Grants access to:** `ctx.brands` (**backend**)
+
+Read the brands the person accepted — their name, colours, products, customers, facts and voice —
+and propose a change for the person to accept or reject. It is granted to the bundled studios only:
+a marketplace plugin is answered `not granted`, however much it declares. There is no accept call
+and no create call on this namespace, so nothing here can settle a fact on the person's behalf.
+
+::: tip A granted studio still sees only finished brands
+A brand answers a studio once the person has accepted enough for it to be usable, and only the
+fields they accepted.
+:::
+
 ## Summary Table
 
 | Permission | APIs Granted | Use Case |
@@ -1048,6 +1062,7 @@ second way to change the item's data through the folder.
 | `coaching-profile` | `ctx.coachingProfile.read` (**backend**) | Read the parts of the Coaching Profile the person shared — read only, elevated |
 | `live` | `ctx.live` (**backend**) | Join boards shared live and add edits to them; cannot share or stop sharing a board |
 | `itemFolders` | item-folder copies in the person's home folder | Read-only per-item copies the app writes; editing them never changes the item |
+| `brands` | `ctx.brands` (**backend**) | Read the brands the person accepted and propose changes for them to accept — bundled studios only, and nothing here accepts |
 | `teamChat.read` | `Omniscio.teamChat` (**webview**); `ctx.teamChat` reads (**backend**) | Read and search the Team Chat channels and direct messages the person picked, as the person — elevated |
 | `teamChat.write` | `ctx.teamChat` posting (**backend**) | Post in the picked conversations after the person approves each one (**requires `teamChat.read`**) — elevated |
 | `ai` | `PluginAi` | Direct AI text generation |

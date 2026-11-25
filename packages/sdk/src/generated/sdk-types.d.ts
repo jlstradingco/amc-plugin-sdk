@@ -38,6 +38,8 @@ export type PluginPermission =
   | "vault.read"
   | "vault.write"
   | "calendar.read"
+  | "timeTracker.read"
+  | "timeTracker.write"
   | "calendar.write"
   | "teamChat.read"
   | "teamChat.write"
@@ -62,6 +64,7 @@ export type PluginPermission =
   | "members.read"
   | "people.read"
   | "coaching-profile"
+  | "brands"
   | "teamChat.emoji"
   | "email.send"
   | "limits"
@@ -235,7 +238,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -888,6 +891,7 @@ export interface PluginContext {
     "getGoogleIdToken": (...args: unknown[]) => Promise<unknown>
     "getSession": (...args: unknown[]) => Promise<unknown>
     "getUser": (...args: unknown[]) => Promise<unknown>
+    "getWorkerToken": (...args: unknown[]) => Promise<unknown>
     "isAuthenticated": (...args: unknown[]) => Promise<unknown>
     "onAuthStateChange": (...args: unknown[]) => unknown
     "requestSignIn": (...args: unknown[]) => Promise<unknown>
@@ -900,6 +904,15 @@ export interface PluginContext {
     "listItems": (...args: unknown[]) => Promise<unknown>
     "setValue": (...args: unknown[]) => Promise<unknown>
     "updateItem": (...args: unknown[]) => Promise<unknown>
+  }
+  "brands": {
+    "brief": (...args: unknown[]) => Promise<unknown>
+    "check": (...args: unknown[]) => Promise<unknown>
+    "fine": (...args: unknown[]) => Promise<unknown>
+    "get": (...args: unknown[]) => Promise<unknown>
+    "link": (...args: unknown[]) => Promise<unknown>
+    "list": (...args: unknown[]) => Promise<unknown>
+    "suggest": (...args: unknown[]) => Promise<unknown>
   }
   "calendar": {
     "calendars": {
@@ -1130,6 +1143,13 @@ export interface PluginContext {
       "list": (...args: unknown[]) => Promise<unknown>
     }
     "unread": (...args: unknown[]) => Promise<unknown>
+  }
+  "timeTracker": {
+    "createInvoiceFromLines": (...args: unknown[]) => Promise<unknown>
+    "findOrCreateClient": (...args: unknown[]) => Promise<unknown>
+    "listClients": (...args: unknown[]) => Promise<unknown>
+    "listProjects": (...args: unknown[]) => Promise<unknown>
+    "listRates": (...args: unknown[]) => Promise<unknown>
   }
   "toast": {
     "notify": (...args: unknown[]) => Promise<unknown>

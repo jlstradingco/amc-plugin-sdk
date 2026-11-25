@@ -297,6 +297,24 @@
     ]
   },
   {
+    "name": "timeTracker.read",
+    "label": "Time Tracker",
+    "description": "Read the projects, clients and recorded rates in your Time Tracker.",
+    "tier": "elevated",
+    "namespaces": [
+      "timeTracker"
+    ]
+  },
+  {
+    "name": "timeTracker.write",
+    "label": "Create Time Tracker invoices and clients",
+    "description": "Create a fixed-price invoice from the figures this plugin sends, and find or add a client. Rates are a suggestion and never set a price.",
+    "tier": "elevated",
+    "namespaces": [
+      "timeTracker"
+    ]
+  },
+  {
     "name": "calendar.write",
     "label": "Change calendar events",
     "description": "Change events on the calendars you choose. Inviting people or deleting asks you first.",
@@ -507,6 +525,15 @@
     "tier": "elevated",
     "namespaces": [
       "coachingProfile"
+    ]
+  },
+  {
+    "name": "brands",
+    "label": "Your Brands",
+    "description": "Read the brands you accepted and propose changes for you to accept or reject. It can never accept one for you.",
+    "tier": "elevated",
+    "namespaces": [
+      "brands"
     ]
   },
   {
