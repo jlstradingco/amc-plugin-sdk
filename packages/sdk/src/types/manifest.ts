@@ -507,6 +507,12 @@ export interface PluginManifest {
      * view. Leave it out for `'full'`, which is how plugins have always opened.
      */
     presentation?: 'popup' | 'full'
+    /**
+     * Set to `true` when the screen answers the host's `media-pause` command (sent through
+     * `commands.onCommand`). The sidebar's what's-playing card then shows a Pause button while the
+     * screen is making sound; without it the card shows only the title.
+     */
+    mediaControls?: boolean
     /** Customises the session list AMC renders for this plugin's own virtual project. */
     sessions?: {
       /**

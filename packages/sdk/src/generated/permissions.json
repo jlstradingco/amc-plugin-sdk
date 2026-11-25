@@ -176,7 +176,7 @@
   {
     "name": "auth.actAsUser",
     "label": "Act As You",
-    "description": "Sign in to the services this app shares as you, for as long as that sign-in lasts, and do what you can do there: read and send messages in your Team Chat channels and direct messages, change who is in them, work in a shared spreadsheet, and see any other data in that account your permissions allow. Only allow this for a plugin you would hand your account to.",
+    "description": "Sign in to ONE shared service as you — Team Chat or the shared spreadsheet — for as long as that sign-in lasts, and only within that service: read and send messages in your Team Chat channels and direct messages, change who is in them, or work in a shared spreadsheet. Every server refuses that sign-in for anything else, so it cannot reach your other data. It is still a real sign-in to your account, so it can change your sign-in details or close the account. Only allow this for a plugin you would trust with your account.",
     "tier": "elevated",
     "namespaces": [
       "auth"
@@ -396,6 +396,15 @@
     "tier": "elevated",
     "namespaces": [
       "launch"
+    ]
+  },
+  {
+    "name": "mediaKeys",
+    "label": "Media Keys",
+    "description": "Press play, pause, next and previous for whatever music or video is playing on this computer",
+    "tier": "standard",
+    "namespaces": [
+      "media"
     ]
   },
   {

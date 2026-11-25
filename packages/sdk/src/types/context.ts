@@ -2471,6 +2471,24 @@ export interface PluginLaunch {
   open(request: PluginLaunchRequest): Promise<PluginLaunchResult>
 }
 
+/** A system media key `ctx.media.sendKey` can press. */
+export type PluginMediaKey = 'playPause' | 'next' | 'previous'
+
+/** What `ctx.media.sendKey` resolves to. A refusal is `ok: false` with a plain-language `error`, never a throw. */
+export interface PluginMediaKeyResult {
+  ok: boolean
+  error?: string
+}
+
+/**
+ * `ctx.media` - press the computer's play/pause, next and previous media keys, so whatever app is
+ * playing (a music app, a browser tab) responds. Requires the `mediaKeys` permission. Backend only;
+ * Windows only for now (other systems answer `ok: false`).
+ */
+export interface PluginMedia {
+  sendKey(key: PluginMediaKey): Promise<PluginMediaKeyResult>
+}
+
 /** What `ctx.oauth.authorize` needs to run one OAuth 2.0 sign-in with your own client credentials. */
 export interface PluginOAuthRequest {
   /** The service's authorization page address. */
@@ -2809,6 +2827,8 @@ export interface PluginContext {
   channel?: PluginChannel
   /** Backend only. Requires `launch`. See {@link PluginLaunch}. Optional for the same reason as `members`. */
   launch?: PluginLaunch
+  /** Backend only. Requires `mediaKeys`. See {@link PluginMedia}. Optional for the same reason as `members`. */
+  media?: PluginMedia
   /** Backend only. Requires `oauth`. See {@link PluginOAuth}. Optional for the same reason as `members`. */
   oauth?: PluginOAuth
   /** Requires `rss`. See {@link PluginRss}. Optional for the same reason as `members`. */

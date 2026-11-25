@@ -57,6 +57,7 @@ export const PLUGIN_PERMISSIONS = [
   "chrome",
   "chrome.widget",
   "launch",
+  "mediaKeys",
   "firebase",
   "recording",
   "spend",

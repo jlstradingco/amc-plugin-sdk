@@ -554,6 +554,9 @@
             "full"
           ]
         },
+        "mediaControls": {
+          "type": "boolean"
+        },
         "sessions": {
           "type": "object",
           "properties": {
@@ -921,6 +924,7 @@
           "chrome",
           "chrome.widget",
           "launch",
+          "mediaKeys",
           "firebase",
           "recording",
           "spend",
@@ -945,7 +949,7 @@
           "live"
         ]
       },
-      "maxItems": 66
+      "maxItems": 67
     },
     "mobile": {
       "type": "boolean"
