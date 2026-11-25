@@ -1064,13 +1064,207 @@
         "additionalProperties": false
       },
       "maxItems": 128
+    },
+    "business": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "namespace": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "requires": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 12,
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "provides": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 12,
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "requests": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)*$"
+            },
+            "minItems": 1,
+            "maxItems": 200
+          }
+        },
+        "types": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "master",
+                  "document"
+                ]
+              },
+              "version": {
+                "type": "string",
+                "maxLength": 12,
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "commitment": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "issued",
+                    "posted",
+                    "reversed",
+                    "voided"
+                  ]
+                },
+                "minItems": 2,
+                "maxItems": 5
+              }
+            },
+            "required": [
+              "kind",
+              "version"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "commands": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 120,
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "maxLength": 12,
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "risk": {
+                "type": "string",
+                "enum": [
+                  "reversible",
+                  "posting",
+                  "protected"
+                ]
+              },
+              "from": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "issued",
+                  "posted",
+                  "reversed",
+                  "voided"
+                ]
+              },
+              "to": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "issued",
+                  "posted",
+                  "reversed",
+                  "voided"
+                ]
+              },
+              "schedule": {
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "monthly"
+                ]
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "version",
+              "risk"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "events": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "maxLength": 12,
+                "pattern": "^[1-9][0-9]*$"
+              }
+            },
+            "required": [
+              "version"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema",
+        "namespace"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
     "plugin",
     "ui"
   ],
-  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.settingsSearch.route, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.id, uiAnchors.label, uiAnchors.description, uiAnchors.when, uiAnchorsExtra, uiAnchorsExtra.id, uiAnchorsExtra.label, uiAnchorsExtra.description, uiAnchorsExtra.when",
+  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.settingsSearch.route, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.id, uiAnchors.label, uiAnchors.description, uiAnchors.when, uiAnchorsExtra, uiAnchorsExtra.id, uiAnchorsExtra.label, uiAnchorsExtra.description, uiAnchorsExtra.when, business.types.*, business.commands.*",
   "allOf": [
     {
       "if": {

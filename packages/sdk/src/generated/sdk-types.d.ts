@@ -252,6 +252,29 @@ export interface PluginManifest {
     "kind": "button" | "link" | "input" | "toggle" | "tab" | "menuitem" | "row" | "region" | "composite" | "dialog" | "panel" | "display" | "select" | "form"
     "when"?: string
   }>
+  "business"?: {
+    "schema": 1
+    "namespace": string
+    "requires"?: Record<string, string>
+    "provides"?: Record<string, string>
+    "requests"?: Record<string, Array<string>>
+    "types"?: Record<string, {
+      "kind": "master" | "document"
+      "version": string
+      "commitment"?: Array<"draft" | "issued" | "posted" | "reversed" | "voided">
+    }>
+    "commands"?: Record<string, {
+      "version": string
+      "risk": "reversible" | "posting" | "protected"
+      "from"?: "draft" | "issued" | "posted" | "reversed" | "voided"
+      "to"?: "draft" | "issued" | "posted" | "reversed" | "voided"
+      "schedule"?: "daily" | "weekly" | "monthly"
+      "idempotencyKey"?: string
+    }>
+    "events"?: Record<string, {
+      "version": string
+    }>
+  }
 }
 
 export interface AgentMC {
