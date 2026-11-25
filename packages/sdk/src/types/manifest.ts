@@ -340,6 +340,36 @@ export interface PluginManifestWidget {
   faces?: WidgetFaceName[]
 }
 
+/** The states a document record moves through, fixed by the kernel. */
+export type PluginBusinessCommitmentState = 'draft' | 'issued' | 'posted' | 'reversed' | 'voided'
+
+/** How much a command is trusted: `protected` always passes the kernel's person-only seam. */
+export type PluginBusinessRiskClass = 'reversible' | 'posting' | 'protected'
+
+export type PluginBusinessSchedule = 'daily' | 'weekly' | 'monthly'
+
+/** One record type a business module declares. A `document` declares its commitment lifecycle. */
+export interface PluginBusinessType {
+  kind: 'master' | 'document'
+  version: string
+  commitment?: PluginBusinessCommitmentState[]
+}
+
+/** One named command, keyed as `<type>.<verb>` in the manifest. */
+export interface PluginBusinessCommand {
+  version: string
+  risk: PluginBusinessRiskClass
+  from?: PluginBusinessCommitmentState
+  to?: PluginBusinessCommitmentState
+  schedule?: PluginBusinessSchedule
+  idempotencyKey?: string
+}
+
+/** One event the module publishes, and the version of its payload. */
+export interface PluginBusinessEvent {
+  version: string
+}
+
 export interface PluginManifest {
   plugin: {
     id: string
@@ -598,10 +628,34 @@ export interface PluginManifest {
    * UTF-8.
    */
   uiAnchorsExtra?: PluginUiAnchor[]
+  /**
+   * What this plugin contributes to the Omniscio business suite. Declared by business
+   * modules only, whose id starts with `biz-`; every other plugin is refused a business
+   * block. A business module declares no plugin storage of its own, because its records
+   * live in the company database and change only through the kernel's commands.
+   */
+  business?: PluginBusinessManifest
   permissions?: PluginPermission[]
   cli?: {
     endpoints: PluginCliEndpoint[]
   }
+}
+
+/**
+ * The `business` block: the contracts a business module needs and provides, the record
+ * types, commands and events it declares, and the capabilities it requests. A request is
+ * not a right — an administrator grants it.
+ */
+export interface PluginBusinessManifest {
+  /** The block's own version. The kernel runs version 1. */
+  schema: 1
+  namespace: string
+  requires?: Record<string, string>
+  provides?: Record<string, string>
+  requests?: Record<string, string[]>
+  types?: Record<string, PluginBusinessType>
+  commands?: Record<string, PluginBusinessCommand>
+  events?: Record<string, PluginBusinessEvent>
 }
 
 /** Runtime state of a plugin's backend worker. */

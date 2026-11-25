@@ -303,6 +303,134 @@ const sidebarWidgetsSchema = z
 // One deliberate remaining gap, in the SDK-is-looser direction: the host
 // requires the `ui` block itself, while we keep it optional — tightening that
 // would reject the backend-only manifests this SDK has always accepted.
+const BUSINESS_CONTRACT_ID = /^[a-z][a-z0-9-]*$/
+const BUSINESS_DEFINITION_ID = /^[a-z][a-z0-9_]*$/
+const BUSINESS_VERSION = /^[1-9][0-9]*$/
+const BUSINESS_COMMAND = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/
+const BUSINESS_REQUEST_REFERENCE = /^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)*$/
+const BUSINESS_IDENTIFIER_MAX = 64
+const BUSINESS_VERSION_MAX = 12
+const BUSINESS_COMMAND_MAX = 120
+const BUSINESS_REQUESTS_PER_KIND_MAX = 200
+const BUSINESS_COMMITMENT_STATES = ['draft', 'issued', 'posted', 'reversed', 'voided'] as const
+const BUSINESS_PLUGIN_PREFIX = 'biz-'
+
+const businessVersion = z
+  .string()
+  .max(BUSINESS_VERSION_MAX)
+  .regex(BUSINESS_VERSION, 'must be a whole version number such as "1"')
+
+const businessContract = z
+  .string()
+  .max(BUSINESS_IDENTIFIER_MAX)
+  .regex(BUSINESS_CONTRACT_ID, 'must be lowercase letters, digits or hyphens, starting with a letter')
+
+const businessDefinitionKey = z
+  .string()
+  .max(BUSINESS_IDENTIFIER_MAX)
+  .regex(
+    BUSINESS_DEFINITION_ID,
+    'must be lowercase letters, digits or underscores, starting with a letter'
+  )
+
+const businessTypeSchema = z
+  .object({
+    kind: z.enum(['master', 'document']),
+    version: businessVersion,
+    commitment: z.array(z.enum(BUSINESS_COMMITMENT_STATES)).min(2).max(5).optional(),
+  })
+  .strict()
+  .superRefine((type, ctx) => {
+    if (type.kind === 'document' && type.commitment === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['commitment'],
+        message: `a document type must declare its commitment lifecycle, drawn from ${BUSINESS_COMMITMENT_STATES.join(', ')}`,
+      })
+    }
+    if (type.kind === 'master' && type.commitment !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['commitment'],
+        message: 'a master type has no commitment lifecycle: remove commitment',
+      })
+    }
+  })
+
+const businessCommandSchema = z
+  .object({
+    version: businessVersion,
+    risk: z.enum(['reversible', 'posting', 'protected']),
+    from: z.enum(BUSINESS_COMMITMENT_STATES).optional(),
+    to: z.enum(BUSINESS_COMMITMENT_STATES).optional(),
+    schedule: z.enum(['daily', 'weekly', 'monthly']).optional(),
+    idempotencyKey: z.string().min(1).max(200).optional(),
+  })
+  .strict()
+  .superRefine((command, ctx) => {
+    if ((command.from === undefined) !== (command.to === undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['to'],
+        message:
+          'a lifecycle command names both the state it leaves and the state it reaches: set from and to together, or neither',
+      })
+    }
+    if (command.from !== undefined && command.from === command.to) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['to'],
+        message: 'a lifecycle command must move the record to a different state',
+      })
+    }
+  })
+
+const businessEventSchema = z.object({ version: businessVersion }).strict()
+
+const businessSchema = z
+  .object({
+    schema: z.literal(1),
+    namespace: z
+      .string()
+      .max(BUSINESS_IDENTIFIER_MAX)
+      .regex(BUSINESS_CONTRACT_ID, 'must be lowercase letters, digits or hyphens, starting with a letter'),
+    requires: z.record(businessContract, businessVersion).optional(),
+    provides: z.record(businessContract, businessVersion).optional(),
+    requests: z
+      .record(
+        businessContract,
+        z
+          .array(
+            z
+              .string()
+              .min(1)
+              .max(200)
+              .regex(
+                BUSINESS_REQUEST_REFERENCE,
+                'must name a contract, type or field as dotted lowercase segments, such as "party.person"'
+              )
+          )
+          .min(1)
+          .max(BUSINESS_REQUESTS_PER_KIND_MAX)
+      )
+      .optional(),
+    types: z.record(businessDefinitionKey, businessTypeSchema).optional(),
+    commands: z
+      .record(
+        z
+          .string()
+          .max(BUSINESS_COMMAND_MAX)
+          .regex(
+            BUSINESS_COMMAND,
+            'must name a command as "<type>.<verb>", lowercase letters, digits and underscores'
+          ),
+        businessCommandSchema
+      )
+      .optional(),
+    events: z.record(businessDefinitionKey, businessEventSchema).optional(),
+  })
+  .strict()
+
 const uiSchema = z.object({
   entryPoint: pluginRelativeEntryPath.optional(),
   sidebar: z
@@ -795,6 +923,7 @@ export const manifestSchema = z.object({
   usageActions: usageActionsSchema.optional(),
   uiAnchors: uiAnchorsSchema.optional(),
   uiAnchorsExtra: uiAnchorsExtraSchema.optional(),
+  business: businessSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
     const primaryAnchors = manifest.uiAnchors ?? []
@@ -857,7 +986,73 @@ export const manifestSchema = z.object({
         })
       }
     }
+    if (manifest.business !== undefined) {
+      for (const message of businessBlockProblems(manifest)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['business'], message })
+      }
+    }
   })
+
+function businessBlockProblems(manifest: {
+  plugin: { id: string }
+  storage: { collections: Record<string, unknown>; kv?: unknown }
+  business?: {
+    requires?: Record<string, string>
+    provides?: Record<string, string>
+    types?: Record<string, { commitment?: readonly string[] }>
+    commands?: Record<string, { from?: string; to?: string }>
+  }
+}): string[] {
+  const business = manifest.business!
+  const problems: string[] = []
+  if (!manifest.plugin.id.startsWith(BUSINESS_PLUGIN_PREFIX) || manifest.plugin.id === BUSINESS_PLUGIN_PREFIX) {
+    problems.push(
+      `a business block belongs to a business module, so it is accepted only on a plugin whose id starts with "${BUSINESS_PLUGIN_PREFIX}" — rename the plugin to ${BUSINESS_PLUGIN_PREFIX}<id>, or remove the business block`
+    )
+  }
+  const collections = Object.keys(manifest.storage.collections)
+  if (collections.length > 0) {
+    problems.push(
+      `a business module keeps no storage of its own, because its records live in the company database and change only through core commands — remove storage.collections (declared: ${collections.join(', ')})`
+    )
+  }
+  if (manifest.storage.kv !== undefined) {
+    problems.push(
+      'a business module keeps no storage of its own, so it declares no storage.kv — records live in the company database and change only through core commands'
+    )
+  }
+  const provided = Object.keys(business.provides ?? {})
+  for (const contract of Object.keys(business.requires ?? {})) {
+    if (provided.includes(contract)) {
+      problems.push(
+        `the business block both needs and provides the contract "${contract}": a module provides the contracts it owns and needs the ones it does not`
+      )
+    }
+  }
+  for (const [name, command] of Object.entries(business.commands ?? {})) {
+    if (command.from === undefined && command.to === undefined) continue
+    const typeId = name.slice(0, name.indexOf('.'))
+    const type = business.types?.[typeId]
+    if (type === undefined) {
+      problems.push(
+        `command "${name}" moves a record between commitment states, so "${typeId}" must name one of this module's types`
+      )
+      continue
+    }
+    const states = type.commitment ?? []
+    for (const [field, state] of [
+      ['from', command.from],
+      ['to', command.to],
+    ] as const) {
+      if (state !== undefined && !states.includes(state)) {
+        problems.push(
+          `command "${name}" names ${field} "${state}", which is not a commitment state of "${typeId}" (${states.join(', ') || 'none declared'})`
+        )
+      }
+    }
+  }
+  return problems
+}
 
 export interface ManifestValidationResult {
   valid: boolean
