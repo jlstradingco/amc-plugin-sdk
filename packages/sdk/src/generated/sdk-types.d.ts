@@ -854,6 +854,11 @@ export interface AgentMC {
     "setBadge": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>
   }
+  "siteMonitor": {
+    "history": (...args: unknown[]) => Promise<unknown>
+    "list": (...args: unknown[]) => Promise<unknown>
+    "settings": (...args: unknown[]) => Promise<unknown>
+  }
   "spend": {
     "getBreakdown": (...args: unknown[]) => Promise<unknown>
   }

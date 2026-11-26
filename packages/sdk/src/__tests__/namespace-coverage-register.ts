@@ -53,5 +53,9 @@ export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
   {
     namespace: 'shotflow',
     reason: 'Reserved to the ShotFlow plugin (ownerPlugin: shotflow) — only that plugin may reach its own shot lists and images'
+  },
+  {
+    namespace: 'siteMonitor',
+    reason: 'Reserved to the Site Monitor plugin (ownerPlugin: site-monitor) — only that plugin may reach its own settings calls and account-owned reads'
   }
 ]
