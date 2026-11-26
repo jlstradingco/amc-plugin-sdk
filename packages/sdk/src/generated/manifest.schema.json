@@ -1026,10 +1026,11 @@
           "limits",
           "webassembly",
           "email.fromName",
-          "live"
+          "live",
+          "appCloner"
         ]
       },
-      "maxItems": 68
+      "maxItems": 69
     },
     "mobile": {
       "type": "boolean"

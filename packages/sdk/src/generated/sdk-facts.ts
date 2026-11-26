@@ -80,7 +80,8 @@ export const PLUGIN_PERMISSIONS = [
   "limits",
   "webassembly",
   "email.fromName",
-  "live"
+  "live",
+  "appCloner"
 ] as const
 
 export const PROCESS_INTERPRETER_DENYLIST = [

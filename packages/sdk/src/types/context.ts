@@ -2767,6 +2767,51 @@ export interface PluginCoachingProfile {
   read(): Promise<CoachingProfileRead>
 }
 
+export type AppClonerRecord = Readonly<Record<string, unknown>>
+
+export interface AppClonerStudyConfig {
+  studyId: string
+  startUrl: string
+  allowedHosts: string[]
+  binding: { workspaceId: string; routePrefix: string } | null
+  workers: number
+  loopbackTarget: boolean
+  headless: boolean
+}
+
+export interface AppClonerActionRequest {
+  worker: number
+  controlRef: string
+  expectFingerprint: string | null
+  typeText: string | null
+}
+
+export interface AppClonerStudyStatus {
+  studyId: string
+  running: boolean
+  signInOpen: boolean
+  workers: number
+  writeLockHeld: boolean
+  lastError: string | null
+}
+
+export interface PluginAppCloner {
+  openSignIn(studyId: string, url: string): Promise<{ ok: true }>
+  finishSignIn(studyId: string): Promise<{ url: string }>
+  startStudy(config: AppClonerStudyConfig): Promise<AppClonerStudyStatus>
+  stopStudy(studyId: string): Promise<AppClonerStudyStatus>
+  snapshot(studyId: string, worker: number): Promise<AppClonerRecord>
+  navigate(studyId: string, worker: number, url: string): Promise<AppClonerRecord>
+  act(studyId: string, action: AppClonerActionRequest): Promise<AppClonerRecord>
+  extractInventory(studyId: string): Promise<AppClonerRecord>
+  coverage(studyId: string, seenTemplateIds: string[], seenCalls: string[]): Promise<AppClonerRecord>
+  journal(studyId: string, sinceSeq: number): Promise<AppClonerRecord[]>
+  undo(studyId: string, journalId: string): Promise<AppClonerRecord>
+  probeErrors(studyId: string, worker: number, serverCall: string): Promise<AppClonerRecord[]>
+  status(studyId: string): Promise<AppClonerStudyStatus>
+  screenshot(studyId: string, captureId: string): Promise<{ dataUrl: string } | null>
+}
+
 /** One brand the person accepted, as a studio sees it. */
 export interface PluginBrandRef {
   kitId: string
@@ -3024,6 +3069,7 @@ export interface PluginContext {
    * a `PluginContext` double written before the SDK typed it still compiles.
    */
   coachingProfile?: PluginCoachingProfile
+  appCloner?: PluginAppCloner
   /**
    * Requires `brands`, and only a bundled studio is granted it. See {@link PluginBrands}.
    * Optional so a `PluginContext` double written before the SDK typed it still compiles.

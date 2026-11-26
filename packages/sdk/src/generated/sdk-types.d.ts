@@ -73,6 +73,7 @@ export type PluginPermission =
   | "webassembly"
   | "email.fromName"
   | "live"
+  | "appCloner"
 
 export interface PluginManifest {
   "plugin": {
@@ -252,7 +253,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -314,6 +315,22 @@ export interface AgentMC {
     "listEngines": (...args: unknown[]) => Promise<unknown>
     "openAddCredit": (...args: unknown[]) => Promise<unknown>
     "openSetup": (...args: unknown[]) => Promise<unknown>
+  }
+  "appCloner": {
+    "act": (...args: unknown[]) => Promise<unknown>
+    "coverage": (...args: unknown[]) => Promise<unknown>
+    "extractInventory": (...args: unknown[]) => Promise<unknown>
+    "finishSignIn": (...args: unknown[]) => Promise<unknown>
+    "journal": (...args: unknown[]) => Promise<unknown>
+    "navigate": (...args: unknown[]) => Promise<unknown>
+    "openSignIn": (...args: unknown[]) => Promise<unknown>
+    "probeErrors": (...args: unknown[]) => Promise<unknown>
+    "screenshot": (...args: unknown[]) => Promise<unknown>
+    "snapshot": (...args: unknown[]) => Promise<unknown>
+    "startStudy": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
+    "stopStudy": (...args: unknown[]) => Promise<unknown>
+    "undo": (...args: unknown[]) => Promise<unknown>
   }
   "assets": {
     "listFiles": (...args: unknown[]) => Promise<unknown>
@@ -926,6 +943,22 @@ export interface PluginContext {
     "generateTitle": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
+  }
+  "appCloner": {
+    "act": (...args: unknown[]) => Promise<unknown>
+    "coverage": (...args: unknown[]) => Promise<unknown>
+    "extractInventory": (...args: unknown[]) => Promise<unknown>
+    "finishSignIn": (...args: unknown[]) => Promise<unknown>
+    "journal": (...args: unknown[]) => Promise<unknown>
+    "navigate": (...args: unknown[]) => Promise<unknown>
+    "openSignIn": (...args: unknown[]) => Promise<unknown>
+    "probeErrors": (...args: unknown[]) => Promise<unknown>
+    "screenshot": (...args: unknown[]) => Promise<unknown>
+    "snapshot": (...args: unknown[]) => Promise<unknown>
+    "startStudy": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
+    "stopStudy": (...args: unknown[]) => Promise<unknown>
+    "undo": (...args: unknown[]) => Promise<unknown>
   }
   "auth": {
     "getGoogleIdToken": (...args: unknown[]) => Promise<unknown>

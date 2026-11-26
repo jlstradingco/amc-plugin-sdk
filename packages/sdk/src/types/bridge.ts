@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginLimits, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
+import type { PluginAppCloner, PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginLimits, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -1659,6 +1659,8 @@ export interface BridgeLive {
   close(liveId: string): Promise<{ unsent: number }>
 }
 
+export type BridgeAppCloner = PluginAppCloner
+
 /** How a file's bytes are spelled: `'utf8'` text (the default) or `'base64'` raw bytes. */
 export type BridgeFileEncoding = 'utf8' | 'base64'
 
@@ -1975,6 +1977,7 @@ export interface Omniscio {
   modelPicker?: BridgeModelPicker
   /** Requires `live`. See {@link BridgeLive}. */
   live: BridgeLive
+  appCloner?: BridgeAppCloner
   /** Requires `limits`. See {@link PluginLimits}. */
   limits: PluginLimits
   /** See {@link BridgeFs}. */

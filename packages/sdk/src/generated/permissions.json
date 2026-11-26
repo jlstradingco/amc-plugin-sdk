@@ -604,5 +604,14 @@
     "namespaces": [
       "live"
     ]
+  },
+  {
+    "name": "appCloner",
+    "label": "Study apps in its own browser",
+    "description": "Open websites in a separate browser of its own and study how their screens look and work. It never uses your own browser or its saved sign-ins, and it keeps a record of anything it changes on the site.",
+    "tier": "elevated",
+    "namespaces": [
+      "appCloner"
+    ]
   }
 ]

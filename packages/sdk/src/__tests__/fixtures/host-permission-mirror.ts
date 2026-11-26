@@ -71,6 +71,7 @@ export const HOST_PERMISSIONS = [
   'coaching-profile',
   'brands',
   'live',
+  'appCloner',
   'itemFolders',
   'mediaKeys',
   'print',
