@@ -11,6 +11,7 @@ import {
   SIDEBAR_WIDGETS_MAX,
   WIDGET_FACE_NAMES,
 } from '../generated/sdk-facts.js'
+import { buildFloorSchema, floorBlockProblems } from './manifest-floor.js'
 import { COMMAND_TABLE_WAIVER_MAX_CHARS, COMMAND_TABLE_WAIVER_MIN_CHARS } from './command-tables.js'
 import { classifyPluginIcon } from './plugin-icon-kind.js'
 import {
@@ -924,6 +925,7 @@ export const manifestSchema = z.object({
   workspace: z.unknown().optional(),
   linkClaims: z.array(linkClaimSchema).min(1).max(LINK_CLAIMS_MAX).optional(),
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
+  floor: buildFloorSchema(pluginRelativeEntryPath).optional(),
   usageActions: usageActionsSchema.optional(),
   uiAnchors: uiAnchorsSchema.optional(),
   uiAnchorsExtra: uiAnchorsExtraSchema.optional(),
@@ -986,6 +988,15 @@ export const manifestSchema = z.object({
         path: ['uiAnchorsExtra'],
         message: `uiAnchors and uiAnchorsExtra use ${anchorBytes} bytes of UTF-8; the limit is ${UI_ANCHORS_BYTES_MAX}`,
       })
+    }
+    if (manifest.floor !== undefined) {
+      for (const problem of floorBlockProblems(manifest.floor, manifest.backend?.entryPoint)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['floor', ...problem.path],
+          message: problem.message,
+        })
+      }
     }
     if ((manifest.permissions ?? []).includes('network.upload') !== (manifest.uploadHosts?.length ?? 0) > 0) {
       ctx.addIssue({

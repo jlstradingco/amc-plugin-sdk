@@ -261,6 +261,17 @@ export interface PluginLinkClaim {
   path: string
 }
 
+export interface PluginFloor {
+  entryPoint: string
+  rpcAllow: string[]
+  signIn: string
+  signOut: string
+  openBeforeSignIn: string[]
+  personalDetails?: string[]
+  methodLimits?: Record<string, number>
+  pictureHosts?: string[]
+}
+
 export interface PluginCliEndpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
   path: string
@@ -631,6 +642,7 @@ export interface PluginManifest {
    * refused without it. The person approves this list once, on the first upload.
    */
   uploadHosts?: string[]
+  floor?: PluginFloor
   /**
    * The feature actions this plugin counts with `usage.record(action)`: at most
    * 20 names of 1 to 40 characters from `a-z`, `0-9` and `-`. An action not in

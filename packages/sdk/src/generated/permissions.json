@@ -504,6 +504,15 @@
     "namespaces": []
   },
   {
+    "name": "print",
+    "label": "Print labels",
+    "description": "Print labels on the printers connected to this computer without a print window opening, and see which printers there are. It prints only what it sends, and no more than 30 labels a minute.",
+    "tier": "elevated",
+    "namespaces": [
+      "print"
+    ]
+  },
+  {
     "name": "documents.write",
     "label": "Create, edit and delete your documents",
     "description": "Change or permanently remove anything you have written in the app, including restoring an older version over your current one",

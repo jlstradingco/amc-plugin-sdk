@@ -805,11 +805,87 @@
       "type": "array",
       "items": {
         "type": "string",
-        "maxLength": 253,
-        "pattern": "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$"
+        "maxLength": 253
       },
       "minItems": 1,
       "maxItems": 10
+    },
+    "floor": {
+      "type": "object",
+      "properties": {
+        "entryPoint": {
+          "type": "string"
+        },
+        "rpcAllow": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^floor(?:\\.[a-z][A-Za-z0-9]*){1,4}$"
+          },
+          "minItems": 1,
+          "maxItems": 64
+        },
+        "signIn": {
+          "type": "string",
+          "maxLength": 80,
+          "pattern": "^floor(?:\\.[a-z][A-Za-z0-9]*){1,4}$"
+        },
+        "signOut": {
+          "type": "string",
+          "maxLength": 80,
+          "pattern": "^floor(?:\\.[a-z][A-Za-z0-9]*){1,4}$"
+        },
+        "openBeforeSignIn": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^floor(?:\\.[a-z][A-Za-z0-9]*){1,4}$"
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "personalDetails": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^floor(?:\\.[a-z][A-Za-z0-9]*){1,4}$"
+          },
+          "maxItems": 64
+        },
+        "methodLimits": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^floor(?:\\.[a-z][A-Za-z0-9]*){1,4}$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 299
+          }
+        },
+        "pictureHosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 253
+          },
+          "minItems": 1,
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "entryPoint",
+        "rpcAllow",
+        "signIn",
+        "signOut",
+        "openBeforeSignIn"
+      ],
+      "additionalProperties": false
     },
     "cli": {
       "type": "object",
@@ -936,6 +1012,7 @@
           "workspace.exec",
           "documents.read",
           "itemFolders",
+          "print",
           "documents.write",
           "members.read",
           "people.read",
@@ -949,7 +1026,7 @@
           "live"
         ]
       },
-      "maxItems": 67
+      "maxItems": 68
     },
     "mobile": {
       "type": "boolean"
@@ -1304,7 +1381,7 @@
     "plugin",
     "ui"
   ],
-  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.settingsSearch.route, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.id, uiAnchors.label, uiAnchors.description, uiAnchors.when, uiAnchorsExtra, uiAnchorsExtra.id, uiAnchorsExtra.label, uiAnchorsExtra.description, uiAnchorsExtra.when, business.types.*, business.commands.*",
+  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.settingsSearch.route, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, floor.entryPoint, floor.pictureHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.id, uiAnchors.label, uiAnchors.description, uiAnchors.when, uiAnchorsExtra, uiAnchorsExtra.id, uiAnchorsExtra.label, uiAnchorsExtra.description, uiAnchorsExtra.when, business.types.*, business.commands.*",
   "allOf": [
     {
       "if": {

@@ -72,6 +72,8 @@ export const HOST_PERMISSIONS = [
   'brands',
   'live',
   'itemFolders',
+  'mediaKeys',
+  'print',
 ] as const
 
 export const SDK_AHEAD_PERMISSIONS = [] as const

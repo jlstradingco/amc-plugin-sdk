@@ -980,6 +980,46 @@ as permission to spend.
 
 ---
 
+### `mediaKeys`
+
+**Grants access to:** `ctx.media.sendKey(key)` (**backend**) — press play, pause, next and previous for whatever music or video is playing on the person's computer
+
+Tier-1 standard. The person sees: *Press play, pause, next and previous for whatever music or video is playing on this computer.* It sends one media key per call and reads nothing back.
+
+---
+
+### `print`
+
+**Grants access to:** `ctx.print.listPrinters()`, `ctx.print.labelImage(job)` and `ctx.print.raw(job)`
+(**backend only**) — silent label printing on the printers connected to the person's computer
+
+Tier-1 **elevated**. The person sees: *Print labels on the printers connected to this computer without a
+print window opening, and see which printers there are. It prints only what it sends, and no more than
+30 labels a minute.* Nothing here reads the person's files or documents; the plugin hands over the label
+and the host sends it.
+
+- `ctx.print.listPrinters()` answers `{ ok: true, printers: [{ name, displayName, isDefault }] }`.
+  Pass a printer's `name` to the two calls below.
+- `ctx.print.labelImage({ printer, pngBase64, widthIn, heightIn, copies })` prints one PNG picture as one
+  page of `widthIn` by `heightIn` inches (each from 1 to 12). The picture is at most 1,000,000 bytes
+  before base64 and at most 4,000 pixels on a side; `copies` is a whole number from 1 to 20 and
+  defaults to 1.
+- `ctx.print.raw({ printer, zplBase64 })` sends a ZPL label straight to the printer's queue, for label
+  printers that take ZPL. The text must start with `^XA` and end with `^XZ` and is at most 2 MiB before
+  base64. Raw printing works on Windows only; elsewhere it answers `not-supported`.
+
+Every call answers `{ ok: true, status: 'spooled', printer, ... }` once the printer's queue accepted the
+job — **spooled is not printed**: a jammed or empty printer still shows as spooled, so show people "sent
+to the printer", never "printed". A refusal answers `{ ok: false, reason, message }` where `message` is a
+plain sentence that is safe to show a person; `reason` is one of `bad-request`, `unknown-printer`,
+`printer-list-failed`, `page-load-failed`, `rejected`, `no-answer`, `shell-failed`, `not-supported`,
+`spooler-failed`, `partial-write`, `rate-limited` or `failed`. A plugin may start 30 print jobs a minute;
+the 31st answers `rate-limited` until the minute has passed.
+
+A panel or floor page cannot call `print` — reach it through your backend with `backend.invoke`.
+
+---
+
 ## Declaring Permissions
 
 Add permissions to the `permissions` array in `manifest.json`:
@@ -1095,6 +1135,8 @@ fields they accepted.
 | `email.send` | `PluginEmail` | Send one email per call from the user's agent address, host-mediated; `ctx.email.sender()` reads which address that is, and sends nothing (backend only) |
 | `email.fromName` | `PluginEmail` (`fromName` on `send`) | Put a display name beside the agent address; cleaned, capped at 64 characters, never the app's own name; needs `email.send` (backend only) |
 | `limits` | `ctx.limits.status` / `ctx.limits.count` (**backend**); `Omniscio.limits` (**webview**) | Ask how much of your own registered daily allowance is left, by name; advisory only for anything that costs Omniscio money, which its servers count and cap |
+| `mediaKeys` | `ctx.media.sendKey` (**backend**) | Press play, pause, next and previous for whatever is playing on the person's computer |
+| `print` | `ctx.print.listPrinters` / `ctx.print.labelImage` / `ctx.print.raw` (**backend only**) | Print labels on the person's printers with no print window, at most 30 jobs a minute; answers *spooled*, which is not *printed* — elevated |
 | `inbox` | `PluginInbox.setItems()` | Contribute rows to the Omniscio inbox |
 | `inbox.read` | `ctx.inbox.listMine()` (**backend**) | See the titles of the person's open inbox items and waiting sessions, never their contents — elevated |
 | `navigation` | *(host-gated; no `ctx` API)* | Navigate Omniscio to sessions, projects, and views |

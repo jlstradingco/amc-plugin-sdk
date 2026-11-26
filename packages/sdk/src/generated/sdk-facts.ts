@@ -69,6 +69,7 @@ export const PLUGIN_PERMISSIONS = [
   "workspace.exec",
   "documents.read",
   "itemFolders",
+  "print",
   "documents.write",
   "members.read",
   "people.read",

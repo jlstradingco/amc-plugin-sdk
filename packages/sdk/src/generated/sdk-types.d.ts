@@ -61,6 +61,7 @@ export type PluginPermission =
   | "workspace.exec"
   | "documents.read"
   | "itemFolders"
+  | "print"
   | "documents.write"
   | "members.read"
   | "people.read"
@@ -227,6 +228,16 @@ export interface PluginManifest {
     "path": string
   }>
   "uploadHosts"?: Array<string>
+  "floor"?: {
+    "entryPoint": string
+    "rpcAllow": Array<string>
+    "signIn": string
+    "signOut": string
+    "openBeforeSignIn": Array<string>
+    "personalDetails"?: Array<string>
+    "methodLimits"?: Record<string, number>
+    "pictureHosts"?: Array<string>
+  }
   "cli"?: {
     "endpoints": Array<{
       "method": "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
@@ -240,7 +251,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "documents.write" | "members.read" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -1068,6 +1079,11 @@ export interface PluginContext {
   }
   "pluginId": string
   "pluginVersion": string
+  "print": {
+    "labelImage": (...args: unknown[]) => Promise<unknown>
+    "listPrinters": (...args: unknown[]) => Promise<unknown>
+    "raw": (...args: unknown[]) => Promise<unknown>
+  }
   "process": {
     "exec": (...args: unknown[]) => Promise<unknown>
     "kill": (...args: unknown[]) => Promise<unknown>
