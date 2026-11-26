@@ -502,6 +502,10 @@ export interface AgentMC {
     "resumeAfterSignIn": (...args: unknown[]) => Promise<unknown>
     "status": (...args: unknown[]) => Promise<unknown>
   }
+  "humanTestingEnvironment": {
+    "close": (...args: unknown[]) => Promise<unknown>
+    "open": (...args: unknown[]) => Promise<unknown>
+  }
   "inbox": {
     "postAlert": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>

@@ -12,6 +12,23 @@ A widget is a small live view of something your plugin knows — a count, a stat
 
 The whole authoring path, written for someone who does not code, is [Make a Widget](https://docs.omniscio.com/library/make-a-widget.html).
 
+## From zero to a widget in the sidebar
+
+One path, start to finish:
+
+1. **Scaffold it.** `omniscio-plugin create my-widget --template widget` writes a plain-JavaScript
+   plugin that already offers two sidebar widgets — a tile that shows a list or a number, and a panel
+   that shows its own page — with the permissions set.
+2. **Watch it live.** `npm install`, then `npm run dev` opens the dev shell; its **Sidebar preview**
+   draws every spec your page sends and names any field that breaks a limit.
+3. **Check it.** `npm run validate` runs the same manifest check Omniscio runs at install.
+4. **Package it.** `npm run package` writes the `.amcplugin` file.
+5. **Install it.** In Omniscio: **Settings → Plugins → Install from file**, pick the file, press Load.
+6. **Add it.** With the widget sidebar switched on, press **+** on the sidebar and pick your widget.
+   Its first declared widget also shows in the titlebar.
+
+The rest of this page explains each part.
+
 ## What a widget is
 
 You send a **description**; Omniscio draws every pixel. You choose a shape, a few short pieces of text, a tone that says what the widget *means* and an icon name. There is no way to pass markup, a colour or an image — that is what keeps a plugin from imitating the app inside the app's own chrome.
@@ -76,6 +93,28 @@ The widget sidebar is the panel beside a person's sessions. A plugin offers widg
 - A **tile** draws the data you send with `set`.
 - A **panel** shows your plugin's own panel page inside the widget, with exactly your plugin's permissions.
 - The **titlebar** draws one widget per plugin: your first declared one.
+
+### How big it starts
+
+The sidebar is six cells across, and a person can resize any widget from 1×1 to 6×6. `defaultSize`
+only sets where it starts, and its width counts in quarters of the sidebar:
+
+| `defaultSize.w` | Cells wide on the sidebar |
+|---|---|
+| 1 | 2 |
+| 2 | 3 |
+| 3 | 5 |
+| 4, 5 or 6 | 6 (the full width) |
+
+`defaultSize.h` is the height in cells; anything above 6 starts at 6. A width above 6 is refused at
+install, and `omniscio-plugin validate` refuses it too.
+
+### Tile settings
+
+Every tile's **Settings** item offers **Show the label**. A plugin widget cannot add settings of its
+own yet: every copy of a widget on the sidebar shows the same spec you send for its `widgetId`. To
+offer two looks, declare them as two `ui.widgets` entries; to let the person choose what the widget
+shows, keep that choice in your panel page and plugin storage.
 
 Target a specific widget by passing its id:
 

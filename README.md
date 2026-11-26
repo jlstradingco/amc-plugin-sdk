@@ -63,7 +63,7 @@ Standalone Electron shell loads your plugin UI in a webview with a mock `Omnisci
 
 **Five Starter Templates**
 
-`basic` (UI only), `with-backend` (UI + backend module), `full` (UI + backend + cron + CLI endpoints), `webview` (plain JS, no build step) and `widget` (a titlebar widget) — pick the right starting point.
+`basic` (UI only), `with-backend` (UI + backend module), `full` (UI + backend + cron + CLI endpoints), `webview` (plain JS, no build step) and `widget` (a sidebar tile and panel, the first also in the titlebar) — pick the right starting point.
 
 </td>
 <td>
@@ -191,7 +191,7 @@ key by key, is [the manifest reference](docs/guide/manifest.md).
 
 | Command | Description |
 |---|---|
-| `omniscio-plugin create <name>` | Scaffold a new plugin (templates: `basic`, `with-backend`, `full`, `webview`, `widget`) |
+| `omniscio-plugin create <name>` | Scaffold a new plugin (templates: `basic`, `with-backend`, `full`, `webview`, `widget` — the widget one is the start of [Build a Widget](docs/guide/widgets.md)) |
 | `omniscio-plugin build` | Compile TypeScript, copy UI assets, bundle each panel script, validate manifest, scan for banned imports |
 | `omniscio-plugin validate` | Run all validation checks without emitting output (CI-friendly) |
 | `omniscio-plugin package` | Bundle into a `.amcplugin` archive (zip or tar.gz fallback); refuses a `dist/` older than `src/`, or a `package.json`/`manifest.json` version mismatch |

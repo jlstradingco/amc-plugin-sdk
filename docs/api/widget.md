@@ -205,8 +205,17 @@ The widget sidebar is a panel of widgets the user arranges beside their sessions
 | `id` | Unique in the plugin: lowercase letters, digits and hyphens, up to 32 characters. Pass it as `widgetId` |
 | `title` | The name the picker and the widget's frame show, 1 to 60 characters |
 | `kind` | `tile` draws the data you send with `set`. `panel` shows your plugin's own panel page inside the widget |
-| `defaultSize` | The size it starts at: `w` is 1 to 6 columns, `h` is 1 to 40 rows |
+| `defaultSize` | The size it starts at. `w` is 1 to 6 and counts in quarters of the sidebar's width — 2, 3, 5 or 6 of its six cells (see below). `h` is the height in cells, 1 to 40, and anything above 6 starts at 6 |
 | `faces` | For a tile only: the shapes it may send. A panel declares none |
+
+| `defaultSize.w` | Cells wide on the six-cell sidebar |
+|---|---|
+| 1 | 2 |
+| 2 | 3 |
+| 3 | 5 |
+| 4, 5 or 6 | 6 (the full width) |
+
+The person can resize any widget from 1×1 to 6×6 afterwards. A plugin widget's tile settings offer only **Show the label**; it cannot declare settings of its own.
 
 - Declare 1 to 8 widgets. `ui.widgets` replaces the older `ui.widget`, and a manifest cannot set both.
 - The **titlebar** draws one widget per plugin: your **first declared** one (the first entry in `ui.widgets`, or the plugin itself when you declare none). Put the widget you want in the titlebar first. Every widget can go in the sidebar.
