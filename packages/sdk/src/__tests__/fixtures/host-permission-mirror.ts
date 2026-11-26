@@ -39,6 +39,7 @@ export const HOST_PERMISSIONS = [
   'inbox.read',
   'calendar.read',
   'calendar.write',
+  'storageBackup.read',
   'timeTracker.read',
   'timeTracker.write',
   'teamChat.read',

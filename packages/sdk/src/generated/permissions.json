@@ -316,6 +316,15 @@
     ]
   },
   {
+    "name": "storageBackup.read",
+    "label": "Plugin backup",
+    "description": "Backs up this plugin's data off your computer, encrypted.",
+    "tier": "elevated",
+    "namespaces": [
+      "storageBackup"
+    ]
+  },
+  {
     "name": "calendar.write",
     "label": "Change calendar events",
     "description": "Change events on the calendars you choose. Inviting people or deleting asks you first.",

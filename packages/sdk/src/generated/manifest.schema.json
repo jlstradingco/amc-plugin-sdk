@@ -994,6 +994,7 @@
           "calendar.read",
           "timeTracker.read",
           "timeTracker.write",
+          "storageBackup.read",
           "calendar.write",
           "teamChat.read",
           "teamChat.write",
@@ -1030,7 +1031,7 @@
           "appCloner"
         ]
       },
-      "maxItems": 69
+      "maxItems": 70
     },
     "mobile": {
       "type": "boolean"

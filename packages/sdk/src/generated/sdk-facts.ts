@@ -48,6 +48,7 @@ export const PLUGIN_PERMISSIONS = [
   "calendar.read",
   "timeTracker.read",
   "timeTracker.write",
+  "storageBackup.read",
   "calendar.write",
   "teamChat.read",
   "teamChat.write",

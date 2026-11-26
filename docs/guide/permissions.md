@@ -1079,6 +1079,24 @@ A brand answers a studio once the person has accepted enough for it to be usable
 fields they accepted.
 :::
 
+### `storageBackup.read`
+
+**Grants access to:** `ctx.storageBackup.backup` and `ctx.storageBackup.restore` (**backend**)
+
+Seal every key this plugin keeps in `ctx.storage` into ONE encrypted backup, and put it back later on
+another device from that backup and the person's recovery code. The backup travels through the
+person's own cross-device sync, so the call is refused until they have sync set up and a recovery
+code. A restore refuses a backup that does not authenticate — a truncated or edited one is rejected
+rather than half-applied — and it installs only the keys that backup carries.
+
+### `appCloner`
+
+**Grants access to:** a separate browser the plugin runs itself (**backend**)
+
+Open websites in a separate browser of its own and study how their screens look and work. It never
+uses the person's own browser or its saved sign-ins, and it keeps a record of anything it changes on
+the site.
+
 ## Summary Table
 
 | Permission | APIs Granted | Use Case |
@@ -1122,6 +1140,8 @@ fields they accepted.
 | `oauth` | `ctx.oauth.authorize` (**backend**) | Sign the person in to another service they choose — elevated |
 | `channel` | `ctx.channel.connect` / `send` / `close` (**backend**) | Hold a live connection to an external service — elevated |
 | `launch` | `ctx.launch.open` (**backend**) | Open a link or file, or run a program the person confirms — elevated |
+| `storageBackup.read` | `ctx.storageBackup.backup` / `restore` (**backend**) | Seal this plugin's data into one encrypted backup and restore it from one, using the person's recovery code — elevated |
+| `appCloner` | a separate browser the plugin runs itself (**backend**) | Study how a site's screens look and work without touching the person's own browser or sign-ins — elevated |
 | `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
