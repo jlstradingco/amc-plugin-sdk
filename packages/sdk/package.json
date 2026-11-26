@@ -44,6 +44,12 @@
       "import": "./dist/commands/index.js",
       "require": "./dist/cjs/commands/index.js",
       "default": "./dist/commands/index.js"
+    },
+    "./keyboard": {
+      "types": "./dist/keyboard.d.ts",
+      "import": "./dist/keyboard.js",
+      "require": "./dist/cjs/keyboard.js",
+      "default": "./dist/keyboard.js"
     }
   },
   "files": [

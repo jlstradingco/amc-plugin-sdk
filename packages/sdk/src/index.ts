@@ -279,6 +279,9 @@ export type {
   PluginActivate,
 } from './types/index.js'
 
+export { onKey, isEditableTarget, isComposingKey } from './keyboard.js'
+export type { KeyEventType, KeyListenerOptions, KeyListenerTarget } from './keyboard.js'
+
 // Validators (runtime value exports)
 export { manifestSchema, validateManifest, PLUGIN_PERMISSIONS } from './validators/manifest.js'
 export type { ManifestValidationResult } from './validators/manifest.js'

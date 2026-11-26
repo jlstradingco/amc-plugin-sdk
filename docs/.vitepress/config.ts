@@ -60,6 +60,7 @@ export default defineConfig({
             { text: 'Manifest', link: '/guide/manifest' },
             { text: 'Permissions', link: '/guide/permissions' },
             { text: 'Theming', link: '/guide/theming' },
+            { text: 'Keyboard', link: '/guide/keyboard' },
             { text: 'Panel Commands', link: '/guide/commands' },
             { text: 'Dev Shell', link: '/guide/dev-shell' },
             { text: 'Publishing', link: '/guide/publishing' },

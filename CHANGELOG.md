@@ -11,6 +11,22 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — `@omniscio/plugin-sdk/keyboard`, the one way a panel hears a keystroke
+
+A panel runs in its own document, so Omniscio's keyboard handling never reaches it and a panel that
+wanted a shortcut had to hand-roll a listener. The SDK now publishes the primitive:
+
+- `onKey(handler, options?)` installs one `keydown` (or `keyup`) listener on a window, document or
+  element and returns the function that removes it. Options: `target`, `eventType`, `capture`,
+  `enabled`. The entry has no dependencies, so a panel that imports it pulls nothing else.
+- `isEditableTarget(target)` answers whether the keystroke belongs to a text control, using the same
+  rule Omniscio's own interface uses.
+- `isComposingKey(event)` answers whether an input method owns the keystroke, so a chord shared with
+  a CJK input never fires your action.
+
+The three are also re-exported from the package root. The guide's Keyboard page covers usage and the
+migration from a hand-rolled listener.
+
 ### Added — the backend `ctx.ai` completions, `limits` and `live`, and three manifest keys
 
 The published types now match what Omniscio accepts:
