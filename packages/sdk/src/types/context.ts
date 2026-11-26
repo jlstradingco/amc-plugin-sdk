@@ -218,7 +218,7 @@ export interface PluginHost {
 }
 
 export interface PluginUsage {
-  record(action: string): Promise<void>
+  record(action: string, count?: number): Promise<void>
 }
 
 export type PluginMemberRole = 'owner' | 'admin' | 'member' | 'guest'
