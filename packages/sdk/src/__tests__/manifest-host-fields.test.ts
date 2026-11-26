@@ -395,3 +395,78 @@ describe('boards.link needs boards.read (host superRefine)', () => {
     expect(validateManifest({ ...baseManifest, permissions: ['workspace.read', 'boards.link'] }).valid).toBe(false)
   })
 })
+
+describe('storage.collections.*.cliAccess (host: none, read or read-write, optional)', () => {
+  const withAccess = (cliAccess: unknown) => ({
+    ...baseManifest,
+    storage: { collections: { notes: { columns: { title: 'text' }, cliAccess } } },
+  })
+
+  it.each(['none', 'read', 'read-write'] as const)('accepts and keeps %s', (cliAccess) => {
+    const result = validateManifest(withAccess(cliAccess))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.storage.collections.notes?.cliAccess).toBe(cliAccess)
+  })
+
+  it.each(['readonly', 'write', 'NONE', '', true])('refuses %j rather than reading it as absent', (cliAccess) => {
+    expect(errorsOf(withAccess(cliAccess))).toMatch(/^storage\.collections\.notes\.cliAccess: /m)
+  })
+
+  it('is a published type field', () => {
+    const collection = { columns: { title: 'text' }, cliAccess: 'none' } satisfies PluginManifest['storage']['collections'][string]
+    expect(collection.cliAccess).toBe('none')
+  })
+})
+
+describe('ui.nativePanel (host: the first-party panel ids, the plugin own id, never beside entryPoint)', () => {
+  const nativeManifest = (id: string, ui: Record<string, unknown>) => ({ ...withPlugin({ id }), ui })
+
+  it('accepts workspace-hub for the plugin named workspace-hub and keeps it', () => {
+    const result = validateManifest(nativeManifest('workspace-hub', { nativePanel: 'workspace-hub' }))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.nativePanel).toBe('workspace-hub')
+  })
+
+  it('refuses a panel id the app does not ship', () => {
+    expect(errorsOf(nativeManifest('my-plugin', { nativePanel: 'my-plugin' }))).toMatch(/^ui\.nativePanel: /m)
+  })
+
+  it("refuses a panel that is not this plugin's own id, with the host message", () => {
+    expect(errorsOf(nativeManifest('my-plugin', { nativePanel: 'workspace-hub' }))).toContain(
+      "ui.nativePanel: ui.nativePanel must name this plugin's own id"
+    )
+  })
+
+  it('refuses nativePanel beside entryPoint, with the host message', () => {
+    expect(errorsOf(nativeManifest('workspace-hub', { nativePanel: 'workspace-hub', entryPoint: 'index.html' }))).toContain(
+      'ui.nativePanel: ui.nativePanel and ui.entryPoint cannot both be set: a plugin draws one main panel'
+    )
+  })
+
+  it('is a published type field', () => {
+    const ui = { nativePanel: 'workspace-hub' } satisfies NonNullable<PluginManifest['ui']>
+    expect(ui.nativePanel).toBe('workspace-hub')
+  })
+})
+
+describe('process.pinnedPrograms[].source (host: marketplace, optional)', () => {
+  const sha256 = 'a'.repeat(64)
+  const marketplaceProgram = { name: 'ffmpeg', path: 'ffmpeg.exe', sha256, source: 'marketplace' } as const
+
+  it('keeps source on a valid marketplace program', () => {
+    const result = validateManifest({ ...baseManifest, process: { pinnedPrograms: [marketplaceProgram] } })
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.process?.pinnedPrograms?.[0]?.source).toBe('marketplace')
+  })
+
+  it('refuses any other source', () => {
+    expect(
+      errorsOf({ ...baseManifest, process: { pinnedPrograms: [{ ...marketplaceProgram, source: 'plugin' }] } })
+    ).toMatch(/^process\.pinnedPrograms\.0\.source: /m)
+  })
+
+  it('is a published type field', () => {
+    const process = { pinnedPrograms: [marketplaceProgram] } satisfies NonNullable<PluginManifest['process']>
+    expect(process.pinnedPrograms[0]?.source).toBe('marketplace')
+  })
+})

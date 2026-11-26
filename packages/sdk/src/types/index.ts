@@ -39,6 +39,7 @@ export type {
   // Core read (`coreRead`)
   CoreSession, CoreProject, CoreMessage, PluginCore,
   PluginMember, PluginMembers,
+  PluginLimits, PluginLimitAnswer, PluginLimitCount, PluginLimitFields, PluginLimitPolicyIdentity, PluginLimitRefusal, PluginLimitUnit, PluginLimitCountedAt,
   PluginWriteCode, PluginWriteResult,
   PluginGrantedBoard, PluginBoardGroup, PluginBoardColumn, PluginBoardView, PluginBoardItem,
   PluginBoardItemsPage, PluginBoardItemsQuery, PluginBoardItemInput, PluginBoardItemPatch,

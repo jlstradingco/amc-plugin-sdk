@@ -1,6 +1,6 @@
 export const HOST_MIRROR_PROVENANCE = {
-  reconciledAt: '2026-11-24',
-  sourceCommit: '51f528a6eb8d3005910d254e7a2a8b71894b3669',
+  reconciledAt: '2026-11-25',
+  sourceCommit: '717eec1cd08b3308e54cace80eafea839f73be33',
   sourceBranch: 'master',
   onOriginMaster: true,
 } as const
@@ -76,7 +76,7 @@ export const HOST_PERMISSIONS = [
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 
-export const HOST_AHEAD_PERMISSIONS = ['live', 'itemFolders'] as const
+export const HOST_AHEAD_PERMISSIONS = [] as const
 
 export const BRIDGE_PENDING_PERMISSIONS = [] as const
 

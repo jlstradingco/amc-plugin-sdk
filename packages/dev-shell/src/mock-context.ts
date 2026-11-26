@@ -606,6 +606,25 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [ai] generateStructured(${opts.tool.name})`)
         return Promise.resolve(mockToolInput(opts.tool.inputSchema))
       },
+      availability: () =>
+        Promise.resolve({
+          route: 'api-key',
+          model: 'dev-shell',
+          pricing: { inUsdPerMTok: 0, outUsdPerMTok: 0 },
+          billed: true,
+          limits: { maxConcurrent: 1, maxRowsPerRun: null }
+        }),
+      completeText: (request) =>
+        Promise.resolve({
+          ok: true,
+          text: `[AI mock] Response to: ${request.prompt.slice(0, 100)}`,
+          route: request.expectRoute ?? 'api-key',
+          model: 'dev-shell',
+          inTokens: 0,
+          outTokens: 0,
+          tokensEstimated: true,
+          truncated: false
+        }),
     },
 
     fs: fsRoot ? realFs : memFs,

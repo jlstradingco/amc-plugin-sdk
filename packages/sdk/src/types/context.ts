@@ -1,4 +1,11 @@
-import type { WidgetSelector, WidgetSpec } from './bridge.js'
+import type {
+  BridgeAiAvailability,
+  BridgeLive,
+  BridgeTextCompletionRequest,
+  BridgeTextCompletionResult,
+  WidgetSelector,
+  WidgetSpec,
+} from './bridge.js'
 
 /**
  * Options for `ctx.db.query` (also published as `PluginDbQueryOptions`).
@@ -613,6 +620,28 @@ export interface PluginAi {
    * webviews and worker backends alike.
    */
   generateStructured(opts: PluginAiStructuredRequest): Promise<unknown>
+  /**
+   * Which route a {@link completeText} would take RIGHT NOW: the person's API
+   * key, their Claude subscription, or none — with the host-chosen model, its
+   * list price and the route's limits.
+   *
+   * Never throws for "not configured": that is `route: 'none'`. Call it before
+   * offering a completion, so the person is never shown an action that cannot
+   * run.
+   */
+  availability(): Promise<BridgeAiAvailability>
+  /**
+   * One text completion, on the person's API key when there is one, else their
+   * Claude subscription (only if the manifest declares `ai.subscription`).
+   *
+   * The HOST chooses the model — never pass one; an unknown field is refused.
+   * `expectRoute` is the route you showed the person and budgeted for: if the
+   * host would now answer on a different route the call is refused
+   * `route-changed` instead of running.
+   *
+   * A model-side failure is RETURNED as `{ ok: false, kind }`, not thrown.
+   */
+  completeText(request: BridgeTextCompletionRequest): Promise<BridgeTextCompletionResult>
 }
 
 /**
@@ -2719,6 +2748,83 @@ export interface PluginBrands {
   }): Promise<{ kitId: string; accepted: false }>
 }
 
+/** The unit a plugin limit is counted in. */
+export type PluginLimitUnit = 'count' | 'bytes' | 'seconds' | 'minutes' | 'days'
+
+/** Which part of Omniscio counts a use of the limit. */
+export type PluginLimitCountedAt = 'desktop' | 'gateway' | 'functions'
+
+/** Why a limit name was refused: it belongs to another plugin, or to the app itself. */
+export type PluginLimitRefusal = 'not-your-limit' | 'unknown-limit'
+
+/** Which version of the limits table an answer was read from. */
+export interface PluginLimitPolicyIdentity {
+  registryVersion: string
+  compiledDigest: string
+  epoch: number
+  revision: number
+}
+
+/** The figures behind a limit Omniscio knows for this plugin. */
+export interface PluginLimitFields {
+  name: string
+  /** The cap for this account's plan, or `null` when the plan has none. */
+  limit: number | null
+  /** Always `null` for now: the desktop keeps no running total for a company-paid limit. */
+  used: number | null
+  remaining: number | null
+  unit: PluginLimitUnit
+  period: 'day' | 'month'
+  /** Whether Omniscio enforces the limit at all. */
+  enforced: boolean
+  allowed: boolean
+  /** `false` for company-paid work: a server counts and enforces it, whatever this answer says. */
+  authoritative: boolean
+  countedAt: PluginLimitCountedAt
+  policyIdentity: PluginLimitPolicyIdentity | null
+}
+
+/** What {@link PluginLimits.status} answers. Never thrown: a refusal is a value. */
+export type PluginLimitAnswer =
+  | ({ kind: 'limit' } & PluginLimitFields)
+  | { kind: 'unknown'; name: string; allowed: true; metered: false; reported: true }
+  | { kind: 'refused'; name: string; reason: PluginLimitRefusal }
+
+/** What {@link PluginLimits.count} answers. `counted` is always `false`: a server counts the use. */
+export type PluginLimitCount =
+  | ({ kind: 'limit'; counted: false; countedBy: PluginLimitCountedAt } & PluginLimitFields)
+  | {
+      kind: 'unknown'
+      name: string
+      allowed: true
+      metered: false
+      reported: true
+      counted: false
+      countedBy: null
+    }
+  | { kind: 'refused'; name: string; reason: PluginLimitRefusal; counted: false; countedBy: null }
+
+/**
+ * `ctx.limits` and `Omniscio.limits` — ask Omniscio about a limit it registered for
+ * your plugin. Requires the `limits` permission.
+ *
+ * You pass a NAME (lowercase letters, digits and underscores, 1 to 64 characters), never a
+ * figure: Omniscio reads the row for the signed-in plan itself. Today the one name is
+ * `plugin_emails_sent`, the daily cap on a plugin's sends, and it answers only a plugin that
+ * also holds `email.send`. A name that belongs to another plugin or to the app is refused. A
+ * name Omniscio has never heard of is answered as allowed and unmetered, so a plugin built for
+ * a newer Omniscio keeps working.
+ *
+ * The answer is ADVISORY for anything that costs the company money: the server that spends
+ * counts it and has the final say, so treat a refusal from the server as the truth.
+ */
+export interface PluginLimits {
+  /** Read the limit without counting a use. */
+  status(name: string): Promise<PluginLimitAnswer>
+  /** Ask the same question for a use you are about to make. Omniscio moves no counter here. */
+  count(name: string): Promise<PluginLimitCount>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -2852,4 +2958,8 @@ export interface PluginContext {
    * Optional so a `PluginContext` double written before the SDK typed it still compiles.
    */
   brands?: PluginBrands
+  /** Requires `limits`. See {@link PluginLimits}. Optional for the same reason as `members`. */
+  limits?: PluginLimits
+  /** Requires `live`. Backend twin of `Omniscio.live` — see {@link BridgeLive}. Optional for the same reason as `members`. */
+  live?: BridgeLive
 }

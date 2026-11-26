@@ -51,6 +51,11 @@ import type {
   PluginChannelEvent
 } from '../types/index.js'
 import type {
+  BridgeAiAvailability,
+  BridgeTextCompletionRequest,
+  BridgeTextCompletionResult
+} from '../types/bridge.js'
+import type {
   PluginPullRequestLink,
   PluginPullRequestState,
   PluginSessionLinkPullRequestInput,
@@ -104,6 +109,10 @@ export interface TestContextOptions {
      * fields should supply its own shape here.
      */
     generateStructured?: (opts: PluginAiStructuredRequest) => Promise<unknown> | unknown
+    /** Defaults to the API-key route with a zero price, so a plugin that checks first goes on to ask. */
+    availability?: () => Promise<BridgeAiAvailability> | BridgeAiAvailability
+    /** Without an override the harness answers `ok: true` with an echo of the prompt. */
+    completeText?: (request: BridgeTextCompletionRequest) => Promise<BridgeTextCompletionResult> | BridgeTextCompletionResult
   }
   /** Seed an authenticated user / session. */
   auth?: {
@@ -875,6 +884,33 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       generateStructured: (structuredOpts) =>
         Promise.resolve(
           opts.ai?.generateStructured ? opts.ai.generateStructured(structuredOpts) : {}
+        ),
+      availability: () =>
+        Promise.resolve(
+          opts.ai?.availability
+            ? opts.ai.availability()
+            : {
+                route: 'api-key',
+                model: 'test-model',
+                pricing: { inUsdPerMTok: 0, outUsdPerMTok: 0 },
+                billed: true,
+                limits: { maxConcurrent: 1, maxRowsPerRun: null }
+              }
+        ),
+      completeText: (request) =>
+        Promise.resolve(
+          opts.ai?.completeText
+            ? opts.ai.completeText(request)
+            : {
+                ok: true,
+                text: `[test-ai] ${request.prompt.slice(0, 100)}`,
+                route: request.expectRoute ?? 'api-key',
+                model: 'test-model',
+                inTokens: 0,
+                outTokens: 0,
+                tokensEstimated: true,
+                truncated: false
+              }
         )
     },
 

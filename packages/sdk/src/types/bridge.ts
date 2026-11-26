@@ -1,4 +1,4 @@
-import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
+import type { PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginLimits, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -111,28 +111,6 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
    * only. Resolves with no value; at most once a second, so a burst is harmless.
    */
   openAddCredit(): Promise<void>
-  /**
-   * Which route a {@link completeText} would take RIGHT NOW: the person's API
-   * key, their Claude subscription, or none — with the host-chosen model, its
-   * list price and the route's limits.
-   *
-   * Never throws for "not configured": that is `route: 'none'`. Call it before
-   * offering a completion, so the person is never shown an action that cannot
-   * run.
-   */
-  availability(): Promise<BridgeAiAvailability>
-  /**
-   * One text completion, on the person's API key when there is one, else their
-   * Claude subscription (only if the manifest declares `ai.subscription`).
-   *
-   * The HOST chooses the model — never pass one; an unknown field is refused.
-   * `expectRoute` is the route you showed the person and budgeted for: if the
-   * host would now answer on a different route the call is refused
-   * `route-changed` instead of running.
-   *
-   * A model-side failure is RETURNED as `{ ok: false, kind }`, not thrown.
-   */
-  completeText(request: BridgeTextCompletionRequest): Promise<BridgeTextCompletionResult>
   /**
    * Open Settings → Accounts at the AI provider setup, so the person can add a
    * credential. Resolves with no value; rate-limited, so a burst is harmless.
@@ -1969,6 +1947,8 @@ export interface Omniscio {
   modelPicker?: BridgeModelPicker
   /** Requires `live`. See {@link BridgeLive}. */
   live: BridgeLive
+  /** Requires `limits`. See {@link PluginLimits}. */
+  limits: PluginLimits
   /** See {@link BridgeFs}. */
   fs: BridgeFs
   /** Requires `secrets`. See {@link BridgeSecrets}. */

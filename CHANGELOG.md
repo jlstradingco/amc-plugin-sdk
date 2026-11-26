@@ -11,6 +11,21 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — the backend `ctx.ai` completions, `limits` and `live`, and three manifest keys
+
+The published types now match what Omniscio accepts:
+
+- `ctx.ai.availability()` and `ctx.ai.completeText()` are typed on the backend, the same two
+  methods `Omniscio.ai` already had.
+- `ctx.limits` and `Omniscio.limits` (permission `limits`) answer `status(name)` and `count(name)`
+  for a limit Omniscio registered for your plugin. `ctx.live` (permission `live`) is the backend
+  twin of `Omniscio.live`.
+- The manifest accepts `storage.collections.<name>.cliAccess` (`'none'`, `'read'` or
+  `'read-write'`) and `ui.nativePanel`, and `process.pinnedPrograms[].source` is typed.
+  `ui.nativePanel` is for plugins that ship with the app, so an outside author leaves it out.
+- `itemFolders`, `live` and `brands` are no longer treated as permissions the SDK does not know, and
+  the host-union pin moves to 66 with them.
+
 ### Changed - `ctx.inbox.postAlert` and `resolveAlert` tell you whether it worked
 
 `postAlert` now resolves `{ stored: true, created }` or `{ stored: false, reason }` instead of

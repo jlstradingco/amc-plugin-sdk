@@ -218,6 +218,7 @@ const collectionSchema = z
     // real CREATE UNIQUE INDEX per tuple, and `collectionUpsert`'s atomicity
     // depends on the tuple existing (plugin-storage.ts:511-513, :528-538).
     uniqueIndexes: z.array(z.array(sqlIdent()).min(1)).optional(),
+    cliAccess: z.enum(['none', 'read', 'read-write']).optional(),
     cliReadOnlyColumns: z.array(sqlIdent()).max(64).optional(),
     // Host `z.boolean().optional()` (plugin-manifest-validator.ts, storage.collections):
     // opts the table IN to control-server writes. See PluginCollectionSchema.agentWritable.
@@ -258,6 +259,7 @@ const collectionSchema = z
 // Mirrors the host's op enum exactly (plugin-manifest-validator.ts:199).
 // `ui.windows` bounds, from the host's shared/types/plugins.ts (PLUGIN_WINDOWS_MAX,
 // PLUGIN_WINDOW_KEY_MAX) and its validator's window schema.
+const NATIVE_PANEL_IDS = ['workspace-hub'] as const
 const PLUGIN_WINDOWS_MAX = 4
 const PLUGIN_WINDOW_KEY_MAX = 40
 const PLUGIN_WINDOW_TITLE_MAX = 120
@@ -491,6 +493,7 @@ const uiSchema = z.object({
   // and SILENTLY LOST this one, un-full-widthing the plugin at package time
   // while a dev-loaded build looked right.
   hideSessionsPane: z.boolean().optional(),
+  nativePanel: z.enum(NATIVE_PANEL_IDS).optional(),
   presentation: z.enum(['popup', 'full']).optional(),
   sessions: z
     .object({
@@ -927,6 +930,21 @@ export const manifestSchema = z.object({
   business: businessSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
+    const nativePanel = manifest.ui?.nativePanel
+    if (nativePanel !== undefined && nativePanel !== manifest.plugin.id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ui', 'nativePanel'],
+        message: "ui.nativePanel must name this plugin's own id",
+      })
+    }
+    if (nativePanel !== undefined && manifest.ui?.entryPoint !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['ui', 'nativePanel'],
+        message: 'ui.nativePanel and ui.entryPoint cannot both be set: a plugin draws one main panel',
+      })
+    }
     const primaryAnchors = manifest.uiAnchors ?? []
     const extraAnchors = manifest.uiAnchorsExtra ?? []
     for (const [field, list] of [

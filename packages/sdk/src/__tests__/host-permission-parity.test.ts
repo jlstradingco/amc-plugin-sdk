@@ -44,6 +44,7 @@ describe('SDK <-> host permission parity', () => {
     sessions: { surface: CTX, key: 'sessions' },
     'sessions.readHistory': { surface: BRIDGE, key: 'sessionHistory' },
     ai: { surface: CTX, key: 'ai' },
+    'ai.subscription': { surface: CTX, key: 'ai' },
     'ai.images': { surface: BRIDGE, key: 'ai' },
     tts: { surface: BRIDGE, key: 'tts' },
     stt: { surface: BRIDGE, key: 'stt' },
@@ -90,6 +91,7 @@ describe('SDK <-> host permission parity', () => {
     'tasks.write': null,
     'sessions.control': null,
     'coaching-profile': null,
+    brands: { surface: CTX, key: 'brands' },
     'vault.read': null,
     'vault.write': null,
     'people.read': null,
@@ -101,6 +103,8 @@ describe('SDK <-> host permission parity', () => {
     'teamChat.write': null,
     webassembly: null,
     itemFolders: null,
+    limits: { surface: BRIDGE, key: 'limits' },
+    live: { surface: BRIDGE, key: 'live' },
   }
 
   const sdk = new Set<string>(PLUGIN_PERMISSIONS)
@@ -172,7 +176,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(65)
+    expect(HOST_PERMISSIONS.length).toBe(66)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

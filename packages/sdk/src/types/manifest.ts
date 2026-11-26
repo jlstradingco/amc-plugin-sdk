@@ -42,6 +42,14 @@ export interface PluginCollectionSchema {
    */
   cliReadOnlyColumns?: string[]
   /**
+   * How far the control-server `/plugins/:id/db/:collection` routes reach into this table:
+   * `'none'` refuses every route, `'read'` allows reads only, `'read-write'` allows both. Absent
+   * means `'read-write'`, which is how every manifest shipped before this key behaves, so a
+   * table the control server must never touch has to say `'none'` out loud. A misspelling is
+   * refused rather than read as absent. `agentWritable` and `agentReadable` still narrow it.
+   */
+  cliAccess?: 'none' | 'read' | 'read-write'
+  /**
    * Opt this table IN to writes from Omniscio's local control server — the
    * `POST` / `PATCH` / `DELETE /plugins/:id/db/:collection` routes every AI agent
    * session on the computer can reach. Absent or `false` (the default), the host
@@ -502,6 +510,13 @@ export interface PluginManifest {
      */
     hideSessionsPane?: boolean
     /**
+     * Draw this plugin's main panel with a panel that ships inside the app instead of an
+     * `entryPoint` page. Only a plugin that ships with the app may use it, and only for its own
+     * id: today `'workspace-hub'` is the one value, so an outside author leaves it out. It cannot
+     * be combined with `entryPoint`.
+     */
+    nativePanel?: 'workspace-hub'
+    /**
      * How the plugin opens. `'popup'` floats it over the current screen in a small
      * surface and lets users pin it to the top bar; `'full'` takes over the main
      * view. Leave it out for `'full'`, which is how plugins have always opened.
@@ -557,6 +572,11 @@ export interface PluginManifest {
       sha256: string
       folder?: 'data' | 'install'
       platform?: 'win32' | 'darwin' | 'linux'
+      /**
+       * `'marketplace'` marks a program the marketplace installs outside the plugin folder. Its
+       * `path` is then a bare file name, and `folder` must be left out.
+       */
+      source?: 'marketplace'
     }[]
   }
   /**
