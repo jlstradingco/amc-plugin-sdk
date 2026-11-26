@@ -490,6 +490,14 @@ export interface AgentMC {
     "fetch": (...args: unknown[]) => Promise<unknown>
     "uploadFile": (...args: unknown[]) => Promise<unknown>
   }
+  "humanTestingCapture": {
+    "abandon": (...args: unknown[]) => Promise<unknown>
+    "begin": (...args: unknown[]) => Promise<unknown>
+    "finish": (...args: unknown[]) => Promise<unknown>
+    "pauseForReveal": (...args: unknown[]) => Promise<unknown>
+    "resumeAfterSignIn": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
+  }
   "inbox": {
     "postAlert": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>
