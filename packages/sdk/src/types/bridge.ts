@@ -312,9 +312,9 @@ export interface BridgeAuth {
    *
    * Requires `auth.actAsUser`, and only a first-party plugin may ask.
    */
-  getServiceToken(audience: 'tables'): Promise<{
-    customToken: string
-    config: { apiKey: string; authDomain: string; projectId: string }
+  getServiceToken(audience: 'tables', force?: boolean): Promise<{
+    serviceToken: string
+    expiresAtMs: number
     serviceUrl: string
   }>
 }
