@@ -267,6 +267,10 @@ export interface PluginManifest {
       "kind": "master" | "document"
       "version": string
       "commitment"?: Array<"draft" | "issued" | "posted" | "reversed" | "voided">
+      "fields"?: Record<string, {
+        "visibility": "public" | "masked"
+        "disclosure": "none" | "summary" | "full"
+      }>
     }>
     "commands"?: Record<string, {
       "version": string

@@ -1164,6 +1164,39 @@
                 },
                 "minItems": 2,
                 "maxItems": 5
+              },
+              "fields": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "pattern": "^[a-z][a-z0-9_]*$"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "public",
+                        "masked"
+                      ]
+                    },
+                    "disclosure": {
+                      "type": "string",
+                      "enum": [
+                        "none",
+                        "summary",
+                        "full"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "visibility",
+                    "disclosure"
+                  ],
+                  "additionalProperties": false
+                }
               }
             },
             "required": [
