@@ -317,6 +317,8 @@ const BUSINESS_VERSION_MAX = 12
 const BUSINESS_COMMAND_MAX = 120
 const BUSINESS_REQUESTS_PER_KIND_MAX = 200
 const BUSINESS_COMMITMENT_STATES = ['draft', 'issued', 'posted', 'reversed', 'voided'] as const
+const BUSINESS_FIELD_VISIBILITIES = ['public', 'masked'] as const
+const BUSINESS_DISCLOSURE_CLASSES = ['none', 'summary', 'full'] as const
 const BUSINESS_PLUGIN_PREFIX = 'biz-'
 
 const businessVersion = z
@@ -337,11 +339,19 @@ const businessDefinitionKey = z
     'must be lowercase letters, digits or underscores, starting with a letter'
   )
 
+const businessFieldSchema = z
+  .object({
+    visibility: z.enum(BUSINESS_FIELD_VISIBILITIES),
+    disclosure: z.enum(BUSINESS_DISCLOSURE_CLASSES),
+  })
+  .strict()
+
 const businessTypeSchema = z
   .object({
     kind: z.enum(['master', 'document']),
     version: businessVersion,
     commitment: z.array(z.enum(BUSINESS_COMMITMENT_STATES)).min(2).max(5).optional(),
+    fields: z.record(businessDefinitionKey, businessFieldSchema).optional(),
   })
   .strict()
   .superRefine((type, ctx) => {
@@ -496,6 +506,7 @@ const uiSchema = z.object({
   hideSessionsPane: z.boolean().optional(),
   nativePanel: z.enum(NATIVE_PANEL_IDS).optional(),
   presentation: z.enum(['popup', 'full']).optional(),
+  mediaControls: z.boolean().optional(),
   sessions: z
     .object({
       // max(5000) but deliberately NO min(1): the host accepts an empty

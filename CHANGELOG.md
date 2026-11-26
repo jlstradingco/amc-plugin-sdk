@@ -21,10 +21,17 @@ The published types now match what Omniscio accepts:
   for a limit Omniscio registered for your plugin. `ctx.live` (permission `live`) is the backend
   twin of `Omniscio.live`.
 - The manifest accepts `storage.collections.<name>.cliAccess` (`'none'`, `'read'` or
-  `'read-write'`) and `ui.nativePanel`, and `process.pinnedPrograms[].source` is typed.
-  `ui.nativePanel` is for plugins that ship with the app, so an outside author leaves it out.
-- `itemFolders`, `live` and `brands` are no longer treated as permissions the SDK does not know, and
-  the host-union pin moves to 66 with them.
+  `'read-write'`), `ui.nativePanel`, `ui.mediaControls` and `business.types.<id>.fields` (each
+  field's `visibility` is `'public'` or `'masked'`, and its `disclosure` is `'none'`, `'summary'` or
+  `'full'`), and `process.pinnedPrograms[].source` is typed. `ui.nativePanel` is for plugins that
+  ship with the app, so an outside author leaves it out.
+- `ctx.print` (permission `print`) is published: `listPrinters()`, `labelImage(job)` and `raw(job)`,
+  with the printer, job and refusal types Omniscio answers. The test harness mocks it and the dev
+  shell answers a spooled job, so a plugin that prints can be tested off the machine. The test
+  harness now also mocks `ctx.media` and `ctx.brands`.
+- `itemFolders`, `live` and `brands` are no longer treated as permissions the SDK does not know.
+  The host-union mirror now carries `mediaKeys` and `print` too (`ctx.media` was already typed), and
+  the pin moves to 68 with them.
 
 ### Changed - `ctx.inbox.postAlert` and `resolveAlert` tell you whether it worked
 

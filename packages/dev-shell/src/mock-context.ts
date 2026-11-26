@@ -683,6 +683,33 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         }),
     },
 
+    media: {
+      sendKey: (key) => {
+        if (shouldLog) console.log(`${prefix} [media] sendKey(${key})`)
+        return Promise.resolve({ ok: true })
+      },
+    },
+
+    print: {
+      listPrinters: () => {
+        if (shouldLog) console.log(`${prefix} [print] listPrinters`)
+        return Promise.resolve({ ok: true, printers: [] })
+      },
+      labelImage: (job) => {
+        if (shouldLog) console.log(`${prefix} [print] labelImage(${job.printer}, ${job.copies})`)
+        return Promise.resolve({ ok: true, status: 'spooled', printer: job.printer, copies: job.copies })
+      },
+      raw: (job) => {
+        if (shouldLog) console.log(`${prefix} [print] raw(${job.printer})`)
+        return Promise.resolve({
+          ok: true,
+          status: 'spooled',
+          printer: job.printer,
+          bytes: Math.ceil((job.zplBase64.length * 3) / 4)
+        })
+      },
+    },
+
     toast: {
       show: (toastOpts) => {
         if (shouldLog) console.log(`${prefix} [toast] ${toastOpts.type}: ${toastOpts.message}`)

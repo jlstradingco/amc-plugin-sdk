@@ -470,3 +470,66 @@ describe('process.pinnedPrograms[].source (host: marketplace, optional)', () => 
     expect(process.pinnedPrograms[0]?.source).toBe('marketplace')
   })
 })
+
+describe('ui.mediaControls (host: boolean, optional)', () => {
+  it.each([true, false])('keeps %s', (mediaControls) => {
+    const result = validateManifest({ ...baseManifest, ui: { mediaControls } })
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.ui?.mediaControls).toBe(mediaControls)
+  })
+
+  it.each(['yes', 1, null])('refuses %j rather than reading it as absent', (mediaControls) => {
+    expect(errorsOf({ ...baseManifest, ui: { mediaControls } })).toMatch(/^ui\.mediaControls: /m)
+  })
+
+  it('is a published type field', () => {
+    const ui = { mediaControls: true } satisfies NonNullable<PluginManifest['ui']>
+    expect(ui.mediaControls).toBe(true)
+  })
+})
+
+describe('business.types.<id>.fields (host: one visibility and one disclosure per field, strict)', () => {
+  const businessManifest = (fields: unknown) => ({
+    ...withPlugin({ id: 'biz-ledger' }),
+    business: {
+      schema: 1,
+      namespace: 'ledger',
+      types: { invoice: { kind: 'master', version: '1', fields } },
+    },
+  })
+
+  it('accepts and keeps every host enum value', () => {
+    const fields = {
+      total: { visibility: 'masked', disclosure: 'summary' },
+      note: { visibility: 'public', disclosure: 'none' },
+      memo: { visibility: 'public', disclosure: 'full' },
+    }
+    const result = validateManifest(businessManifest(fields))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.business?.types?.invoice?.fields).toEqual(fields)
+  })
+
+  it.each([
+    { visibility: 'secret', disclosure: 'none' },
+    { visibility: 'public', disclosure: 'some' },
+    { visibility: 'public' },
+    { disclosure: 'none' },
+  ])('refuses %j', (field) => {
+    expect(errorsOf(businessManifest({ total: field }))).toMatch(
+      /^business\.types\.invoice\.fields\.total\./m
+    )
+  })
+
+  it('refuses a key the host does not declare, because the field schema is strict', () => {
+    expect(
+      errorsOf(businessManifest({ total: { visibility: 'public', disclosure: 'none', hidden: true } }))
+    ).toMatch(/^business\.types\.invoice\.fields\.total: /m)
+  })
+
+  it('is a published type field', () => {
+    const fields = { total: { visibility: 'public', disclosure: 'summary' } } satisfies NonNullable<
+      NonNullable<PluginManifest['business']>['types']
+    >[string]['fields']
+    expect(fields.total.disclosure).toBe('summary')
+  })
+})

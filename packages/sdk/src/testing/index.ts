@@ -56,8 +56,15 @@ import type {
   BridgeTextCompletionResult
 } from '../types/bridge.js'
 import type {
+  PluginBrandRef,
+  PluginLabelImageJob,
+  PluginMediaKey,
+  PluginMediaKeyResult,
+  PluginPrintJobResult,
+  PluginPrinter,
   PluginPullRequestLink,
   PluginPullRequestState,
+  PluginRawJob,
   PluginSessionLinkPullRequestInput,
   PluginSessionLinkPullRequestResult
 } from '../types/context.js'
@@ -146,7 +153,15 @@ export interface TestContextOptions {
   email?: (message: PluginEmailMessage) => PluginEmailSendResult | Promise<PluginEmailSendResult>
   emailSender?: PluginEmailSender
   members?: PluginMember[]
+  /** Seed `ctx.brands.list()`. Every other brands call answers the empty, not-ready shape. */
+  brands?: PluginBrandRef[]
   launch?: (request: PluginLaunchRequest) => PluginLaunchResult | Promise<PluginLaunchResult>
+  /** Without an override every media key press answers `{ ok: true }`. */
+  media?: (key: PluginMediaKey) => PluginMediaKeyResult | Promise<PluginMediaKeyResult>
+  /** Seed `ctx.print.listPrinters()`. Without it the computer has no printers. */
+  printers?: PluginPrinter[]
+  /** Without an override every print job answers `status: 'spooled'` for the printer it named. */
+  printJob?: (job: PluginLabelImageJob | PluginRawJob) => PluginPrintJobResult | Promise<PluginPrintJobResult>
   oauth?: (request: PluginOAuthRequest) => PluginOAuthResult | Promise<PluginOAuthResult>
   db?: {
     /**
@@ -198,6 +213,10 @@ export interface TestHarness {
   sentEmails: PluginEmailMessage[]
   scheduledEmails: PluginEmailSchedule[]
   launches: PluginLaunchRequest[]
+  /** Captured ctx.media.sendKey calls, in order. */
+  mediaKeys: PluginMediaKey[]
+  /** Captured ctx.print jobs, in order, with the method that sent each one. */
+  printJobs: Array<{ kind: 'labelImage'; job: PluginLabelImageJob } | { kind: 'raw'; job: PluginRawJob }>
   oauthRequests: PluginOAuthRequest[]
   channelConnects: Array<{ options: PluginChannelConnectOptions; channelId: string }>
   emitChannelEvent(channelId: string, event: PluginChannelEvent): void
@@ -530,6 +549,8 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     sentEmails: [],
     scheduledEmails: [],
     launches: [],
+    mediaKeys: [],
+    printJobs: [],
     oauthRequests: [],
     channelConnects: [],
     channelSends: [],
@@ -715,6 +736,49 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
 
     members: {
       list: () => Promise.resolve([...(opts.members ?? [])])
+    },
+
+    brands: {
+      list: () => Promise.resolve({ kits: [...(opts.brands ?? [])] }),
+      get: ({ kitId }) => Promise.resolve({ kitId, kit: null, ready: false }),
+      brief: ({ kitId }) =>
+        Promise.resolve({
+          kitId,
+          brandName: '',
+          ready: false,
+          brief: { text: '', fieldIds: [], capped: false }
+        }),
+      check: ({ kitId }) => Promise.resolve({ kitId, brandName: '', flags: [] }),
+      fine: ({ kitId }) => Promise.resolve({ kitId, remembered: false }),
+      link: ({ name }) => Promise.resolve({ kitId: null, name }),
+      suggest: ({ kitId }) => Promise.resolve({ kitId, accepted: false as const })
+    },
+
+    media: {
+      sendKey: (key) => {
+        harness.mediaKeys.push(key)
+        if (opts.media) return Promise.resolve(opts.media(key))
+        return Promise.resolve({ ok: true })
+      }
+    },
+
+    print: {
+      listPrinters: () => Promise.resolve({ ok: true, printers: [...(opts.printers ?? [])] }),
+      labelImage: (job) => {
+        harness.printJobs.push({ kind: 'labelImage', job })
+        if (opts.printJob) return Promise.resolve(opts.printJob(job))
+        return Promise.resolve({ ok: true, status: 'spooled', printer: job.printer, copies: job.copies })
+      },
+      raw: (job) => {
+        harness.printJobs.push({ kind: 'raw', job })
+        if (opts.printJob) return Promise.resolve(opts.printJob(job))
+        return Promise.resolve({
+          ok: true,
+          status: 'spooled',
+          printer: job.printer,
+          bytes: Math.ceil((job.zplBase64.length * 3) / 4)
+        })
+      }
     },
 
     launch: {

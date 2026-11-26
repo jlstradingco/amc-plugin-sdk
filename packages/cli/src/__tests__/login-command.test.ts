@@ -105,7 +105,7 @@ describe('omniscio-plugin login', () => {
   })
 
   it('signs in through the shared flow and saves the credential where the app reads it', async () => {
-    const fetchMock = vi.fn(async (_url: string) => ({
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => ({
       ok: true,
       json: async () => ({
         token: 'minted-token',
@@ -122,8 +122,16 @@ describe('omniscio-plugin login', () => {
     await vi.advanceTimersByTimeAsync(5000)
     await pending
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(fetchMock.mock.calls[0]?.[0]).toMatch(/\/getAuthSession\?session=[A-Za-z0-9_-]{20,200}$/)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const [pollUrl, pollInit] = fetchMock.mock.calls[0]!
+    expect(pollUrl).toMatch(/\/getAuthSession$/)
+    expect(pollInit?.headers).toMatchObject({
+      'x-auth-verifier': expect.stringMatching(/^[0-9a-f]{64}$/),
+      'x-auth-session': expect.stringMatching(/^[0-9a-f]{64}$/)
+    })
+    const [consumeUrl, consumeInit] = fetchMock.mock.calls[1]!
+    expect(consumeUrl).toBe(pollUrl)
+    expect(consumeInit?.method).toBe('POST')
     expect(tokenOnDisk()).toMatchObject({ token: 'minted-token', refreshToken: 'minted-refresh', github: 'octocat' })
     expect(logged.join('\n')).toContain('Signed in as octocat')
     expect(logged.join('\n')).toContain('Credential saved to')

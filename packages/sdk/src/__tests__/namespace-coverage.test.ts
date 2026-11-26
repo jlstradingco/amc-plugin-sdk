@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PUBLISHED_METHOD_GAPS, UNTYPED_BRIDGE_GAPS } from './namespace-coverage-register.js'
+import { namespaceCoverageDrift } from './namespace-coverage-core.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const GENERATED_TYPES = path.join(here, '..', 'generated', 'sdk-types.d.ts')
@@ -35,59 +36,51 @@ function publishedNamespaces(): string[] {
 describe('bridge namespace coverage', () => {
   const exposed = exposedNamespaces()
   const published = publishedNamespaces()
-  const publishedSet = new Set(published)
-  const registeredSet = new Set(UNTYPED_BRIDGE_GAPS.map((gap) => gap.namespace))
+  const drift = namespaceCoverageDrift({ exposed, published, registered: UNTYPED_BRIDGE_GAPS })
 
   it('reads both surfaces instead of passing on an empty comparison', () => {
     expect(exposed.length).toBeGreaterThanOrEqual(EXPOSED_FLOOR)
     expect(published.length).toBeGreaterThanOrEqual(TYPED_FLOOR)
-    expect(new Set(exposed).size).toBe(exposed.length)
-    expect(new Set(published).size).toBe(published.length)
+    expect(drift.empty).toBe(false)
+    expect(drift.duplicated).toEqual([])
   })
 
   it('types every exposed namespace on the published bridge or records the gap', () => {
-    const unaccounted = exposed.filter((name) => !publishedSet.has(name) && !registeredSet.has(name))
     expect(
-      unaccounted,
+      drift.untyped,
       `Exposed but neither typed on Omniscio (types/bridge.ts) nor listed in ` +
-        `namespace-coverage-register.ts: ${unaccounted.join(', ')}. Type the namespace, or add a ` +
+        `namespace-coverage-register.ts: ${drift.untyped.join(', ')}. Type the namespace, or add a ` +
         `register entry explaining why it is still untyped.`
     ).toEqual([])
   })
 
   it('deletes a namespace from the register the moment the bridge types it', () => {
-    const stale = UNTYPED_BRIDGE_GAPS.map((gap) => gap.namespace).filter((name) => publishedSet.has(name))
     expect(
-      stale,
-      `Typed on Omniscio but still listed as an untyped gap: ${stale.join(', ')}. ` +
+      drift.staleRegister,
+      `Typed on Omniscio but still listed as an untyped gap: ${drift.staleRegister.join(', ')}. ` +
         `Delete the register entry in this same change.`
     ).toEqual([])
   })
 
   it('types nothing on the published bridge that the host does not expose', () => {
-    const exposedSet = new Set(exposed)
-    const phantom = published.filter((name) => !exposedSet.has(name))
     expect(
-      phantom,
-      `Typed on Omniscio but not exposed to the webview: ${phantom.join(', ')}. ` +
+      drift.phantomTyped,
+      `Typed on Omniscio but not exposed to the webview: ${drift.phantomTyped.join(', ')}. ` +
         `Remove the type, or expose the namespace in the host surface.`
     ).toEqual([])
   })
 
   it('registers only namespaces the host actually exposes', () => {
-    const exposedSet = new Set(exposed)
-    const phantom = UNTYPED_BRIDGE_GAPS.map((gap) => gap.namespace).filter((name) => !exposedSet.has(name))
     expect(
-      phantom,
-      `Registered as an untyped gap but not exposed on the webview bridge: ${phantom.join(', ')}. ` +
+      drift.phantomRegistered,
+      `Registered as an untyped gap but not exposed on the webview bridge: ${drift.phantomRegistered.join(', ')}. ` +
         `A register entry must name a real exposed namespace.`
     ).toEqual([])
   })
 
   it('gives every register entry a distinct namespace and a stated reason', () => {
-    expect(registeredSet.size).toBe(UNTYPED_BRIDGE_GAPS.length)
-    const unexplained = UNTYPED_BRIDGE_GAPS.filter((gap) => gap.reason.trim().length === 0)
-    expect(unexplained.map((gap) => gap.namespace)).toEqual([])
+    expect(drift.duplicated).toEqual([])
+    expect(drift.unexplained).toEqual([])
   })
 })
 

@@ -2518,6 +2518,75 @@ export interface PluginMedia {
   sendKey(key: PluginMediaKey): Promise<PluginMediaKeyResult>
 }
 
+/** One printer connected to this computer, as `ctx.print.listPrinters` reports it. */
+export interface PluginPrinter {
+  /** The printer's system name, which every print job names. */
+  name: string
+  displayName: string
+  isDefault: boolean
+}
+
+/** Why a print job or printer list was not printed. `rate-limited` means the plugin printed too many jobs. */
+export type PluginPrintFailureReason =
+  | 'bad-request'
+  | 'unknown-printer'
+  | 'page-load-failed'
+  | 'rejected'
+  | 'no-answer'
+  | 'shell-failed'
+  | 'not-supported'
+  | 'printer-list-failed'
+  | 'spooler-failed'
+  | 'partial-write'
+  | 'rate-limited'
+  | 'failed'
+
+/** A refusal from `ctx.print`. `message` is plain language and safe to show the person. */
+export interface PluginPrintFailure {
+  ok: false
+  reason: PluginPrintFailureReason
+  message: string
+}
+
+/** What `ctx.print.listPrinters` resolves to. */
+export type PluginPrinterList = { ok: true; printers: PluginPrinter[] } | PluginPrintFailure
+
+/** One label image job for `ctx.print.labelImage`. */
+export interface PluginLabelImageJob {
+  /** The printer's system name, from `listPrinters`. */
+  printer: string
+  /** The label image as base64 PNG bytes, without a data-URL prefix. */
+  pngBase64: string
+  widthIn: number
+  heightIn: number
+  copies: number
+}
+
+/** One raw job for `ctx.print.raw`. */
+export interface PluginRawJob {
+  /** The printer's system name, from `listPrinters`. */
+  printer: string
+  /** The raw payload as base64 bytes, without a data-URL prefix. */
+  zplBase64: string
+}
+
+/** What a print job resolves to. `status: 'spooled'` means the system accepted it for printing. */
+export type PluginPrintJobResult =
+  | { ok: true; status: 'spooled'; printer: string; copies: number }
+  | { ok: true; status: 'spooled'; printer: string; bytes: number }
+  | PluginPrintFailure
+
+/**
+ * `ctx.print` - print labels on the printers connected to this computer without a print window
+ * opening, and list which printers there are. Requires the `print` permission. Backend only, on the
+ * worker surface. A refusal is `ok: false` with a plain-language `message`, never a throw.
+ */
+export interface PluginPrint {
+  listPrinters(): Promise<PluginPrinterList>
+  labelImage(job: PluginLabelImageJob): Promise<PluginPrintJobResult>
+  raw(job: PluginRawJob): Promise<PluginPrintJobResult>
+}
+
 /** What `ctx.oauth.authorize` needs to run one OAuth 2.0 sign-in with your own client credentials. */
 export interface PluginOAuthRequest {
   /** The service's authorization page address. */
@@ -2935,6 +3004,8 @@ export interface PluginContext {
   launch?: PluginLaunch
   /** Backend only. Requires `mediaKeys`. See {@link PluginMedia}. Optional for the same reason as `members`. */
   media?: PluginMedia
+  /** Backend only. Requires `print`. See {@link PluginPrint}. Optional for the same reason as `members`. */
+  print?: PluginPrint
   /** Backend only. Requires `oauth`. See {@link PluginOAuth}. Optional for the same reason as `members`. */
   oauth?: PluginOAuth
   /** Requires `rss`. See {@link PluginRss}. Optional for the same reason as `members`. */

@@ -372,6 +372,19 @@ export interface PluginBusinessType {
   kind: 'master' | 'document'
   version: string
   commitment?: PluginBusinessCommitmentState[]
+  fields?: Record<string, PluginBusinessField>
+}
+
+/** Who may see a declared business field: everyone, or only callers holding the field's disclosure. */
+export type PluginBusinessFieldVisibility = 'public' | 'masked'
+
+/** How much of a declared business field a disclosure-capable caller may see: none, a summary, or the whole value. */
+export type PluginBusinessDisclosureClass = 'none' | 'summary' | 'full'
+
+/** One field a business record type declares, with how it is shown and what may be disclosed. */
+export interface PluginBusinessField {
+  visibility: PluginBusinessFieldVisibility
+  disclosure: PluginBusinessDisclosureClass
 }
 
 /** One named command, keyed as `<type>.<verb>` in the manifest. */
