@@ -217,6 +217,9 @@
           },
           "agentWritable": {
             "type": "boolean"
+          },
+          "offOnly": {
+            "type": "boolean"
           }
         },
         "required": [

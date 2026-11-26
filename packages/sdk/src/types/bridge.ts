@@ -487,6 +487,34 @@ export interface BridgeExport {
     preferCSSPageSize?: boolean
     landscape?: boolean
   }): Promise<{ saved: boolean }>
+  /**
+   * Show the OS Save window and let the HOST stream one file out of your plugin's data folder to
+   * the place the person chose. `name` is a path relative to your data folder.
+   *
+   * Nothing passes through your panel: the bytes go kernel-to-kernel, so a 3 GB backup takes the
+   * same path as a 3 KB text file and there is no size cap. The copy lands atomically — an
+   * existing file at the chosen place is never left half-written if the copy fails.
+   *
+   * Resolves `{ saved: false }` when the person cancels.
+   */
+  saveDataFile(opts: {
+    name: string
+    suggestedName?: string
+    title?: string
+  }): Promise<{ saved: boolean }>
+  /**
+   * Show the OS Open window and let the HOST stream the chosen file INTO your plugin's data
+   * folder, so you can read it with `fs`. `name` picks the path inside your data folder; leave it
+   * out and the file keeps the name it had where it was picked. Nothing passes through your panel
+   * and there is no size cap.
+   *
+   * Resolves `{ opened: true, name }` with the path relative to your data folder, or
+   * `{ opened: false }` when the person cancels.
+   */
+  openDataFile(opts?: {
+    name?: string
+    title?: string
+  }): Promise<{ opened: true; name: string } | { opened: false }>
   /** Resolves an OBJECT, not a bare path string. */
   pickFolder(opts?: {
     defaultPath?: string
