@@ -571,6 +571,10 @@ export interface AgentMC {
     "close": (...args: unknown[]) => Promise<unknown>
     "open": (...args: unknown[]) => Promise<unknown>
   }
+  "humanTestingFixSession": {
+    "pick": (...args: unknown[]) => Promise<unknown>
+    "start": (...args: unknown[]) => Promise<unknown>
+  }
   "inbox": {
     "postAlert": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>
