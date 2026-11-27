@@ -1003,6 +1003,7 @@ export interface PluginContext {
   "appCloner": {
     "act": (...args: unknown[]) => Promise<unknown>
     "coverage": (...args: unknown[]) => Promise<unknown>
+    "deleteStudy": (...args: unknown[]) => Promise<unknown>
     "extractInventory": (...args: unknown[]) => Promise<unknown>
     "finishSignIn": (...args: unknown[]) => Promise<unknown>
     "journal": (...args: unknown[]) => Promise<unknown>
@@ -1113,6 +1114,7 @@ export interface PluginContext {
     "emit": (...args: unknown[]) => Promise<unknown>
     "endSignIns": (...args: unknown[]) => Promise<unknown>
     "handle": (...args: unknown[]) => unknown
+    "listDevices": (...args: unknown[]) => Promise<unknown>
   }
   "fs": {
     "deleteFile": (...args: unknown[]) => Promise<unknown>

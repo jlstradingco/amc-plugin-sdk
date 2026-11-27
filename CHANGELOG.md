@@ -11,6 +11,19 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — `ctx.floor.listDevices`
+
+- `ctx.floor.listDevices()` (backend only) lists the devices paired to your plugin's own floor as
+  `[{ id, name }]`: the host's id for the device and the name the owner gave it, nothing else. A
+  device the owner revoked, or that Omniscio suspended or expired, is no longer listed. Optional on
+  `ctx.floor`, so feature-detect it; a plugin still cannot pair, name or remove a device.
+
+### Fixed — `appCloner.deleteStudy` is typed and reaches the background program
+
+- `appCloner.deleteStudy(studyId)` is now on `PluginAppCloner` (optional, so feature-detect it) and
+  on `ctx.appCloner` in the background program. Omniscio already exposed it to the App Cloner page;
+  the background program, which is what calls it, could not reach it.
+
 ### Fixed — `ctx.ai.getImageSpend` answers in the dev shell
 
 - `ctx.ai.getImageSpend()` now answers in the dev shell, so a plugin that reads its daily and

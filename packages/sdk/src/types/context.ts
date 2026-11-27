@@ -2859,6 +2859,8 @@ export interface PluginAppCloner {
   probeErrors(studyId: string, worker: number, serverCall: string): Promise<AppClonerRecord[]>
   status(studyId: string): Promise<AppClonerStudyStatus>
   screenshot(studyId: string, captureId: string): Promise<{ dataUrl: string } | null>
+  /** Delete a study and everything Omniscio holds for it. Optional: absent on an Omniscio that predates it. */
+  deleteStudy?(studyId: string): Promise<void>
 }
 
 /**
@@ -3008,6 +3010,14 @@ export type PluginFloorPinAnswer =
   | { ok: false; code: 'pin-wrong' }
   | { ok: false; code: 'pin-locked'; seconds: number | null }
 
+/** One device paired to this plugin's floor, as {@link PluginFloor.listDevices} answers it. */
+export interface PluginFloorDevice {
+  /** A host-minted label, steady for the life of the pairing. It is not a credential. */
+  id: string
+  /** The name the owner gave the device when pairing it. */
+  name: string
+}
+
 /**
  * `ctx.floor` — the abilities of a plugin that declares a `floor` block in its manifest.
  * A call from any plugin without an open floor of its own answers no and changes nothing.
@@ -3026,6 +3036,12 @@ export interface PluginFloor {
   emit(name: string, payload: unknown): Promise<boolean>
   /** End the named staff member's floor sign-ins on this plugin. */
   endSignIns(staffId: string): void
+  /**
+   * List the devices paired to this plugin's own floor: ids and names, nothing else. A device the
+   * owner revoked, or that Omniscio suspended or expired, is no longer listed. Optional: absent on
+   * an Omniscio that predates it.
+   */
+  listDevices?(): Promise<PluginFloorDevice[]>
   /** Register (or replace) the handler Omniscio calls for a floor event. Handlers stay in the worker. */
   handle(method: string, handler: (...args: unknown[]) => unknown): void
 }
