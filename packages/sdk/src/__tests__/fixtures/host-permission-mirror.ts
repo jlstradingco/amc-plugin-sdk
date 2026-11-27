@@ -61,6 +61,7 @@ export const HOST_PERMISSIONS = [
   'documents.read',
   'documents.write',
   'members.read',
+  'members.manage',
   'people.read',
   'teamChat.emoji',
   'email.send',
@@ -77,6 +78,8 @@ export const HOST_PERMISSIONS = [
   'mediaKeys',
   'print',
 ] as const
+
+export const HOST_UNION_SIZE = 69
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 

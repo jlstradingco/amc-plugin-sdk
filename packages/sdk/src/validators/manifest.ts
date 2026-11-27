@@ -32,6 +32,7 @@ export const REQUIRED_PERMISSION_PARTNERS = [
   ['tasks.write', 'tasks.read'],
   ['vault.write', 'vault.read'],
   ['people.read', 'members.read'],
+  ['members.manage', 'members.read'],
   ['calendar.write', 'calendar.read'],
   ['timeTracker.write', 'timeTracker.read'],
   ['teamChat.write', 'teamChat.read'],

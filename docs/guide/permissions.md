@@ -914,6 +914,17 @@ email addresses, and it grants nothing about their sessions or their content.
 
 ---
 
+### `members.manage`
+
+**Grants access to:** `Omniscio.members.invite()` and `Omniscio.members.remove()` (**webview** only)
+
+Invite people to the workspace the person is using and remove members from it, only where the person
+could do the same on the People screen, and only after they say yes in an Omniscio dialog for each
+change. The plugin never names the workspace or who is asking. **Elevated**, and it **requires**
+[`members.read`](#membersread) in the same manifest. See [Members](../api/members).
+
+---
+
 ### `people.read`
 
 **Grants access to:** `ctx.people.schedules.list()` and `ctx.people.timeOff.list({ from, to })`
@@ -1145,6 +1156,7 @@ the site.
 | `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
+| `members.manage` | `Omniscio.members.invite()` / `remove()` (**webview**) | Invite and remove the workspace's people, each change confirmed by the person -- **elevated** (**requires `members.read`**) |
 | `people.read` | `ctx.people.schedules.list()` / `ctx.people.timeOff.list()` (**backend**) | See when the workspace's people work and when they are away, never more than the person could see (**requires `members.read`**) |
 | `teamChat.emoji` | `Omniscio.teamChat` (**webview**) | Offer a custom emoji to Team Chat (the person confirms every add), list the workspace's custom emoji, and read one emoji's picture |
 | `auth.actAsUser` | `AgentMC.auth.getWebAuth()` (**webview**) | Sign in to the shared account as the person -- **elevated**; reads and sends as them |

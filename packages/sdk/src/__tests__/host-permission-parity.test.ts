@@ -17,6 +17,7 @@ function bridgeNamespaceNames(): string[] {
 }
 import {
   HOST_PERMISSIONS,
+  HOST_UNION_SIZE,
   SDK_AHEAD_PERMISSIONS,
   HOST_AHEAD_PERMISSIONS,
   BRIDGE_PENDING_PERMISSIONS,
@@ -78,6 +79,7 @@ describe('SDK <-> host permission parity', () => {
     'documents.read': { surface: BRIDGE, key: 'documents' },
     'documents.write': { surface: BRIDGE, key: 'documents' },
     'members.read': null,
+    'members.manage': null,
     'teamChat.emoji': { surface: BRIDGE, key: 'teamChat' },
     'email.send': { surface: CTX, key: 'email' },
     'email.fromName': null,
@@ -179,7 +181,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(68)
+    expect(HOST_PERMISSIONS.length).toBe(71)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
@@ -223,6 +225,10 @@ describe('SDK <-> host permission parity', () => {
 
   it('has no outstanding type-shape deltas (both historical ones resolved)', () => {
     expect(KNOWN_TYPE_DELTAS.length).toBe(0)
+  })
+
+  it('keeps HOST_UNION_SIZE, the pin the host check reads, equal to the mirror it counts', () => {
+    expect(HOST_UNION_SIZE).toBe(HOST_PERMISSIONS.length)
   })
 })
 

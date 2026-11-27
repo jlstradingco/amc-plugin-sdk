@@ -1019,6 +1019,7 @@
           "print",
           "documents.write",
           "members.read",
+          "members.manage",
           "people.read",
           "coaching-profile",
           "brands",
@@ -1031,7 +1032,7 @@
           "appCloner"
         ]
       },
-      "maxItems": 70
+      "maxItems": 71
     },
     "mobile": {
       "type": "boolean"
@@ -1659,6 +1660,29 @@
           "permissions": {
             "contains": {
               "const": "workspace.read"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "permissions"
+        ],
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "members.manage"
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "contains": {
+              "const": "members.read"
             }
           }
         }

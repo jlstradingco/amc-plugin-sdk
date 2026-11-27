@@ -1387,13 +1387,35 @@ export interface BridgeClipboard {
   writeImage(dataUrl: string): Promise<void>
 }
 
+/** What `Omniscio.members.invite()` reports back. */
+export interface BridgeMemberInviteResult {
+  /**
+   * `sent`; `email-not-delivered` (the invitation exists but its email did not arrive);
+   * `already-invited` (the address is already a member or already invited); or `not-sent`.
+   */
+  status: 'sent' | 'email-not-delivered' | 'already-invited' | 'not-sent'
+}
+
 /**
  * `Omniscio.members` - who is in the workspace the person is working in right now. Requires the
- * `members.read` permission. Also available to the backend as `ctx.members`.
+ * `members.read` permission. Also available to the backend as `ctx.members`, read-only.
  */
 export interface BridgeMembers {
   /** The people in the active workspace: id, name, avatar and role, nothing else. */
   list(): Promise<PluginMember[]>
+  /**
+   * Invite someone by email to the active company workspace. Requires `members.manage`; webview
+   * only; absent on hosts that predate it. Omniscio checks that the signed-in person may invite,
+   * asks them in its own dialog, and refuses when they decline, when they could not do it on the
+   * People screen, or while another team change from this plugin is still waiting.
+   */
+  invite?(email: string): Promise<BridgeMemberInviteResult>
+  /**
+   * Remove a member of the active workspace by id. Requires `members.manage`; webview only; absent
+   * on hosts that predate it. Refused for the signed-in person themselves, for a guest, and for
+   * anyone the person could not remove on the People screen; asks them in Omniscio's own dialog.
+   */
+  remove?(memberId: string): Promise<void>
 }
 
 /**
@@ -1959,7 +1981,7 @@ export interface Omniscio {
   clipboard: BridgeClipboard
   /** See {@link BridgeConfirm}. */
   confirm: BridgeConfirm
-  /** Requires `members.read`. See {@link BridgeMembers}. */
+  /** Requires `members.read`; `invite` and `remove` also need `members.manage`. See {@link BridgeMembers}. */
   members: BridgeMembers
   /** Requires `navigation`. See {@link BridgeNavigation}. */
   navigation: BridgeNavigation

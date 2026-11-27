@@ -538,6 +538,15 @@
     ]
   },
   {
+    "name": "members.manage",
+    "label": "Add and remove your workspace's people",
+    "description": "Invite people to the workspace you are using and remove people from it, only where you could do it yourself on the People screen, and only after you say yes in an Omniscio dialog for each change.",
+    "tier": "elevated",
+    "namespaces": [
+      "members"
+    ]
+  },
+  {
     "name": "people.read",
     "label": "People's schedules",
     "description": "See when the people in your workspace work and when they are away.",

@@ -73,6 +73,7 @@ export const PLUGIN_PERMISSIONS = [
   "print",
   "documents.write",
   "members.read",
+  "members.manage",
   "people.read",
   "coaching-profile",
   "brands",

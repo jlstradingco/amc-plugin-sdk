@@ -11,6 +11,14 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — `members.manage`: invite and remove teammates, with the person's yes
+
+- `Omniscio.members.invite(email)` and `Omniscio.members.remove(memberId)` (webview only), behind the
+  new elevated permission `members.manage`, which requires `members.read`. Omniscio picks the
+  workspace and the caller, applies the People screen's own rules, and asks the person in its own
+  dialog before every change. Both are optional on `BridgeMembers`, so feature-detect them.
+- The host-union pin moves to 70.
+
 ### Added — `@omniscio/plugin-sdk/keyboard`, the one way a panel hears a keystroke
 
 A panel runs in its own document, so Omniscio's keyboard handling never reaches it and a panel that
