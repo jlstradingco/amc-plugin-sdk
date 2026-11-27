@@ -81,6 +81,7 @@ export const PLUGIN_PERMISSIONS = [
   "brands",
   "teamChat.emoji",
   "handoff",
+  "reports",
   "email.send",
   "limits",
   "webassembly",

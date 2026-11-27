@@ -83,6 +83,7 @@ describe('SDK <-> host permission parity', () => {
     'members.manage': null,
     'teamChat.emoji': { surface: BRIDGE, key: 'teamChat' },
     handoff: { surface: BRIDGE, key: 'handoff' },
+    reports: null,
     'email.send': { surface: CTX, key: 'email' },
     'email.fromName': null,
     'network.upload': { surface: BRIDGE, key: 'http' },

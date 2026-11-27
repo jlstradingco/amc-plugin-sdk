@@ -978,6 +978,20 @@ Offer a picture to Team Chat as a custom emoji, and read the custom emoji the wo
 
 ---
 
+### `reports`
+
+**Grants access to:** `Omniscio.reports.submit()` (**webview**)
+
+Offer a picture your plugin made, so the person can report it to Omniscio. It is not elevated, because nothing leaves the computer without the person's own answer:
+
+- `submit` never sends anything by itself. Omniscio opens its own window with the picture, the reason and the note, worded by Omniscio and not by your plugin, and only the person's **Send report** sends it. A close, a cancel or the Escape key resolves `{ ok: false, code: 'declined', message }`.
+- The picture is a PNG or JPEG of at most 1 MB and 1024 pixels on its longest side, passed as `{ type, base64 }`. The reason is one of `hateful`, `sexual`, `violent`, `harassment`, `someone-elses-work` or `other`, and the note is optional text of at most 500 characters.
+- Omniscio sends only that picture, the reason and the note. Nothing else about the person or their computer leaves with it.
+- A plugin can send at most 20 reports a day, and one request can wait for an answer at a time; past that the call resolves a refusal with the code `report-limit` or `busy`.
+- A refusal resolves `{ ok: false, code, message }` instead of rejecting. The codes are `declined`, `report-limit`, `invalid-picture`, `busy`, `no-window` and `unavailable`.
+
+---
+
 ### `workspace.read`, `workspace.write`, `workspace.exec`
 
 **Grants access to:** `ctx.workspace` (**backend**) — three separate grants over the projects the
@@ -1184,6 +1198,7 @@ the site.
 | `people.read` | `ctx.people.schedules.list()` / `ctx.people.timeOff.list()` (**backend**) | See when the workspace's people work and when they are away, never more than the person could see (**requires `members.read`**) |
 | `handoff` | `Omniscio.handoff` (webview) and `ctx.handoff` (backend) | Hand ideas, pictures and clips to another plugin that names this one back, and read the short lists it shares |
 | `teamChat.emoji` | `Omniscio.teamChat` (**webview**) | Offer a custom emoji to Team Chat (the person confirms every add), list the workspace's custom emoji, and read one emoji's picture |
+| `reports` | `Omniscio.reports` (**webview**) | Offer a picture the plugin made for the person to report to Omniscio (the person confirms every send) |
 | `auth.actAsUser` | `AgentMC.auth.getWebAuth()` (**webview**) | Sign in to the shared account as the person -- **elevated**; reads and sends as them |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |
 | `chrome.widget` | `Omniscio.widget` (**webview**) | A live status widget in the titlebar (**requires `chrome`** as well) |

@@ -610,6 +610,15 @@
     ]
   },
   {
+    "name": "reports",
+    "label": "Report a picture",
+    "description": "Lets the plugin offer a picture it made for you to report to Omniscio. Omniscio asks you first and sends only the picture, the reason and your note.",
+    "tier": "standard",
+    "namespaces": [
+      "reports"
+    ]
+  },
+  {
     "name": "email.send",
     "label": "Send Email",
     "description": "Send email from your Omniscio agent address to people it chooses, up to 500 a day. Every email has a one-click unsubscribe, and anyone who unsubscribed is never emailed again.",

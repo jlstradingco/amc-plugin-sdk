@@ -323,6 +323,24 @@ export interface BridgeTeamChat {
   getCustomEmojiImage(request: BridgeCustomEmojiImageRequest): Promise<BridgeCustomEmojiImage>
 }
 
+export interface BridgeReportRequest {
+  picture: { type: 'image/png' | 'image/jpeg'; base64: string }
+  reason: 'hateful' | 'sexual' | 'violent' | 'harassment' | 'someone-elses-work' | 'other'
+  note?: string
+}
+
+export type BridgeReportResult =
+  | { ok: true }
+  | {
+      ok: false
+      code: 'declined' | 'report-limit' | 'invalid-picture' | 'busy' | 'no-window' | 'unavailable'
+      message: string
+    }
+
+export interface BridgeReports {
+  submit(report: BridgeReportRequest): Promise<BridgeReportResult>
+}
+
 export type BridgeInbox = Pick<PluginInbox, 'setItems' | 'postAlert'>
 
 /**
@@ -2159,6 +2177,7 @@ export interface Omniscio {
   usage?: PluginUsage
   /** Optional: absent on hosts without the 'model-picker' token. See {@link BridgeModelPicker}. */
   modelPicker?: BridgeModelPicker
+  reports?: BridgeReports
   /** Requires `live`. See {@link BridgeLive}. */
   live: BridgeLive
   /** Requires `appCloner`, which only the bundled App Cloner plugin is granted. See {@link PluginAppCloner}. */

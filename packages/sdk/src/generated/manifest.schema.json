@@ -1275,6 +1275,7 @@
           "brands",
           "teamChat.emoji",
           "handoff",
+          "reports",
           "email.send",
           "limits",
           "webassembly",
@@ -1283,7 +1284,7 @@
           "appCloner"
         ]
       },
-      "maxItems": 74
+      "maxItems": 75
     },
     "mobile": {
       "type": "boolean"

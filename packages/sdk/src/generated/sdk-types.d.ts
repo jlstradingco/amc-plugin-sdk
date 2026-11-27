@@ -73,6 +73,7 @@ export type PluginPermission =
   | "brands"
   | "teamChat.emoji"
   | "handoff"
+  | "reports"
   | "email.send"
   | "limits"
   | "webassembly"
@@ -301,7 +302,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "storageBackup.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "share.images" | "documents.write" | "documents.convert" | "members.read" | "members.manage" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "handoff" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "storageBackup.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "share.images" | "documents.write" | "documents.convert" | "members.read" | "members.manage" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "handoff" | "reports" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -843,6 +844,9 @@ export interface AgentMC {
   }
   "release": {
     "read": (...args: unknown[]) => Promise<unknown>
+  }
+  "reports": {
+    "submit": (...args: unknown[]) => Promise<unknown>
   }
   "rpc": {
     "call": (...args: unknown[]) => Promise<unknown>
