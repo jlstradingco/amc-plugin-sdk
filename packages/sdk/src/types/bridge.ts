@@ -105,6 +105,7 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
   generateImage(request: BridgeImageRequest): Promise<BridgeImageResult | BridgeImageRefusal>
   estimateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetEstimate | BridgeImageRefusal>
   generateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetResult | BridgeImageRefusal>
+  getImageSpend(): Promise<BridgeImageSpend | BridgeImageRefusal>
   /**
    * Open Settings → Plan & Usage at Buy credit, for a button beside an
    * `insufficient-credit` refusal. Needs the `ai.images` permission; panel
@@ -201,6 +202,13 @@ export interface BridgeImageSetResult extends BridgeImageLedger {
   ok: true
   items: (BridgeImageResult | BridgeImageRefusal)[]
   costUsd: number
+}
+
+export interface BridgeImageSpend {
+  ok: true
+  todayUsd: number
+  monthUsd: number
+  dailyLimitUsd: number
 }
 
 export interface BridgeImageEstimate extends BridgeImageLedger {

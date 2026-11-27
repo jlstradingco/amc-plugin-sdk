@@ -313,6 +313,7 @@ export interface AgentMC {
     "generateStructured": (...args: unknown[]) => Promise<unknown>
     "generateTextViaSubscription": (...args: unknown[]) => Promise<unknown>
     "generateTitle": (...args: unknown[]) => Promise<unknown>
+    "getImageSpend": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
     "openAddCredit": (...args: unknown[]) => Promise<unknown>
@@ -949,6 +950,7 @@ export interface PluginContext {
     "generateStructured": (...args: unknown[]) => Promise<unknown>
     "generateTextViaSubscription": (...args: unknown[]) => Promise<unknown>
     "generateTitle": (...args: unknown[]) => Promise<unknown>
+    "getImageSpend": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
   }

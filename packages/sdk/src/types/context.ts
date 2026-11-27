@@ -1,5 +1,7 @@
 import type {
   BridgeAiAvailability,
+  BridgeImageRefusal,
+  BridgeImageSpend,
   BridgeLive,
   BridgeTextCompletionRequest,
   BridgeTextCompletionResult,
@@ -607,6 +609,7 @@ export interface PluginAi {
     opts?: { model?: string }
   ): Promise<string>
   listEngines(): Promise<PluginEngineCatalog>
+  getImageSpend(): Promise<BridgeImageSpend | BridgeImageRefusal>
   generateTitle(text: string): Promise<string>
   /**
    * Whether an Anthropic API-key account exists. The other methods need one

@@ -264,6 +264,19 @@ if (result.ok) {
 } else if (result.code !== 'declined') showMessage(result.message)
 ```
 
+### `getImageSpend(): Promise<BridgeImageSpend | BridgeImageRefusal>` (panel and worker)
+
+What **this plugin** has spent on pictures today and this calendar month, and its daily picture limit, all in US dollars. Free. Needs the `ai.images` permission and takes no arguments (any argument is refused).
+
+**Returns:** `{ ok: true, todayUsd, monthUsd, dailyLimitUsd }`. `todayUsd` is the exact figure the daily limit is judged against, so `dailyLimitUsd - todayUsd` is what the plugin can still spend today; `dailyLimitUsd` is `0` when the person turned plugin pictures off. Only this plugin's own pictures count: never another plugin, its text-AI spend, or the credit balance. At most 60 reads a minute; a faster call answers `{ ok: false, code: 'busy', message }`.
+
+**Example:**
+
+```typescript
+const spend = await AgentMC.ai.getImageSpend()
+if (spend.ok) showGuard(spend.todayUsd, spend.dailyLimitUsd, spend.monthUsd)
+```
+
 ## Notes
 
 - `estimateImage` / `generateImage` / `estimateImageSet` / `generateImageSet` work only from the plugin's panel, and their spend has its own per-plugin daily limit (Cost Control → **Plugin pictures**, $2 unless changed), separate from the text-AI limit.

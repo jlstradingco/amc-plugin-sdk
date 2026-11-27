@@ -52,6 +52,8 @@ import type {
 } from '../types/index.js'
 import type {
   BridgeAiAvailability,
+  BridgeImageRefusal,
+  BridgeImageSpend,
   BridgeTextCompletionRequest,
   BridgeTextCompletionResult
 } from '../types/bridge.js'
@@ -134,6 +136,7 @@ export interface TestContextOptions {
     availability?: () => Promise<BridgeAiAvailability> | BridgeAiAvailability
     /** Without an override the harness answers `ok: true` with an echo of the prompt. */
     completeText?: (request: BridgeTextCompletionRequest) => Promise<BridgeTextCompletionResult> | BridgeTextCompletionResult
+    getImageSpend?: () => Promise<BridgeImageSpend | BridgeImageRefusal> | BridgeImageSpend | BridgeImageRefusal
   }
   /** Seed an authenticated user / session. */
   auth?: {
@@ -1029,6 +1032,12 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
                 tokensEstimated: true,
                 truncated: false
               }
+        ),
+      getImageSpend: () =>
+        Promise.resolve(
+          opts.ai?.getImageSpend
+            ? opts.ai.getImageSpend()
+            : { ok: true, todayUsd: 0, monthUsd: 0, dailyLimitUsd: 2 }
         )
     },
 
