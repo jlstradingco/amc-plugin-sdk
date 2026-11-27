@@ -8,12 +8,17 @@ import { createTestContext } from '../testing/index.js'
 // the shape the AMC host actually exposes on `window.AgentMC.documents`, so a
 // drift fails `pnpm run typecheck` rather than a plugin at runtime.
 //
-// Transcribed from the host at `origin/master` **e975f0cb28**, from the three
-// files that together are the real contract:
+// Transcribed from the host at `origin/master` **5e21344351b4**, from the files
+// that together are the real contract:
 //   - args:    src/shared/plugin-capabilities/args.ts (`DOCUMENTS_SCHEMAS`)
 //   - returns: src/main/ipc/plugin-bridge/document-handles.ts (`DocumentHandle`)
 //              src/main/ipc/plugin-bridge/documents-handler.ts (the per-`case` returns)
-//   - surface: src/preload/plugin-bridge-preload.ts (what a webview calls)
+//              src/main/ipc/plugin-bridge/word-to-pdf.ts (`WordToPdfResult`)
+//   - surface: src/preload/plugin-bridge-preload.ts, whose runtime bag is built
+//              from `PRELOAD_CALLS` (src/shared/plugin-capabilities/
+//              preload-surface.generated.ts); the hand-written `PluginBridgeApi`
+//              interface can lag that list, and `documents.wordToPdf` is one key
+//              it lags, so this transcription follows the runtime surface
 //
 // Read out of the HOST, never out of this SDK's own types or mocks — that is the
 // inversion fixtures/host-mirror.ts exists to warn about. Three claims in the
@@ -47,6 +52,18 @@ type HostDocumentGrant = {
   lastOpenedAt: string
 }
 
+type HostWordToPdfFinding = {
+  severity: 'block' | 'warn'
+  code: string
+  detail: string
+}
+
+type HostWordToPdfResult = {
+  blocked: boolean
+  findings: HostWordToPdfFinding[]
+  pdf: string | null
+}
+
 type HostDocuments = {
   open(options: {
     mode: 'read' | 'readwrite'
@@ -57,6 +74,7 @@ type HostDocuments = {
   }): Promise<HostDocumentHandle[]>
   list(): Promise<HostDocumentHandle[]>
   stat(handleId: string): Promise<{ length: number }>
+  wordToPdf(handleId: string): Promise<HostWordToPdfResult>
   append(
     handleId: string,
     base64: string,

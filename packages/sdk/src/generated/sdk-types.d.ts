@@ -354,6 +354,7 @@ export interface AgentMC {
   "appCloner": {
     "act": (...args: unknown[]) => Promise<unknown>
     "coverage": (...args: unknown[]) => Promise<unknown>
+    "deleteStudy": (...args: unknown[]) => Promise<unknown>
     "extractInventory": (...args: unknown[]) => Promise<unknown>
     "finishSignIn": (...args: unknown[]) => Promise<unknown>
     "journal": (...args: unknown[]) => Promise<unknown>
@@ -570,6 +571,7 @@ export interface AgentMC {
     "review": (...args: unknown[]) => Promise<unknown>
     "screenshot": (...args: unknown[]) => Promise<unknown>
     "status": (...args: unknown[]) => Promise<unknown>
+    "upload": (...args: unknown[]) => Promise<unknown>
   }
   "humanTestingEnvironment": {
     "close": (...args: unknown[]) => Promise<unknown>
