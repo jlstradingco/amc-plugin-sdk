@@ -183,26 +183,34 @@ export interface BridgeImageRequest {
   referenceImages?: string[]
 }
 
-export interface BridgeImageSetEstimate {
+/** What this plugin has spent on pictures today, and its daily limit, from the host's cost ledger. */
+export interface BridgeImageLedger {
+  /** Spend recorded today for this plugin's pictures. Absent on a host too old to report it. */
+  spentTodayUsd?: number
+  /** This plugin's daily picture limit, the one the host enforces. Absent on an old host. */
+  capUsd?: number
+}
+
+export interface BridgeImageSetEstimate extends BridgeImageLedger {
   ok: true
   items: { model: string; priceUsd: number }[]
   priceUsd: number
 }
 
-export interface BridgeImageSetResult {
+export interface BridgeImageSetResult extends BridgeImageLedger {
   ok: true
   items: (BridgeImageResult | BridgeImageRefusal)[]
   costUsd: number
 }
 
-export interface BridgeImageEstimate {
+export interface BridgeImageEstimate extends BridgeImageLedger {
   ok: true
   model: string
   /** What the user's credit would be charged at most, Omniscio's fee included. */
   priceUsd: number
 }
 
-export interface BridgeImageResult {
+export interface BridgeImageResult extends BridgeImageLedger {
   ok: true
   imageId: string
   url?: string
@@ -1681,8 +1689,6 @@ export interface BridgeLive {
   close(liveId: string): Promise<{ unsent: number }>
 }
 
-export type BridgeAppCloner = PluginAppCloner
-
 /** How a file's bytes are spelled: `'utf8'` text (the default) or `'base64'` raw bytes. */
 export type BridgeFileEncoding = 'utf8' | 'base64'
 
@@ -1999,7 +2005,8 @@ export interface Omniscio {
   modelPicker?: BridgeModelPicker
   /** Requires `live`. See {@link BridgeLive}. */
   live: BridgeLive
-  appCloner?: BridgeAppCloner
+  /** Requires `appCloner`, which only the bundled App Cloner plugin is granted. See {@link PluginAppCloner}. */
+  appCloner?: PluginAppCloner
   /** Requires `limits`. See {@link PluginLimits}. */
   limits: PluginLimits
   /** See {@link BridgeFs}. */

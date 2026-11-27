@@ -53,9 +53,21 @@ The published types now match what Omniscio accepts:
   with the printer, job and refusal types Omniscio answers. The test harness mocks it and the dev
   shell answers a spooled job, so a plugin that prints can be tested off the machine. The test
   harness now also mocks `ctx.media` and `ctx.brands`.
-- `itemFolders`, `live` and `brands` are no longer treated as permissions the SDK does not know.
-  The host-union mirror now carries `mediaKeys` and `print` too (`ctx.media` was already typed), and
-  the pin moves to 68 with them.
+- `settings[].offOnly` is typed. Marking a setting `offOnly` keeps it off unless the person turns it
+  on in the plugin's own screens: a write from the control server that would change it from off to
+  on is refused with a plain-language message, while a write that leaves it off still applies.
+- `ctx.appCloner` and `Omniscio.appCloner` (permission `appCloner`) are typed with the 14 actions
+  Omniscio answers — `openSignIn`, `finishSignIn`, `startStudy`, `stopStudy`, `snapshot`,
+  `navigate`, `act`, `extractInventory`, `coverage`, `journal`, `undo`, `probeErrors`, `status` and
+  `screenshot`. Only the bundled App Cloner plugin is granted the permission. The test harness
+  records its calls and the dev shell answers a stubbed study.
+- `ctx.storageBackup` (permission `storageBackup.read`) is typed on the backend: `backup()` seals
+  every key this plugin keeps in `ctx.storage` into one encrypted backup, and `restore({ code })`
+  puts it back on another device. The test harness answers both.
+- `itemFolders`, `live`, `brands` and `appCloner` are no longer treated as permissions the SDK does
+  not know. The host-union mirror now carries `mediaKeys`, `print` and `appCloner` too (`ctx.media`
+  was already typed), and the pin moves to 70 with them (`storageBackup.read` joined the host after
+  the appCloner work).
 
 ### Changed - `ctx.inbox.postAlert` and `resolveAlert` tell you whether it worked
 

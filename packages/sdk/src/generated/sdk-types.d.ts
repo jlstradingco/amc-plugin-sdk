@@ -776,6 +776,9 @@ export interface AgentMC {
     "listAll": (...args: unknown[]) => Promise<unknown>
     "openAddDialog": (...args: unknown[]) => Promise<unknown>
   }
+  "release": {
+    "read": (...args: unknown[]) => Promise<unknown>
+  }
   "rpc": {
     "call": (...args: unknown[]) => Promise<unknown>
   }
@@ -1056,6 +1059,12 @@ export interface PluginContext {
     "emit": (...args: unknown[]) => Promise<unknown>
     "on": (...args: unknown[]) => unknown
   }
+  "floor": {
+    "checkPin": (...args: unknown[]) => Promise<unknown>
+    "emit": (...args: unknown[]) => Promise<unknown>
+    "endSignIns": (...args: unknown[]) => Promise<unknown>
+    "handle": (...args: unknown[]) => unknown
+  }
   "fs": {
     "deleteFile": (...args: unknown[]) => Promise<unknown>
     "exists": (...args: unknown[]) => Promise<unknown>
@@ -1121,6 +1130,9 @@ export interface PluginContext {
     "timeOff": {
       "list": (...args: unknown[]) => Promise<unknown>
     }
+  }
+  "pin": {
+    "redeemProof": (...args: unknown[]) => Promise<unknown>
   }
   "pluginId": string
   "pluginVersion": string

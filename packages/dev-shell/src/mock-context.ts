@@ -36,6 +36,20 @@ interface MockContextOptions {
   preview?: PreviewState
 }
 
+type AppClonerStudyStatus = Awaited<ReturnType<NonNullable<PluginContext['appCloner']>['startStudy']>>
+
+/** The status a study reports: running while it has workers, and nothing has failed yet. */
+function appClonerStatus(studyId: string, workers: number): AppClonerStudyStatus {
+  return {
+    studyId,
+    running: workers > 0,
+    signInOpen: false,
+    workers,
+    writeLockHeld: false,
+    lastError: null
+  }
+}
+
 /** A copy so callers can't mutate rows/values still held by the in-memory store. */
 function clone<T>(value: T): T {
   return value === undefined ? value : (JSON.parse(JSON.stringify(value)) as T)
@@ -707,6 +721,68 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           printer: job.printer,
           bytes: Math.ceil((job.zplBase64.length * 3) / 4)
         })
+      },
+    },
+
+    appCloner: {
+      openSignIn: (studyId, url) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] openSignIn(${studyId}, ${url})`)
+        return Promise.resolve({ ok: true })
+      },
+      finishSignIn: (studyId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] finishSignIn(${studyId})`)
+        return Promise.resolve({ url: '' })
+      },
+      startStudy: (config) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] startStudy(${config.studyId}, ${config.workers})`)
+        return Promise.resolve(appClonerStatus(config.studyId, config.workers))
+      },
+      stopStudy: (studyId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] stopStudy(${studyId})`)
+        return Promise.resolve(appClonerStatus(studyId, 0))
+      },
+      snapshot: (studyId, worker) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] snapshot(${studyId}, ${worker})`)
+        return Promise.resolve({})
+      },
+      navigate: (studyId, worker, url) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] navigate(${studyId}, ${worker}, ${url})`)
+        return Promise.resolve({})
+      },
+      act: (studyId, action) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] act(${studyId}, ${action.controlRef})`)
+        return Promise.resolve({})
+      },
+      extractInventory: (studyId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] extractInventory(${studyId})`)
+        return Promise.resolve({})
+      },
+      coverage: (studyId, seenTemplateIds, seenCalls) => {
+        if (shouldLog)
+          console.log(
+            `${prefix} [appCloner] coverage(${studyId}, ${seenTemplateIds.length}, ${seenCalls.length})`
+          )
+        return Promise.resolve({})
+      },
+      journal: (studyId, sinceSeq) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] journal(${studyId}, ${sinceSeq})`)
+        return Promise.resolve([])
+      },
+      undo: (studyId, journalId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] undo(${studyId}, ${journalId})`)
+        return Promise.resolve({})
+      },
+      probeErrors: (studyId, worker, serverCall) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] probeErrors(${studyId}, ${worker}, ${serverCall})`)
+        return Promise.resolve([])
+      },
+      status: (studyId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] status(${studyId})`)
+        return Promise.resolve(appClonerStatus(studyId, 0))
+      },
+      screenshot: (studyId, captureId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] screenshot(${studyId}, ${captureId})`)
+        return Promise.resolve(null)
       },
     },
 

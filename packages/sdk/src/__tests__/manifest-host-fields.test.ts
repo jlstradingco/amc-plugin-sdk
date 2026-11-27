@@ -533,3 +533,34 @@ describe('business.types.<id>.fields (host: one visibility and one disclosure pe
     expect(fields.total.disclosure).toBe('summary')
   })
 })
+
+describe('settings[].offOnly (host: boolean, optional)', () => {
+  const settingManifest = (offOnly: unknown) => ({
+    ...withPlugin({ id: 'off-only-plugin' }),
+    settings: [{ key: 'autoPost', label: 'Post automatically', type: 'toggle', default: false, offOnly }],
+  })
+
+  it.each([true, false])('keeps %s', (offOnly) => {
+    const result = validateManifest(settingManifest(offOnly))
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.settings[0]?.offOnly).toBe(offOnly)
+  })
+
+  it.each(['yes', 1, null])('refuses %j rather than reading it as absent', (offOnly) => {
+    expect(errorsOf(settingManifest(offOnly))).toMatch(/^settings\.0\.offOnly: /m)
+  })
+
+  it('leaves the key off entirely when a manifest does not declare it', () => {
+    const result = validateManifest({
+      ...withPlugin({ id: 'plain-plugin' }),
+      settings: [{ key: 'autoPost', label: 'Post automatically', type: 'toggle', default: false }],
+    })
+    expect(result.errors).toEqual([])
+    expect(result.manifest?.settings[0]).not.toHaveProperty('offOnly')
+  })
+
+  it('is a published type field', () => {
+    const settings = [{ key: 'autoPost', label: 'Post automatically', type: 'toggle', default: false, offOnly: true }] satisfies PluginManifest['settings']
+    expect(settings[0]?.offOnly).toBe(true)
+  })
+})

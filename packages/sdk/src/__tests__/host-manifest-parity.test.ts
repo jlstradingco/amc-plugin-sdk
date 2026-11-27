@@ -52,6 +52,7 @@ describe(`settings[] item parity (${HOST_SOURCES.manifestSchema}, settings)`, ()
         min: 0,
         max: 1,
         agentWritable: true,
+        offOnly: true,
         testAction: { namespace: 'scan', method: 'probe', label: 'Test' },
       })
     )

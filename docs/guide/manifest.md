@@ -296,6 +296,7 @@ Declare user-configurable settings that appear in Omniscio's Settings > Plugins 
 | `min` | number | No | Minimum value (for `number` type) |
 | `max` | number | No | Maximum value (for `number` type) |
 | `agentWritable` | boolean | No | Let an outside (control-server) change to this setting apply at once; without it the change waits for the person's approval. See [Outside writes](#outside-writes-agentwritable) |
+| `offOnly` | boolean | No | Keep this setting off unless the person turns it on in your plugin's own screens. See [Off-only settings](#off-only-settings-offonly) |
 
 ## `storage` Block
 
@@ -386,6 +387,21 @@ On Omniscio builds that carry the plugin-table fence, those writes are refused (
 The same key on a setting (`settings[].agentWritable`) lets an outside settings change apply at
 once. Without it the change waits for the person's approval card, and a `password` setting can never
 be changed from outside.
+
+### Off-only settings: `offOnly`
+
+A setting the person must turn on themselves — a plugin that posts on their behalf, spends their
+credit or changes something outside your own panel — is declared `offOnly`:
+
+```json
+{ "key": "autoPost", "label": "Post automatically", "type": "toggle", "default": false, "offOnly": true }
+```
+
+A write from the control server that would change it from off to on is refused with a
+plain-language message, so an agent cannot switch it on for the person. A write that leaves it off,
+or turns it off, still applies. A `toggle` counts as on for any value other than `false`; every
+other type counts as on once its value differs from `default`. The person can always turn it on in
+your plugin's settings screen.
 
 ### Private rows: `agentReadable`
 

@@ -56,6 +56,8 @@ import type {
   BridgeTextCompletionResult
 } from '../types/bridge.js'
 import type {
+  AppClonerStudyStatus,
+  PluginAppCloner,
   PluginBrandRef,
   PluginLabelImageJob,
   PluginMediaKey,
@@ -73,6 +75,18 @@ export { createRpcDouble } from './rpc-double.js'
 export type { RpcDouble } from './rpc-double.js'
 export { checkForgedRowsAreInert, describeForgedRowsAreInert } from './forged-rows.js'
 export type { ForgedRowsOptions, TestApi } from './forged-rows.js'
+
+/** The status shape a study reports: running while it has workers, and nothing has failed yet. */
+function appClonerStatus(studyId: string, workers: number): AppClonerStudyStatus {
+  return {
+    studyId,
+    running: workers > 0,
+    signInOpen: false,
+    workers,
+    writeLockHeld: false,
+    lastError: null
+  }
+}
 
 /** Zeroed spend breakdown — the shape a brand-new install reports. */
 function emptySpendBreakdown(): SpendReportBreakdown {
@@ -217,6 +231,8 @@ export interface TestHarness {
   mediaKeys: PluginMediaKey[]
   /** Captured ctx.print jobs, in order, with the method that sent each one. */
   printJobs: Array<{ kind: 'labelImage'; job: PluginLabelImageJob } | { kind: 'raw'; job: PluginRawJob }>
+  /** Captured ctx.appCloner calls, in order: the method and the arguments it was given. */
+  appClonerCalls: Array<{ method: keyof PluginAppCloner; args: readonly unknown[] }>
   oauthRequests: PluginOAuthRequest[]
   channelConnects: Array<{ options: PluginChannelConnectOptions; channelId: string }>
   emitChannelEvent(channelId: string, event: PluginChannelEvent): void
@@ -551,6 +567,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     launches: [],
     mediaKeys: [],
     printJobs: [],
+    appClonerCalls: [],
     oauthRequests: [],
     channelConnects: [],
     channelSends: [],
@@ -573,6 +590,15 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
   }
 
   const channelHandlers = new Map<string, (event: PluginChannelEvent) => void>()
+
+  function recordAppCloner<T>(
+    method: keyof PluginAppCloner,
+    args: readonly unknown[],
+    result: T
+  ): Promise<T> {
+    harness.appClonerCalls.push({ method, args })
+    return Promise.resolve(result)
+  }
 
   const ctx: PluginContext = {
     pluginId,
@@ -779,6 +805,34 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
           bytes: Math.ceil((job.zplBase64.length * 3) / 4)
         })
       }
+    },
+
+    appCloner: {
+      openSignIn: (studyId, url) =>
+        recordAppCloner('openSignIn', [studyId, url], { ok: true as const }),
+      finishSignIn: (studyId) => recordAppCloner('finishSignIn', [studyId], { url: '' }),
+      startStudy: (config) =>
+        recordAppCloner('startStudy', [config], appClonerStatus(config.studyId, config.workers)),
+      stopStudy: (studyId) => recordAppCloner('stopStudy', [studyId], appClonerStatus(studyId, 0)),
+      snapshot: (studyId, worker) => recordAppCloner('snapshot', [studyId, worker], {}),
+      navigate: (studyId, worker, url) =>
+        recordAppCloner('navigate', [studyId, worker, url], {}),
+      act: (studyId, action) => recordAppCloner('act', [studyId, action], {}),
+      extractInventory: (studyId) => recordAppCloner('extractInventory', [studyId], {}),
+      coverage: (studyId, seenTemplateIds, seenCalls) =>
+        recordAppCloner('coverage', [studyId, seenTemplateIds, seenCalls], {}),
+      journal: (studyId, sinceSeq) => recordAppCloner('journal', [studyId, sinceSeq], []),
+      undo: (studyId, journalId) => recordAppCloner('undo', [studyId, journalId], {}),
+      probeErrors: (studyId, worker, serverCall) =>
+        recordAppCloner('probeErrors', [studyId, worker, serverCall], []),
+      status: (studyId) => recordAppCloner('status', [studyId], appClonerStatus(studyId, 0)),
+      screenshot: (studyId, captureId) =>
+        recordAppCloner('screenshot', [studyId, captureId], null)
+    },
+
+    storageBackup: {
+      backup: () => Promise.resolve({ ok: true as const }),
+      restore: () => Promise.resolve({ restored: 0 })
     },
 
     launch: {

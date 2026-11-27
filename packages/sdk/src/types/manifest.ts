@@ -248,6 +248,14 @@ export interface PluginSettingDefinition {
    * fence strip the key. Mirrors the host's `PluginSettingDefinition.agentWritable`.
    */
   agentWritable?: boolean
+  /**
+   * Keep this setting off unless the person turns it on in the plugin's own screens. A write from
+   * an outside door (the control server) that would change it from off to on is refused with a
+   * plain-language message; a write that leaves it off, or turns it off, still applies. A `toggle`
+   * counts as on for any value other than `false`; every other type counts as on once its value
+   * differs from `default`. Mirrors the host's `PluginSettingDefinition.offOnly`.
+   */
+  offOnly?: boolean
 }
 
 export interface PluginLinkClaim {

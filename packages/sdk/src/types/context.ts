@@ -2812,6 +2812,20 @@ export interface PluginAppCloner {
   screenshot(studyId: string, captureId: string): Promise<{ dataUrl: string } | null>
 }
 
+/**
+ * Seal every key this plugin keeps in `ctx.storage` into ONE encrypted backup, and put it back
+ * later on another device from that backup and the person's recovery code.
+ *
+ * Requires the `storageBackup.read` permission. The backup travels through the person's own
+ * cross-device sync, so both calls are refused until they have sync set up and a recovery code.
+ * `restore` refuses a backup that does not authenticate rather than half-applying it, and it
+ * installs only the keys that backup carries.
+ */
+export interface PluginStorageBackup {
+  backup(): Promise<{ ok: true }>
+  restore(input: { code: string }): Promise<{ restored: number }>
+}
+
 /** One brand the person accepted, as a studio sees it. */
 export interface PluginBrandRef {
   kitId: string
@@ -3070,6 +3084,8 @@ export interface PluginContext {
    */
   coachingProfile?: PluginCoachingProfile
   appCloner?: PluginAppCloner
+  /** Backend only. Requires `storageBackup.read`. See {@link PluginStorageBackup}. Optional for the same reason as `members`. */
+  storageBackup?: PluginStorageBackup
   /**
    * Requires `brands`, and only a bundled studio is granted it. See {@link PluginBrands}.
    * Optional so a `PluginContext` double written before the SDK typed it still compiles.

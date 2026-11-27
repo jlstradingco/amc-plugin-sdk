@@ -1,6 +1,6 @@
 export const HOST_MIRROR_PROVENANCE = {
   reconciledAt: '2026-11-26',
-  sourceCommit: '8ccab38da4727031dbbc17246cb80673b494d2c0',
+  sourceCommit: '236822188a01e0138d124c8818d64e2793ad9426',
   sourceBranch: 'master',
   onOriginMaster: true,
 } as const

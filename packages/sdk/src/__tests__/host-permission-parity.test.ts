@@ -109,7 +109,8 @@ describe('SDK <-> host permission parity', () => {
     print: { surface: CTX, key: 'print' },
     limits: { surface: BRIDGE, key: 'limits' },
     live: { surface: BRIDGE, key: 'live' },
-    appCloner: null,
+    appCloner: { surface: CTX, key: 'appCloner' },
+    'storageBackup.read': { surface: CTX, key: 'storageBackup' },
   }
 
   const sdk = new Set<string>(PLUGIN_PERMISSIONS)

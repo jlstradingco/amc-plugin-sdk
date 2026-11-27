@@ -182,6 +182,7 @@ const settingSchema = z.object({
   // Host `z.boolean().optional()` (plugin-manifest-validator.ts, settings). Without
   // it a non-boolean passed here and failed at install, and a valid one was stripped.
   agentWritable: z.boolean().optional(),
+  offOnly: z.boolean().optional(),
 })
 
 /**

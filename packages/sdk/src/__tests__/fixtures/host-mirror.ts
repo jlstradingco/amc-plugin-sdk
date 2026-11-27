@@ -108,6 +108,7 @@ export const HOST_SETTINGS_KEYS = [
   'min',
   'max',
   'agentWritable',
+  'offOnly',
 ] as const
 
 export const HOST_RESERVED_COLUMNS = ['id', 'created_at', 'updated_at'] as const
