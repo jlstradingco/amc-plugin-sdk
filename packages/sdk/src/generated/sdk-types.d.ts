@@ -64,6 +64,7 @@ export type PluginPermission =
   | "itemFolders"
   | "print"
   | "documents.write"
+  | "documents.convert"
   | "members.read"
   | "members.manage"
   | "people.read"
@@ -284,7 +285,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "storageBackup.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "documents.write" | "members.read" | "members.manage" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "storageBackup.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "documents.write" | "documents.convert" | "members.read" | "members.manage" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -333,6 +334,7 @@ export interface PluginManifest {
 export interface AgentMC {
   "ai": {
     "availability": (...args: unknown[]) => Promise<unknown>
+    "claimImages": (...args: unknown[]) => Promise<unknown>
     "completeText": (...args: unknown[]) => Promise<unknown>
     "estimateImage": (...args: unknown[]) => Promise<unknown>
     "estimateImageSet": (...args: unknown[]) => Promise<unknown>
@@ -457,6 +459,7 @@ export interface AgentMC {
     "saveCopies": (...args: unknown[]) => Promise<unknown>
     "saveCopy": (...args: unknown[]) => Promise<unknown>
     "stat": (...args: unknown[]) => Promise<unknown>
+    "wordToPdf": (...args: unknown[]) => Promise<unknown>
   }
   "events": {
     "emit": (...args: unknown[]) => Promise<unknown>
@@ -564,6 +567,7 @@ export interface AgentMC {
     "finish": (...args: unknown[]) => Promise<unknown>
     "pauseForReveal": (...args: unknown[]) => Promise<unknown>
     "resumeAfterSignIn": (...args: unknown[]) => Promise<unknown>
+    "review": (...args: unknown[]) => Promise<unknown>
     "screenshot": (...args: unknown[]) => Promise<unknown>
     "status": (...args: unknown[]) => Promise<unknown>
   }

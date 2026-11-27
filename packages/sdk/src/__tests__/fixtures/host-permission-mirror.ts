@@ -6,6 +6,7 @@ export const HOST_MIRROR_PROVENANCE = {
 } as const
 
 export const HOST_PERMISSIONS = [
+  'documents.convert',
   'storage',
   'secrets',
   'sessions',
@@ -76,10 +77,10 @@ export const HOST_PERMISSIONS = [
   'appCloner',
   'itemFolders',
   'mediaKeys',
-  'print',
+  'print'
 ] as const
 
-export const HOST_UNION_SIZE = 71
+export const HOST_UNION_SIZE = 72
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 

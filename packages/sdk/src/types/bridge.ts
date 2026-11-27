@@ -114,6 +114,12 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
   onImageSetItem(callback: (event: BridgeImageSetItemEvent) => void): () => void
   getImageSpend(): Promise<BridgeImageSpend | BridgeImageRefusal>
   /**
+   * Get back the pictures already made and paid for under a `requestId`, for 24 hours after
+   * each was made. Free: it never prices, asks or charges. Needs the `ai.images` permission;
+   * panel only. An unknown, expired or another plugin's id answers `not-found`.
+   */
+  claimImages(requestId: string): Promise<BridgeImageClaim | BridgeImageRefusal>
+  /**
    * Open Settings → Plan & Usage at Buy credit, for a button beside an
    * `insufficient-credit` refusal. Needs the `ai.images` permission; panel
    * only. Resolves with no value; at most once a second, so a burst is harmless.
@@ -257,7 +263,14 @@ export interface BridgeImageRefusal {
     | 'declined'
     | 'busy'
     | 'image-service-error'
+    | 'duplicate-request'
+    | 'not-found'
   message: string
+}
+
+export interface BridgeImageClaim {
+  ok: true
+  items: { index: number; item: BridgeImageResult }[]
 }
 
 export interface BridgeEmojiOffer {
@@ -807,6 +820,22 @@ export interface DocumentGrant {
  * `could-not-read`, `could-not-open`, `could-not-write`, `nothing-to-append`,
  * `bad-name`, `copy-too-large`, `name-exhausted`.
  */
+export interface WordToPdfFinding {
+  /** `block` stops the conversion; `warn` reports something the sender should look at. */
+  severity: 'block' | 'warn'
+  /** A stable machine code, such as `tracked-changes`, `comments` or `header`. */
+  code: string
+  /** One sentence a person can read, naming what was found. */
+  detail: string
+}
+
+export interface WordToPdfResult {
+  /** True when the document must not be converted until the blocking findings are resolved. */
+  blocked: boolean
+  findings: WordToPdfFinding[]
+  /** The converted PDF as base64, or null when `blocked`. */
+  pdf: string | null
+}
 export interface BridgeDocuments {
   /**
    * Show the OS file picker and mint a Handle for each file the user chose.
@@ -850,6 +879,22 @@ export interface BridgeDocuments {
    * REJECTS on an unknown or closed Handle; it does not resolve `null`.
    */
   stat(handleId: string): Promise<{ length: number }>
+  /**
+   * Turn a Word document the person already opened into a PDF, and say what in it needs a second
+   * look before it goes out for signature.
+   *
+   * Requires the `documents.convert` permission. The Handle must come from {@link open}, so the
+   * plugin can only convert a file the person picked; the source file is never changed.
+   *
+   * A document with tracked changes or comments is BLOCKED: `blocked` is true, `pdf` is null and
+   * the findings name what has to be resolved first. Headers, footers, footnotes, endnotes and
+   * text boxes are WARNINGS.
+   *
+   * A converted PDF comes back as `pdf`, base64-encoded. Calls reject with a `code` on a Handle
+   * that is unknown or closed (`bad-handle`), a PDF over the host cap (`pdf-too-large`), or a
+   * host without the conversion engine (`conversion-unavailable`).
+   */
+  wordToPdf(handleId: string): Promise<WordToPdfResult>
   /**
    * Append bytes — the namespace's only write. Resolves the file's new length,
    * re-stat'd from disk, which is exactly the `expectedLength` for your next

@@ -880,6 +880,14 @@ connection needs a `backend` in the manifest. **Elevated**.
 
 ---
 
+### `documents.convert`
+
+**Grants access to:** `documents.wordToPdf` (**webview**)
+
+Convert a Word document the person picked, reached through a Handle they minted, into a PDF so it can be sent for signature. Tracked changes, comments and formatting marks come back as blocking findings; headers, footers, footnotes, endnotes and text boxes come back as warnings. The original file is never changed.
+
+---
+
 ### `documents.read`
 
 **Grants access to:** the read methods of the Writer namespace (**webview** — `list`, `get`,
@@ -1153,6 +1161,7 @@ the site.
 | `launch` | `ctx.launch.open` (**backend**) | Open a link or file, or run a program the person confirms — elevated |
 | `storageBackup.read` | `ctx.storageBackup.backup` / `restore` (**backend**) | Seal this plugin's data into one encrypted backup and restore it from one, using the person's recovery code — elevated |
 | `appCloner` | a separate browser the plugin runs itself (**backend**) | Study how a site's screens look and work without touching the person's own browser or sign-ins — elevated |
+| `documents.convert` | `documents.wordToPdf` (**webview**) | Turn a picked Word document into a PDF and report what needs a second look |
 | `documents.read` | Writer namespace, read methods (**webview**) | Open and search the person's documents |
 | `documents.write` | Writer namespace, write methods (**webview**) | Create, change and delete the person's documents — elevated |
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |

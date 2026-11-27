@@ -52,6 +52,8 @@ export const PUBLISHED_PERMISSIONS: string[] = [
   'workspace.read',
   'workspace.write',
   'workspace.exec',
+  'documents.convert',
+
   'documents.read',
   'documents.write',
   'members.read',

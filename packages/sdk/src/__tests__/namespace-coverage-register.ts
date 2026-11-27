@@ -39,10 +39,6 @@ export const UNTYPED_BRIDGE_GAPS: readonly UntypedBridgeNamespace[] = [
     reason: 'Reserved to the Human Testing plugin (ownerPlugin: human-testing) — no general AgentMC type, and none may be added for anyone else'
   },
   {
-    namespace: 'humanTestingFixSession',
-    reason: 'Reserved to the Human Testing plugin (ownerPlugin: human-testing) — no general AgentMC type, and none may be added for anyone else'
-  },
-  {
     namespace: 'lms',
     reason: 'Reserved to the LMS plugin (ownerPlugin: lms) — only that plugin may reach its own course data'
   },

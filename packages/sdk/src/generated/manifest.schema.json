@@ -1188,6 +1188,7 @@
           "itemFolders",
           "print",
           "documents.write",
+          "documents.convert",
           "members.read",
           "members.manage",
           "people.read",
@@ -1202,7 +1203,7 @@
           "appCloner"
         ]
       },
-      "maxItems": 71
+      "maxItems": 72
     },
     "mobile": {
       "type": "boolean"

@@ -529,6 +529,15 @@
     "namespaces": []
   },
   {
+    "name": "documents.convert",
+    "label": "Turn a Word document into a PDF",
+    "description": "Convert a Word document you picked into a PDF so it can be sent for signature, and tell you what in it needs a second look before it goes out. It never changes the original file.",
+    "tier": "standard",
+    "namespaces": [
+      "documents"
+    ]
+  },
+  {
     "name": "members.read",
     "label": "See your workspace's people",
     "description": "Read the names, pictures and roles of the people in the workspace you are using. Never their email addresses.",
@@ -540,7 +549,7 @@
   {
     "name": "members.manage",
     "label": "Add and remove your workspace's people",
-    "description": "Invite people to the workspace you are using and remove people from it, only where you could do it yourself on the People screen, and only after you say yes in an Omniscio dialog for each change.",
+    "description": "Invite people to the workspace you are using and remove people from it, only where you could do it yourself on the People screen, and only after you say yes in a confirmation dialog for each change.",
     "tier": "elevated",
     "namespaces": [
       "members"

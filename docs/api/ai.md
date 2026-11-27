@@ -219,7 +219,7 @@ Make **one** picture with Image Studio, paid from the user's Omniscio credit. Ne
 
 Any other field (a picture count, a price) is refused.
 
-**Returns:** `{ ok: true, imageId, base64, model, costUsd }`, or a refusal `{ ok: false, code, message }` — it does not reject for these. `code` is `plugin-images-off`, `signed-out`, `plugin-image-daily-cap`, `insufficient-credit` (Omniscio already offered the user **Add credit**), `declined`, `busy` or `image-service-error`.
+**Returns:** `{ ok: true, imageId, base64, model, costUsd }`, or a refusal `{ ok: false, code, message }` — it does not reject for these. `code` is `plugin-images-off`, `signed-out`, `plugin-image-daily-cap`, `insufficient-credit` (Omniscio already offered the user **Add credit**), `declined`, `busy`, `image-service-error` or `duplicate-request` (the `requestId` was already used; claim its pictures instead).
 
 The picture always arrives as `base64` bytes, so a canvas that draws it is never tainted. When Image Studio stores the picture instead of returning it, Omniscio downloads it for you; if that download fails you get `image-service-error`.
 
@@ -275,10 +275,13 @@ What **this plugin** has spent on pictures today and this calendar month, and it
 ```typescript
 const spend = await AgentMC.ai.getImageSpend()
 if (spend.ok) showGuard(spend.todayUsd, spend.dailyLimitUsd, spend.monthUsd)
+```
 
 ### `opts.requestId` — name a request
 
 `generateImage(request, opts?)` and `generateImageSet(requests, opts?)` take an optional `{ requestId }`: your own handle for that request, 1 to 64 letters, digits, `-` or `_`. Any other value, or any other field in `opts`, is refused before anything is priced or asked. The person never sees it. On a set it comes back on every `onImageSetItem` event.
+
+Every picture made under a `requestId` is kept by Omniscio on this computer for 24 hours, so a panel that closed or lost its answer can get it back with `claimImages`. An id can be used once: a request whose id was already used in the last 24 hours is refused `duplicate-request` before anything is priced or asked, so a resent request never pays twice. A request that was declined or refused before it was paid leaves its id free. Use a new id for every new paid try.
 
 ### `onImageSetItem(callback): () => void` (panel only)
 
@@ -294,6 +297,17 @@ const off = AgentMC.ai.onImageSetItem(({ requestId, index, count, item }) => {
 })
 const result = await AgentMC.ai.generateImageSet(requests, { requestId: 'batch-7' })
 off()
+```
+
+### `claimImages(requestId): Promise<BridgeImageClaim | BridgeImageRefusal>` (panel only)
+
+Get back the pictures already made and paid for under a `requestId`, for 24 hours after each was made. Free: it never prices, asks, charges or calls Image Studio. Needs the `ai.images` permission.
+
+**Returns:** `{ ok: true, items }`, where each item is `{ index, item }`: the picture's position in its request and the same picture result `generateImage` returned, `costUsd` included, in order. A picture that was not made is not listed. An unknown id, an expired id and another plugin's id all answer `{ ok: false, code: 'not-found', message }`. At most 60 claims a minute; a faster call answers `busy`.
+
+```typescript
+const kept = await AgentMC.ai.claimImages('batch-7')
+if (kept.ok) kept.items.forEach(({ index, item }) => placePicture(index, item.base64 ?? item.url))
 ```
 
 ## Notes
