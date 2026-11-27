@@ -234,7 +234,7 @@ Every upload passes four steps before it reaches anyone's computer:
 
 The newest powers are **not open to outside developers yet**. Until Omniscio turns them on, an upload that declares any of these is refused at the automatic check, with a message that names the power:
 
-`tasks.read`, `tasks.write`, `boards.write`, `vault.read`, `vault.write`, `calendar.read`, `calendar.write`, `inbox.read`, `people.read`, `sessions.control`, `teamChat.read`, `teamChat.write`
+`tasks.read`, `tasks.write`, `boards.write`, `vault.read`, `vault.write`, `calendar.read`, `calendar.write`, `inbox.read`, `people.read`, `sessions.control`, `teamChat.read`, `teamChat.write`, `members.manage`
 
 ```
 This power isn't open to outside developers yet: tasks.read.
