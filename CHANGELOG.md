@@ -11,6 +11,11 @@ which are released together.
 
 ## [Unreleased]
 
+### Fixed — `ctx.ai.getImageSpend` answers in the dev shell
+
+- `ctx.ai.getImageSpend()` now answers in the dev shell, so a plugin that reads its daily and
+  monthly picture spend works under `omniscio-plugin dev` instead of crashing on a missing method.
+
 ### Added — the release center, the floor abilities and the pin proof
 
 - `Omniscio.release.read({ lane })` (webview only) reads one lane of the release center —

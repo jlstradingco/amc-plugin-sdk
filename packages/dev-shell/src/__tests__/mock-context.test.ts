@@ -76,6 +76,15 @@ describe('createMockContext', () => {
     // `status` is required — the host silently drops a whole batch without it.
     expect(() => ctx.sidebar.setItems([{ id: '1', title: 'Test', status: 'idle' }])).not.toThrow()
   })
+
+  it('ai.getImageSpend answers the spend and daily limit the panel reads', async () => {
+    await expect(ctx.ai.getImageSpend()).resolves.toEqual({
+      ok: true,
+      todayUsd: 0,
+      monthUsd: 0,
+      dailyLimitUsd: 2
+    })
+  })
 })
 
 describe('createMockContext — faithful db', () => {

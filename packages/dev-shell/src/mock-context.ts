@@ -615,6 +615,8 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
           },
           engines: []
         }),
+      getImageSpend: () =>
+        Promise.resolve({ ok: true, todayUsd: 0, monthUsd: 0, dailyLimitUsd: 2 }),
       // Shape the mock from the tool's own inputSchema rather than returning {} —
       // a plugin that renders `tldr` and `bullets` gets something to render in
       // `omniscio-plugin dev` instead of a screen of undefined.
