@@ -82,6 +82,7 @@ describe('SDK <-> host permission parity', () => {
     'members.read': null,
     'members.manage': null,
     'teamChat.emoji': { surface: BRIDGE, key: 'teamChat' },
+    handoff: { surface: BRIDGE, key: 'handoff' },
     'email.send': { surface: CTX, key: 'email' },
     'email.fromName': null,
     'network.upload': { surface: BRIDGE, key: 'http' },
@@ -184,7 +185,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(73)
+    expect(HOST_PERMISSIONS.length).toBe(74)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 

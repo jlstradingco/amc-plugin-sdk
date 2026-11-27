@@ -756,6 +756,10 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
         if (shouldLog) console.log(`${prefix} [appCloner] stopStudy(${studyId})`)
         return Promise.resolve(appClonerStatus(studyId, 0))
       },
+      deleteStudy: (studyId) => {
+        if (shouldLog) console.log(`${prefix} [appCloner] deleteStudy(${studyId})`)
+        return Promise.resolve()
+      },
       snapshot: (studyId, worker) => {
         if (shouldLog) console.log(`${prefix} [appCloner] snapshot(${studyId}, ${worker})`)
         return Promise.resolve({})

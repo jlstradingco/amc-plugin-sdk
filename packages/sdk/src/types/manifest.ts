@@ -258,6 +258,19 @@ export interface PluginSettingDefinition {
   offOnly?: boolean
 }
 
+/**
+ * The plugins this one hands off to, takes hand-offs from, and answers reads for. A hand-off needs
+ * BOTH sides to name each other: the sender lists `{ to, kind }` under `sends` and the receiver
+ * lists `{ from, kind }` under `accepts`; a read needs the provider to list `{ to, read }` under
+ * `answers`. Kinds are `idea` and `file`, reads are `trends` and `accounts`. At most 20 rows in
+ * each list, no row twice. Needs the `handoff` permission.
+ */
+export interface PluginHandoffs {
+  sends?: Array<{ to: string; kind: 'idea' | 'file' }>
+  accepts?: Array<{ from: string; kind: 'idea' | 'file' }>
+  answers?: Array<{ to: string; read: 'trends' | 'accounts' }>
+}
+
 export interface PluginLinkClaim {
   /** The site's domain, at least two labels (`example.com`), at most 253 characters. */
   host: string
@@ -702,6 +715,8 @@ export interface PluginManifest {
    * refused without it. The person approves this list once, on the first upload.
    */
   uploadHosts?: string[]
+  /** Plugin hand-off pairs. See {@link PluginHandoffs}. */
+  handoffs?: PluginHandoffs
   floor?: PluginFloor
   /**
    * The feature actions this plugin counts with `usage.record(action)`: at most

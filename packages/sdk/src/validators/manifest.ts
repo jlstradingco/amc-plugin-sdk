@@ -899,6 +899,29 @@ const usageActionsSchema = z
     message: 'usageActions may not list the same action twice',
   })
 
+const HANDOFF_ROWS_MAX = 20
+const HANDOFF_KINDS = ['idea', 'file'] as const
+const HANDOFF_READS = ['trends', 'accounts'] as const
+const handoffPluginId = z.string().max(PLUGIN_ID_MAX).regex(pluginIdRegex, 'handoffs must name plugins by their id')
+
+function handoffRows<T extends z.ZodRawShape>(shape: T, key: (row: Record<string, string>) => string) {
+  return z
+    .array(z.object(shape).strict())
+    .max(HANDOFF_ROWS_MAX)
+    .refine((rows) => new Set(rows.map((row) => key(row as Record<string, string>))).size === rows.length, {
+      message: 'handoffs may not list the same row twice',
+    })
+    .optional()
+}
+
+const handoffsSchema = z
+  .object({
+    sends: handoffRows({ to: handoffPluginId, kind: z.enum(HANDOFF_KINDS) }, (row) => `${row.to}:${row.kind}`),
+    accepts: handoffRows({ from: handoffPluginId, kind: z.enum(HANDOFF_KINDS) }, (row) => `${row.from}:${row.kind}`),
+    answers: handoffRows({ to: handoffPluginId, read: z.enum(HANDOFF_READS) }, (row) => `${row.to}:${row.read}`),
+  })
+  .strict()
+
 const UI_ANCHORS_MAX = 64
 const UI_ANCHORS_EXTRA_MAX = 128
 const UI_ANCHORS_TOTAL_MAX = UI_ANCHORS_MAX + UI_ANCHORS_EXTRA_MAX
@@ -1065,6 +1088,7 @@ export const manifestSchema = z.object({
   workspace: z.unknown().optional(),
   linkClaims: z.array(linkClaimSchema).min(1).max(LINK_CLAIMS_MAX).optional(),
   uploadHosts: z.array(uploadHostSchema).min(1).max(10).optional(),
+  handoffs: handoffsSchema.optional(),
   floor: buildFloorSchema(pluginRelativeEntryPath).optional(),
   usageActions: usageActionsSchema.optional(),
   uiAnchors: uiAnchorsSchema.optional(),

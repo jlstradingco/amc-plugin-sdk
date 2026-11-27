@@ -72,6 +72,7 @@ export type PluginPermission =
   | "coaching-profile"
   | "brands"
   | "teamChat.emoji"
+  | "handoff"
   | "email.send"
   | "limits"
   | "webassembly"
@@ -263,6 +264,20 @@ export interface PluginManifest {
     "path": string
   }>
   "uploadHosts"?: Array<string>
+  "handoffs"?: {
+    "sends"?: Array<{
+      "to": string
+      "kind": "idea" | "file"
+    }>
+    "accepts"?: Array<{
+      "from": string
+      "kind": "idea" | "file"
+    }>
+    "answers"?: Array<{
+      "to": string
+      "read": "trends" | "accounts"
+    }>
+  }
   "floor"?: {
     "entryPoint": string
     "rpcAllow": Array<string>
@@ -286,7 +301,7 @@ export interface PluginManifest {
       "agentReadable"?: boolean
     }>
   }
-  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "storageBackup.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "share.images" | "documents.write" | "documents.convert" | "members.read" | "members.manage" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
+  "permissions"?: Array<"storage" | "secrets" | "sessions" | "ai" | "ai.subscription" | "ai.images" | "tts" | "stt" | "microphone" | "network" | "network.upload" | "cron" | "cli" | "notifications" | "system" | "rss" | "auth" | "auth.session" | "auth.sharedSignIn" | "auth.actAsUser" | "sessions.readHistory" | "sessions.images" | "boards.read" | "boards.link" | "boards.write" | "tasks.read" | "tasks.write" | "sessions.launchAny" | "sessions.observeStatus" | "sessions.control" | "vault.read" | "vault.write" | "calendar.read" | "timeTracker.read" | "timeTracker.write" | "storageBackup.read" | "calendar.write" | "teamChat.read" | "teamChat.write" | "inbox" | "inbox.read" | "navigation" | "chrome" | "chrome.widget" | "launch" | "mediaKeys" | "firebase" | "recording" | "spend" | "coreRead" | "oauth" | "channel" | "workspace.read" | "workspace.write" | "workspace.exec" | "documents.read" | "itemFolders" | "print" | "share.images" | "documents.write" | "documents.convert" | "members.read" | "members.manage" | "people.read" | "coaching-profile" | "brands" | "teamChat.emoji" | "handoff" | "email.send" | "limits" | "webassembly" | "email.fromName" | "live" | "appCloner">
   "mobile"?: boolean
   "usageActions"?: Array<string>
   "uiAnchors"?: Array<{
@@ -552,6 +567,13 @@ export interface AgentMC {
     "unwatch": (...args: unknown[]) => Promise<unknown>
     "watch": (...args: unknown[]) => Promise<unknown>
     "writeFile": (...args: unknown[]) => Promise<unknown>
+  }
+  "handoff": {
+    "onReceive": (handler: (...args: unknown[]) => void) => () => void
+    "open": (...args: unknown[]) => Promise<unknown>
+    "passFile": (...args: unknown[]) => Promise<unknown>
+    "read": (...args: unknown[]) => Promise<unknown>
+    "readFile": (...args: unknown[]) => Promise<unknown>
   }
   "host": {
     "accountNamespace": (...args: unknown[]) => Promise<unknown>

@@ -80,6 +80,7 @@ export const PLUGIN_PERMISSIONS = [
   "coaching-profile",
   "brands",
   "teamChat.emoji",
+  "handoff",
   "email.send",
   "limits",
   "webassembly",

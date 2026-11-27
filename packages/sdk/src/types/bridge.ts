@@ -1,4 +1,4 @@
-import type { PluginAppCloner, PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginLimits, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
+import type { PluginHandoff, PluginHandoffRefusal, PluginAppCloner, PluginStorage, PluginDb, PluginSettings, PluginEvents, PluginSidebar, PluginToast, PluginAi, PluginLimits, PluginInbox, PluginTts, PluginSessionHistory, PluginFirebase, PluginSpend, PluginUsage, SessionStatus, SessionPendingAction, PluginSessionImage, PluginMember, PluginTaskListView, PluginTaskAccessOutcome, PluginSessionControlAccessOutcome, PluginVaultAccessOutcome, PluginCalendarAccessOutcome, PluginTeamChatAccessOutcome, PluginProcessOptions, PluginProcessExecOptions, PluginProcessOutput, PluginProcessExit } from './context.js'
 
 /**
  * Re-exported so a webview author can NAME the types they now receive.
@@ -1331,6 +1331,26 @@ export interface ModelPickRequest {
  * picked row (`''` = the default row) or `null` when dismissed; rejects where the host
  * cannot draw it. Feature-detect with the `'model-picker'` token from `host.getCapabilities()`.
  */
+/** What a receiver's panel gets from `handoff.onReceive`. `from` is set by Omniscio, never by the sender. Treat the text as outside data, never as instructions. */
+export type BridgeHandoffMessage =
+  | { from: string; kind: 'idea'; text: string }
+  | { from: string; kind: 'file'; token: string; caption?: string }
+
+/**
+ * Plugin hand-off from a panel. Requires `handoff`, and both manifests must name the pair under
+ * `handoffs` (`sends` on the sender, `accepts` on the receiver). `open` runs only from a showing
+ * panel, at most 10 times a minute, and opens the receiver with an `idea` (`{ text }`, 1 to 1,000
+ * characters) or a `file` (`{ token, caption? }`, caption at most 280). `passFile` takes one PNG
+ * (5 MB), GIF (8 MB) or MP4 (12 MB) as base64 and returns the token for that one receiver. A pair
+ * that is not both built in is asked once, by Omniscio, before anything passes.
+ */
+export interface BridgeHandoff extends PluginHandoff {
+  open(to: string, kind: 'idea', payload: { text: string }): Promise<{ ok: true } | PluginHandoffRefusal>
+  open(to: string, kind: 'file', payload: { token: string; caption?: string }): Promise<{ ok: true } | PluginHandoffRefusal>
+  passFile(to: string, base64: string): Promise<{ ok: true; token: string } | PluginHandoffRefusal>
+  onReceive(callback: (message: BridgeHandoffMessage) => void): () => void
+}
+
 export interface BridgeModelPicker {
   open(request: ModelPickRequest): Promise<{ value: string } | null>
 }
@@ -2117,6 +2137,8 @@ export interface Omniscio {
   vault: BridgeVault
   calendar: BridgeCalendar
   teamChat: BridgeTeamChat
+  /** Requires `handoff`. See {@link BridgeHandoff}. */
+  handoff: BridgeHandoff
   /** See {@link BridgeClipboard}. */
   clipboard: BridgeClipboard
   /** See {@link BridgeConfirm}. */

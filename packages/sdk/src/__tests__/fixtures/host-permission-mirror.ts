@@ -65,6 +65,7 @@ export const HOST_PERMISSIONS = [
   'members.manage',
   'people.read',
   'teamChat.emoji',
+  'handoff',
   'email.send',
   'limits',
   'webassembly',
@@ -81,7 +82,7 @@ export const HOST_PERMISSIONS = [
   'share.images'
 ] as const
 
-export const HOST_UNION_SIZE = 73
+export const HOST_UNION_SIZE = 74
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 

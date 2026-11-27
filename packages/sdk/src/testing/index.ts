@@ -831,6 +831,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
       startStudy: (config) =>
         recordAppCloner('startStudy', [config], appClonerStatus(config.studyId, config.workers)),
       stopStudy: (studyId) => recordAppCloner('stopStudy', [studyId], appClonerStatus(studyId, 0)),
+      deleteStudy: (studyId) => recordAppCloner('deleteStudy', [studyId], undefined),
       snapshot: (studyId, worker) => recordAppCloner('snapshot', [studyId, worker], {}),
       navigate: (studyId, worker, url) =>
         recordAppCloner('navigate', [studyId, worker, url], {}),

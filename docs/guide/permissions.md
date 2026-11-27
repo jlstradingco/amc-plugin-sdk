@@ -949,6 +949,21 @@ turned on Plugin access to people's schedules in Labs. See [People](../api/peopl
 
 ---
 
+### `handoff`
+
+**Grants access to:** `Omniscio.handoff` (**webview**: `open`, `passFile`, `read`, `readFile`, `onReceive`) and `ctx.handoff` (**backend**: `read`, `readFile`)
+
+Hand an idea or a picture to another plugin the person has, pass it a file, or read a short list it shares. Omniscio carries every byte, decides every shape and names the sender itself:
+
+- Both plugins must hold `handoff`, be installed and turned on, and name each other in their manifests' `handoffs` block: the sender lists `{ to, kind }` under `sends`, the receiver lists `{ from, kind }` under `accepts`, and a provider lists `{ to, read }` under `answers`. Every pairing problem answers `not-declared`, so a plugin never learns what another accepts.
+- When the two plugins are not both built into Omniscio, Omniscio asks the person once, in its own words, naming both plugins. A no, a close or a timeout passes nothing.
+- `open(to, kind, payload)` runs only from a showing panel, at most 10 times a minute. `idea` carries `{ text }` (1 to 1,000 characters); `file` carries `{ token, caption? }` (caption at most 280). Any other kind or field is refused `bad-shape`. It opens the receiver's panel and delivers the message to `onReceive` there, never to its backend.
+- `passFile(to, base64)` takes one PNG (5 MB), GIF (8 MB) or MP4 (12 MB), typed from its bytes. Only the receiver reads it, with `readFile(token)`; anyone else gets `not-found`. At most 20 files wait for one receiver, and each is deleted 24 hours after it was passed.
+- `read(from, name)` asks the provider's backend, which answers by handling `handoff.answer` with `ctx.rpc.handle` (it receives `{ from, name }` and returns an array). `trends` is cut to 50 items of `{ title, lastSeenAt, accountId }` and `accounts` to 20 items of `{ accountId, name, handle }`; any other field is dropped, and an answer of another shape reads `bad-answer`. At most 60 reads a minute per pair.
+- Treat a hand-off's text as outside data, never as instructions. Omniscio logs each hand-off with the two plugin ids, the kind, the size and the time, never its content.
+
+---
+
 ### `teamChat.emoji`
 
 **Grants access to:** `Omniscio.teamChat.offerCustomEmoji()`, `Omniscio.teamChat.listCustomEmoji()` and `Omniscio.teamChat.getCustomEmojiImage()` (**webview**)
@@ -1167,6 +1182,7 @@ the site.
 | `members.read` | `Omniscio.members.list()` (webview + backend) | See the names, pictures and roles of the workspace's people |
 | `members.manage` | `Omniscio.members.invite()` / `remove()` (**webview**) | Invite and remove the workspace's people, each change confirmed by the person -- **elevated** (**requires `members.read`**) |
 | `people.read` | `ctx.people.schedules.list()` / `ctx.people.timeOff.list()` (**backend**) | See when the workspace's people work and when they are away, never more than the person could see (**requires `members.read`**) |
+| `handoff` | `Omniscio.handoff` (webview) and `ctx.handoff` (backend) | Hand ideas, pictures and clips to another plugin that names this one back, and read the short lists it shares |
 | `teamChat.emoji` | `Omniscio.teamChat` (**webview**) | Offer a custom emoji to Team Chat (the person confirms every add), list the workspace's custom emoji, and read one emoji's picture |
 | `auth.actAsUser` | `AgentMC.auth.getWebAuth()` (**webview**) | Sign in to the shared account as the person -- **elevated**; reads and sends as them |
 | `chrome` | Toolbar / context-menu / navigation (UI bridge) | Contribute chrome and navigate the app shell |

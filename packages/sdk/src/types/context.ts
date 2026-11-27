@@ -3004,6 +3004,47 @@ export interface PluginLimits {
   count(name: string): Promise<PluginLimitCount>
 }
 
+/** Why a hand-off was refused. Every pairing problem reads `not-declared`, so no plugin learns what another accepts. */
+export interface PluginHandoffRefusal {
+  ok: false
+  code: 'not-declared' | 'bad-shape' | 'busy' | 'not-found' | 'not-showing' | 'bad-answer'
+}
+
+/** One trend another plugin shares, as Omniscio reshapes it. */
+export interface PluginHandoffTrend {
+  title: string
+  lastSeenAt: string
+  accountId: string
+}
+
+/** One account another plugin shares, as Omniscio reshapes it. */
+export interface PluginHandoffAccount {
+  accountId: string
+  name: string
+  handle: string
+}
+
+/** A file another plugin passed to you, read back once with its token. */
+export interface PluginHandoffFile {
+  ok: true
+  mime: 'image/png' | 'image/gif' | 'video/mp4'
+  base64: string
+}
+
+/**
+ * Plugin hand-off, the reading half (backend and panel). Requires `handoff` and a matching
+ * `handoffs` block in both manifests. `read` reaches the other plugin only when it lists you
+ * under `handoffs.answers`; the answer is cut to 50 trends or 20 accounts and every field
+ * outside the shape is dropped. To answer reads yourself, handle `handoff.answer` with
+ * `ctx.rpc.handle`: it receives `{ from, name }` and returns an array. `readFile` reads a file
+ * passed to YOU; anyone else gets `not-found`, and the file is gone 24 hours after it was passed.
+ */
+export interface PluginHandoff {
+  read(from: string, name: 'trends'): Promise<{ ok: true; items: PluginHandoffTrend[] } | PluginHandoffRefusal>
+  read(from: string, name: 'accounts'): Promise<{ ok: true; items: PluginHandoffAccount[] } | PluginHandoffRefusal>
+  readFile(token: string): Promise<PluginHandoffFile | PluginHandoffRefusal>
+}
+
 /** What {@link PluginFloor.checkPin} answers: the PIN matched, was wrong, or the pair is locked. */
 export type PluginFloorPinAnswer =
   | { ok: true }
@@ -3155,6 +3196,8 @@ export interface PluginContext {
    * double written before the SDK typed it still compiles.
    */
   members?: PluginMembers
+  /** Requires `handoff`. See {@link PluginHandoff}. Optional for the same reason as `members`. */
+  handoff?: PluginHandoff
   /** Backend only. Requires `channel`. See {@link PluginChannel}. Optional for the same reason as `members`. */
   channel?: PluginChannel
   /** Backend only. Requires `launch`. See {@link PluginLaunch}. Optional for the same reason as `members`. */
