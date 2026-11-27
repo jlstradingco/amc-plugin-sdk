@@ -345,6 +345,7 @@ export interface AgentMC {
     "getImageSpend": (...args: unknown[]) => Promise<unknown>
     "isConfigured": (...args: unknown[]) => Promise<unknown>
     "listEngines": (...args: unknown[]) => Promise<unknown>
+    "onImageSetItem": (handler: (...args: unknown[]) => void) => () => void
     "openAddCredit": (...args: unknown[]) => Promise<unknown>
     "openSetup": (...args: unknown[]) => Promise<unknown>
   }

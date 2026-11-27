@@ -102,9 +102,16 @@ export interface BridgeAi extends Omit<PluginAi, 'generateMessage' | 'generateTe
    * `ai.images` permission; panel only (the worker is refused). Check
    * `host.getCapabilities()` for `ai-images` before offering the action.
    */
-  generateImage(request: BridgeImageRequest): Promise<BridgeImageResult | BridgeImageRefusal>
+  generateImage(
+    request: BridgeImageRequest,
+    opts?: BridgeImageRequestOptions
+  ): Promise<BridgeImageResult | BridgeImageRefusal>
   estimateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetEstimate | BridgeImageRefusal>
-  generateImageSet(requests: BridgeImageRequest[]): Promise<BridgeImageSetResult | BridgeImageRefusal>
+  generateImageSet(
+    requests: BridgeImageRequest[],
+    opts?: BridgeImageRequestOptions
+  ): Promise<BridgeImageSetResult | BridgeImageRefusal>
+  onImageSetItem(callback: (event: BridgeImageSetItemEvent) => void): () => void
   getImageSpend(): Promise<BridgeImageSpend | BridgeImageRefusal>
   /**
    * Open Settings → Plan & Usage at Buy credit, for a button beside an
@@ -190,6 +197,18 @@ export interface BridgeImageLedger {
   spentTodayUsd?: number
   /** This plugin's daily picture limit, the one the host enforces. Absent on an old host. */
   capUsd?: number
+}
+
+export interface BridgeImageRequestOptions {
+  requestId?: string
+}
+
+export interface BridgeImageSetItemEvent {
+  requestId: string | null
+  index: number
+  count: number
+  item: BridgeImageResult | BridgeImageRefusal
+  costUsd: number
 }
 
 export interface BridgeImageSetEstimate extends BridgeImageLedger {

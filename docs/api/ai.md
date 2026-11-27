@@ -242,7 +242,7 @@ if (caps.includes('ai-images')) {
 
 Omniscio's own price for a **set** of pictures, Omniscio's fee included. Free. Needs the `ai.images` permission.
 
-### `generateImageSet(requests): Promise<BridgeImageSetResult | BridgeImageRefusal>` (panel only)
+### `generateImageSet(requests, opts?): Promise<BridgeImageSetResult | BridgeImageRefusal>` (panel only)
 
 Make a set of pictures with Image Studio, paid from the user's Omniscio credit, behind **one** confirmation for the whole set. Needs the `ai.images` permission.
 
@@ -275,11 +275,30 @@ What **this plugin** has spent on pictures today and this calendar month, and it
 ```typescript
 const spend = await AgentMC.ai.getImageSpend()
 if (spend.ok) showGuard(spend.todayUsd, spend.dailyLimitUsd, spend.monthUsd)
+
+### `opts.requestId` — name a request
+
+`generateImage(request, opts?)` and `generateImageSet(requests, opts?)` take an optional `{ requestId }`: your own handle for that request, 1 to 64 letters, digits, `-` or `_`. Any other value, or any other field in `opts`, is refused before anything is priced or asked. The person never sees it. On a set it comes back on every `onImageSetItem` event.
+
+### `onImageSetItem(callback): () => void` (panel only)
+
+See each picture of a set the moment it is made, instead of waiting for the whole set. Subscribe before calling `generateImageSet`; the return value unsubscribes. Needs the `ai.images` permission.
+
+The callback gets one event per picture, in the order asked: `{ requestId, index, count, item, costUsd }`. `requestId` is the set's own id or `null`, `item` is exactly what the final `items[index]` will hold (a picture or a refusal), and `costUsd` is that picture's own charge (`0` for one that was not made). Only the panel that asked receives them. A set refused as a whole sends no event. The final answer of `generateImageSet` is unchanged, so a plugin that never subscribes works exactly as before. The last event and the final answer travel separately, so treat the final answer as the record and the events as progress.
+
+```typescript
+const off = AgentMC.ai.onImageSetItem(({ requestId, index, count, item }) => {
+  if (requestId !== 'batch-7') return
+  showProgress(index + 1, count)
+  if (item.ok) showPicture(item.base64 ?? item.url)
+})
+const result = await AgentMC.ai.generateImageSet(requests, { requestId: 'batch-7' })
+off()
 ```
 
 ## Notes
 
-- `estimateImage` / `generateImage` / `estimateImageSet` / `generateImageSet` work only from the plugin's panel, and their spend has its own per-plugin daily limit (Cost Control → **Plugin pictures**, $2 unless changed), separate from the text-AI limit.
+- `estimateImage` / `generateImage` / `estimateImageSet` / `generateImageSet` / `onImageSetItem` work only from the plugin's panel, and their spend has its own per-plugin daily limit (Cost Control → **Plugin pictures**, $2 unless changed), separate from the text-AI limit.
 - `generateTextViaSubscription` runs on the person's Claude plan; every other method here goes through Omniscio's AI service on a stored key.
 - These key calls go through Omniscio's AI service, which requires an API key account. OAuth/login accounts cannot make direct AI calls. If no API key account is available, the call will fail with a descriptive error.
 - Call `isConfigured` first when you are about to show a Generate control — it is the difference between a disabled button and a failed click.
