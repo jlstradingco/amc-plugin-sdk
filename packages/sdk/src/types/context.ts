@@ -2953,6 +2953,39 @@ export interface PluginLimits {
   count(name: string): Promise<PluginLimitCount>
 }
 
+/** What {@link PluginFloor.checkPin} answers: the PIN matched, was wrong, or the pair is locked. */
+export type PluginFloorPinAnswer =
+  | { ok: true }
+  | { ok: false; code: 'pin-wrong' }
+  | { ok: false; code: 'pin-locked'; seconds: number | null }
+
+/**
+ * `ctx.floor` — the abilities of a plugin that declares a `floor` block in its manifest.
+ * A call from any plugin without an open floor of its own answers no and changes nothing.
+ * Backend only. Optional: absent on an Omniscio that predates the floor door.
+ */
+export interface PluginFloor {
+  /** Check a staff PIN against the record this floor made for it. */
+  checkPin(input: {
+    deviceId: string
+    callId: string
+    staffId: string
+    pinRecord: unknown
+    pin: unknown
+  }): Promise<PluginFloorPinAnswer>
+  /** Send one of this floor's own events to every listener of the floor stream. */
+  emit(name: string, payload: unknown): Promise<boolean>
+  /** End the named staff member's floor sign-ins on this plugin. */
+  endSignIns(staffId: string): void
+  /** Register (or replace) the handler Omniscio calls for a floor event. Handlers stay in the worker. */
+  handle(method: string, handler: (...args: unknown[]) => unknown): void
+}
+
+/** `ctx.pin` — redeem a single-use proof this floor issued for a person. */
+export interface PluginPin {
+  redeemProof(proof: unknown): Promise<{ ok: true; staffId: string } | { ok: false }>
+}
+
 export interface PluginContext {
   pluginId: string
   pluginVersion: string
@@ -3095,4 +3128,11 @@ export interface PluginContext {
   limits?: PluginLimits
   /** Requires `live`. Backend twin of `Omniscio.live` — see {@link BridgeLive}. Optional for the same reason as `members`. */
   live?: BridgeLive
+  /**
+   * Backend only. A plugin with a `floor` block in its manifest calls these for its own
+   * floor. See {@link PluginFloor}. Optional: absent on an Omniscio that predates the floor door.
+   */
+  floor?: PluginFloor
+  /** Backend only. Redeem a single-use proof from this floor. See {@link PluginPin}. Optional for the same reason as `floor`. */
+  pin?: PluginPin
 }

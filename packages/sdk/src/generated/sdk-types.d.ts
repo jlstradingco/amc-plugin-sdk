@@ -533,6 +533,7 @@ export interface AgentMC {
     "finish": (...args: unknown[]) => Promise<unknown>
     "pauseForReveal": (...args: unknown[]) => Promise<unknown>
     "resumeAfterSignIn": (...args: unknown[]) => Promise<unknown>
+    "screenshot": (...args: unknown[]) => Promise<unknown>
     "status": (...args: unknown[]) => Promise<unknown>
   }
   "humanTestingEnvironment": {

@@ -251,6 +251,10 @@ export type {
   PluginRssEntry,
   PluginRssRecentOptions,
   PluginRss,
+  // The floor abilities and the proof a plugin with a floor block redeems
+  PluginFloorPinAnswer,
+  PluginFloor,
+  PluginPin,
   // Titlebar and sidebar widgets (`chrome.widget`)
   WidgetShape,
   WidgetTone,
@@ -274,6 +278,14 @@ export type {
   ModelPickOption,
   ModelPickRequest,
   BridgeModelPicker,
+  // The release center the bundled `release-center` plugin reads through `Omniscio.release`
+  BridgeReleaseLane,
+  BridgeReleaseState,
+  BridgeReleaseTone,
+  BridgeReleaseItem,
+  BridgeReleaseLink,
+  BridgeReleaseLaneResult,
+  BridgeRelease,
   // Backend types
   PluginBackend,
   PluginActivate,

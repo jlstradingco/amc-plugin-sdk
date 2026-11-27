@@ -79,7 +79,7 @@ export const HOST_PERMISSIONS = [
   'print',
 ] as const
 
-export const HOST_UNION_SIZE = 69
+export const HOST_UNION_SIZE = 71
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 

@@ -67,6 +67,8 @@ export type {
   PluginLaunchRequest, PluginLaunchResult, PluginLaunch,
   PluginOAuthRequest, PluginOAuthTokens, PluginOAuthResult, PluginOAuth,
   PluginRssParsedEntry, PluginRssFeedResult, PluginRssFeed, PluginRssEntry, PluginRssRecentOptions, PluginRss,
+  // The floor abilities and the proof a plugin with a floor block redeems
+  PluginFloorPinAnswer, PluginFloor, PluginPin,
 } from './context.js'
 
 // Titlebar and sidebar widgets (`chrome.widget`) — declared with the bridge types
@@ -78,5 +80,11 @@ export type {
 } from './bridge.js'
 
 export type { ModelPickOption, ModelPickRequest, BridgeModelPicker } from './bridge.js'
+
+// The release center the bundled `release-center` plugin reads through `Omniscio.release`
+export type {
+  BridgeReleaseLane, BridgeReleaseState, BridgeReleaseTone, BridgeReleaseItem,
+  BridgeReleaseLink, BridgeReleaseLaneResult, BridgeRelease,
+} from './bridge.js'
 
 export type { PluginBackend, PluginActivate } from './backend.js'

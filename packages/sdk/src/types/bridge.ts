@@ -1925,6 +1925,48 @@ export interface BridgeLocale {
   onChange(callback: (locale: BridgeLocaleValue) => void): () => void
 }
 
+/** The release-center lane {@link BridgeRelease.read} answers about. */
+export type BridgeReleaseLane = 'readiness' | 'inFlight' | 'rollout' | 'sites'
+
+/** The overall colour a release lane reports. */
+export type BridgeReleaseState = 'green' | 'amber' | 'red' | 'unknown'
+
+/** How one release lane line is drawn. */
+export type BridgeReleaseTone = 'neutral' | 'good' | 'warn' | 'bad' | 'unknown'
+
+/** One labelled number in a release lane. */
+export interface BridgeReleaseItem {
+  label: string
+  value: string
+  tone?: BridgeReleaseTone
+}
+
+/** One link a release lane offers. */
+export interface BridgeReleaseLink {
+  label: string
+  url: string
+}
+
+/** One lane of the release center, as {@link BridgeRelease.read} answers. */
+export interface BridgeReleaseLaneResult {
+  state: BridgeReleaseState
+  /** ISO timestamp of the data this answer was built from. */
+  asOf: string
+  headline: string
+  items: BridgeReleaseItem[]
+  links: BridgeReleaseLink[]
+  notes: string[]
+}
+
+/**
+ * `Omniscio.release` — read one lane of the release center. Only the bundled
+ * `release-center` plugin may call it; every other plugin is refused.
+ * Optional: absent on an Omniscio that predates the release center.
+ */
+export interface BridgeRelease {
+  read(input: { lane: BridgeReleaseLane }): Promise<BridgeReleaseLaneResult>
+}
+
 /**
  * `window.Omniscio` — the surface a plugin WEBVIEW gets. The same object is
  * also installed as `window.AgentMC`, its name before 3.4.0, so existing
@@ -2007,6 +2049,8 @@ export interface Omniscio {
   live: BridgeLive
   /** Requires `appCloner`, which only the bundled App Cloner plugin is granted. See {@link PluginAppCloner}. */
   appCloner?: PluginAppCloner
+  /** Only the bundled `release-center` plugin may call this. See {@link BridgeRelease}. */
+  release?: BridgeRelease
   /** Requires `limits`. See {@link PluginLimits}. */
   limits: PluginLimits
   /** See {@link BridgeFs}. */

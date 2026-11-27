@@ -11,6 +11,18 @@ which are released together.
 
 ## [Unreleased]
 
+### Added — the release center, the floor abilities and the pin proof
+
+- `Omniscio.release.read({ lane })` (webview only) reads one lane of the release center —
+  `readiness`, `inFlight`, `rollout` or `sites` — and answers its state, headline, line items,
+  links and notes. Only the bundled `release-center` plugin may call it. Optional on `Omniscio`,
+  so feature-detect it.
+- `ctx.floor` and `ctx.pin` (backend only) give a plugin that declares a `floor` block in its
+  manifest the abilities its own floor uses: `floor.checkPin`, `floor.emit`, `floor.endSignIns`
+  and `floor.handle`, plus `pin.redeemProof`. A plugin without an open floor of its own is refused
+  and changes nothing. Both are optional on `PluginContext`.
+- The host-union pin moves to 71.
+
 ### Added — `members.manage`: invite and remove teammates, with the person's yes
 
 - `Omniscio.members.invite(email)` and `Omniscio.members.remove(memberId)` (webview only), behind the
