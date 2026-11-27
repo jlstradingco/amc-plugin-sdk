@@ -77,10 +77,11 @@ export const HOST_PERMISSIONS = [
   'appCloner',
   'itemFolders',
   'mediaKeys',
-  'print'
+  'print',
+  'share.images'
 ] as const
 
-export const HOST_UNION_SIZE = 72
+export const HOST_UNION_SIZE = 73
 
 export const SDK_AHEAD_PERMISSIONS = [] as const
 

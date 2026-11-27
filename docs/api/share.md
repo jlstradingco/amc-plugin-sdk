@@ -1,9 +1,9 @@
 # Share
 
-Publish an HTML page to Omniscio Shares as a public link, and take the link down again.
+Publish an HTML page or one picture to Omniscio Shares as a public link, and take the link down again.
 
 **Availability:** Webview only (`Omniscio.share`). There is no `ctx.share`.
-**Required Permission:** `firebase`
+**Required Permission:** `firebase` (`publishArtifact`, `revokeArtifact`); `share.images` (`publishImage`)
 
 ::: warning The link is public
 Anyone with the link can read the page. Publish only what the user has asked you to publish, and tell them that a link was created.
@@ -18,6 +18,8 @@ Anyone with the link can read the page. Publish only what the user has asked you
   "permissions": ["firebase"]
 }
 ```
+
+`share.images` is an elevated permission, shown as "Share Pictures". It covers `publishImage` only. A plugin that also takes its pictures down with `revokeArtifact` declares both.
 
 ## Methods
 
@@ -35,6 +37,19 @@ Publish a page and resolve its link.
 | `SHARE_TOO_LARGE` | The page is over the size limit |
 
 Treat any other code as a generic failure.
+
+---
+
+### `publishImage(opts: BridgeSharePublishImageRequest): Promise<BridgeSharePublishResult>`
+
+Publish one PNG (up to 5,242,880 bytes) or one GIF (up to 8,388,608 bytes) as an image page and resolve its link. Requires `share.images`, which is shown to the user as "Share Pictures"; `firebase` does not grant it.
+
+- Omniscio reads the picture type from the bytes. A GIF named `.png` is published as a GIF; anything that is not a PNG or GIF is refused.
+- The link is always a page with a report link and comments off. The call has no option to turn comments on.
+- Comment and application blocks in a GIF are removed (its loop count is kept), and so are a PNG's text chunks.
+- `expiresInDays` is 1, 7 or 30. Omit it for 30 days.
+
+**Rejects** with `SHARE_TOO_LARGE` for a picture over its type's limit and `SHARE_SIGN_IN_REQUIRED` when the user is not signed in.
 
 ---
 
@@ -65,6 +80,16 @@ interface BridgeSharePublishRequest {
    * A value outside that range is refused rather than clamped.
    */
   expiresInDays?: number
+}
+
+interface BridgeSharePublishImageRequest {
+  /** One PNG or GIF as plain base64, no `data:` prefix. */
+  base64: string
+  /** Shown as the picture's name. Its extension is replaced by the real type. */
+  fileName?: string
+  title?: string
+  /** 1, 7 or 30. Omit it for 30 days. */
+  expiresInDays?: 1 | 7 | 30
 }
 
 interface BridgeSharePublishResult {
@@ -128,4 +153,4 @@ async function unshare() {
 - A link published without an expiry set lasts 30 days. Ask for a shorter one with `expiresInDays`, from 1 to 30 whole days; a value outside that range is refused. A link is never given a longer life than 30 days.
 - The result reports `expiresAt`, the moment the link stops working. Read it rather than assuming it matches what you asked for: publishing a page that already has a live link can shorten that link, and the date you get back is always the real one.
 - A page must be one self-contained HTML document of at most 20 MB.
-- `@omniscio/plugin-sdk/browser` exports `BridgeShare`, `BridgeSharePublishRequest`, `BridgeSharePublishResult`, `BridgeShareRevokeResult` and `BridgeHostFailureCode`.
+- `@omniscio/plugin-sdk/browser` exports `BridgeShare`, `BridgeSharePublishRequest`, `BridgeSharePublishImageRequest`, `BridgeSharePublishResult`, `BridgeShareRevokeResult` and `BridgeHostFailureCode`.

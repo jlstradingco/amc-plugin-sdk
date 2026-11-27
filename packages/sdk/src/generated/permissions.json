@@ -522,6 +522,15 @@
     ]
   },
   {
+    "name": "share.images",
+    "label": "Share Pictures",
+    "description": "Publish a PNG or GIF picture it made as a public link on Omniscio Shares, with comments off. Anyone with the link can see the picture, and only this plugin can take its links down.",
+    "tier": "elevated",
+    "namespaces": [
+      "share"
+    ]
+  },
+  {
     "name": "documents.write",
     "label": "Create, edit and delete your documents",
     "description": "Change or permanently remove anything you have written in the app, including restoring an older version over your current one",

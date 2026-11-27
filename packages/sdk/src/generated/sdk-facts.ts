@@ -71,6 +71,7 @@ export const PLUGIN_PERMISSIONS = [
   "documents.read",
   "itemFolders",
   "print",
+  "share.images",
   "documents.write",
   "documents.convert",
   "members.read",

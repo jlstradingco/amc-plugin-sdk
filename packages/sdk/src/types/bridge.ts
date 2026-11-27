@@ -1604,6 +1604,21 @@ export interface BridgeSharePublishResult {
   expiresAt: string | null
 }
 
+/** What to publish with `Omniscio.share.publishImage()`. */
+export interface BridgeSharePublishImageRequest {
+  /**
+   * One PNG (up to 5,242,880 bytes) or one GIF (up to 8,388,608 bytes), as plain base64 with no
+   * `data:` prefix. Omniscio reads the type from the bytes; anything else is refused.
+   */
+  base64: string
+  /** Shown as the picture's name. Its extension is ignored and replaced by the real type. */
+  fileName?: string
+  /** The page title. */
+  title?: string
+  /** How long the link lives: 1, 7 or 30 days. Omit it for 30 days. */
+  expiresInDays?: 1 | 7 | 30
+}
+
 /** What `Omniscio.share.revokeArtifact()` resolves to. */
 export interface BridgeShareRevokeResult {
   /** `true` once the link no longer works. */
@@ -1613,13 +1628,18 @@ export interface BridgeShareRevokeResult {
 }
 
 /**
- * `Omniscio.share` - publish an HTML page to Omniscio Shares as a public link. Requires the `firebase`
- * permission. Webview only. A refusal arrives with an `err.code`; see {@link BridgeHostFailureCode}
+ * `Omniscio.share` - publish an HTML page or one picture to Omniscio Shares as a public link. Requires
+ * the `firebase` permission, or `share.images` for `publishImage`. Webview only. A refusal arrives with an `err.code`; see {@link BridgeHostFailureCode}
  * for `SHARE_SIGN_IN_REQUIRED` and `SHARE_TOO_LARGE`.
  */
 export interface BridgeShare {
   /** Publish a page and resolve its link. */
   publishArtifact(opts: BridgeSharePublishRequest): Promise<BridgeSharePublishResult>
+  /**
+   * Publish one PNG or GIF as an image page with comments off. Requires the `share.images`
+   * permission (`firebase` does not grant it). Webview only.
+   */
+  publishImage(opts: BridgeSharePublishImageRequest): Promise<BridgeSharePublishResult>
   /**
    * Take down a link this plugin published. Resolves `{ revoked: false, deferred: false }` for a token
    * that is not one of this plugin's own shares.

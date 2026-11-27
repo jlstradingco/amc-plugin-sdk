@@ -78,6 +78,7 @@ describe('SDK <-> host permission parity', () => {
     'auth.actAsUser': { surface: BRIDGE, key: 'auth' },
     'documents.read': { surface: BRIDGE, key: 'documents' },
     'documents.write': { surface: BRIDGE, key: 'documents' },
+    'documents.convert': { surface: BRIDGE, key: 'documents' },
     'members.read': null,
     'members.manage': null,
     'teamChat.emoji': { surface: BRIDGE, key: 'teamChat' },
@@ -111,6 +112,7 @@ describe('SDK <-> host permission parity', () => {
     live: { surface: BRIDGE, key: 'live' },
     appCloner: { surface: CTX, key: 'appCloner' },
     'storageBackup.read': { surface: CTX, key: 'storageBackup' },
+    'share.images': { surface: BRIDGE, key: 'share' },
   }
 
   const sdk = new Set<string>(PLUGIN_PERMISSIONS)
@@ -182,7 +184,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(71)
+    expect(HOST_PERMISSIONS.length).toBe(73)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
