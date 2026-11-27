@@ -60,6 +60,7 @@ import type {
 import type {
   AppClonerStudyStatus,
   PluginAppCloner,
+  PluginAgentToolStatus,
   PluginBrandRef,
   PluginLabelImageJob,
   PluginMediaKey,
@@ -175,6 +176,7 @@ export interface TestContextOptions {
   launch?: (request: PluginLaunchRequest) => PluginLaunchResult | Promise<PluginLaunchResult>
   /** Without an override every media key press answers `{ ok: true }`. */
   media?: (key: PluginMediaKey) => PluginMediaKeyResult | Promise<PluginMediaKeyResult>
+  agentTools?: PluginAgentToolStatus[]
   /** Seed `ctx.print.listPrinters()`. Without it the computer has no printers. */
   printers?: PluginPrinter[]
   /** Without an override every print job answers `status: 'spooled'` for the printer it named. */
@@ -232,6 +234,7 @@ export interface TestHarness {
   launches: PluginLaunchRequest[]
   /** Captured ctx.media.sendKey calls, in order. */
   mediaKeys: PluginMediaKey[]
+  agentToolRetries: number
   /** Captured ctx.print jobs, in order, with the method that sent each one. */
   printJobs: Array<{ kind: 'labelImage'; job: PluginLabelImageJob } | { kind: 'raw'; job: PluginRawJob }>
   /** Captured ctx.appCloner calls, in order: the method and the arguments it was given. */
@@ -292,6 +295,8 @@ function processNotFakeable(): PluginContext['process'] {
     exec: reject,
     spawn: reject,
     kill: reject,
+    write: reject,
+    closeStdin: reject,
     onOutput: () => unsubscribe,
     onExit: () => unsubscribe
   }
@@ -569,6 +574,7 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
     scheduledEmails: [],
     launches: [],
     mediaKeys: [],
+    agentToolRetries: 0,
     printJobs: [],
     appClonerCalls: [],
     oauthRequests: [],
@@ -788,6 +794,14 @@ export function createTestContext(opts: TestContextOptions = {}): TestHarness {
         harness.mediaKeys.push(key)
         if (opts.media) return Promise.resolve(opts.media(key))
         return Promise.resolve({ ok: true })
+      }
+    },
+
+    agentTools: {
+      status: () => Promise.resolve((opts.agentTools ?? []).map((server) => ({ ...server }))),
+      retry: () => {
+        harness.agentToolRetries += 1
+        return Promise.resolve()
       }
     },
 

@@ -674,6 +674,17 @@ const marketplaceProgramPath = z
     message: 'a marketplace program path may not end with a dot or a space',
   })
 
+const PINNED_PROGRAM_COMPANIONS_MAX = 10
+
+const pinnedProgramCompanionSchema = z
+  .object({
+    path: pluginRelativeEntryPath,
+    sha256: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/, "sha256 must be the file's SHA-256 written as 64 lowercase hex characters"),
+  })
+  .strict()
+
 const pinnedProgramSchema = z
   .object({
     name: allowedCommandSchema,
@@ -684,6 +695,7 @@ const pinnedProgramSchema = z
     folder: z.enum(['data', 'install']).optional(),
     platform: z.enum(['win32', 'darwin', 'linux']).optional(),
     source: z.enum(['marketplace']).optional(),
+    companions: z.array(pinnedProgramCompanionSchema).min(1).max(PINNED_PROGRAM_COMPANIONS_MAX).optional(),
   })
   .strict()
   .superRefine((program, ctx) => {
@@ -730,6 +742,119 @@ const processSchema = z
       seen.add(key)
     })
   })
+
+const AGENT_TOOL_SERVERS_MAX = 3
+const AGENT_TOOL_KEY = /^[a-z0-9](?:[a-z0-9-]{0,14}[a-z0-9])?$/
+const AGENT_TOOL_DESCRIPTION_MAX = 200
+const AGENT_TOOL_ARGS_MAX = 20
+const AGENT_TOOL_ARG_MAX = 500
+const AGENT_TOOL_ENV_MAX = 20
+const AGENT_TOOL_ENV_VALUE_MAX = 500
+const AGENT_TOOL_ENV_NAME = /^[A-Z_][A-Z0-9_]*$/
+const AGENT_TOOL_SECRET_ENV_NAME = /TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL/i
+const AGENT_TOOL_PROGRAM_NAME_MAX = 100
+const AGENT_TOOL_PATH_PROGRAMS_MAX = 3
+const NPM_PACKAGE_NAME_MAX = 214
+const NPM_PACKAGE_NAME = /^(?:@[a-z0-9~-][a-z0-9._~-]*\/)?[a-z0-9~-][a-z0-9._~-]*$/
+const NPM_BIN_NAME = /^[A-Za-z0-9._-]{1,100}$/
+const EXACT_SEMVER =
+  /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
+const SHA256_HEX = /^[a-f0-9]{64}$/
+const LOCAL_PORTS_MAX = 4
+const LOCAL_PORT_MIN = 1024
+const LOCAL_PORT_MAX = 65535
+
+const agentToolEnvSchema = z
+  .record(
+    z
+      .string()
+      .regex(AGENT_TOOL_ENV_NAME, 'agentTools env names must be uppercase letters, digits and underscores, and may not start with a digit')
+      .refine((name) => !AGENT_TOOL_SECRET_ENV_NAME.test(name), {
+        message:
+          'agentTools env names may not look like a secret (TOKEN, KEY, SECRET, PASSWORD, CREDENTIAL): a plugin cannot hand its own secrets to a program this way',
+      }),
+    z.string().max(AGENT_TOOL_ENV_VALUE_MAX),
+  )
+  .refine((env) => Object.keys(env).length <= AGENT_TOOL_ENV_MAX, {
+    message: `agentTools env may list at most ${AGENT_TOOL_ENV_MAX} variables`,
+  })
+
+const agentToolRuntimeSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('program'), program: z.string().min(1).max(AGENT_TOOL_PROGRAM_NAME_MAX) }).strict(),
+  z.object({ kind: z.literal('script'), path: pluginRelativeEntryPath, sha256: z.string().regex(SHA256_HEX) }).strict(),
+  z
+    .object({
+      kind: z.literal('npm'),
+      package: z.string().max(NPM_PACKAGE_NAME_MAX).regex(NPM_PACKAGE_NAME),
+      version: z.string().regex(EXACT_SEMVER),
+      bin: z.string().regex(NPM_BIN_NAME).optional(),
+      lockfile: pluginRelativeEntryPath,
+      lockfileSha256: z.string().regex(SHA256_HEX),
+    })
+    .strict(),
+])
+
+const agentToolServerSchema = z
+  .object({
+    key: z
+      .string()
+      .regex(
+        AGENT_TOOL_KEY,
+        'agentTools server keys must be 1-16 lowercase letters, digits or hyphens, starting and ending with a letter or digit',
+      ),
+    description: z.string().max(AGENT_TOOL_DESCRIPTION_MAX).optional(),
+    runtime: agentToolRuntimeSchema,
+    args: z.array(z.string().max(AGENT_TOOL_ARG_MAX)).max(AGENT_TOOL_ARGS_MAX).optional(),
+    env: agentToolEnvSchema.optional(),
+    programsOnPath: z
+      .array(z.string().min(1).max(AGENT_TOOL_PROGRAM_NAME_MAX))
+      .min(1)
+      .max(AGENT_TOOL_PATH_PROGRAMS_MAX)
+      .refine((names) => new Set(names).size === names.length, {
+        message: 'agentTools programsOnPath may not name the same program twice',
+      })
+      .optional(),
+  })
+  .strict()
+
+const agentToolsSchema = z
+  .object({
+    mcpServers: z
+      .array(agentToolServerSchema)
+      .min(1)
+      .max(AGENT_TOOL_SERVERS_MAX)
+      .refine((servers) => new Set(servers.map((server) => server.key)).size === servers.length, {
+        message: 'agentTools server keys must be unique within the plugin',
+      }),
+  })
+  .strict()
+
+const localPortsSchema = z
+  .array(z.number().int().min(LOCAL_PORT_MIN).max(LOCAL_PORT_MAX))
+  .min(1)
+  .max(LOCAL_PORTS_MAX)
+  .refine((ports) => new Set(ports).size === ports.length, {
+    message: 'localPorts may not list the same port twice',
+  })
+
+interface AgentToolsHolder {
+  agentTools?: { mcpServers: { runtime: { kind: string; program?: string }; programsOnPath?: string[] }[] }
+  process?: { pinnedPrograms?: { name: string }[] }
+}
+
+function undeclaredPathPrograms(manifest: AgentToolsHolder): [number, number][] {
+  const pinned = new Set((manifest.process?.pinnedPrograms ?? []).map((program) => program.name))
+  return (manifest.agentTools?.mcpServers ?? []).flatMap(({ programsOnPath }, index) =>
+    (programsOnPath ?? []).flatMap((name, entry): [number, number][] => (pinned.has(name) ? [] : [[index, entry]])),
+  )
+}
+
+function undeclaredProgramRuntimes(manifest: AgentToolsHolder): number[] {
+  const pinned = new Set((manifest.process?.pinnedPrograms ?? []).map((program) => program.name))
+  return (manifest.agentTools?.mcpServers ?? []).flatMap(({ runtime }, index) =>
+    runtime.kind === 'program' && !pinned.has(runtime.program ?? '') ? [index] : [],
+  )
+}
 
 // No upper bound: the host has none, so the SDK's old `.max(512)` was invented
 // policy that rejected a host-legal `memoryMb: 1024`.
@@ -922,6 +1047,8 @@ export const manifestSchema = z.object({
   ui: uiSchema.optional(),
   keybindings: z.array(keybindingSchema).max(20).optional(),
   process: processSchema.optional(),
+  agentTools: agentToolsSchema.optional(),
+  localPorts: localPortsSchema.optional(),
   sdkVersion: z.string().min(1).max(50).optional(),
   backend: z.object({
     entryPoint: pluginRelativeEntryPath,
@@ -945,6 +1072,20 @@ export const manifestSchema = z.object({
   business: businessSchema.optional(),
 })
   .superRefine((manifest, ctx) => {
+    for (const index of undeclaredProgramRuntimes(manifest)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['agentTools', 'mcpServers', index, 'runtime', 'program'],
+        message: 'an agentTools server that runs a program must name a program declared in process.pinnedPrograms',
+      })
+    }
+    for (const [index, entry] of undeclaredPathPrograms(manifest)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['agentTools', 'mcpServers', index, 'programsOnPath', entry],
+        message: 'every program an agentTools server puts on its path must be declared in process.pinnedPrograms',
+      })
+    }
     const nativePanel = manifest.ui?.nativePanel
     if (nativePanel !== undefined && nativePanel !== manifest.plugin.id) {
       ctx.addIssue({

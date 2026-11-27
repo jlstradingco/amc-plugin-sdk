@@ -1826,15 +1826,47 @@ export interface PluginProcessExit {
   signal?: string
 }
 
+export type PluginProcessEncoding = 'utf8' | 'base64'
+
+export interface PluginWorkerProcessExecOptions extends PluginProcessExecOptions {
+  /** How `stdout` and `stderr` come back. `'base64'` returns the program's bytes intact. Default `'utf8'`. */
+  encoding?: PluginProcessEncoding
+}
+
+export interface PluginWorkerProcessSpawnOptions extends PluginProcessOptions {
+  /** How output events carry the program's bytes. Default `'utf8'`. */
+  encoding?: PluginProcessEncoding
+  /** Open the program's standard input so {@link PluginProcess.write} and {@link PluginProcess.closeStdin} can reach it. Default `false`. */
+  stdin?: boolean
+}
+
+export interface PluginWorkerProcessOutput extends PluginProcessOutput {
+  /** How `text` is encoded. Absent means `'utf8'`. */
+  encoding?: PluginProcessEncoding
+}
+
+export interface PluginProcessWriteOptions {
+  /** How `data` is encoded. Default `'utf8'`. */
+  encoding?: PluginProcessEncoding
+}
+
 export interface PluginProcess {
   exec(
     command: string,
     args: string[],
-    options?: PluginProcessExecOptions
+    options?: PluginWorkerProcessExecOptions
   ): Promise<{ stdout: string; stderr: string; exitCode: number }>
-  spawn(command: string, args: string[], options?: PluginProcessOptions): Promise<{ processId: string }>
+  spawn(
+    command: string,
+    args: string[],
+    options?: PluginWorkerProcessSpawnOptions
+  ): Promise<{ processId: string }>
   kill(processId: string): Promise<void>
-  onOutput(handler: (event: PluginProcessOutput) => void): () => void
+  /** Write to the standard input of a program started with `spawn(..., { stdin: true })`. One write carries at most 1 MiB of bytes. */
+  write(processId: string, data: string, options?: PluginProcessWriteOptions): Promise<void>
+  /** Close the standard input of a program started with `spawn(..., { stdin: true })`. */
+  closeStdin(processId: string): Promise<void>
+  onOutput(handler: (event: PluginWorkerProcessOutput) => void): () => void
   onExit(handler: (event: PluginProcessExit) => void): () => void
 }
 
@@ -2521,6 +2553,20 @@ export interface PluginMedia {
   sendKey(key: PluginMediaKey): Promise<PluginMediaKeyResult>
 }
 
+export type PluginAgentToolState = 'ready' | 'installing' | 'needs-node' | 'failed'
+
+export interface PluginAgentToolStatus {
+  key: string
+  name: string
+  state: PluginAgentToolState
+  reason?: string
+}
+
+export interface PluginAgentTools {
+  status(): Promise<PluginAgentToolStatus[]>
+  retry(): Promise<void>
+}
+
 /** One printer connected to this computer, as `ctx.print.listPrinters` reports it. */
 export interface PluginPrinter {
   /** The printer's system name, which every print job names. */
@@ -3099,6 +3145,7 @@ export interface PluginContext {
   launch?: PluginLaunch
   /** Backend only. Requires `mediaKeys`. See {@link PluginMedia}. Optional for the same reason as `members`. */
   media?: PluginMedia
+  agentTools?: PluginAgentTools
   /** Backend only. Requires `print`. See {@link PluginPrint}. Optional for the same reason as `members`. */
   print?: PluginPrint
   /** Backend only. Requires `oauth`. See {@link PluginOAuth}. Optional for the same reason as `members`. */

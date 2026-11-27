@@ -207,6 +207,10 @@ export interface PluginManifest {
       "sha256": string
       "folder"?: "data" | "install"
       "platform"?: "win32" | "darwin" | "linux"
+      "companions"?: Array<{
+        "path": string
+        "sha256": string
+      }>
       "source"?: "marketplace"
     }>
   }
@@ -227,6 +231,31 @@ export interface PluginManifest {
     }
   }
   "sessionTools"?: boolean
+  "agentTools"?: {
+    "mcpServers": Array<{
+      "key": string
+      "description"?: string
+      "runtime": {
+        "kind": "program"
+        "program": string
+      } | {
+        "kind": "script"
+        "path": string
+        "sha256": string
+      } | {
+        "kind": "npm"
+        "package": string
+        "version": string
+        "bin"?: string
+        "lockfile": string
+        "lockfileSha256": string
+      }
+      "args"?: Array<string>
+      "env"?: Record<string, string>
+      "programsOnPath"?: Array<string>
+    }>
+  }
+  "localPorts"?: Array<number>
   "linkClaims"?: Array<{
     "host": string
     "path": string
@@ -943,6 +972,10 @@ export interface AgentMC {
 }
 
 export interface PluginContext {
+  "agentTools": {
+    "retry": (...args: unknown[]) => Promise<unknown>
+    "status": (...args: unknown[]) => Promise<unknown>
+  }
   "ai": {
     "availability": (...args: unknown[]) => Promise<unknown>
     "completeText": (...args: unknown[]) => Promise<unknown>
@@ -1145,11 +1178,13 @@ export interface PluginContext {
     "raw": (...args: unknown[]) => Promise<unknown>
   }
   "process": {
+    "closeStdin": (...args: unknown[]) => Promise<unknown>
     "exec": (...args: unknown[]) => Promise<unknown>
     "kill": (...args: unknown[]) => Promise<unknown>
     "onExit": (...args: unknown[]) => unknown
     "onOutput": (...args: unknown[]) => unknown
     "spawn": (...args: unknown[]) => Promise<unknown>
+    "write": (...args: unknown[]) => Promise<unknown>
   }
   "recording": {
     "get": (...args: unknown[]) => Promise<unknown>

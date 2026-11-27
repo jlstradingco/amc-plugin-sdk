@@ -142,6 +142,8 @@ function processNotFakeable(): PluginContext['process'] {
     exec: reject,
     spawn: reject,
     kill: reject,
+    write: reject,
+    closeStdin: reject,
     onOutput: () => unsubscribe,
     onExit: () => unsubscribe
   }
@@ -701,6 +703,17 @@ export function createMockContext(opts: MockContextOptions): PluginContext {
       sendKey: (key) => {
         if (shouldLog) console.log(`${prefix} [media] sendKey(${key})`)
         return Promise.resolve({ ok: true })
+      },
+    },
+
+    agentTools: {
+      status: () => {
+        if (shouldLog) console.log(`${prefix} [agentTools] status`)
+        return Promise.resolve([])
+      },
+      retry: () => {
+        if (shouldLog) console.log(`${prefix} [agentTools] retry`)
+        return Promise.resolve()
       },
     },
 

@@ -31,6 +31,39 @@ which are released together.
   dialog before every change. Both are optional on `BridgeMembers`, so feature-detect them.
 - The host-union pin moves to 70.
 
+### Added — tool servers for AI sessions, local ports, and binary-safe process I/O
+
+- `agentTools.mcpServers` (manifest) — 1 to 3 tool servers Omniscio adds to the person's AI sessions as
+  `pl-<key>`. Each runs as a pinned `program`, a hashed `script`, or an exact-version `npm` package with a
+  hashed lockfile. Servers run outside the plugin sandbox with the person's full access, so the person
+  approves them at install and any update that changes them asks again.
+- `localPorts` (manifest) — 1 to 4 ports, each 1024 or higher, the plugin's backend may connect to on this
+  computer. Omniscio's own ports are always refused. The person approves the list, and an update that
+  changes it asks again.
+- `process.pinnedPrograms[].companions` (manifest) — extra files a pinned program needs beside it, each
+  pinned by its own `sha256`.
+- `ctx.process.exec` and `ctx.process.spawn` take `encoding: 'utf8' | 'base64'`; `base64` returns the
+  program's bytes intact, and `onOutput` events carry an `encoding` field.
+- `ctx.process.spawn` takes `stdin: true`, with new `ctx.process.write(processId, data, { encoding? })` and
+  `ctx.process.closeStdin(processId)` to feed the program. Backend only; the webview `Omniscio.process`
+  is unchanged.
+- The generated manifest schema and types now describe all of the above.
+
+### Added — programs on a tool server's PATH, and a backend view of its tool servers
+
+- `agentTools.mcpServers[].programsOnPath` (manifest) — 1 to 3 names of programs the plugin pins in
+  `process.pinnedPrograms`. Omniscio checks each one, then starts the tool server with the folders of those
+  checked copies at the front of its `PATH`, followed by the computer's own `PATH`. A `PATH` in the server's
+  `env` is ignored when this is set. A name the plugin does not pin, a repeated name or more than three names
+  is refused at install, and adding or removing a name asks the person to approve the server again.
+- `ctx.agentTools.status()` (backend only, no permission) — this plugin's own tool servers, each as
+  `{ key, name, state, reason? }` where `state` is `'ready'`, `'installing'`, `'needs-node'` or `'failed'` and
+  `reason` is a plain sentence. Only servers the person approved are listed.
+- `ctx.agentTools.retry()` (backend only, no permission) — sets this plugin's own tool servers up again after a
+  failure. It returns once the retry has started; read `status()` to follow it.
+- `@omniscio/plugin-sdk/testing`: `createTestContext({ agentTools })` seeds `status()`, and
+  `harness.agentToolRetries` counts `retry()` calls.
+
 ### Added — `@omniscio/plugin-sdk/keyboard`, the one way a panel hears a keystroke
 
 A panel runs in its own document, so Omniscio's keyboard handling never reaches it and a panel that

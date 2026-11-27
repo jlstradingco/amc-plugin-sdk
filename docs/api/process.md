@@ -42,12 +42,15 @@ Declare `system` and list the programs in `process.allowedCommands` or `process.
 | `pinnedPrograms[].sha256` | 64 lowercase hexadecimal characters |
 | `pinnedPrograms[].folder` | Optional: `'data'` or `'install'` |
 | `pinnedPrograms[].platform` | Optional: `'win32'`, `'darwin'` or `'linux'` |
+| `pinnedPrograms[].companions` | Optional: 1 to 10 entries of `{ path, sha256 }`, files the program needs beside it |
+
+Omniscio copies a pinned program and its `companions` together into one folder your plugin cannot write, and checks every file against its pin on each run. The files in that group need different file names. The person's approval covers the exact set of files, so an update that changes a companion asks again. See [Companion files](../guide/manifest#companion-files).
 
 The `command` you pass to `exec` or `spawn` is a bare name from one of these lists. You cannot choose the working directory; the host runs the program in the plugin's own folder, so pass absolute paths in `args`.
 
 ## Methods
 
-### `exec(command: string, args: string[], options?: PluginProcessExecOptions): Promise<{ stdout: string; stderr: string; exitCode: number }>`
+### `exec(command: string, args: string[], options?: PluginWorkerProcessExecOptions): Promise<{ stdout: string; stderr: string; exitCode: number }>`
 
 Run a program to completion and collect its output.
 
@@ -55,13 +58,17 @@ Run a program to completion and collect its output.
 
 A command that is not listed in your manifest is refused. The call rejects when the program runs longer than `options.timeout`.
 
+With the default `encoding: 'utf8'`, `stdout` and `stderr` are text. Pass `encoding: 'base64'` for a program that prints binary data, such as an image: the two fields then hold the program's bytes as base64 text, unchanged. Output is capped at 5 MiB of raw bytes either way.
+
 ---
 
-### `spawn(command: string, args: string[], options?: PluginProcessOptions): Promise<{ processId: string }>`
+### `spawn(command: string, args: string[], options?: PluginWorkerProcessSpawnOptions): Promise<{ processId: string }>`
 
 Start a program in the background. Follow it with `onOutput` and `onExit`.
 
 **Returns:** `Promise<{ processId: string }>`
+
+`encoding: 'base64'` makes every `onOutput` event carry its bytes as base64 text and say so in its `encoding` field. Pass `stdin: true` to keep the program's standard input open for `write` and `closeStdin`; without it the program has no input and `write` is refused.
 
 ---
 
@@ -71,9 +78,25 @@ Stop a program started with `spawn`.
 
 ---
 
-### `onOutput(handler: (event: PluginProcessOutput) => void): () => void`
+### `write(processId: string, data: string, options?: PluginProcessWriteOptions): Promise<void>`
 
-Subscribe to the output of programs this plugin started. Returns an unsubscribe function.
+Send input to a program started with `spawn(..., { stdin: true })`. `data` is text by default; pass `encoding: 'base64'` to send bytes. One write carries at most 1 MiB of bytes. The call is refused when the program was not started with `stdin: true`, is no longer running, or has had its input closed.
+
+Backend only: the webview `Omniscio.process` has no `write`.
+
+---
+
+### `closeStdin(processId: string): Promise<void>`
+
+Close the standard input of a program started with `spawn(..., { stdin: true })`, which tells a program that reads until the end of its input that nothing more is coming.
+
+Backend only: the webview `Omniscio.process` has no `closeStdin`.
+
+---
+
+### `onOutput(handler: (event: PluginWorkerProcessOutput) => void): () => void`
+
+Subscribe to the output of programs this plugin started. Returns an unsubscribe function. When the program was started with `encoding: 'base64'`, `event.encoding` is `'base64'` and `event.text` holds base64 text.
 
 On the webview, events are delivered to the plugin's overlay window only.
 
@@ -103,6 +126,25 @@ interface PluginProcessOutput {
   text: string
 }
 
+type PluginProcessEncoding = 'utf8' | 'base64'
+
+interface PluginWorkerProcessExecOptions extends PluginProcessExecOptions {
+  encoding?: PluginProcessEncoding
+}
+
+interface PluginWorkerProcessSpawnOptions extends PluginProcessOptions {
+  encoding?: PluginProcessEncoding
+  stdin?: boolean
+}
+
+interface PluginWorkerProcessOutput extends PluginProcessOutput {
+  encoding?: PluginProcessEncoding
+}
+
+interface PluginProcessWriteOptions {
+  encoding?: PluginProcessEncoding
+}
+
 interface PluginProcessExit {
   processId: string
   exitCode: number
@@ -110,7 +152,7 @@ interface PluginProcessExit {
 }
 ```
 
-On the webview the parameter is named `callback` instead of `handler`; the types are the same.
+On the webview the parameter is named `callback` instead of `handler`, and `exec`, `spawn` and `onOutput` use `PluginProcessExecOptions`, `PluginProcessOptions` and `PluginProcessOutput`, without `encoding` or `stdin`.
 
 ## Example
 

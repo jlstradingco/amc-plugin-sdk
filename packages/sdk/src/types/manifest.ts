@@ -609,6 +609,11 @@ export interface PluginManifest {
        * `path` is then a bare file name, and `folder` must be left out.
        */
       source?: 'marketplace'
+      /** Extra files the program needs beside it, each pinned by its own `sha256`. 1 to 10 entries. */
+      companions?: {
+        path: string
+        sha256: string
+      }[]
     }[]
   }
   /**
@@ -651,6 +656,40 @@ export interface PluginManifest {
    * sees it at install as "Agent Sessions", and an update that turns it on asks them again.
    */
   sessionTools?: boolean
+  /**
+   * Tool servers Omniscio adds to the person's AI sessions. Between 1 and 3 servers, each
+   * named by a `key` of 1 to 16 characters from `a-z`, `0-9` and `-`; the session sees it as
+   * `pl-<key>`, and a tool name must fit `mcp__pl-<key>__<tool>` in 64 characters.
+   *
+   * A server runs outside the plugin sandbox with the person's full access to their files and
+   * network, so the person approves it at install and an update that changes it asks again.
+   */
+  agentTools?: {
+    mcpServers: {
+      key: string
+      description?: string
+      runtime:
+        | { kind: 'program'; program: string }
+        | { kind: 'script'; path: string; sha256: string }
+        | {
+            kind: 'npm'
+            package: string
+            version: string
+            bin?: string
+            lockfile: string
+            lockfileSha256: string
+          }
+      args?: string[]
+      env?: Record<string, string>
+      programsOnPath?: string[]
+    }[]
+  }
+  /**
+   * Ports on this computer the plugin may connect to (1 to 4, each 1024 or higher). Omniscio's
+   * own ports are always refused. The person approves the list at install and an update that
+   * changes it asks again.
+   */
+  localPorts?: number[]
   mobile?: boolean
   /**
    * Web URLs this plugin wants to handle, so the host can offer it to the user when they are

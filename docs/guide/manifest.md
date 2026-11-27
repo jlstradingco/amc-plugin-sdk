@@ -36,6 +36,8 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `process` | object | No | Programs your plugin may run through the host launcher — see [`process`](#process) |
 | `backend` | object | No | Backend entry point and resource limits |
 | `sessionTools` | boolean | No | Give your plugin's AI sessions the built-in tools. Off unless `true` — see [`sessionTools`](#sessiontools) |
+| `agentTools` | object | No | Tool servers added to the person's AI sessions, 1-3 of them — needs the person's approval — see [`agentTools`](#agenttools) |
+| `localPorts` | number[] | No | Ports on this computer the plugin may connect to, 1-4 of them, each 1024 or higher — needs the person's approval — see [`localPorts`](#localports) |
 | `mobile` | boolean | No | Let your plugin open on the owner's phone. Off unless `true` — see [`mobile`](#mobile) |
 | `uiAnchors` | array | No | Controls in your page the in-app assistant may point at — see [`uiAnchors`](#uianchors) |
 | `uiAnchorsExtra` | array | No | Anchors beyond the first 64, so up to 192 in total — see [`uiAnchors`](#uianchors) |
@@ -716,6 +718,7 @@ Each `pinnedPrograms` entry:
 | `sha256` | string | Yes | 64 lowercase hex characters: the SHA-256 of the exact file |
 | `folder` | `"data"` or `"install"` | No | `data` (default) is your plugin's data folder, where a backend can download a binary; `install` is your installed package |
 | `platform` | `"win32"`, `"darwin"` or `"linux"` | No | Pin a different build per platform under one name; leave it out to pin one file everywhere |
+| `companions` | object[] | No | 1–10 more files the program needs beside it, each `{ "path", "sha256" }` with the same rules as `path` and `sha256` above — see [Companion files](#companion-files) |
 
 Omniscio never runs your file in place. Before the first start it copies the file to a folder
 your plugin cannot write, checks the copy's fingerprint, makes it read-only, and runs that copy.
@@ -732,6 +735,113 @@ ships the same list, generated from that file, as `PROCESS_INTERPRETER_DENYLIST`
 `omniscio-plugin validate` applies it the way Omniscio does: case does not matter, and a `.exe` or
 `.cmd` suffix is ignored, so `NODE.EXE` and `bash.cmd` are refused too. SDK 3.2 and earlier
 dropped the `process` block unchecked.
+
+### Companion files
+
+Some programs load other files that sit beside them, such as a library or a data file. List each one
+under `companions`:
+
+```json
+{
+  "name": "mytool",
+  "path": "bin/mytool.exe",
+  "sha256": "<64 hex>",
+  "companions": [
+    { "path": "bin/mytool-data.bin", "sha256": "<64 hex>" }
+  ]
+}
+```
+
+Omniscio copies the program and every companion into one folder your plugin cannot write, so each
+file in the group needs its own file name. It checks every file against its pin before each run, and a
+missing or changed companion is refused with a plain sentence before anything starts. Changing a
+companion changes the program's pin: the person's approval covers the exact set of files, so an
+update that changes one asks again.
+
+## `agentTools` Block
+
+Adds tool servers to the person's AI sessions. Each server is a program from your plugin that Omniscio
+starts for a session and offers to the AI as tools.
+
+```json
+{
+  "agentTools": {
+    "mcpServers": [
+      {
+        "key": "notes",
+        "description": "Search the person's notes",
+        "runtime": { "kind": "script", "path": "tools/notes-server.js", "sha256": "<64 hex>" },
+        "args": ["--read-only"],
+        "env": { "NOTES_MODE": "local" }
+      }
+    ]
+  }
+}
+```
+
+| Field | Rules |
+|---|---|
+| `mcpServers` | 1 to 3 servers; no two may share a `key` |
+| `key` | 1 to 16 characters from `a-z`, `0-9` and `-`, starting and ending with a letter or digit. Omniscio names the server `pl-<key>` in the session |
+| `description` | Optional, up to 200 characters |
+| `runtime` | How the server starts — one of the three kinds below |
+| `args` | Optional, up to 20 strings of up to 500 characters each |
+| `env` | Optional, up to 20 variables. Names are uppercase letters, digits and `_`, and a name containing `TOKEN`, `KEY`, `SECRET`, `PASSWORD` or `CREDENTIAL` is refused. Values are up to 500 characters |
+| `programsOnPath` | Optional, 1 to 3 different `name`s from `process.pinnedPrograms`. Omniscio checks each program, then starts the server with the folders of those checked copies first on its `PATH`, followed by the computer's own `PATH`; a `PATH` in `env` is ignored. Adding or removing a name asks for approval again. A program that fails its check keeps the server out of sessions with a plain reason; one that is not on disk yet, because your backend downloads it, is checked again next time |
+
+The three `runtime` kinds:
+
+| Kind | Fields | What runs |
+|---|---|---|
+| `program` | `program` | A program already declared in `process.pinnedPrograms`. `program` is its `name` |
+| `script` | `path`, `sha256` | A JavaScript file from your plugin folder, run by Omniscio's own Node. `sha256` is the SHA-256 of the exact file |
+| `npm` | `package`, `version`, `bin` (optional), `lockfile`, `lockfileSha256` | An npm package at an exact version such as `1.2.3`, installed from the lockfile you ship. `lockfileSha256` pins that lockfile |
+
+Every tool name the AI sees is `mcp__pl-<key>__<tool>`, and the whole name may be at most 64
+characters, so a longer key leaves less room for tool names.
+
+::: warning Agent tool servers run outside the plugin sandbox
+A server runs with the person's full access to their files and network, which is far more than
+the rest of your plugin gets. The person sees "AI Session Tools" with your server keys on the install
+card and must approve it. Any update that adds or changes a server — its key, its runtime or a pin —
+asks for approval again; an update that leaves them alone does not.
+:::
+
+### Your servers' state: `ctx.agentTools`
+
+A backend can see whether its own tool servers are ready and set them up again. Both calls are backend
+only, need no permission, and only ever see this plugin's own servers that the person approved.
+
+```typescript
+const servers = await ctx.agentTools.status()
+if (servers.some((server) => server.state === 'failed')) await ctx.agentTools.retry()
+```
+
+| Method | What it does |
+|---|---|
+| `status()` | Each server as `{ key, name, state, reason? }`, where `name` is `pl-<key>`. `state` is `'ready'`, `'installing'`, `'needs-node'` or `'failed'`, and `reason` is a sentence you can show the person |
+| `retry()` | Sets this plugin's servers up again, for example after your backend has downloaded a program listed in `programsOnPath`. It returns once the retry has started; call `status()` to follow it |
+
+Only a `ready` server is added to a session. The person sees the same states in the AI tools picker,
+with a Retry button on a failed server.
+
+## `localPorts`
+
+A list of ports on this computer your plugin's backend may connect to, for example a database or a
+local server the person runs.
+
+```json
+{ "localPorts": [5432, 6379] }
+```
+
+- 1 to 4 whole numbers, each from 1024 to 65535, with no repeats.
+- Omniscio's own ports are always refused, whatever you list.
+- Your plugin may reach these ports on this computer only. Other hosts follow the usual network rules.
+
+::: warning Needs the person's approval
+The person sees "Local Connections" with your port numbers on the install card and must approve
+them. Any update that adds a port, or changes the list, asks for approval again.
+:::
 
 ## `backend` Block
 

@@ -65,6 +65,7 @@ export type {
   PluginTeamChatDirectMessages,
   PluginChannelConnectOptions, PluginChannelEvent, PluginChannelSendResult, PluginChannelHandle, PluginChannel,
   PluginLaunchRequest, PluginLaunchResult, PluginLaunch,
+  PluginAgentToolState, PluginAgentToolStatus, PluginAgentTools,
   PluginOAuthRequest, PluginOAuthTokens, PluginOAuthResult, PluginOAuth,
   PluginRssParsedEntry, PluginRssFeedResult, PluginRssFeed, PluginRssEntry, PluginRssRecentOptions, PluginRss,
   // The floor abilities and the proof a plugin with a floor block redeems

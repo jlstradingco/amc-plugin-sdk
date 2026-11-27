@@ -703,6 +703,28 @@
                   "linux"
                 ]
               },
+              "companions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 10
+              },
               "source": {
                 "type": "string",
                 "enum": [
@@ -782,6 +804,154 @@
     },
     "sessionTools": {
       "type": "boolean"
+    },
+    "agentTools": {
+      "type": "object",
+      "properties": {
+        "mcpServers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "runtime": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "program"
+                      },
+                      "program": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "program"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "script"
+                      },
+                      "path": {
+                        "type": "string"
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "path",
+                      "sha256"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "const": "npm"
+                      },
+                      "package": {
+                        "type": "string",
+                        "maxLength": 214,
+                        "pattern": "^(?:@[a-z0-9~-][a-z0-9._~-]*\\/)?[a-z0-9~-][a-z0-9._~-]*$"
+                      },
+                      "version": {
+                        "type": "string",
+                        "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
+                      },
+                      "bin": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9._-]{1,100}$"
+                      },
+                      "lockfile": {
+                        "type": "string"
+                      },
+                      "lockfileSha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "package",
+                      "version",
+                      "lockfile",
+                      "lockfileSha256"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                "maxItems": 20
+              },
+              "env": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "programsOnPath": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "minItems": 1,
+                "maxItems": 3
+              }
+            },
+            "required": [
+              "key",
+              "runtime"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "mcpServers"
+      ],
+      "additionalProperties": false
+    },
+    "localPorts": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1024,
+        "maximum": 65535
+      },
+      "minItems": 1,
+      "maxItems": 4
     },
     "linkClaims": {
       "type": "array",
@@ -1387,7 +1557,7 @@
     "plugin",
     "ui"
   ],
-  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.settingsSearch.route, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms, process.pinnedPrograms.name, process.pinnedPrograms.path, backend.entryPoint, linkClaims, uploadHosts, floor.entryPoint, floor.pictureHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.id, uiAnchors.label, uiAnchors.description, uiAnchors.when, uiAnchorsExtra, uiAnchorsExtra.id, uiAnchorsExtra.label, uiAnchorsExtra.description, uiAnchorsExtra.when, business.types.*, business.commands.*",
+  "$comment": "These fields carry a rule the shared schema enforces in code, which a JSON Schema cannot state: the properties above describe their SHAPE only. A green from an editor is not a verdict on them; run the kit CLI, which asks the shared schema itself. Fields: plugin.icon, plugin.screenshots, plugin.links.homepage, plugin.links.support, plugin.links.privacy, plugin.links.contact, plugin.links.repository, storage.collections.*, storage.collections.*.columns.*, ui.entryPoint, ui.sidebar.icon, ui.overlay.entryPoint, ui.settingsPanel.entryPoint, ui.settingsSearch.route, ui.widget.entryPoint, ui.widgets, ui.widgets.title, ui.windows, ui.windows.*.entryPoint, process, process.allowedCommands, process.pinnedPrograms, process.pinnedPrograms.name, process.pinnedPrograms.path, process.pinnedPrograms.companions.path, backend.entryPoint, agentTools.mcpServers, agentTools.mcpServers.key, agentTools.mcpServers.runtime.path, agentTools.mcpServers.runtime.lockfile, agentTools.mcpServers.env, agentTools.mcpServers.env.*, agentTools.mcpServers.programsOnPath, localPorts, linkClaims, uploadHosts, floor.entryPoint, floor.pictureHosts, cli.endpoints, cli.endpoints.auth, usageActions, uiAnchors, uiAnchors.id, uiAnchors.label, uiAnchors.description, uiAnchors.when, uiAnchorsExtra, uiAnchorsExtra.id, uiAnchorsExtra.label, uiAnchorsExtra.description, uiAnchorsExtra.when, business.types.*, business.commands.*",
   "allOf": [
     {
       "if": {
