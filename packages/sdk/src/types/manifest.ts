@@ -359,6 +359,18 @@ export interface PluginSupportLinks {
   repository?: string
 }
 
+/** One entry in a plugin manifest's `help` list. */
+export interface PluginHelpLink {
+  title: string
+  url: string
+}
+
+/** The articles and videos a plugin offers in the app's Help drawer. */
+export interface PluginHelp {
+  articles?: PluginHelpLink[]
+  videos?: PluginHelpLink[]
+}
+
 /**
  * One widget a plugin offers for the widget sidebar, declared in `ui.widgets`.
  * The user adds it from the sidebar's Add picker, under your plugin's name.
@@ -741,6 +753,15 @@ export interface PluginManifest {
    * UTF-8.
    */
   uiAnchorsExtra?: PluginUiAnchor[]
+  /**
+   * Help shown for your plugin's page in the app's Help drawer (the top-bar help button,
+   * Ctrl+J). `articles` are web pages, each a `title` and an `http://` or `https://` `url`,
+   * opened in the person's browser. `videos` are Omniscio Shares video links
+   * (`https://shares.omniscio.com/s/<token>`), played inside the drawer; any other video
+   * link is refused when the plugin loads. At most 10 of each; a title is 1 to 120
+   * characters. An app older than this key ignores it.
+   */
+  help?: PluginHelp
   /**
    * What this plugin contributes to the Omniscio business suite. Declared by business
    * modules only, whose id starts with `biz-`; every other plugin is refused a business

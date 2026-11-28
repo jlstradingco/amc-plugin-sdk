@@ -319,6 +319,16 @@ export interface PluginManifest {
     "kind": "button" | "link" | "input" | "toggle" | "tab" | "menuitem" | "row" | "region" | "composite" | "dialog" | "panel" | "display" | "select" | "form"
     "when"?: string
   }>
+  "help"?: {
+    "articles"?: Array<{
+      "title": string
+      "url": string
+    }>
+    "videos"?: Array<{
+      "title": string
+      "url": string
+    }>
+  }
   "business"?: {
     "schema": 1
     "namespace": string

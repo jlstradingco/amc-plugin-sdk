@@ -16,6 +16,8 @@ export type {
   PluginManifest,
   PluginManifestWidget,
   PluginSupportLinks,
+  PluginHelp,
+  PluginHelpLink,
   PluginRegistryEntry,
   PluginRuntimeStatus,
   // Workspace manifest block (`workspace.read` / `.write` / `.exec`)

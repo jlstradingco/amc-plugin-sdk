@@ -98,6 +98,16 @@ wanted a shortcut had to hand-roll a listener. The SDK now publishes the primiti
 The three are also re-exported from the package root. The guide's Keyboard page covers usage and the
 migration from a hand-rolled listener.
 
+### Added — help for your plugin's page
+
+A manifest can now carry a `help` block: up to 10 `articles` (a `title` and an `http://` or
+`https://` `url`) and up to 10 `videos` (a `title` and an Omniscio Shares video link,
+`https://shares.omniscio.com/s/<token>`). The app's Help drawer — the top-bar help button, or
+Ctrl+J — lists them on your plugin's page: an article opens in the person's browser, a video plays
+inside the drawer. `validateManifest` refuses a video hosted anywhere else, exactly as the app does
+when it loads the plugin. An Omniscio older than this release ignores the block. `PluginHelp` and
+`PluginHelpLink` are exported for the manifest type.
+
 ### Added — the backend `ctx.ai` completions, `limits` and `live`, and three manifest keys
 
 The published types now match what Omniscio accepts:

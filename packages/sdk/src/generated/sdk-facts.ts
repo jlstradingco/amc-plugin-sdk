@@ -4,6 +4,7 @@
 // PROCESS_INTERPRETER_DENYLIST ← src/shared/plugin-manifest-schema.ts
 // AMC_PLUGIN_SDK_VERSION       ← plugin-sdk/packages/sdk/package.json
 // PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER ← src/shared/plugin-permissions.ts
+// SHARE_HOSTING_ORIGINS        ← src/shared/share-hosting-domains.ts
 // WIDGET_SHAPES / WIDGET_TONES / WIDGET_ICON_NAMES ← src/shared/push-event-schemas/plugin.ts
 // RICH_WIDGET_SHAPES           ← src/shared/push-event-schemas/plugin-rich-widgets.ts
 // WIDGET_ACTION_IDS / WIDGET_BUTTONS_MAX ← src/shared/widget-sidebar/
@@ -156,6 +157,11 @@ export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 export const AMC_PLUGIN_SDK_VERSION = "3.6.0"
 
 export const PLUGIN_EMAIL_UNSUBSCRIBE_PLACEHOLDER = "{{unsubscribe_url}}"
+
+export const SHARE_HOSTING_ORIGINS = [
+  "https://shares.omniscio.com",
+  "https://agentmc-shares.web.app"
+] as const
 
 export const WIDGET_SHAPES = [
   "stat",

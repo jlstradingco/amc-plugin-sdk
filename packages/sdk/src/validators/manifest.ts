@@ -2,6 +2,7 @@ import { z } from 'zod'
 import {
   PLUGIN_PERMISSIONS,
   PROCESS_INTERPRETER_DENYLIST,
+  SHARE_HOSTING_ORIGINS,
   SIDEBAR_GRID_COLUMNS,
   SIDEBAR_MAX_WIDGET_ROWS,
   SIDEBAR_WIDGET_ID_MAX,
@@ -1035,6 +1036,38 @@ const linkClaimSchema = z
     if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `linkClaims: ${problem}` })
   })
 
+const HELP_ENTRIES_MAX = 10
+const HELP_TITLE_MAX = 120
+const shareHostingOrigins: ReadonlySet<string> = new Set(SHARE_HOSTING_ORIGINS)
+
+const isSharesVideoUrl = (value: string): boolean => {
+  try {
+    const url = new URL(value)
+    const parts = url.pathname.split('/').filter(Boolean)
+    return shareHostingOrigins.has(url.origin.toLowerCase()) && parts[0] === 's' && !!parts[1]
+  } catch {
+    return false
+  }
+}
+
+const helpTitle = z.string().trim().min(1).max(HELP_TITLE_MAX)
+
+const helpSchema = z.object({
+  articles: z.array(z.object({ title: helpTitle, url: listingUrl })).max(HELP_ENTRIES_MAX).optional(),
+  videos: z
+    .array(
+      z.object({
+        title: helpTitle,
+        url: z
+          .string()
+          .max(LISTING_URL_MAX)
+          .refine(isSharesVideoUrl, 'help videos must be Omniscio Shares video links (https://shares.omniscio.com/s/<token>)'),
+      }),
+    )
+    .max(HELP_ENTRIES_MAX)
+    .optional(),
+})
+
 /**
  * Four keys below (`settings`, `storage`, `migrations`, `sdkVersion`) were
  * REQUIRED here while the host defaults or omits every one of them. That is the
@@ -1093,6 +1126,7 @@ export const manifestSchema = z.object({
   usageActions: usageActionsSchema.optional(),
   uiAnchors: uiAnchorsSchema.optional(),
   uiAnchorsExtra: uiAnchorsExtraSchema.optional(),
+  help: helpSchema.optional(),
   business: businessSchema.optional(),
 })
   .superRefine((manifest, ctx) => {

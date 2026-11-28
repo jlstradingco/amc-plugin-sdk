@@ -20,6 +20,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
   "linkClaims": [ ... ],
   "uploadHosts": [ ... ],
   "usageActions": [ ... ],
+  "help": { "articles": [ ... ], "videos": [ ... ] },
   "permissions": [ ... ],
   "cli": { "endpoints": [ ... ] }
 }
@@ -44,6 +45,7 @@ The `manifest.json` file is the central configuration for your plugin. It declar
 | `linkClaims` | array | No | Web URLs your plugin wants to handle, 1–20 entries of `{ "host", "path" }` — see [`linkClaims`](#linkclaims) |
 | `uploadHosts` | array | No | The exact websites `http.uploadFile` may send files to, up to 10 — **required together with `network.upload`** — see [`uploadHosts`](#uploadhosts) |
 | `usageActions` | array | No | The feature actions your plugin counts with `usage.record(action)`, up to 20 — see [`usageActions`](#usageactions) |
+| `help` | object | No | Help articles and videos shown for your plugin's page in the app's Help drawer, up to 10 of each — see [`help`](#help) |
 | `permissions` | array | No | Requested API permissions |
 | `linkClaims` | array | No | External links your plugin handles, up to 20 — see [`linkClaims`](#linkclaims) |
 | `uploadHosts` | array | No | Exact hostnames your plugin uploads to, up to 10; required with and by `network.upload` — see [`uploadHosts`](#uploadhosts) |
@@ -1086,8 +1088,10 @@ assistant sees your plugin as one blank area.
   line breaks. `kind` is one of `button`, `link`, `input`, `toggle`, `tab`, `menuitem`, `row`, `region`,
   `composite`, `dialog`, `panel`, `display`, `select`, `form`. At most 64 entries in `uiAnchors`,
   and at most 192 across `uiAnchors` and `uiAnchorsExtra` together.
-- **The assistant reads these words, not your page.** It sees your `label`, `description` and `when`, marked
+- **The pointing assistant reads these words.** It sees your `label`, `description` and `when`, marked
   as written by your plugin. Write them as plain descriptions of the control, never as instructions.
+  (The Help drawer's **Ask AI** tab is different: when a person sends a question from your page, it
+  also reads your page's text — see [`help`](#help).)
 - **Names.** Omniscio names each control `plugin:<your plugin id>:<id>`, so your ids can never collide with
   the app's or another plugin's. You never write the full name, and the whole name must fit 120 characters:
   a long plugin id leaves less room for the `id`.
@@ -1100,6 +1104,34 @@ assistant sees your plugin as one blank area.
   second list exists only so an older app can drop it and keep working with your first 64, instead of
   refusing to load your plugin.
 - It must be an array of valid entries; anything else fails `omniscio-plugin validate`.
+
+## `help`
+
+What the app's **Help drawer** (the top-bar help button, or Ctrl+J) shows on your plugin's page.
+
+```json
+{
+  "help": {
+    "articles": [{ "title": "Getting started", "url": "https://example.com/docs/start" }],
+    "videos": [{ "title": "A two-minute tour", "url": "https://shares.omniscio.com/s/abc123" }]
+  }
+}
+```
+
+- **`articles`** are web pages: a `title` (1–120 characters) and an `http://` or `https://` `url`. They
+  open in the person's browser. At most 10.
+- **`videos`** are Omniscio Shares video links (`https://shares.omniscio.com/s/<token>`) and play inside
+  the drawer. Any other video link is refused when your plugin loads, and by `omniscio-plugin validate`.
+  At most 10.
+- **A help article with your plugin's id.** A first-party plugin whose id matches an article in the
+  Omniscio help library (`<plugin-id>.md`) gets that article listed too, with nothing to declare.
+- **What Ask AI reads from your page.** When a person asks a question on your plugin's page, the app reads
+  your page's text at that moment — never on open, never in the background — and hands it to the AI
+  marked as untrusted, capped at about 6,000 characters. Anything inside an element marked
+  `data-sensitive` is left out, along with scripts and styles. Mark every region that shows private data
+  (an inbox, an account, a secret) with `data-sensitive`. Your `help` titles reach the AI too, also
+  marked as untrusted.
+- **Older apps.** An app that predates this key ignores it.
 
 ## `linkClaims`
 
