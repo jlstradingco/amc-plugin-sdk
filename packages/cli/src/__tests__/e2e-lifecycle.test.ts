@@ -6,6 +6,7 @@ import { execSync, spawnSync } from 'node:child_process'
 import * as vm from 'node:vm'
 import { readPackageFiles } from '../lib/package-selection.js'
 import { findPageScriptProblems } from '../lib/page-scripts.js'
+import { buildSdkAndCli } from './build-packages.js'
 
 function setupPluginNodeModules(pluginDir: string) {
   const sdkPkg = path.resolve(__dirname, '../../../sdk')
@@ -39,18 +40,10 @@ const BUILD_HOOK_TIMEOUT_MS = 120_000
 describe('Plugin lifecycle E2E', () => {
   let tmpDir: string
   let pluginDir: string
-  const monorepoRoot = path.resolve(__dirname, '../../../..')
   const cliDist = path.resolve(__dirname, '../../dist/index.js')
 
   beforeAll(() => {
-    execSync('pnpm --filter @omniscio/plugin-sdk build', {
-      cwd: monorepoRoot,
-      stdio: 'pipe',
-    })
-    execSync('pnpm --filter @omniscio/plugin-cli build', {
-      cwd: monorepoRoot,
-      stdio: 'pipe',
-    })
+    buildSdkAndCli()
 
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-e2e-'))
     pluginDir = path.join(tmpDir, 'e2e-test-plugin')

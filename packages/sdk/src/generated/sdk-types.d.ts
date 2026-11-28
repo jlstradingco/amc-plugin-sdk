@@ -605,6 +605,12 @@ export interface AgentMC {
     "pick": (...args: unknown[]) => Promise<unknown>
     "start": (...args: unknown[]) => Promise<unknown>
   }
+  "humanTestingSetupCopy": {
+    "fetch": (...args: unknown[]) => Promise<unknown>
+    "load": (...args: unknown[]) => Promise<unknown>
+    "preview": (...args: unknown[]) => Promise<unknown>
+    "send": (...args: unknown[]) => Promise<unknown>
+  }
   "inbox": {
     "postAlert": (...args: unknown[]) => Promise<unknown>
     "setItems": (...args: unknown[]) => Promise<unknown>

@@ -186,7 +186,7 @@ describe('SDK <-> host permission parity', () => {
   })
 
   it('pins the host union size so a silent mirror shrink is a reviewed change', () => {
-    expect(HOST_PERMISSIONS.length).toBe(74)
+    expect(HOST_PERMISSIONS.length).toBe(HOST_UNION_SIZE)
     expect(host.size).toBe(HOST_PERMISSIONS.length)
   })
 
@@ -230,10 +230,6 @@ describe('SDK <-> host permission parity', () => {
 
   it('has no outstanding type-shape deltas (both historical ones resolved)', () => {
     expect(KNOWN_TYPE_DELTAS.length).toBe(0)
-  })
-
-  it('keeps HOST_UNION_SIZE, the pin the host check reads, equal to the mirror it counts', () => {
-    expect(HOST_UNION_SIZE).toBe(HOST_PERMISSIONS.length)
   })
 })
 

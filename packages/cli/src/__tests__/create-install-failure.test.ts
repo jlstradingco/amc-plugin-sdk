@@ -2,13 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { execSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
+import { buildSdkAndCli } from './build-packages.js'
 
 const BUILD_HOOK_TIMEOUT_MS = 120_000
 const INSTALL_FAILURE_TIMEOUT_MS = 60_000
 
 describe('create: a failed dependency install', () => {
-  const monorepoRoot = path.resolve(__dirname, '../../../..')
   const cliDist = path.resolve(__dirname, '../../dist/index.js')
   let tmpDir: string
 
@@ -47,8 +47,7 @@ describe('create: a failed dependency install', () => {
   }
 
   beforeAll(() => {
-    execSync('pnpm --filter @omniscio/plugin-sdk build', { cwd: monorepoRoot, stdio: 'pipe' })
-    execSync('pnpm --filter @omniscio/plugin-cli build', { cwd: monorepoRoot, stdio: 'pipe' })
+    buildSdkAndCli()
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-install-failure-'))
   }, BUILD_HOOK_TIMEOUT_MS)
 

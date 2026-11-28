@@ -3,6 +3,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { spawnSync, execSync } from 'node:child_process'
+import { buildSdkAndCli } from './build-packages.js'
 
 /**
  * The scaffold's icon default and `validate`'s icon check, driven through the BUILT CLI the
@@ -13,7 +14,6 @@ const SHELL_OUT_TIMEOUT_MS = 30_000
 const BUILD_HOOK_TIMEOUT_MS = 120_000
 
 describe('plugin icon: scaffold default and validate', () => {
-  const monorepoRoot = path.resolve(__dirname, '../../../..')
   const cliDist = path.resolve(__dirname, '../../dist/index.js')
   let tmpDir: string
 
@@ -44,8 +44,7 @@ describe('plugin icon: scaffold default and validate', () => {
     JSON.parse(fs.readFileSync(path.join(pluginDir, 'manifest.json'), 'utf-8'))
 
   beforeAll(() => {
-    execSync('pnpm --filter @omniscio/plugin-sdk build', { cwd: monorepoRoot, stdio: 'pipe' })
-    execSync('pnpm --filter @omniscio/plugin-cli build', { cwd: monorepoRoot, stdio: 'pipe' })
+    buildSdkAndCli()
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'amc-icon-'))
   }, BUILD_HOOK_TIMEOUT_MS)
 

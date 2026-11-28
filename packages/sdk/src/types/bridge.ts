@@ -49,6 +49,10 @@ export interface BridgeSettings extends PluginSettings {
   onChange(callback: (changed: Record<string, unknown>) => void): () => void
 }
 
+export interface BridgeAppCloner extends PluginAppCloner {
+  deleteStudy?(studyId: string): Promise<void>
+}
+
 export interface BridgeThemeValue {
   mode: string
   /** An `r,g,b` triple, e.g. `'139,92,246'`. */
@@ -2181,7 +2185,7 @@ export interface Omniscio {
   /** Requires `live`. See {@link BridgeLive}. */
   live: BridgeLive
   /** Requires `appCloner`, which only the bundled App Cloner plugin is granted. See {@link PluginAppCloner}. */
-  appCloner?: PluginAppCloner
+  appCloner?: BridgeAppCloner
   /** Only the bundled `release-center` plugin may call this. See {@link BridgeRelease}. */
   release?: BridgeRelease
   /** Requires `limits`. See {@link PluginLimits}. */
