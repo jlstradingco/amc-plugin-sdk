@@ -602,6 +602,7 @@ export interface AgentMC {
     "open": (...args: unknown[]) => Promise<unknown>
   }
   "humanTestingFixSession": {
+    "keep": (...args: unknown[]) => Promise<unknown>
     "pick": (...args: unknown[]) => Promise<unknown>
     "start": (...args: unknown[]) => Promise<unknown>
   }
