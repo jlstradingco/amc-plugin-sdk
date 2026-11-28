@@ -193,8 +193,8 @@ The widget sidebar is a panel of widgets the user arranges beside their sessions
   "ui": {
     "entryPoint": "ui/index.html",
     "widgets": [
-      { "id": "today", "title": "Today", "kind": "tile", "defaultSize": { "w": 4, "h": 3 }, "faces": ["list"] },
-      { "id": "board", "title": "Board", "kind": "panel", "defaultSize": { "w": 4, "h": 6 } }
+      { "id": "today", "title": "Today", "kind": "tile", "cells": { "w": 2, "h": 2 }, "faces": ["list"] },
+      { "id": "board", "title": "Board", "kind": "panel", "cells": { "w": 6, "h": 6 } }
     ]
   }
 }
@@ -205,8 +205,11 @@ The widget sidebar is a panel of widgets the user arranges beside their sessions
 | `id` | Unique in the plugin: lowercase letters, digits and hyphens, up to 32 characters. Pass it as `widgetId` |
 | `title` | The name the picker and the widget's frame show, 1 to 60 characters |
 | `kind` | `tile` draws the data you send with `set`. `panel` shows your plugin's own panel page inside the widget |
-| `defaultSize` | The size it starts at. `w` is 1 to 6 and counts in quarters of the sidebar's width — 2, 3, 5 or 6 of its six cells (see below). `h` is the height in cells, 1 to 40, and anything above 6 starts at 6 |
+| `cells` | The size it starts at, in the sidebar's own cells: `w` 1 to 6 wide, `h` 1 to 6 tall. `{ "w": 2, "h": 2 }` is a 2×2 tile. When it is given, `defaultSize` is ignored |
+| `defaultSize` | The older way to give the starting size. Give `cells` or `defaultSize` — at least one. `w` is 1 to 6 and counts in quarters of the sidebar's width — 2, 3, 5 or 6 of its six cells (see below). `h` is the height in cells, 1 to 40, and anything above 6 starts at 6 |
 | `faces` | For a tile only: the shapes it may send. A panel declares none |
+
+**`cells` needs a recent Omniscio.** A build older than the one that added `cells` refuses to install a manifest that uses it. If your plugin must also install on older builds, give `defaultSize` instead of `cells`.
 
 | `defaultSize.w` | Cells wide on the six-cell sidebar |
 |---|---|

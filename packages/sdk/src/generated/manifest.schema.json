@@ -452,6 +452,26 @@
                   "panel"
                 ]
               },
+              "cells": {
+                "type": "object",
+                "properties": {
+                  "w": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  },
+                  "h": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  }
+                },
+                "required": [
+                  "w",
+                  "h"
+                ],
+                "additionalProperties": false
+              },
               "defaultSize": {
                 "type": "object",
                 "properties": {
@@ -495,8 +515,7 @@
             "required": [
               "id",
               "title",
-              "kind",
-              "defaultSize"
+              "kind"
             ],
             "additionalProperties": false
           },

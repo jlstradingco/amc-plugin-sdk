@@ -83,8 +83,8 @@ The widget sidebar is the panel beside a person's sessions. A plugin offers widg
   "ui": {
     "entryPoint": "ui/index.html",
     "widgets": [
-      { "id": "today", "title": "Today", "kind": "tile", "defaultSize": { "w": 4, "h": 3 }, "faces": ["list", "stat"] },
-      { "id": "board", "title": "Board", "kind": "panel", "defaultSize": { "w": 4, "h": 6 } }
+      { "id": "today", "title": "Today", "kind": "tile", "cells": { "w": 2, "h": 2 }, "faces": ["list", "stat"] },
+      { "id": "board", "title": "Board", "kind": "panel", "cells": { "w": 6, "h": 6 } }
     ]
   }
 }
@@ -96,8 +96,16 @@ The widget sidebar is the panel beside a person's sessions. A plugin offers widg
 
 ### How big it starts
 
-The sidebar is six cells across, and a person can resize any widget from 1×1 to 6×6. `defaultSize`
-only sets where it starts, and its width counts in quarters of the sidebar:
+The sidebar is six cells across, and a person can resize any widget from 1×1 to 6×6. Say where it
+starts with `cells`, in those same cells: `"cells": { "w": 2, "h": 2 }` is a 2×2 tile, and `w` and
+`h` each go from 1 to 6. A size outside that is refused at install, and `omniscio-plugin validate`
+refuses it too.
+
+**`cells` needs a recent Omniscio.** A build older than the one that added `cells` refuses to install
+a manifest that uses it. If your plugin must also install on older builds, use the older
+`defaultSize` instead. Give `cells` or `defaultSize`; when you give both, `cells` wins.
+
+`defaultSize` is the older way, and its width counts in quarters of the sidebar:
 
 | `defaultSize.w` | Cells wide on the sidebar |
 |---|---|

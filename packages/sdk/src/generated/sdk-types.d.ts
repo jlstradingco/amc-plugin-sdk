@@ -165,7 +165,11 @@ export interface PluginManifest {
       "id": string
       "title": string
       "kind": "tile" | "panel"
-      "defaultSize": {
+      "cells"?: {
+        "w": number
+        "h": number
+      }
+      "defaultSize"?: {
         "w": number
         "h": number
       }

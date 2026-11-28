@@ -5,6 +5,7 @@ import {
   SHARE_HOSTING_ORIGINS,
   SIDEBAR_GRID_COLUMNS,
   SIDEBAR_MAX_WIDGET_ROWS,
+  SIDEBAR_MAX_WIDGET_SIZE,
   SIDEBAR_WIDGET_ID_MAX,
   SIDEBAR_WIDGET_ID_PATTERN,
   SIDEBAR_WIDGET_KINDS,
@@ -277,17 +278,28 @@ const sidebarWidgetSchema = z
     id: z.string().min(1).max(SIDEBAR_WIDGET_ID_MAX).regex(SIDEBAR_WIDGET_ID_PATTERN),
     title: z.string().trim().min(1).max(SIDEBAR_WIDGET_TITLE_MAX),
     kind: z.enum(SIDEBAR_WIDGET_KINDS),
+    cells: z
+      .object({
+        w: z.number().int().min(1).max(SIDEBAR_GRID_COLUMNS),
+        h: z.number().int().min(1).max(SIDEBAR_MAX_WIDGET_SIZE),
+      })
+      .strict()
+      .optional(),
     defaultSize: z
       .object({
         w: z.number().int().min(1).max(SIDEBAR_GRID_COLUMNS),
         h: z.number().int().min(1).max(SIDEBAR_MAX_WIDGET_ROWS),
       })
-      .strict(),
+      .strict()
+      .optional(),
     faces: z.array(z.enum(WIDGET_FACE_NAMES)).min(1).max(WIDGET_FACE_NAMES.length).optional(),
   })
   .strict()
   .refine((widget) => widget.kind === 'tile' || widget.faces === undefined, {
     message: 'a panel widget draws the plugin page, so it declares no faces',
+  })
+  .refine((widget) => widget.cells !== undefined || widget.defaultSize !== undefined, {
+    message: 'a widget states its starting size with cells (or the older defaultSize)',
   })
 
 const sidebarWidgetsSchema = z

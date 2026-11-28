@@ -386,8 +386,10 @@ export interface PluginManifestWidget {
    * permissions.
    */
   kind: SidebarWidgetKind
-  /** The size it starts at on the six-cell sidebar: `w` 1 to 6, counted in quarters of its width (1, 2 and 3 are 2, 3 and 5 cells; 4 and up the full 6), `h` 1 to 40 cells tall, shown at most 6. */
-  defaultSize: { w: number; h: number }
+  /** The size it starts at, in the sidebar's own cells: `w` 1 to 6 wide, `h` 1 to 6 tall. Wins over `defaultSize`. Give this or `defaultSize`. Omniscio builds older than the one that added it refuse to install a manifest that uses it. */
+  cells?: { w: number; h: number }
+  /** The older size: `w` 1 to 6 counted in quarters of the sidebar's width (1, 2 and 3 are 2, 3 and 5 cells; 4 and up the full 6), `h` 1 to 40 cells tall, shown at most 6. Ignored when `cells` is given. */
+  defaultSize?: { w: number; h: number }
   /** For a tile, the shapes it may send. A panel declares none. */
   faces?: WidgetFaceName[]
 }

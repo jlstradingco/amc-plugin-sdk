@@ -256,6 +256,7 @@ export const SIDEBAR_WIDGET_ID_MAX = 32
 export const SIDEBAR_WIDGET_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 export const SIDEBAR_GRID_COLUMNS = 6
 export const SIDEBAR_MAX_WIDGET_ROWS = 40
+export const SIDEBAR_MAX_WIDGET_SIZE = 6
 
 export const WIDGET_VALUE_MAX = 8
 export const WIDGET_LABEL_MAX = 16
